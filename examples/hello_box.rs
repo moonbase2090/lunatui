@@ -45,8 +45,15 @@ fn main() -> io::Result<()> {
 }
 
 /// Describes the cost of drawing the box, one line per counter.
-fn metrics_lines(_alloc: AllocStats, _write: WriteStats) -> [String; 3] {
-    [String::new(), String::new(), String::new()]
+fn metrics_lines(alloc: AllocStats, write: WriteStats) -> [String; 3] {
+    [
+        format!("write() calls: {}", write.writes),
+        format!("bytes written: {}", write.bytes),
+        format!(
+            "allocations:   {} ({} bytes)",
+            alloc.allocations, alloc.bytes_allocated
+        ),
+    ]
 }
 
 /// Renders `lines` inside a single-line border, padded by one space on each side.

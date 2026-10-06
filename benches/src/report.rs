@@ -4,6 +4,8 @@
 
 //! A plain-text table of benchmark metrics.
 
+use std::{array, iter};
+
 use crate::{AllocStats, WriteStats};
 
 /// The counts measured for one workload.
@@ -17,11 +19,24 @@ pub struct Metrics {
     pub write: WriteStats,
 }
 
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "M1 red stub, used in the next commit")
-)]
-const HEADERS: [&str; 6] = [
+impl Metrics {
+    fn cells(&self) -> Row {
+        [
+            self.name.to_owned(),
+            self.alloc.allocations.to_string(),
+            self.alloc.reallocations.to_string(),
+            self.alloc.bytes_allocated.to_string(),
+            self.write.writes.to_string(),
+            self.write.bytes.to_string(),
+        ]
+    }
+}
+
+const COLUMNS: usize = 6;
+
+type Row = [String; COLUMNS];
+
+const HEADERS: [&str; COLUMNS] = [
     "workload",
     "allocs",
     "reallocs",
@@ -33,8 +48,37 @@ const HEADERS: [&str; 6] = [
 /// Renders `rows` as an aligned table: the name column left-aligned, the
 /// counts right-aligned.
 #[must_use]
-pub fn table(_rows: &[Metrics]) -> String {
-    String::new()
+pub fn table(rows: &[Metrics]) -> String {
+    let header: Row = HEADERS.map(str::to_owned);
+    let body: Vec<Row> = rows.iter().map(Metrics::cells).collect();
+    let widths: [usize; COLUMNS] = array::from_fn(|column| {
+        iter::once(&header)
+            .chain(&body)
+            .map(|row| row[column].chars().count())
+            .max()
+            .unwrap_or(0)
+    });
+
+    iter::once(&header)
+        .chain(&body)
+        .map(|row| format_row(row, &widths))
+        .collect()
+}
+
+fn format_row(row: &Row, widths: &[usize; COLUMNS]) -> String {
+    let cells: Vec<String> = row
+        .iter()
+        .zip(widths)
+        .enumerate()
+        .map(|(column, (cell, &width))| {
+            if column == 0 {
+                format!("{cell:<width$}")
+            } else {
+                format!("{cell:>width$}")
+            }
+        })
+        .collect();
+    format!("{}\n", cells.join("  "))
 }
 
 #[cfg(test)]
