@@ -104,5 +104,26 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 |---|---|
 | Formatting is `rustfmt` with default settings. There is no `rustfmt.toml`. | CI (`cargo fmt --check`) |
 | No `#[allow]`. Suppression is only `#[expect(lint, reason = "...")]`, listed in `docs/lints.md` (M16). | CI (planned): `clippy::allow_attributes`, `allow_attributes_without_reason`, plus a check that every `#[expect]` is listed |
-| No comments except `///` on public API items (M14). | CI (planned): comment check script |
+| No comments except the approved forms below (M14). Anything else fails the comment check script. | CI (planned): comment check script |
+| Every `.rs` file starts with exactly this license header, identical everywhere, followed by one blank line. | CI (planned): comment check script |
+| Every `unsafe` block is preceded by a `// SAFETY:` comment explaining why its contract holds. | CI (planned): `clippy::undocumented_unsafe_blocks` denied |
 | `unsafe` code exists only in small modules that expose a safe API, and SIMD modules keep a scalar reference implementation alongside (M10). | Review |
+
+### Approved comment forms (M14)
+
+The default is no comments. These are the only exceptions MB2090 has approved. A new exception needs his explicit approval, in its own small PR or flagged in a PR body. Once approved, it is added here and to the comment check's allowlist.
+
+| Form | Where | Approved |
+|---|---|---|
+| `///` rustdoc | On public API items only | M14 |
+| `#![doc = include_str!("../README.md")]` | Crate root, for crate-level docs | MB2090, 2026-10-06 |
+| License header (text below) | First three lines of every `.rs` file | MB2090, 2026-10-06 |
+| `// SAFETY: <why the unsafe contract holds>` | Immediately before an `unsafe` block | MB2090, 2026-10-06 |
+
+The license header, exactly:
+
+```rust
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+```
