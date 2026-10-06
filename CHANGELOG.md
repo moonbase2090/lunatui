@@ -10,6 +10,10 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `lunatui_core::char_width` and `lunatui_core::width`: terminal display widths
+  from tables generated from Unicode 18.0.0, with `docs/width-policy.md`
+  listing every difference from `unicode-width`. `hello_box` now measures
+  its lines with them (PR 04).
 - `cargo xtask gen-width` generates the Unicode 18.0.0 width tables for
   `lunatui-core`, and `unicode-width` 0.2.2 is a dev-dependency of
   `lunatui-core` for the differential width tests. The `lunatui` facade's
