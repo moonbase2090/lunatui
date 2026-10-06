@@ -1,6 +1,6 @@
 # lunatui: Product Requirements Document (PRD)
 
-*A hyperspeed Rust TUI library to replace ratatui. Owner: MB2090 (Moonbase 2090 LLC). Status: **draft for sign-off**. Builds on `/workspace/ratatui-breakdown.md` and the measurements in `/workspace/ratatui-perf/results.txt`. Canonical copies: `/workspace/tui-replacement-plan.md` and `/workspace/lunatui-prd.md`, kept identical.*
+*A hyperspeed Rust TUI library to replace ratatui. Owner: MB2090 (Moonbase 2090 LLC). Status: **Approved** (MB2090, 2026-10-06 5:52 AM MT). Builds on `/workspace/ratatui-breakdown.md` and the measurements in `/workspace/ratatui-perf/results.txt`. Canonical copies: `/workspace/tui-replacement-plan.md` and `/workspace/lunatui-prd.md`, kept identical.*
 
 - **Name: `lunatui`** (recommended in §12; final confirmation is open decision D1). Every crate and snippet uses it, so a rename is one pass.
 - **Binding sections:** §M (Development methodology) and §T (Team model and review protocol) are **binding working rules** for everyone contributing, human or AI. The PR acceptance template (§8.0) enforces them. Every other section is the product plan and may change through the decision process in §11.
