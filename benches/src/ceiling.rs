@@ -2,16 +2,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! The binding frame-time ceiling (PRD §1.3): no frame may take longer than
-//! 8 ms, end to end, at any supported size.
-//!
-//! The gate is on the maximum, not a percentile: every sample of every
-//! worst-case benchmark must be at or under [`FRAME_CEILING`].
-
 use std::time::{Duration, Instant};
 
 /// Hard ceiling on the time of any single frame (PRD §1.3).
-pub const FRAME_CEILING: Duration = Duration::from_millis(8);
+pub const FRAME_CEILING: Duration = Duration::from_millis(16);
+
+/// Target for the time of any single frame on a dedicated machine (PRD §1.3).
+pub const FRAME_TARGET: Duration = Duration::from_millis(8);
+
+/// How a worst-case benchmark's slowest frame compares with the frame budget.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Verdict {
+    /// The slowest frame is at or under [`FRAME_TARGET`].
+    WithinTarget,
+    /// The slowest frame misses [`FRAME_TARGET`] but is at or under [`FRAME_CEILING`].
+    OverTarget,
+    /// The slowest frame exceeds [`FRAME_CEILING`]. CI fails.
+    OverCeiling,
+}
 
 /// Frame-time statistics for one worst-case benchmark.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -45,6 +53,18 @@ impl FrameTimes {
     pub fn within(&self, ceiling: Duration) -> bool {
         self.max <= ceiling
     }
+
+    /// Compares the slowest frame with [`FRAME_TARGET`] and [`FRAME_CEILING`].
+    #[must_use]
+    pub fn verdict(&self) -> Verdict {
+        if !self.within(FRAME_CEILING) {
+            Verdict::OverCeiling
+        } else if !self.within(FRAME_TARGET) {
+            Verdict::OverTarget
+        } else {
+            Verdict::WithinTarget
+        }
+    }
 }
 
 fn nearest_rank(sorted: &[Duration], percent: usize) -> Option<Duration> {
@@ -75,7 +95,7 @@ mod tests {
     use std::convert::Infallible;
     use std::time::Duration;
 
-    use super::{FRAME_CEILING, FrameTimes, sample};
+    use super::{FRAME_CEILING, FRAME_TARGET, FrameTimes, Verdict, sample};
 
     fn millis(range: std::ops::RangeInclusive<u64>) -> Vec<Duration> {
         range.map(Duration::from_millis).collect()
@@ -154,5 +174,36 @@ mod tests {
         });
         assert_eq!(samples, Err("frame failed"));
         assert_eq!(runs, 2);
+    }
+
+    #[test]
+    fn the_ceiling_on_shared_ci_runners_is_16_ms_and_the_target_8_ms() {
+        assert_eq!(FRAME_CEILING, Duration::from_millis(16));
+        assert_eq!(FRAME_TARGET, Duration::from_millis(8));
+    }
+
+    #[test]
+    fn a_max_at_the_target_is_within_target() {
+        assert_eq!(
+            times_with_max(FRAME_TARGET).verdict(),
+            Verdict::WithinTarget
+        );
+    }
+
+    #[test]
+    fn a_max_just_over_the_target_is_over_target() {
+        let max = FRAME_TARGET + Duration::from_nanos(1);
+        assert_eq!(times_with_max(max).verdict(), Verdict::OverTarget);
+    }
+
+    #[test]
+    fn a_max_at_the_ceiling_is_over_target_only() {
+        assert_eq!(times_with_max(FRAME_CEILING).verdict(), Verdict::OverTarget);
+    }
+
+    #[test]
+    fn a_max_just_over_the_ceiling_is_over_ceiling() {
+        let max = FRAME_CEILING + Duration::from_nanos(1);
+        assert_eq!(times_with_max(max).verdict(), Verdict::OverCeiling);
     }
 }

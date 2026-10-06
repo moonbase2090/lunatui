@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! A plain-text table of benchmark metrics.
-
 use std::{array, iter};
 
 use crate::{AllocStats, WriteStats};

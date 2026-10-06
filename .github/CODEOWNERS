@@ -1,0 +1,14 @@
+# PRD M16: lint, CI and dependency configuration needs MB2090 sign-off.
+# `cargo xtask signoff` reads these anchored paths and fails a pull request
+# that changes one without the mb2090-signoff label.
+
+/Cargo.toml @mb2090
+/Cargo.lock @mb2090
+/deny.toml @mb2090
+/_typos.toml @mb2090
+/.cargo/ @mb2090
+/.github/ @mb2090
+/xtask/ @mb2090
+/benches/src/ceiling.rs @mb2090
+/docs/lints.md @mb2090
+/docs/conventions.md @mb2090

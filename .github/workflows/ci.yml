@@ -60,6 +60,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo doc --workspace --no-deps
 
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo xtask check
+
   deny:
     runs-on: ubuntu-latest
     steps:

@@ -2,17 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! `hello_box`: draws a bordered box with text (PRD M13, PR 01).
-//!
-//! lunatui has no grid, encoder or `Block` widget yet, so this example builds
-//! the box as a plain string and prints it. Later PRs move it onto lunatui's
-//! own pipeline (PRD §8, Phase 0 and Phase 1 Demo lines).
-//!
-//! With `--metrics` it also prints what drawing the box cost, measured with
-//! the bench harness counters (PR 02): allocations, `write()` calls and bytes.
-//!
-//! Run with `cargo run --example hello_box`, or
-//! `cargo run --example hello_box -- --metrics`.
+#![doc = include_str!("README.md")]
 
 use std::env;
 use std::io::{self, Write};
@@ -44,7 +34,6 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-/// Describes the cost of drawing the box, one line per counter.
 fn metrics_lines(alloc: AllocStats, write: WriteStats) -> [String; 3] {
     [
         format!("write() calls: {}", write.writes),
@@ -56,11 +45,6 @@ fn metrics_lines(alloc: AllocStats, write: WriteStats) -> [String; 3] {
     ]
 }
 
-/// Renders `lines` inside a single-line border, padded by one space on each side.
-///
-/// Widths are counted in `char`s, which is correct for the ASCII text drawn
-/// here. Display widths for wide and multi-codepoint graphemes arrive with the
-/// width tables (PR 04) and grapheme slot (PR 05).
 fn render_box(lines: &[&str]) -> String {
     let text_width = lines
         .iter()

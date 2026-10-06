@@ -2,12 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Instruction-count benchmarks of the calibration workloads (gungraun, PRD §6.1).
-//!
-//! Needs Linux, valgrind and a matching `gungraun-runner`. Run with
-//! `cargo xtask bench`, which skips these when valgrind is missing.
-
-#![allow(
+#![doc = include_str!("../README.md")]
+#![expect(
     missing_docs,
     reason = "gungraun's benchmark macros generate undocumented public items"
 )]
