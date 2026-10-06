@@ -60,10 +60,14 @@ impl<W> CountingWriter<W> {
 
 impl<W: Write> Write for CountingWriter<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.write(buf)
+        self.stats.writes += 1;
+        let written = self.inner.write(buf)?;
+        self.stats.bytes += written;
+        Ok(written)
     }
 
     fn flush(&mut self) -> io::Result<()> {
+        self.stats.flushes += 1;
         self.inner.flush()
     }
 }

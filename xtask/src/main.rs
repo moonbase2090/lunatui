@@ -64,8 +64,24 @@ fn bench() -> ExitCode {
 
 /// Returns the benchmark steps in run order: metrics first, then wall-clock,
 /// then instruction counts when valgrind is available.
-fn bench_plan(_valgrind: bool) -> Vec<BenchStep> {
-    Vec::new()
+fn bench_plan(valgrind: bool) -> Vec<BenchStep> {
+    let mut plan = vec![
+        BenchStep {
+            target: "metrics",
+            feature: None,
+        },
+        BenchStep {
+            target: "criterion_calibration",
+            feature: None,
+        },
+    ];
+    if valgrind {
+        plan.push(BenchStep {
+            target: "gungraun_calibration",
+            feature: Some("gungraun"),
+        });
+    }
+    plan
 }
 
 fn run_cargo(args: &[&str]) -> Result<(), String> {

@@ -5,7 +5,6 @@
 //! Wall-clock benchmarks of the calibration workloads (criterion, PRD §6.1).
 
 use std::hint::black_box;
-use std::io;
 
 use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use lunatui_bench::calibration::{LARGE_FRAME_BYTES, frame, grow_buffer, write_frame};
@@ -17,8 +16,14 @@ fn calibration(c: &mut Criterion) {
         b.iter(|| frame(black_box(LARGE_FRAME_BYTES)));
     });
     let large = frame(LARGE_FRAME_BYTES);
+    // A reused, pre-sized buffer: measures the copy, not an allocation, and
+    // unlike `io::sink()` it cannot be optimized away.
+    let mut out = Vec::with_capacity(LARGE_FRAME_BYTES);
     group.bench_function("write_frame_68k", |b| {
-        b.iter(|| write_frame(&mut io::sink(), black_box(&large)));
+        b.iter(|| {
+            out.clear();
+            write_frame(&mut out, black_box(&large))
+        });
     });
     group.finish();
 

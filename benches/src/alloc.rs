@@ -103,23 +103,19 @@ impl<A> CountingAllocator<A> {
         (result, self.snapshot().since(before))
     }
 
-    #[expect(
-        clippy::unused_self,
-        reason = "M1 red stub, implemented in the next commit"
-    )]
-    fn record_allocation(&self, _bytes: usize) {}
+    fn record_allocation(&self, bytes: usize) {
+        self.allocations.fetch_add(1, Ordering::Relaxed);
+        self.bytes_allocated.fetch_add(bytes, Ordering::Relaxed);
+    }
 
-    #[expect(
-        clippy::unused_self,
-        reason = "M1 red stub, implemented in the next commit"
-    )]
-    fn record_reallocation(&self, _bytes: usize) {}
+    fn record_reallocation(&self, bytes: usize) {
+        self.reallocations.fetch_add(1, Ordering::Relaxed);
+        self.bytes_allocated.fetch_add(bytes, Ordering::Relaxed);
+    }
 
-    #[expect(
-        clippy::unused_self,
-        reason = "M1 red stub, implemented in the next commit"
-    )]
-    fn record_deallocation(&self) {}
+    fn record_deallocation(&self) {
+        self.deallocations.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 // SAFETY: every method forwards its arguments unchanged to `inner`, which

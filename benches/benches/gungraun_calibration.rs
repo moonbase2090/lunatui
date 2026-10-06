@@ -25,9 +25,10 @@ fn bench_frame(len: usize) -> Vec<u8> {
 }
 
 #[library_benchmark]
-#[bench::large(frame(LARGE_FRAME_BYTES))]
-fn bench_write_frame(buffer: Vec<u8>) -> io::Result<()> {
-    black_box(write_frame(&mut io::sink(), black_box(&buffer)))
+#[bench::large(frame(LARGE_FRAME_BYTES), Vec::with_capacity(LARGE_FRAME_BYTES))]
+fn bench_write_frame(buffer: Vec<u8>, mut out: Vec<u8>) -> io::Result<Vec<u8>> {
+    write_frame(&mut out, black_box(&buffer))?;
+    Ok(out)
 }
 
 #[library_benchmark]
