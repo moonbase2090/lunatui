@@ -10,6 +10,10 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- ratatui baseline scenes (dashboard, log, table, gradient) ported from
+  ratatui-perf, with fidelity tests, ratatui rows in the `metrics` bench, a
+  `criterion_ratatui` wall-clock bench, and the `ratatui_dashboard` example
+  (PR 03).
 - `ratatui` 0.30.2 (pinned) as a dependency of `lunatui-bench` and a
   dev-dependency of the `lunatui` facade (for examples), for the ratatui
   baseline scenes in PR 03. Its crates are on the cargo-deny allowlist, and

@@ -35,6 +35,10 @@ name = "criterion_calibration"
 harness = false
 
 [[bench]]
+name = "criterion_ratatui"
+harness = false
+
+[[bench]]
 name = "gungraun_calibration"
 harness = false
 required-features = ["gungraun"]

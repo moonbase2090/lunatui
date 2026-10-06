@@ -15,6 +15,8 @@ pub mod calibration;
 pub mod ceiling;
 /// A plain-text table of benchmark metrics.
 pub mod report;
+/// The ratatui baseline scenes (PRD §6.1), ported 1:1 from the measured ratatui-perf runs.
+pub mod scenes;
 mod write;
 
 pub use alloc::{AllocStats, CountingAllocator};
