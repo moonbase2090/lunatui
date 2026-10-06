@@ -831,6 +831,16 @@ lunatui is demoable early and continuously, so development can be watched in fli
 - Each rule is listed in `docs/lints.md` with the mistake it prevents.
 - Muse checks it on every review.
 
+## M16 Locked down: conventional and standardized (binding, MB2090 Oct 6, 2026)
+"Locked down" means **highly conventional and standardized, with no workarounds or shortcuts**. lunatui is set up so only the correct patterns compile and pass CI. The items below are how that is enforced.
+- **One canonical way.** `docs/conventions.md` defines one canonical way for each recurring thing: module and file layout, naming, error types and propagation, constructors and builders, widget structure, tests and test names, benches, examples and captures, and feature flags. Everything else follows idiomatic Rust and the Rust API Guidelines unless that doc says otherwise. Code that does the same kind of thing a different way is a review blocker. Where a convention can be checked mechanically, CI checks it.
+- **No workarounds.** If a convention blocks real work, change the convention in its own PR with MB2090 sign-off. Never route around it.
+- **Strict lints, no `#[allow]`.** Workspace lints are strict and `#[allow]` is not permitted anywhere, even with a reason. The only suppression is `#[expect(lint, reason = "...")]`, and each one is listed in `docs/lints.md`.
+- **Dependency allowlist.** cargo-deny allows only the crates it lists.
+- **Architecture boundaries and size limits** are checked in CI.
+- **Sign-off.** Changes to lint or CI configuration need MB2090 sign-off (CODEOWNERS on mb2090 plus a PR label) and are never bundled with feature work.
+- Muse checks all of it on every review.
+
 ## T-update Seat assignments (MB2090 Oct 5, 2026)
 - Implementer: Claude Opus 5.5.
 - Reviewer (every PR, blind, SHIP <sha>): a dedicated Muse seat (muse-spark-1.3-contributor, xhigh), a different model family from the implementer.
