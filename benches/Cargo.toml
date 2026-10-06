@@ -26,6 +26,10 @@ name = "metrics"
 harness = false
 
 [[bench]]
+name = "ceiling"
+harness = false
+
+[[bench]]
 name = "criterion_calibration"
 harness = false
 

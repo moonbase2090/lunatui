@@ -12,12 +12,14 @@
 //!   [`std::io::Write`].
 //! - [`calibration`]: workloads with known costs, used to check the harness
 //!   itself.
+//! - [`ceiling`]: the 8 ms maximum frame-time gate (PRD §1.3).
 //! - [`report`]: a plain-text metrics table.
 //!
 //! Run everything with `cargo xtask bench`.
 
 mod alloc;
 pub mod calibration;
+pub mod ceiling;
 pub mod report;
 mod write;
 
