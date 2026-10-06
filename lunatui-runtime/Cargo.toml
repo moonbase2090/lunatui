@@ -1,0 +1,11 @@
+[package]
+name = "lunatui-runtime"
+description = "Runtime for lunatui: scheduler, Ui context, IDs and memo, hit-testing, focus, animation and keymap registry."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true

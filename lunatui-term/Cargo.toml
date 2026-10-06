@@ -1,0 +1,11 @@
+[package]
+name = "lunatui-term"
+description = "Terminal layer for lunatui: encoder, capability probing, session and input parser."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true

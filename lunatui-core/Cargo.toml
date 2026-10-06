@@ -1,0 +1,11 @@
+[package]
+name = "lunatui-core"
+description = "Core types for lunatui: cells, grid, styles, geometry, diff, grapheme slot and width tables."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true

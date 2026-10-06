@@ -1,0 +1,19 @@
+[package]
+name = "lunatui"
+description = "Facade for lunatui: re-exports, prelude and run()."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+autoexamples = false
+
+[lints]
+workspace = true
+
+# Examples live in the top-level `examples/` directory (PRD M13) and are
+# listed here so each one runs with `cargo run --example <name>`.
+[[example]]
+name = "hello_box"
+path = "../examples/hello_box.rs"
+test = true
