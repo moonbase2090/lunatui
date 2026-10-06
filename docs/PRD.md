@@ -789,7 +789,7 @@ Recommendation: decide the name, then publish a real (if minimal) `0.0.x` from P
 
 ## M10 Code beauty (binding, MB2090 Oct 5, 2026)
 "The codebase should be as pretty as the performance is fast."
-- Readable first: clear names, small functions, one idea per module, no clever tricks without a comment explaining why.
+- Readable first: clear names, small functions, one idea per module, no clever tricks. What isn't obvious is explained by a name, a type, a test or public `///` docs, not by a comment (M14).
 - Unsafe code and SIMD are isolated in tiny, documented modules with a safe API and a scalar reference implementation alongside.
 - Every public item has rustdoc with an example; `#![deny(missing_docs)]` on public crates; doc examples are tested.
 - Tooling gates in CI: `cargo fmt --check`, `cargo clippy -- -D warnings` (pedantic where sensible), `cargo doc` with no warnings, `cargo deny`, and typos checks.
@@ -798,11 +798,11 @@ Recommendation: decide the name, then publish a real (if minimal) `0.0.x` from P
 
 ## M11 No shortcuts (binding, MB2090 Oct 5, 2026)
 "Readable, highly maintainable code. Do not take shortcuts."
-- No TODO/FIXME/`unimplemented!`/`todo!` merged to main without a linked issue; no commented-out code.
-- No disabling or skipping tests, lints, or benchmarks to get a PR green; no `#[allow]` without a written reason.
+- No `unimplemented!` or `todo!` merged to main; no TODO or FIXME comments and no commented-out code (M14). Deferred work is a tracked issue.
+- No disabling or skipping tests, lints, or benchmarks to get a PR green; no `#[allow]` at all. The only suppression is `#[expect(lint, reason = "...")]`, listed in `docs/lints.md` (M16).
 - No copy-paste duplication; extract shared logic.
 - No `unwrap`/`expect` in library code outside tests and documented invariants.
-- Fix root causes, not symptoms; workarounds require an issue and a comment.
+- Fix root causes, not symptoms. No workarounds (M16): if a convention or design blocks real work, change it in its own PR with MB2090 sign-off, tracked by an issue.
 - Muse rejects any PR that cuts a corner, even if tests and benchmarks pass.
 
 ## M12 Regular housekeeping (binding, MB2090 Oct 5, 2026)
@@ -818,6 +818,31 @@ lunatui is demoable early and continuously, so development can be watched in fli
 - Every PR body includes a **Proof** section: the demo command, a short capture of it running (GIF, PNG or asciinema), and benchmark numbers where relevant (the §T2 table). A PR with nothing to run (design doc, docs only) says so in its Proof section, with the reason.
 - Each early phase of §8 ends in a visible demo, named in its **Demo** line.
 - Muse does not post `SHIP` without the Proof section.
+
+## M14 No comments: code is the memory (binding, MB2090 Oct 6, 2026)
+- **The default is no comments.** Names, types and tests must explain the code. No `//` or `/* */` comments and no `//!` inner docs, in every crate.
+- **Documentation:** `///` rustdoc on public API items, with `missing_docs` on. Crate-level docs use `#![doc = include_str!("../README.md")]`.
+- **Exactly two approved comment exceptions (MB2090 rulings, Oct 6, 2026):**
+  1. The MPL-2.0 license header at the top of every source file. Its text is fixed and identical in every file (`docs/conventions.md` §10).
+  2. `// SAFETY:` comments on `unsafe` blocks. `clippy::undocumented_unsafe_blocks` is denied, so every `unsafe` block has one.
+- **New exceptions need MB2090's explicit approval.** Other comment types may be allowed case by case where they make sense. Propose a new exception in its own small PR, or flag it in a PR body as needing MB2090 sign-off. Once approved, it is added to the comment check's allowlist and listed in `docs/conventions.md` §10. Never add an exception on your own or slip a comment past the check.
+- CI enforces this with a check script that allows only the approved forms and fails on any other comment. Plain comments are not visible to clippy or dylint, so the script is the enforcement.
+- Muse checks it on every review.
+
+## M15 Mistakes become lints (binding, MB2090 Oct 6, 2026)
+- Any error or mistake found more than once during development (review findings, CI failures, bugs) becomes a new lint rule (clippy configuration, dylint, or the check script) in the same PR or the next one.
+- Each rule is listed in `docs/lints.md` with the mistake it prevents.
+- Muse checks it on every review.
+
+## M16 Locked down: conventional and standardized (binding, MB2090 Oct 6, 2026)
+"Locked down" means **highly conventional and standardized, with no workarounds or shortcuts**. lunatui is set up so only the correct patterns compile and pass CI. The items below are how that is enforced.
+- **One canonical way.** `docs/conventions.md` defines one canonical way for each recurring thing: module and file layout, naming, error types and propagation, constructors and builders, widget structure, tests and test names, benches, examples and captures, and feature flags. Everything else follows idiomatic Rust and the Rust API Guidelines unless that doc says otherwise. Code that does the same kind of thing a different way is a review blocker. Where a convention can be checked mechanically, CI checks it.
+- **No workarounds.** If a convention blocks real work, change the convention in its own PR with MB2090 sign-off. Never route around it.
+- **Strict lints, no `#[allow]`.** Workspace lints are strict and `#[allow]` is not permitted anywhere, even with a reason. The only suppression is `#[expect(lint, reason = "...")]`, and each one is listed in `docs/lints.md`.
+- **Dependency allowlist.** cargo-deny allows only the crates it lists.
+- **Architecture boundaries and size limits** are checked in CI.
+- **Sign-off.** Changes to lint or CI configuration need MB2090 sign-off (CODEOWNERS on mb2090 plus a PR label) and are never bundled with feature work.
+- Muse checks all of it on every review.
 
 ## T-update Seat assignments (MB2090 Oct 5, 2026)
 - Implementer: Claude Opus 5.5.
