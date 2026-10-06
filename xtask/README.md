@@ -1,0 +1,9 @@
+# xtask
+
+Development tasks for lunatui. Run them from anywhere in the repository with `cargo xtask <task>`.
+
+| Task | What it does |
+|---|---|
+| `cargo xtask bench` | Prints allocation and write metrics, checks the frame-time ceiling, then runs the criterion benchmarks, and the gungraun benchmarks when valgrind is installed. It fails if any step fails, including a ceiling breach. |
+| `cargo xtask check` | Checks the conventions that clippy can't (PRD M14, M16): the fixed license header, the comment ban and its approved exceptions, `///` only on public items, crate docs through `include_str!` of a README, every `#[expect]` listed in `docs/lints.md`, and every member manifest using only the workspace lints. |
+| `cargo xtask signoff <base> <head> <labeled>` | Fails when a pull request changes a path listed in `.github/CODEOWNERS` (lint, CI or dependency configuration) without the `mb2090-signoff` label. CI runs it on every pull request. |

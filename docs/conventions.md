@@ -3,7 +3,7 @@
 This document defines **one canonical way** for each recurring thing in lunatui. Anything it doesn't cover follows idiomatic Rust and the [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/).
 
 - Code that does the same kind of thing a different way is a review blocker.
-- Every rule is marked **CI** (checked mechanically) or **Review** (checked by Muse). Rules marked **CI (planned)** become CI checks in the PR that enforces M14 and M16. Until then Muse checks them by hand.
+- Every rule is marked **CI** (checked mechanically) or **Review** (checked by Muse). Rules marked **CI (planned)** don't have a mechanical check yet, so Muse checks them by hand until one lands.
 - If a convention blocks real work, change this document in its own PR with MB2090 sign-off. Never route around it.
 
 ## 1. Module and file layout
@@ -35,7 +35,7 @@ The dependency directions above are inferred from PRD §3.1 and must be confirme
 |---|---|
 | Each library crate has one error type, `pub enum Error`, in `src/error.rs`. It is `#[non_exhaustive]` and implements `Display`, `std::error::Error` and `From` for wrapped sources. | Review |
 | Each library crate has `pub type Result<T, E = Error> = core::result::Result<T, E>`. | Review |
-| Errors propagate with `?`. Library code never calls `unwrap`, `expect`, `panic!`, `todo!` or `unimplemented!` (M11). | CI (planned): `clippy::unwrap_used`, `expect_used`, `panic`, `todo`, `unimplemented` in library crates |
+| Errors propagate with `?`. Library code never calls `unwrap`, `expect`, `panic!`, `todo!` or `unimplemented!` (M11). | CI: `clippy::unwrap_used`, `expect_used`, `panic`, `todo`, `unimplemented`, denied workspace-wide crates |
 | Binaries (`xtask`, examples, benches) return `std::io::Result<()>` or `ExitCode` from `main`. | Review |
 | Error impls are hand-written. Adding an error-derive crate is a dependency-allowlist change (M16). | CI (cargo-deny allowlist, planned) |
 
@@ -76,7 +76,7 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 |---|---|
 | Benches live in `benches/benches/<name>.rs` with `harness = false` and are run through `cargo xtask bench`. | Review |
 | There are three kinds, named by kind: `metrics` (allocation and write counts), `criterion_<area>` (wall clock) and `gungraun_<area>` (instruction counts, behind the `gungraun` feature). | Review |
-| Every worst-case scene is registered in the `ceiling` bench (PRD §1.3, 8 ms maximum). | Review |
+| Every worst-case scene is registered in the `ceiling` bench (PRD §1.3). CI fails if any sample exceeds the 16 ms ceiling. The 8 ms target is measured on a dedicated machine and reported in every PR's Proof section. | CI (`cargo xtask bench`) and Review |
 | Timed code wraps inputs and outputs in `std::hint::black_box`. Write targets are reused, pre-sized buffers, never `io::sink()`, which the optimizer removes. | Review |
 | A workload's expected counts are documented on it and checked by the harness self-test. | Review |
 
@@ -103,10 +103,14 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 | Rule | Check |
 |---|---|
 | Formatting is `rustfmt` with default settings. There is no `rustfmt.toml`. | CI (`cargo fmt --check`) |
-| No `#[allow]`. Suppression is only `#[expect(lint, reason = "...")]`, listed in `docs/lints.md` (M16). | CI (planned): `clippy::allow_attributes`, `allow_attributes_without_reason`, plus a check that every `#[expect]` is listed |
-| No comments except the approved forms below (M14). Anything else fails the comment check script. | CI (planned): comment check script |
-| Every `.rs` file starts with exactly this license header, identical everywhere, followed by one blank line. | CI (planned): comment check script |
-| Every `unsafe` block is preceded by a `// SAFETY:` comment explaining why its contract holds. | CI (planned): `clippy::undocumented_unsafe_blocks` denied |
+| No `#[allow]`. Suppression is only `#[expect(lint, reason = "...")]`, listed in `docs/lints.md` (M16). | CI: `clippy::allow_attributes` and `allow_attributes_without_reason` denied; `cargo xtask check` fails on any unlisted `#[expect]`, a missing reason, or a stale listing |
+| No comments except the approved forms below (M14). Anything else fails the comment check. | CI: `cargo xtask check` |
+| `///` docs only on `pub` items (not `pub(crate)`), and on the fields, variants and trait items of public types. Never on `impl` blocks, trait-impl items, or items inside function bodies. | CI: `cargo xtask check` |
+| Member manifests use `[lints] workspace = true` and never override workspace lints. | CI: `cargo xtask check` |
+| Dependencies come only from the `deny.toml` allowlist. Adding a crate, or bumping any version in `Cargo.lock`, needs MB2090 sign-off (M16). | CI: `cargo deny` and `cargo xtask signoff` |
+| Lint, CI and dependency configuration (the paths in `.github/CODEOWNERS`) changes only with MB2090 sign-off, in a PR without feature work (M16). | CI: `cargo xtask signoff` (needs the `mb2090-signoff` label) and CODEOWNERS review |
+| Every `.rs` file starts with exactly this license header, identical everywhere, followed by one blank line. | CI: `cargo xtask check` |
+| Every `unsafe` block and `unsafe impl` is preceded by a `// SAFETY:` comment explaining why its contract holds. | CI: `clippy::undocumented_unsafe_blocks` denied |
 | `unsafe` code exists only in small modules that expose a safe API, and SIMD modules keep a scalar reference implementation alongside (M10). | Review |
 
 ### Approved comment forms (M14)
@@ -116,9 +120,9 @@ The default is no comments. These are the only exceptions MB2090 has approved. A
 | Form | Where | Approved |
 |---|---|---|
 | `///` rustdoc | On public API items only | M14 |
-| `#![doc = include_str!("../README.md")]` | Crate root, for crate-level docs | MB2090, 2026-10-06 |
+| `#![doc = include_str!("<path>/README.md")]` | Crate root of every target, for crate-level docs: libraries (`../README.md`), examples (`README.md`), benches, integration tests and `xtask` (`../README.md`) | MB2090, 2026-10-06 |
 | License header (text below) | First three lines of every `.rs` file | MB2090, 2026-10-06 |
-| `// SAFETY: <why the unsafe contract holds>` | Immediately before an `unsafe` block | MB2090, 2026-10-06 |
+| `// SAFETY: <why the unsafe contract holds>`, optionally continued on the following `//` lines | Immediately before an `unsafe` block or `unsafe impl` | MB2090, 2026-10-06 |
 
 The license header, exactly:
 
