@@ -510,7 +510,7 @@ The binding rules are in §M. This section lists the concrete harnesses that imp
 
 ## 8. Phased roadmap, PR by PR
 
-Conventions: every PR is small (target ≤ ~600 changed lines excluding generated tables and snapshots), built by one implementer seat, and reviewed per §T. Size **S** is about 1–3 days, **M** about 3–7 days of focused work (estimates). **DD-n** rows are design-doc PRs (M7), counted in the PR totals.
+Conventions: every PR is small (target ≤ ~600 changed lines excluding generated tables and snapshots), built by one implementer seat, and reviewed per §T. Size **S** is about 1–3 days, **M** about 3–7 days of focused work (estimates). **DD-n** rows are design-doc PRs (M7), counted in the PR totals. Under M13, every feature PR adds or extends a runnable example with a capture in its Proof section, and each early phase ends in a visible demo (its **Demo** line).
 
 ### 8.0 Per-PR acceptance criteria template (applies to every PR in addition to its row's "Accept")
 
@@ -526,6 +526,7 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 - [ ] M5 Fuzz: targets touched ____ ran ≥60 s in CI with no findings (input parser / encoder / caps / theme)
 - [ ] M6 Styled snapshots added or updated for visual changes; each snapshot diff explicitly accepted
 - [ ] M8 Dogfood: Scorecard branch builds against this PR (from PR 10 on), friction logged as `dogfood` issues
+- [ ] M13 Proof: `cargo run --example ____` (documented in examples/README.md); capture attached (GIF/PNG/asciinema); bench numbers where relevant
 - [ ] Docs on all new public items; CHANGELOG entry
 - [ ] T5 Authorship: all commits authored/committed by mb2090 noreply; no Co-authored-by trailers (CI `authorship` green)
 - [ ] T3 Muse: `SHIP <head-sha>` posted for the current head
@@ -536,12 +537,14 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 
 | PR | Title | Scope / files | Tests | Accept |
 |---|---|---|---|---|
-| 01 | Workspace scaffold | Cargo workspace, crates stubbed, MPL-2.0 `LICENSE` + headers, `deny.toml`, CI (fmt, clippy, test on Linux/macOS/Windows), MSRV pin | CI itself | CI green on 3 OSes; `cargo deny` passes |
+| 01 | Workspace scaffold | Cargo workspace, crates stubbed, MPL-2.0 `LICENSE` + headers, `deny.toml`, CI (fmt, clippy, test on Linux/macOS/Windows), MSRV pin; `examples/hello_box.rs` + `examples/README.md` (M13) | CI itself | CI green on 3 OSes; `cargo deny` passes; `cargo run --example hello_box` draws a bordered box with text |
 | 02 | Bench harness | `benches/` with criterion + gungraun, counting allocator, byte/write counters | Harness self-test | `xtask bench` runs and prints metrics |
 | 03 | ratatui baseline scenes | Port `ratatui-perf` scenes (dashboard, log, table, gradient) on pinned ratatui | Scenes render | Numbers within ±15% of `results.txt` on the same box |
 | 04 | Unicode width tables | `xtask gen-width` from UCD + emoji data → `lunatui-core/src/width/tables.rs`; `width(&str)` | Corpus + diff vs `unicode-width` (documented deltas) | All differences explained in `docs/width-policy.md` |
 | DD-1 | **Design doc: cell format** | `docs/adr/0001-cell-format.md`: 16-byte cell, grapheme slot, per-frame cluster table + ID seeding, continuation cells, mode 2027 policy, ExtTable, benchmarks | Prototype bench (from `ratatui-perf`) attached | Muse review, **Opus CP-1**, MB2090 sign-off |
 | 05 | Grapheme slot + cluster table | `core/src/grapheme.rs`: inline scalar, tagged `ClusterId`, per-frame `ClusterTable` with seeding from the previous frame | Proptest: round-trip; ID stability across frames | Zero allocations for inline glyphs; implements DD-1 |
+
+**Demo (Phase 0, M13):** `hello_box` draws a bordered box with text from PR 01, using the simplest working version (M9) until the grid and encoder land. PR 04 and PR 05 extend it with mixed-width lines (CJK, emoji, a ZWJ sequence) whose right border stays aligned, using the new width tables and grapheme slot. PR 02 and PR 03 show their bench output and the ratatui baseline scenes in their Proof sections.
 
 ### Phase 1: Grid and encoder
 
@@ -555,6 +558,8 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 | 11 | vt100 oracle + diff-apply property + encoder fuzz | `test/src/oracle.rs`, `fuzz/fuzz_encoder.rs`, `tests/differential/` harness | Proptest (old + encode(diff) == new) + fuzz | 10M fuzz execs clean; oracle on all snapshots |
 | 12 | Capability probe | `term/src/caps.rs`: env + batched queries (incl. DECRQM 2026/2027) + DA1 sentinel + timeout; enable 2027 when reported | Fake-terminal replies; PTY tests | Probe ≤ 200 ms worst case; correct on recorded replies from 6 terminals |
 | 13 | Color profiles + downsampling | `theme/src/profile.rs`: truecolor→256→16→mono (perceptual nearest) | Golden mappings | Gradient scene readable at 16 colors (snapshot) |
+
+**Demo (Phase 1, M13):** `hello_box` moves onto lunatui's own pipeline. PR 06 adds `cell_dump` (the box's cells in packed 16-byte form), PR 07 renders the box into a `Grid`, PR 08 prints the changed runs between two frames, PR 09 emits it through the encoder, and PR 10 shows it full-screen in the alternate screen with restore on exit. PR 12 adds `caps` (the probed `Caps` shown in a box) and PR 13 adds `gradient` (truecolor, 256, 16 and mono side by side). Phase 1 ends with `hello_box` running through grid → diff → encoder → session.
 
 ### Phase 2: Layout and text
 
@@ -570,6 +575,8 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 | 18 | WrapCache | `text/src/wrap/{mod,cache,index}.rs` | Proptest cached == fresh | 5k-line wrapped scroll ≤ 0.5 ms at 400×120 |
 | 19 | `RowSource` virtualization | `text/src/source.rs` | Unit | 1M-row table renders visible rows only (constant time vs length) |
 
+**Demo (Phase 2, M13):** PR 14 adds `layout` (panes split by constraints, re-solved on resize), extended by PR 15 and PR 16 with conflict cases and `Grid`/`Stack`/`Auto`. PR 17 and PR 18 add `log_viewer` (a wrapped 5k-line log scrolling on a timer until input lands in Phase 3), and PR 19 adds `big_table` (1M rows, visible rows only). Phase 2 ends with the log viewer and table inside a resizable layout.
+
 ### Phase 3: Runtime
 
 | PR | Title | Scope / files | Tests | Accept |
@@ -583,6 +590,8 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 | 25 | Animation primitives | `runtime/src/anim/{clock,ease,spring,tween}.rs` | Deterministic snapshots at time t | Frame-rate-independent results |
 | 26 | Theme tokens | `theme/src/{token,theme,serde}.rs`, light/dark from OSC 11 | Unit + snapshot | Theme switch re-encodes without re-render |
 | 27 | Windows backend (tier 2) | `term/src/sys/windows.rs` (VT output, input per D3) | CI on Windows; manual Windows Terminal check | Examples run in Windows Terminal |
+
+**Demo (Phase 3, M13):** PR 20 adds `keys` (decoded key, mouse, paste and focus events shown live). PR 23 adds the hello-world and counter examples on `run()`, and earlier examples move onto it. PR 24 makes the counter's buttons clickable and focusable, PR 25 adds `motion` (springs and tweens), and PR 26 adds a light/dark theme toggle. Phase 3 ends with an interactive counter app (mouse, focus, animation, theme switch), also running in Windows Terminal from PR 27.
 
 ### Phase 4: Widgets, testing kit, first release
 
@@ -598,6 +607,8 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 | 35 | Docs, examples, release **v0.1.0** | `docs/`, `examples/`, README perf table vs ratatui, porting notes | Doc tests | **Opus CP-4 pre-v0.1 review resolved**; **first usable release** |
 
 **First usable release = PR 35 in code-PR numbering, which is the 38th PR overall (35 code PRs + DD-1, DD-2, DD-3) → v0.1.0.**
+
+**Demo (Phase 4, M13):** PR 29 moves `hello_box` onto `Block`. PRs 30–33 add each widget to a `gallery` example. Phase 4 ends with the dashboard scene fully on lunatui (PR 32) and v0.1.0 (PR 35). From Phase 5 on, every PR still follows M13, and each row's Accept already names a visible result.
 
 ### Phase 5: Graphite and Scorecard (first real consumer)
 
@@ -797,6 +808,14 @@ Optimization and refactoring are a standing, recurring task, not a one-off phase
 - A housekeeping pass is scheduled regularly (e.g., after every ~5 feature PRs, or weekly): profile hot paths, review the benchmark trend, and refactor anything that grew too large or tangled under M9–M11.
 - Housekeeping PRs follow every rule above (tests first, benchmarks, small scope, proof in the body) and never mix with feature work.
 - Findings that can't be fixed in one pass become tracked issues labeled `housekeeping`.
+
+## M13 Demo every PR (binding, MB2090 Oct 6, 2026)
+lunatui is demoable early and continuously, so development can be watched in flight instead of arriving as one large feature set.
+- Every feature PR adds or extends a runnable example under `examples/`, run with one `cargo run --example <name>` command and documented in `examples/README.md`.
+- The first code PR (PR 01) already puts something on screen: a bordered box with text (`hello_box`).
+- Every PR body includes a **Proof** section: the demo command, a short capture of it running (GIF, PNG or asciinema), and benchmark numbers where relevant (the §T2 table). A PR with nothing to run (design doc, docs only) says so in its Proof section, with the reason.
+- Each early phase of §8 ends in a visible demo, named in its **Demo** line.
+- Muse does not post `SHIP` without the Proof section.
 
 ## T-update Seat assignments (MB2090 Oct 5, 2026)
 - Implementer: Claude Opus 5.5.
