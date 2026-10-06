@@ -13,6 +13,7 @@ workspace = true
 
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }
+ratatui = "=0.30.2"
 
 # Examples live in the top-level `examples/` directory (PRD M13) and are
 # listed here so each one runs with `cargo run --example <name>`.
