@@ -21,6 +21,8 @@ No rules yet.
 |---|---|---|---|
 | `benches/src/calibration.rs`, `grow_buffer` | `clippy::same_item_push` | Growing one push at a time is the workload being measured | PR 02 (#4) |
 | `benches/benches/gungraun_calibration.rs`, crate root | `missing_docs` | gungraun's benchmark macros generate undocumented public items | PR 02 (#4); `#[allow]` replaced in #6 |
+| `xtask/src/main.rs`, crate root | `dead_code` | M1 red commit: the gen-width stubs are implemented in the next commit (removed there) | PR 04a |
+| `xtask/src/main.rs`, crate root | `clippy::unnecessary_wraps` | M1 red commit: the gen-width stubs are implemented in the next commit (removed there) | PR 04a |
 
 ## Checks
 
