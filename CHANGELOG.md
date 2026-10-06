@@ -10,6 +10,9 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- ADR 0001 (DD-1, `docs/adr/0001-cell-format.md`): the 16-byte cell format,
+  with the cell prototype in `lunatui-bench`, the `criterion_cell_prototype`
+  bench and the `cell_prototype` example as evidence.
 - `lunatui_core::char_width` and `lunatui_core::width`: terminal display widths
   from tables generated from Unicode 18.0.0, with `docs/width-policy.md`
   listing every difference from `unicode-width`. `hello_box` now measures

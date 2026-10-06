@@ -39,6 +39,10 @@ name = "criterion_ratatui"
 harness = false
 
 [[bench]]
+name = "criterion_cell_prototype"
+harness = false
+
+[[bench]]
 name = "gungraun_calibration"
 harness = false
 required-features = ["gungraun"]
