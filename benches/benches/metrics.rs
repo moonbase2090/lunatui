@@ -2,9 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Prints allocation and write counts for each calibration workload.
-//!
-//! Run with `cargo xtask bench` or `cargo bench -p lunatui-bench --bench metrics`.
+#![doc = include_str!("../README.md")]
 
 use std::hint::black_box;
 use std::io;
@@ -33,7 +31,6 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-/// Runs `work` once with a counting writer over [`io::sink`] and returns its counts.
 fn measure(
     name: &'static str,
     work: impl FnOnce(&mut CountingWriter<io::Sink>) -> io::Result<()>,

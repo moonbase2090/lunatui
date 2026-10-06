@@ -2,8 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::visit::{self, Visit};
+use syn::{Attribute, Meta, Token};
 
 use super::Violation;
 
@@ -17,20 +22,131 @@ pub(crate) struct Expectation {
 
 pub(crate) type Listed = BTreeMap<(PathBuf, String), usize>;
 
-pub(crate) fn in_file(_path: &Path, _file: &syn::File) -> Vec<Expectation> {
-    Vec::new()
+const EXPECTATIONS_HEADING: &str = "## Lint expectations";
+
+pub(crate) fn in_file(path: &Path, file: &syn::File) -> Vec<Expectation> {
+    let mut collector = Collector {
+        path,
+        found: Vec::new(),
+    };
+    collector.visit_file(file);
+    collector.found
 }
 
-pub(crate) fn listed(_lints_doc: &str) -> Listed {
-    Listed::new()
+pub(crate) fn listed(lints_doc: &str) -> Listed {
+    let mut listed = Listed::new();
+    let mut in_expectations = false;
+    for (index, line) in lints_doc.lines().enumerate() {
+        if line.starts_with("## ") {
+            in_expectations = line.starts_with(EXPECTATIONS_HEADING);
+            continue;
+        }
+        let mut cells = line.split('|').skip(1);
+        if let (true, Some(location), Some(lint)) = (
+            in_expectations,
+            cells.next().and_then(first_code_span),
+            cells.next().and_then(first_code_span),
+        ) {
+            listed.insert((PathBuf::from(location), lint.to_owned()), index + 1);
+        }
+    }
+    listed
 }
 
 pub(crate) fn violations(
-    _found: &[Expectation],
-    _listed: &Listed,
-    _lints_doc: &Path,
+    found: &[Expectation],
+    listed: &Listed,
+    lints_doc: &Path,
 ) -> Vec<Violation> {
-    Vec::new()
+    let mut violations = Vec::new();
+    let mut used = BTreeSet::new();
+    for expectation in found {
+        if !expectation.has_reason {
+            violations.push(Violation::new(
+                &expectation.path,
+                expectation.line,
+                "`#[expect]` needs `reason = \"...\"` (M16)",
+            ));
+        }
+        let key = (expectation.path.clone(), expectation.lint.clone());
+        if listed.contains_key(&key) {
+            used.insert(key);
+        } else {
+            violations.push(Violation::new(
+                &expectation.path,
+                expectation.line,
+                format!(
+                    "`#[expect({})]` is not listed in docs/lints.md (M16)",
+                    expectation.lint
+                ),
+            ));
+        }
+    }
+    for (key, line) in listed {
+        if !used.contains(key) {
+            violations.push(Violation::new(
+                lints_doc,
+                *line,
+                format!(
+                    "listed expectation `{}` in `{}` no longer exists",
+                    key.1,
+                    key.0.display()
+                ),
+            ));
+        }
+    }
+    violations
+}
+
+fn first_code_span(cell: &str) -> Option<&str> {
+    let start = cell.find('`')? + 1;
+    let length = cell[start..].find('`')?;
+    Some(&cell[start..start + length])
+}
+
+fn lint_name(path: &syn::Path) -> String {
+    path.segments
+        .iter()
+        .map(|segment| segment.ident.to_string())
+        .collect::<Vec<_>>()
+        .join("::")
+}
+
+struct Collector<'p> {
+    path: &'p Path,
+    found: Vec<Expectation>,
+}
+
+impl<'ast> Visit<'ast> for Collector<'_> {
+    fn visit_attribute(&mut self, attr: &'ast Attribute) {
+        if attr.path().is_ident("expect") {
+            let line = attr.span().start().line;
+            match attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated) {
+                Ok(metas) => {
+                    let has_reason = metas.iter().any(
+                        |meta| matches!(meta, Meta::NameValue(pair) if pair.path.is_ident("reason")),
+                    );
+                    for meta in &metas {
+                        if let Meta::Path(lint) = meta {
+                            self.found.push(Expectation {
+                                path: self.path.to_owned(),
+                                line,
+                                lint: lint_name(lint),
+                                has_reason,
+                            });
+                        }
+                    }
+                }
+                Err(_) => self.found.push(Expectation {
+                    path: self.path.to_owned(),
+                    line,
+                    lint: "<unparsable #[expect]>".to_owned(),
+                    has_reason: false,
+                }),
+            }
+        }
+        visit::visit_attribute(self, attr);
+    }
 }
 
 #[cfg(test)]

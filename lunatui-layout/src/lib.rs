@@ -2,9 +2,5 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Layout engine for lunatui: constraints, closed-form solver, solver fallback, `Grid`/`Stack` and memo.
-//!
-//! This crate is a stub from the workspace scaffold (PRD §8, PR 01). Its
-//! contents land in later roadmap PRs.
-
+#![doc = include_str!("../README.md")]
 #![no_std]

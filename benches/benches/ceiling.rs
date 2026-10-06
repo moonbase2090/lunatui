@@ -2,14 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Frame-time ceiling gate (PRD §1.3): times every worst-case benchmark and
-//! exits with failure if any single sample exceeds 8 ms.
-//!
-//! Until lunatui can render, the worst cases are calibration stand-ins for the
-//! write stage only: copying a full truecolor repaint's bytes at 400×120 and
-//! 800×240. Real worst-case scenes join this list as their pipeline stages land.
-//!
-//! Run with `cargo xtask bench` or `cargo bench -p lunatui-bench --bench ceiling`.
+#![doc = include_str!("../README.md")]
 
 use std::hint::black_box;
 use std::io;
@@ -17,7 +10,7 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use lunatui_bench::calibration::{frame, truecolor_frame_bytes, write_frame};
-use lunatui_bench::ceiling::{FRAME_CEILING, FrameTimes, sample};
+use lunatui_bench::ceiling::{FRAME_CEILING, FRAME_TARGET, FrameTimes, Verdict, sample};
 
 const SAMPLES: usize = 1000;
 
@@ -28,36 +21,45 @@ const WORST_CASES: [(&str, usize, usize); 2] = [
 
 fn main() -> io::Result<ExitCode> {
     println!(
-        "{:<45}{:>8}{:>11}{:>11}{:>11}  ceiling {}",
+        "{:<45}{:>8}{:>11}{:>11}{:>11}  target {}, ceiling {}",
         "worst case",
         "samples",
         "p50",
         "p99",
         "max",
+        millis(FRAME_TARGET),
         millis(FRAME_CEILING)
     );
-    let mut all_within = true;
+    let mut over_ceiling = false;
     for (name, cols, rows) in WORST_CASES {
         let times = time_truecolor_write(cols, rows)?;
-        let within = times.within(FRAME_CEILING);
-        all_within &= within;
+        let verdict = times.verdict();
+        over_ceiling |= verdict == Verdict::OverCeiling;
         println!(
             "{name:<45}{:>8}{:>11}{:>11}{:>11}  {}",
             times.samples,
             millis(times.p50),
             millis(times.p99),
             millis(times.max),
-            if within { "ok" } else { "OVER" }
+            verdict_label(verdict)
         );
     }
-    if all_within {
-        Ok(ExitCode::SUCCESS)
-    } else {
+    if over_ceiling {
         eprintln!(
             "frame-time ceiling exceeded: a worst-case frame took longer than {}",
             millis(FRAME_CEILING)
         );
         Ok(ExitCode::FAILURE)
+    } else {
+        Ok(ExitCode::SUCCESS)
+    }
+}
+
+fn verdict_label(verdict: Verdict) -> &'static str {
+    match verdict {
+        Verdict::WithinTarget => "within target",
+        Verdict::OverTarget => "over target",
+        Verdict::OverCeiling => "OVER CEILING",
     }
 }
 

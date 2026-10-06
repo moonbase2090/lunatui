@@ -2,12 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Harness self-test: the counters must report the documented cost of every
-//! calibration workload.
-//!
-//! This runs without the libtest harness (`harness = false`), because the
-//! allocation counts are process-wide and libtest's own threads would
-//! otherwise add to them.
+#![doc = include_str!("../README.md")]
 
 use std::io;
 
