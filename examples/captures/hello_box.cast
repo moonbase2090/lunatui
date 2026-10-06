@@ -1,4 +1,4 @@
-{"version":3,"term":{"cols":60,"rows":14},"timestamp":1791303566,"command":"sh -c 'printf \"\\$ cargo run --example hello_box -- --metrics\\n\"; sleep 0.6; cargo run -q --example hello_box -- --metrics; sleep 2.5'","env":{"SHELL":"/bin/zsh"}}
+{"version":3,"term":{"cols":60,"rows":16},"timestamp":1791321392,"command":"sh -c 'printf \"\\$ cargo run --example hello_box -- --metrics\\n\"; sleep 0.6; cargo run -q --example hello_box -- --metrics; sleep 2.5'","env":{"SHELL":"/bin/zsh"}}
 [0.006, "o", "$ cargo run --example hello_box -- --metrics\r\n"]
-[0.810, "o", "┌──────────────────────┐\r\n│ Hello from lunatui   │\r\n│ PR 02: bench harness │\r\n└──────────────────────┘\r\n┌──────────────────────────────┐\r\n│ write() calls: 1             │\r\n│ bytes written: 204           │\r\n│ allocations:   5 (892 bytes) │\r\n└──────────────────────────────┘\r\n"]
-[2.513, "x", "0"]
+[0.844, "o", "┌─────────────────────────────┐\r\n│ Hello from lunatui          │\r\n│ PR 04: Unicode width tables │\r\n│ 日本語 한국어 🦀 café       │\r\n└─────────────────────────────┘\r\n┌───────────────────────────────┐\r\n│ write() calls: 1              │\r\n│ bytes written: 305            │\r\n│ allocations:   8 (1264 bytes) │\r\n└───────────────────────────────┘\r\n"]
+[2.512, "x", "0"]
