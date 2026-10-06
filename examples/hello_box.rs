@@ -11,6 +11,7 @@
 //! Run with `cargo run --example hello_box`.
 
 use std::io::{self, Write};
+use std::iter;
 
 const LINES: [&str; 2] = ["Hello from lunatui", "PR 01: workspace scaffold"];
 
@@ -21,8 +22,28 @@ fn main() -> io::Result<()> {
 }
 
 /// Renders `lines` inside a single-line border, padded by one space on each side.
-fn render_box(_lines: &[&str]) -> String {
-    String::new()
+///
+/// Widths are counted in `char`s, which is correct for the ASCII text drawn
+/// here. Display widths for wide and multi-codepoint graphemes arrive with the
+/// width tables (PR 04) and grapheme slot (PR 05).
+fn render_box(lines: &[&str]) -> String {
+    let text_width = lines
+        .iter()
+        .map(|line| line.chars().count())
+        .max()
+        .unwrap_or(0);
+    let border = "─".repeat(text_width + 2);
+
+    let top = format!("┌{border}┐\n");
+    let rows = lines
+        .iter()
+        .map(|line| format!("│ {line:<text_width$} │\n"));
+    let bottom = format!("└{border}┘\n");
+
+    iter::once(top)
+        .chain(rows)
+        .chain(iter::once(bottom))
+        .collect()
 }
 
 #[cfg(test)]
