@@ -835,6 +835,7 @@ name = "lunatui"
 version = "0.0.0"
 dependencies = [
  "lunatui-bench",
+ "lunatui-core",
  "ratatui",
 ]
 

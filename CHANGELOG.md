@@ -12,7 +12,8 @@ Every PR adds its entry under **Unreleased**.
 
 - `cargo xtask gen-width` generates the Unicode 18.0.0 width tables for
   `lunatui-core`, and `unicode-width` 0.2.2 is a dev-dependency of
-  `lunatui-core` for the differential width tests (PR 04a, #11).
+  `lunatui-core` for the differential width tests. The `lunatui` facade's
+  examples can use `lunatui-core` (PR 04a, #11).
 - ratatui baseline scenes (dashboard, log, table, gradient) ported from
   ratatui-perf, with fidelity tests, ratatui rows in the `metrics` bench, a
   `criterion_ratatui` wall-clock bench, and the `ratatui_dashboard` example
