@@ -21,3 +21,8 @@ ratatui = "=0.30.2"
 name = "hello_box"
 path = "../examples/hello_box.rs"
 test = true
+
+[[example]]
+name = "ratatui_dashboard"
+path = "../examples/ratatui_dashboard.rs"
+test = true
