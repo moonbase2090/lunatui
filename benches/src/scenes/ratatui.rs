@@ -13,6 +13,7 @@ pub mod table;
 
 use std::io;
 
+use ratatui::backend::{Backend, CrosstermBackend};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::style::Colored;
 
@@ -54,10 +55,10 @@ pub struct Encoded {
 /// Returns any error from the crossterm backend.
 pub fn encode(previous: &Buffer, next: &Buffer, out: &mut Vec<u8>) -> io::Result<Encoded> {
     out.clear();
-    let _ = (previous, next);
+    CrosstermBackend::new(&mut *out).draw(previous.diff_iter(next))?;
     Ok(Encoded {
-        changed_cells: 0,
-        bytes: 0,
-        csi_sequences: 0,
+        changed_cells: previous.diff_iter(next).count(),
+        bytes: out.len(),
+        csi_sequences: out.windows(2).filter(|pair| *pair == b"\x1b[").count(),
     })
 }
