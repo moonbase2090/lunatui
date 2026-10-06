@@ -4,3 +4,7 @@
 
 #![doc = include_str!("../README.md")]
 #![no_std]
+
+mod width;
+
+pub use width::{UNICODE_VERSION, char_width, width};
