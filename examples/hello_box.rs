@@ -8,17 +8,45 @@
 //! the box as a plain string and prints it. Later PRs move it onto lunatui's
 //! own pipeline (PRD §8, Phase 0 and Phase 1 Demo lines).
 //!
-//! Run with `cargo run --example hello_box`.
+//! With `--metrics` it also prints what drawing the box cost, measured with
+//! the bench harness counters (PR 02): allocations, `write()` calls and bytes.
+//!
+//! Run with `cargo run --example hello_box`, or
+//! `cargo run --example hello_box -- --metrics`.
 
+use std::env;
 use std::io::{self, Write};
 use std::iter;
 
-const LINES: [&str; 2] = ["Hello from lunatui", "PR 01: workspace scaffold"];
+use lunatui_bench::{AllocStats, CountingAllocator, CountingWriter, WriteStats};
+
+#[global_allocator]
+static ALLOC: CountingAllocator = CountingAllocator::system();
+
+const LINES: [&str; 2] = ["Hello from lunatui", "PR 02: bench harness"];
 
 fn main() -> io::Result<()> {
-    let mut stdout = io::stdout().lock();
-    stdout.write_all(render_box(&LINES).as_bytes())?;
-    stdout.flush()
+    let show_metrics = env::args().skip(1).any(|arg| arg == "--metrics");
+
+    let mut stdout = CountingWriter::new(io::stdout().lock());
+    let (drawn, alloc) = ALLOC.measure(|| {
+        stdout.write_all(render_box(&LINES).as_bytes())?;
+        stdout.flush()
+    });
+    drawn?;
+
+    if show_metrics {
+        let lines = metrics_lines(alloc, stdout.stats());
+        let mut stdout = stdout.into_inner();
+        stdout.write_all(render_box(&lines.each_ref().map(String::as_str)).as_bytes())?;
+        stdout.flush()?;
+    }
+    Ok(())
+}
+
+/// Describes the cost of drawing the box, one line per counter.
+fn metrics_lines(_alloc: AllocStats, _write: WriteStats) -> [String; 3] {
+    [String::new(), String::new(), String::new()]
 }
 
 /// Renders `lines` inside a single-line border, padded by one space on each side.
@@ -48,7 +76,32 @@ fn render_box(lines: &[&str]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{LINES, render_box};
+    use lunatui_bench::{AllocStats, WriteStats};
+
+    use super::{LINES, metrics_lines, render_box};
+
+    #[test]
+    fn metrics_lines_report_each_counter() {
+        let alloc = AllocStats {
+            allocations: 3,
+            reallocations: 0,
+            deallocations: 3,
+            bytes_allocated: 412,
+        };
+        let write = WriteStats {
+            writes: 1,
+            bytes: 128,
+            flushes: 1,
+        };
+        assert_eq!(
+            metrics_lines(alloc, write),
+            [
+                "write() calls: 1",
+                "bytes written: 128",
+                "allocations:   3 (412 bytes)",
+            ]
+        );
+    }
 
     #[test]
     fn draws_border_around_text() {
