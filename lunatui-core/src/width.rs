@@ -4,6 +4,8 @@
 
 mod tables;
 
+use core::cmp::Ordering;
+
 use tables::{WIDE, ZERO_WIDTH};
 
 /// The Unicode version the width tables were generated from.
@@ -49,12 +51,27 @@ pub fn char_width(c: char) -> usize {
 /// ```
 #[must_use]
 pub fn width(text: &str) -> usize {
-    text.chars().count()
+    if text.is_ascii() {
+        text.bytes()
+            .filter(|byte| (b' '..=b'~').contains(byte))
+            .count()
+    } else {
+        text.chars().map(char_width).sum()
+    }
 }
 
 fn contains(ranges: &[(u32, u32)], code_point: u32) -> bool {
-    let _ = (ranges, code_point);
-    false
+    ranges
+        .binary_search_by(|&(start, end)| {
+            if end < code_point {
+                Ordering::Less
+            } else if start > code_point {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
+        })
+        .is_ok()
 }
 
 #[cfg(test)]
