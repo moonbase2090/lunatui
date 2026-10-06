@@ -819,6 +819,18 @@ lunatui is demoable early and continuously, so development can be watched in fli
 - Each early phase of §8 ends in a visible demo, named in its **Demo** line.
 - Muse does not post `SHIP` without the Proof section.
 
+## M14 No comments: code is the memory (binding, MB2090 Oct 6, 2026)
+- No `//` or `/* */` comments and no `//!` inner docs, in every crate. The only allowed comments are `///` rustdoc on public API items, and `missing_docs` stays on.
+- Names, types and tests must explain the code.
+- License headers go in REUSE metadata and Cargo `license` metadata, not in comments.
+- CI enforces this with a check script that fails on any comment other than `///`, plus a clippy or dylint rule if feasible.
+- Muse checks it on every review.
+
+## M15 Mistakes become lints (binding, MB2090 Oct 6, 2026)
+- Any error or mistake found more than once during development (review findings, CI failures, bugs) becomes a new lint rule (clippy configuration, dylint, or the check script) in the same PR or the next one.
+- Each rule is listed in `docs/lints.md` with the mistake it prevents.
+- Muse checks it on every review.
+
 ## T-update Seat assignments (MB2090 Oct 5, 2026)
 - Implementer: Claude Opus 5.5.
 - Reviewer (every PR, blind, SHIP <sha>): a dedicated Muse seat (muse-spark-1.3-contributor, xhigh), a different model family from the implementer.
