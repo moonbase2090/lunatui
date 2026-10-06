@@ -12,8 +12,9 @@ Every PR adds its entry under **Unreleased**.
 
 - `ratatui` 0.30.2 (pinned) as a dependency of `lunatui-bench` and a
   dev-dependency of the `lunatui` facade (for examples), for the ratatui
-  baseline scenes in PR 03. Its crates are on the cargo-deny
-  allowlist, and Zlib joins the allowed licenses for `foldhash`.
+  baseline scenes in PR 03. Its crates are on the cargo-deny allowlist, and
+  Zlib joins the allowed licenses for `foldhash` (#7).
+- typos skips `*.cast` capture recordings, which are raw terminal output (#7).
 - `cargo xtask check` enforces PRD M14 and M16: the fixed license header, the
   comment ban with its approved exceptions, `///` only on public items, crate
   docs through `include_str!` of a README, the `#[expect]` inventory in
