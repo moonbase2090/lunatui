@@ -37,8 +37,10 @@ impl PackedCell {
     /// The cell as one 128-bit word: glyph in the low 32 bits, then fg, bg and meta.
     #[must_use]
     pub fn to_bits(self) -> u128 {
-        let _ = self;
-        0
+        u128::from(self.glyph)
+            | u128::from(self.fg) << 32
+            | u128::from(self.bg) << 64
+            | u128::from(self.meta) << 96
     }
 }
 
@@ -120,16 +122,36 @@ fn indexed(index: u32) -> u32 {
 /// with one slice comparison each.
 #[must_use]
 pub fn changed_cells(previous: &[PackedCell], next: &[PackedCell], width: usize) -> usize {
-    let _ = (previous, next, width);
-    0
+    previous
+        .chunks_exact(width)
+        .zip(next.chunks_exact(width))
+        .filter(|(before, after)| before != after)
+        .map(|(before, after)| {
+            before
+                .iter()
+                .zip(after)
+                .filter(|(old, new)| old != new)
+                .count()
+        })
+        .sum()
 }
 
 /// Counts the cells that differ between two grids of `width` columns stored as 128-bit
 /// words. Equal rows are skipped with one slice comparison, which compiles to `memcmp`.
 #[must_use]
 pub fn changed_words(previous: &[u128], next: &[u128], width: usize) -> usize {
-    let _ = (previous, next, width);
-    0
+    previous
+        .chunks_exact(width)
+        .zip(next.chunks_exact(width))
+        .filter(|(before, after)| before != after)
+        .map(|(before, after)| {
+            before
+                .iter()
+                .zip(after)
+                .filter(|(old, new)| old != new)
+                .count()
+        })
+        .sum()
 }
 
 /// Writes an FNV-1a hash of each row of `width` cells into `hashes`, for a dirty-row check.
