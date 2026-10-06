@@ -15,6 +15,8 @@ use std::process::ExitCode;
 
 use crate::git;
 
+pub(crate) use comments::LICENSE_HEADER;
+
 const LINTS_DOC: &str = "docs/lints.md";
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
