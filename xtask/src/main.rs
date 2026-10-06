@@ -6,8 +6,10 @@
 //!
 //! Tasks:
 //!
-//! - `bench`: prints allocation and write metrics, then runs the criterion
-//!   benchmarks, then the gungraun benchmarks when valgrind is installed.
+//! - `bench`: prints allocation and write metrics, checks the 8 ms frame-time
+//!   ceiling, then runs the criterion benchmarks, then the gungraun benchmarks
+//!   when valgrind is installed. It fails if any step fails, including a
+//!   ceiling breach.
 
 use std::env;
 use std::path::Path;
@@ -111,6 +113,10 @@ mod tests {
         target: "metrics",
         feature: None,
     };
+    const CEILING: BenchStep = BenchStep {
+        target: "ceiling",
+        feature: None,
+    };
     const CRITERION: BenchStep = BenchStep {
         target: "criterion_calibration",
         feature: None,
@@ -122,12 +128,12 @@ mod tests {
 
     #[test]
     fn plan_without_valgrind_skips_gungraun() {
-        assert_eq!(bench_plan(false), [METRICS, CRITERION]);
+        assert_eq!(bench_plan(false), [METRICS, CEILING, CRITERION]);
     }
 
     #[test]
     fn plan_with_valgrind_ends_with_gungraun() {
-        assert_eq!(bench_plan(true), [METRICS, CRITERION, GUNGRAUN]);
+        assert_eq!(bench_plan(true), [METRICS, CEILING, CRITERION, GUNGRAUN]);
     }
 
     #[test]

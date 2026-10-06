@@ -1,0 +1,138 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+//! The binding frame-time ceiling (PRD §1.3): no frame may take longer than
+//! 8 ms, end to end, at any supported size.
+//!
+//! The gate is on the maximum, not a percentile: every sample of every
+//! worst-case benchmark must be at or under [`FRAME_CEILING`].
+
+use std::time::{Duration, Instant};
+
+/// Hard ceiling on the time of any single frame (PRD §1.3).
+pub const FRAME_CEILING: Duration = Duration::from_millis(8);
+
+/// Frame-time statistics for one worst-case benchmark.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FrameTimes {
+    /// Number of frames timed.
+    pub samples: usize,
+    /// Median frame time (nearest rank).
+    pub p50: Duration,
+    /// 99th-percentile frame time (nearest rank), reported for context only.
+    pub p99: Duration,
+    /// Slowest frame. The ceiling gates on this.
+    pub max: Duration,
+}
+
+impl FrameTimes {
+    /// Summarizes `samples`, or returns `None` when there are none.
+    #[must_use]
+    pub fn from_samples(_samples: &[Duration]) -> Option<Self> {
+        None
+    }
+
+    /// Returns whether every sample is at or under `ceiling`.
+    #[must_use]
+    pub fn within(&self, _ceiling: Duration) -> bool {
+        false
+    }
+}
+
+/// Times `count` runs of `frame`, returning one sample per run.
+///
+/// # Errors
+///
+/// Returns the first error from `frame`.
+pub fn sample<E>(_count: usize, _frame: impl FnMut() -> Result<(), E>) -> Result<Vec<Duration>, E> {
+    let _ = Instant::now();
+    Ok(Vec::new())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::convert::Infallible;
+    use std::time::Duration;
+
+    use super::{FRAME_CEILING, FrameTimes, sample};
+
+    fn millis(range: std::ops::RangeInclusive<u64>) -> Vec<Duration> {
+        range.map(Duration::from_millis).collect()
+    }
+
+    fn times_with_max(max: Duration) -> FrameTimes {
+        FrameTimes {
+            samples: 1,
+            p50: max,
+            p99: max,
+            max,
+        }
+    }
+
+    #[test]
+    fn summarizes_by_nearest_rank() {
+        let expected = FrameTimes {
+            samples: 100,
+            p50: Duration::from_millis(50),
+            p99: Duration::from_millis(99),
+            max: Duration::from_millis(100),
+        };
+        assert_eq!(FrameTimes::from_samples(&millis(1..=100)), Some(expected));
+    }
+
+    #[test]
+    fn sample_order_does_not_matter() {
+        let mut samples = millis(1..=100);
+        samples.reverse();
+        assert_eq!(
+            FrameTimes::from_samples(&samples),
+            FrameTimes::from_samples(&millis(1..=100))
+        );
+    }
+
+    #[test]
+    fn no_samples_means_no_summary() {
+        assert_eq!(FrameTimes::from_samples(&[]), None);
+    }
+
+    #[test]
+    fn a_max_at_the_ceiling_passes() {
+        assert!(times_with_max(FRAME_CEILING).within(FRAME_CEILING));
+    }
+
+    #[test]
+    fn one_slow_frame_fails_even_when_p99_passes() {
+        let mut samples = vec![Duration::from_millis(1); 999];
+        samples.push(FRAME_CEILING + Duration::from_nanos(1));
+        let times = FrameTimes::from_samples(&samples);
+        assert_eq!(times.map(|t| t.p99), Some(Duration::from_millis(1)));
+        assert_eq!(times.map(|t| t.within(FRAME_CEILING)), Some(false));
+    }
+
+    #[test]
+    fn sample_times_every_run() {
+        let mut runs = 0;
+        let samples = sample(5, || {
+            runs += 1;
+            Ok::<(), Infallible>(())
+        });
+        assert_eq!(samples.map(|s| s.len()), Ok(5));
+        assert_eq!(runs, 5);
+    }
+
+    #[test]
+    fn sample_stops_at_the_first_error() {
+        let mut runs = 0;
+        let samples = sample(5, || {
+            runs += 1;
+            if runs == 2 {
+                Err("frame failed")
+            } else {
+                Ok(())
+            }
+        });
+        assert_eq!(samples, Err("frame failed"));
+        assert_eq!(runs, 2);
+    }
+}

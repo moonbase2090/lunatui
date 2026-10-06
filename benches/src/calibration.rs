@@ -13,6 +13,16 @@ use std::io::{self, Write};
 /// Size of the large truecolor frame in PRD §1.3 (68 KB).
 pub const LARGE_FRAME_BYTES: usize = 68 * 1024;
 
+/// Bytes in a full truecolor repaint of a `cols` × `rows` grid, scaled from the
+/// measured ratatui gradient frame in PRD §1.3 (68 KB at 200×60).
+///
+/// The frame-time ceiling's worst cases use this size until lunatui's own
+/// encoder can produce the real frame.
+#[must_use]
+pub fn truecolor_frame_bytes(_cols: usize, _rows: usize) -> usize {
+    0
+}
+
 /// Builds a frame buffer of `len` bytes.
 ///
 /// Expected cost: exactly one allocation of `len` bytes (none when `len` is 0).
@@ -48,4 +58,20 @@ pub fn grow_buffer(count: usize) -> Vec<u8> {
         buffer.push(b'x');
     }
     buffer
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{LARGE_FRAME_BYTES, truecolor_frame_bytes};
+
+    #[test]
+    fn truecolor_frame_matches_the_measured_200x60_frame() {
+        assert_eq!(truecolor_frame_bytes(200, 60), LARGE_FRAME_BYTES);
+    }
+
+    #[test]
+    fn truecolor_frame_scales_with_cell_count() {
+        assert_eq!(truecolor_frame_bytes(400, 120), 4 * LARGE_FRAME_BYTES);
+        assert_eq!(truecolor_frame_bytes(800, 240), 16 * LARGE_FRAME_BYTES);
+    }
 }
