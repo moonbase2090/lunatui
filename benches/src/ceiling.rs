@@ -29,15 +29,27 @@ pub struct FrameTimes {
 impl FrameTimes {
     /// Summarizes `samples`, or returns `None` when there are none.
     #[must_use]
-    pub fn from_samples(_samples: &[Duration]) -> Option<Self> {
-        None
+    pub fn from_samples(samples: &[Duration]) -> Option<Self> {
+        let mut sorted = samples.to_vec();
+        sorted.sort_unstable();
+        Some(Self {
+            samples: sorted.len(),
+            p50: nearest_rank(&sorted, 50)?,
+            p99: nearest_rank(&sorted, 99)?,
+            max: *sorted.last()?,
+        })
     }
 
     /// Returns whether every sample is at or under `ceiling`.
     #[must_use]
-    pub fn within(&self, _ceiling: Duration) -> bool {
-        false
+    pub fn within(&self, ceiling: Duration) -> bool {
+        self.max <= ceiling
     }
+}
+
+fn nearest_rank(sorted: &[Duration], percent: usize) -> Option<Duration> {
+    let rank = (percent * sorted.len()).div_ceil(100).max(1);
+    sorted.get(rank - 1).copied()
 }
 
 /// Times `count` runs of `frame`, returning one sample per run.
@@ -45,9 +57,17 @@ impl FrameTimes {
 /// # Errors
 ///
 /// Returns the first error from `frame`.
-pub fn sample<E>(_count: usize, _frame: impl FnMut() -> Result<(), E>) -> Result<Vec<Duration>, E> {
-    let _ = Instant::now();
-    Ok(Vec::new())
+pub fn sample<E>(
+    count: usize,
+    mut frame: impl FnMut() -> Result<(), E>,
+) -> Result<Vec<Duration>, E> {
+    let mut samples = Vec::with_capacity(count);
+    for _ in 0..count {
+        let start = Instant::now();
+        frame()?;
+        samples.push(start.elapsed());
+    }
+    Ok(samples)
 }
 
 #[cfg(test)]

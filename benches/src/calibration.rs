@@ -19,8 +19,8 @@ pub const LARGE_FRAME_BYTES: usize = 68 * 1024;
 /// The frame-time ceiling's worst cases use this size until lunatui's own
 /// encoder can produce the real frame.
 #[must_use]
-pub fn truecolor_frame_bytes(_cols: usize, _rows: usize) -> usize {
-    0
+pub fn truecolor_frame_bytes(cols: usize, rows: usize) -> usize {
+    LARGE_FRAME_BYTES * cols * rows / (200 * 60)
 }
 
 /// Builds a frame buffer of `len` bytes.

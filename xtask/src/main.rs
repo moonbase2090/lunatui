@@ -73,6 +73,10 @@ fn bench_plan(valgrind: bool) -> Vec<BenchStep> {
             feature: None,
         },
         BenchStep {
+            target: "ceiling",
+            feature: None,
+        },
+        BenchStep {
             target: "criterion_calibration",
             feature: None,
         },
