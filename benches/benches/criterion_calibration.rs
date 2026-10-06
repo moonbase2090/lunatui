@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Wall-clock benchmarks of the calibration workloads (criterion, PRD §6.1).
+#![doc = include_str!("../README.md")]
 
 use std::hint::black_box;
 
@@ -16,13 +16,11 @@ fn calibration(c: &mut Criterion) {
         b.iter(|| frame(black_box(LARGE_FRAME_BYTES)));
     });
     let large = frame(LARGE_FRAME_BYTES);
-    // A reused, pre-sized buffer: measures the copy, not an allocation, and
-    // unlike `io::sink()` it cannot be optimized away.
-    let mut out = Vec::with_capacity(LARGE_FRAME_BYTES);
+    let mut reused_presized_output = Vec::with_capacity(LARGE_FRAME_BYTES);
     group.bench_function("write_frame_68k", |b| {
         b.iter(|| {
-            out.clear();
-            write_frame(&mut out, black_box(&large))
+            reused_presized_output.clear();
+            write_frame(&mut reused_presized_output, black_box(&large))
         });
     });
     group.finish();

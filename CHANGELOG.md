@@ -10,6 +10,16 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `cargo xtask check` enforces PRD M14 and M16: the fixed license header, the
+  comment ban with its approved exceptions, `///` only on public items, crate
+  docs through `include_str!` of a README, the `#[expect]` inventory in
+  `docs/lints.md`, and workspace lints in every member (#6).
+- Restriction lints: no `#[allow]`, no undocumented `unsafe`, no `unwrap`,
+  `expect`, `panic!`, `todo!` or `unimplemented!` (#6).
+- cargo-deny dependency allowlist, CODEOWNERS for lint, CI and dependency
+  configuration, and a Sign-off workflow (`cargo xtask signoff`) requiring the
+  `mb2090-signoff` label (#6).
+
 - PRD rules M14 (no comments: code is the memory), M15 (mistakes become
   lints) and M16 (locked down: conventional and standardized), with
   `docs/conventions.md` and `docs/lints.md`.
@@ -24,3 +34,12 @@ Every PR adds its entry under **Unreleased**.
   `cargo deny` and typos checks (PR 01, #3).
 - `hello_box` example: a bordered box with text (PR 01, #3).
 - PRD, architecture overview and README (#1, #2).
+
+### Changed
+
+- Frame budget: the CI hard gate is a 16 ms maximum on shared runners, and
+  the 8 ms maximum is the target, measured on a dedicated machine and reported
+  in every Proof section (#6).
+- Crate-level docs moved from `//!` comments to per-crate `README.md` files
+  included with `include_str!`. Comments other than the license header and
+  `// SAFETY:` were removed (#6).

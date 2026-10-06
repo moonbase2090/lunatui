@@ -43,8 +43,28 @@ fn protected_changes(base: &str, head: &str) -> io::Result<Vec<String>> {
         .collect())
 }
 
-fn needs_signoff<'a>(_changed: &'a [String], _codeowners: &str) -> Vec<&'a str> {
-    Vec::new()
+fn needs_signoff<'a>(changed: &'a [String], codeowners: &str) -> Vec<&'a str> {
+    let patterns: Vec<&str> = codeowners
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .filter_map(|line| line.split_whitespace().next())
+        .collect();
+    changed
+        .iter()
+        .map(String::as_str)
+        .filter(|path| patterns.iter().any(|pattern| is_protected(path, pattern)))
+        .collect()
+}
+
+fn is_protected(path: &str, pattern: &str) -> bool {
+    let anchored = pattern.trim_start_matches('/');
+    match anchored.strip_suffix('/') {
+        Some(directory) => path
+            .strip_prefix(directory)
+            .is_some_and(|rest| rest.starts_with('/')),
+        None => path == anchored,
+    }
 }
 
 #[cfg(test)]
@@ -88,6 +108,9 @@ mod tests {
 
     #[test]
     fn feature_work_needs_no_signoff() {
-        assert!(protected(&["benches/src/report.rs", "examples/hello_box.rs"]).is_empty());
+        assert_eq!(
+            protected(&["benches/src/report.rs", "examples/hello_box.rs"]),
+            Vec::<String>::new()
+        );
     }
 }

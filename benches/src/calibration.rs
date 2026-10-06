@@ -2,12 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! Workloads with known costs, used to check the harness itself.
-//!
-//! They stand in for real scenes until lunatui has code to measure (PR 03
-//! adds the ratatui baseline scenes). Each documents the counts it must
-//! produce, and the harness self-test checks them.
-
 use std::io::{self, Write};
 
 /// Size of the large truecolor frame in PRD §1.3 (68 KB).

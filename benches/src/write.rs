@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! A writer wrapper that counts `write()` calls and bytes.
-
 use std::io::{self, Write};
 
 /// Counts of the calls made through a [`CountingWriter`].
@@ -78,7 +76,6 @@ mod tests {
 
     use super::{CountingWriter, WriteStats};
 
-    /// Accepts at most `limit` bytes per `write()` call.
     struct ShortWriter {
         limit: usize,
     }
@@ -93,7 +90,6 @@ mod tests {
         }
     }
 
-    /// Fails every `write()` call.
     struct FailingWriter;
 
     impl Write for FailingWriter {

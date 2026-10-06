@@ -3,10 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #![doc = include_str!("../README.md")]
-#![expect(
-    dead_code,
-    reason = "M1 red commit: the check stubs are implemented in the next commit"
-)]
 
 mod bench;
 mod check;
