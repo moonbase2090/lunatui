@@ -12,6 +12,8 @@ members = [
     "lunatui-test",
     "lunatui-ratatui",
     "lunatui-prismattyc",
+    "benches",
+    "xtask",
 ]
 
 [workspace.package]
