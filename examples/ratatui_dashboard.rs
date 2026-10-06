@@ -22,7 +22,10 @@ fn main() -> io::Result<()> {
     let size = terminal.size()?;
     let times = FrameTimes::from_samples(&drawn?)
         .ok_or_else(|| io::Error::other("no frames were drawn"))?;
-    println!("{}", summary(size.width, size.height, times));
+    println!(
+        "{}",
+        summary(size.width, size.height, times, build_profile())
+    );
     Ok(())
 }
 
@@ -41,13 +44,21 @@ fn draw_frames(terminal: &mut DefaultTerminal) -> io::Result<Vec<Duration>> {
     Ok(draw_times)
 }
 
-fn summary(width: u16, height: u16, times: FrameTimes) -> String {
+fn build_profile() -> &'static str {
+    if cfg!(debug_assertions) {
+        "debug build"
+    } else {
+        "release build"
+    }
+}
+
+fn summary(width: u16, height: u16, times: FrameTimes, profile: &str) -> String {
     let verdict = match times.verdict() {
         Verdict::WithinTarget => "within",
         Verdict::OverTarget | Verdict::OverCeiling => "over",
     };
     format!(
-        "ratatui 0.30.2 dashboard, {width}x{height}, {} frames: p50 {}, p99 {}, max {} ({verdict} the {} target)",
+        "ratatui 0.30.2 dashboard, {width}x{height}, {} frames, {profile}: p50 {}, p99 {}, max {} ({verdict} the {} target)",
         times.samples,
         millis(times.p50),
         millis(times.p99),
@@ -77,8 +88,8 @@ mod tests {
             max: Duration::from_millis(2),
         };
         assert_eq!(
-            summary(200, 60, times),
-            "ratatui 0.30.2 dashboard, 200x60, 240 frames: p50 0.500 ms, p99 1.250 ms, max 2.000 ms (within the 8.000 ms target)"
+            summary(200, 60, times, "release build"),
+            "ratatui 0.30.2 dashboard, 200x60, 240 frames, release build: p50 0.500 ms, p99 1.250 ms, max 2.000 ms (within the 8.000 ms target)"
         );
     }
 
@@ -90,6 +101,6 @@ mod tests {
             p99: Duration::from_millis(9),
             max: Duration::from_millis(9),
         };
-        assert!(summary(400, 120, times).ends_with("(over the 8.000 ms target)"));
+        assert!(summary(400, 120, times, "debug build").ends_with("(over the 8.000 ms target)"));
     }
 }
