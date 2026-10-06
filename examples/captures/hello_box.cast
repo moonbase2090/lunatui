@@ -1,0 +1,4 @@
+{"version":3,"term":{"cols":60,"rows":8},"timestamp":1791299304,"command":"sh -c 'printf \"\\$ cargo run --example hello_box\\n\"; sleep 0.6; cargo run -q --example hello_box; sleep 2.5'","env":{"SHELL":"/bin/zsh"}}
+[0.005, "o", "$ cargo run --example hello_box\r\n"]
+[0.751, "o", "┌───────────────────────────┐\r\n│ Hello from lunatui        │\r\n│ PR 01: workspace scaffold │\r\n└───────────────────────────┘\r\n"]
+[2.514, "x", "0"]
