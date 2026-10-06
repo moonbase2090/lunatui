@@ -69,6 +69,8 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 | Fallible tests return `Result` and use `?`. They don't call `unwrap` or `expect`. | Review |
 | A test whose assertions depend on process-wide state (the counting allocator) runs as a `harness = false` integration test. | Review |
 | Property tests are named for the invariant they check (M3). | Review |
+| A test fails when the behavior it names breaks. Muse asks of every test: would it fail if that behavior broke? If not, it is rejected (M17). | Review |
+| No tautological tests (M17). A test never asserts a value against itself or a constant against the same constant, computes the expected value with the code under test or a copy of its logic, asserts what a mock or stub of the unit under test returns, checks only that code ran, was called or didn't panic, compares against a snapshot accepted without review (M6), or still passes when the implementation is deleted or replaced with a stub or default. | Review |
 
 ## 7. Benches
 

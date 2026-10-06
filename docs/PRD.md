@@ -844,6 +844,18 @@ lunatui is demoable early and continuously, so development can be watched in fli
 - **Sign-off.** Changes to lint or CI configuration need MB2090 sign-off (CODEOWNERS on mb2090 plus a PR label) and are never bundled with feature work.
 - Muse checks all of it on every review.
 
+## M17 No tautological tests (binding, MB2090 Oct 6, 2026)
+- **Every test must be able to fail.** A test fails when the behavior it names breaks.
+- Banned:
+  - asserting a value against itself, or a constant against the same constant
+  - computing the expected value with the code under test or a copy of its logic
+  - mocking or stubbing the unit under test and asserting what the mock returns
+  - tests whose only check is that code ran, was called or didn't panic, with no assertion on the observable result
+  - snapshots or golden files regenerated from current output without review (M6)
+  - tests that still pass when the implementation is deleted or replaced with a stub or default
+- The review question for every test: would it fail if the behavior it names broke? If not, it is rejected. `docs/conventions.md` §6 lists the rule.
+- Muse checks it on every review.
+
 ## T-update Seat assignments (MB2090 Oct 5, 2026)
 - Implementer: Claude Opus 5.5.
 - Reviewer (every PR, blind, SHIP <sha>): a dedicated Muse seat (muse-spark-1.3-contributor, xhigh), a different model family from the implementer.
