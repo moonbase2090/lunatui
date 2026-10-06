@@ -6,3 +6,7 @@ PN = "PN"
 
 [default.extend-words]
 ratatui = "ratatui"
+
+[files]
+# Asciinema recordings in examples/captures are raw terminal output, not prose.
+extend-exclude = ["*.cast"]
