@@ -10,8 +10,9 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
-- PRD rules M14 (no comments: code is the memory) and M15 (mistakes become
-  lints), and `docs/lints.md` to list the lint rules M15 adds.
+- PRD rules M14 (no comments: code is the memory), M15 (mistakes become
+  lints) and M16 (locked down: conventional and standardized), with
+  `docs/conventions.md` and `docs/lints.md`.
 - Bench harness crate `lunatui-bench` in `benches/`: a counting allocator, a
   `write()` and byte counter, calibration workloads, criterion and gungraun
   benchmarks, and `cargo xtask bench` to run them (PR 02, #4).
