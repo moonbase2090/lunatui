@@ -850,6 +850,9 @@ dependencies = [
 [[package]]
 name = "lunatui-core"
 version = "0.0.0"
+dependencies = [
+ "unicode-width",
+]
 
 [[package]]
 name = "lunatui-layout"

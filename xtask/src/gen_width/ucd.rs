@@ -5,8 +5,32 @@
 use std::io;
 use std::ops::RangeInclusive;
 
-pub(crate) fn ranges_with(_source: &str, _value: &str) -> io::Result<Vec<RangeInclusive<u32>>> {
-    Ok(Vec::new())
+pub(crate) fn ranges_with(source: &str, value: &str) -> io::Result<Vec<RangeInclusive<u32>>> {
+    let mut ranges = Vec::new();
+    for (index, line) in source.lines().enumerate() {
+        let data = line.split('#').next().unwrap_or_default().trim();
+        if data.is_empty() {
+            continue;
+        }
+        let mut fields = data.split(';').map(str::trim);
+        let (Some(points), Some(found)) = (fields.next(), fields.next()) else {
+            return Err(malformed(index, line));
+        };
+        let range = code_points(points).ok_or_else(|| malformed(index, line))?;
+        if found == value {
+            ranges.push(range);
+        }
+    }
+    Ok(ranges)
+}
+
+fn code_points(points: &str) -> Option<RangeInclusive<u32>> {
+    let (start, end) = points.split_once("..").unwrap_or((points, points));
+    Some(u32::from_str_radix(start, 16).ok()?..=u32::from_str_radix(end, 16).ok()?)
+}
+
+fn malformed(index: usize, line: &str) -> io::Error {
+    io::Error::other(format!("line {}: malformed UCD data: {line}", index + 1))
 }
 
 #[cfg(test)]
