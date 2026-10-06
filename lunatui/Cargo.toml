@@ -11,6 +11,9 @@ autoexamples = false
 [lints]
 workspace = true
 
+[dev-dependencies]
+lunatui-bench = { path = "../benches" }
+
 # Examples live in the top-level `examples/` directory (PRD M13) and are
 # listed here so each one runs with `cargo run --example <name>`.
 [[example]]
