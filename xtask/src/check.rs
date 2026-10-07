@@ -65,7 +65,13 @@ pub(crate) fn run() -> ExitCode {
 fn violations() -> io::Result<Vec<Violation>> {
     let mut found = Vec::new();
     let mut expected = Vec::new();
-    for path in git::work_tree_files(Path::new("."), "*.rs")? {
+    let sources = git::work_tree_files(Path::new("."), "*.rs")?;
+    if sources.is_empty() {
+        return Err(io::Error::other(
+            "found no Rust sources to check; run it from a git work tree of lunatui",
+        ));
+    }
+    for path in sources {
         let source = fs::read_to_string(&path)?;
         found.extend(comments::violations(&path, &source));
         let file = syn::parse_file(&source)
