@@ -46,8 +46,8 @@ impl Color {
             return None;
         }
         match bits & (3 << KIND_SHIFT) {
-            KIND_DEFAULT => Some(Self::Default),
-            KIND_INDEXED => Some(Self::Indexed((bits & 0xFF) as u8)),
+            KIND_DEFAULT if bits == KIND_DEFAULT => Some(Self::Default),
+            KIND_INDEXED if bits & 0x00FF_FF00 == 0 => Some(Self::Indexed((bits & 0xFF) as u8)),
             KIND_RGB => Some(Self::Rgb(
                 ((bits >> 16) & 0xFF) as u8,
                 ((bits >> 8) & 0xFF) as u8,
