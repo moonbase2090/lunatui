@@ -65,7 +65,7 @@ pub(crate) fn run() -> ExitCode {
 fn violations() -> io::Result<Vec<Violation>> {
     let mut found = Vec::new();
     let mut expected = Vec::new();
-    for path in git::tracked_files("*.rs")? {
+    for path in git::work_tree_files(Path::new("."), "*.rs")? {
         let source = fs::read_to_string(&path)?;
         found.extend(comments::violations(&path, &source));
         let file = syn::parse_file(&source)
@@ -79,7 +79,7 @@ fn violations() -> io::Result<Vec<Violation>> {
         &expectations::listed(&lints_doc),
         Path::new(LINTS_DOC),
     ));
-    for path in git::tracked_files("*Cargo.toml")? {
+    for path in git::work_tree_files(Path::new("."), "*Cargo.toml")? {
         if path != Path::new("Cargo.toml") {
             found.extend(manifests::violations(&path, &fs::read_to_string(&path)?));
         }
