@@ -13,6 +13,9 @@ pub mod calibration;
 /// every sample of every worst-case benchmark, and an 8 ms target reported on a
 /// dedicated machine.
 pub mod ceiling;
+/// A prototype of the 16-byte cell proposed by ADR 0001 (DD-1), packed from ratatui buffers
+/// to measure the diff it enables. It is evidence for the design, not lunatui's cell.
+pub mod prototype;
 /// A plain-text table of benchmark metrics.
 pub mod report;
 /// The ratatui baseline scenes (PRD §6.1), ported 1:1 from the measured ratatui-perf runs.
