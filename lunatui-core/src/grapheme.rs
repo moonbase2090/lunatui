@@ -109,7 +109,6 @@ pub enum DecodedGlyph {
     Continuation,
 }
 
-/// One interned cluster and its cached terminal width.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ClusterRecord {
     text: String,
@@ -170,9 +169,7 @@ impl ClusterTable {
     /// Cached display width for a cluster ID.
     #[must_use]
     pub fn cluster_width(&self, id: ClusterId) -> Option<usize> {
-        self.by_id
-            .get(&id)
-            .map(|record| usize::from(record.width))
+        self.by_id.get(&id).map(|record| usize::from(record.width))
     }
 
     /// Resolves `text` to a glyph slot, interning multi-codepoint clusters.
