@@ -29,9 +29,21 @@ pub(crate) fn enter_toplevel() -> io::Result<()> {
 }
 
 pub(crate) fn work_tree_files(dir: &Path, pattern: &str) -> io::Result<Vec<PathBuf>> {
-    Ok(output_in(dir, &["ls-files", "--", pattern])?
+    let listing = output_in(
+        dir,
+        &[
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "--",
+            pattern,
+        ],
+    )?;
+    Ok(listing
         .lines()
         .map(PathBuf::from)
+        .filter(|path| dir.join(path).is_file())
         .collect())
 }
 
