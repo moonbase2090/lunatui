@@ -40,8 +40,9 @@ pub fn char_width(c: char) -> usize {
 /// Returns the number of terminal columns `text` occupies: the sum of its characters'
 /// [`char_width`]s.
 ///
-/// Multi-codepoint grapheme clusters such as ZWJ emoji sequences are measured
-/// character by character here. Cluster widths arrive with the grapheme slot (PR 05).
+/// Multi-codepoint grapheme clusters use [`crate::text_display_width`], which
+/// segments with Unicode extended grapheme rules and caches widths in
+/// [`crate::ClusterTable`] when clusters are interned.
 ///
 /// ```
 /// use lunatui_core::width;
@@ -51,13 +52,7 @@ pub fn char_width(c: char) -> usize {
 /// ```
 #[must_use]
 pub fn width(text: &str) -> usize {
-    if text.is_ascii() {
-        text.bytes()
-            .filter(|byte| (b' '..=b'~').contains(byte))
-            .count()
-    } else {
-        text.chars().map(char_width).sum()
-    }
+    crate::grapheme::text_display_width(text)
 }
 
 fn contains(ranges: &[(u32, u32)], code_point: u32) -> bool {

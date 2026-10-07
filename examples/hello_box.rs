@@ -14,10 +14,11 @@ use lunatui_core::width;
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
 
-const LINES: [&str; 3] = [
+const LINES: [&str; 4] = [
     "Hello from lunatui",
-    "PR 04: Unicode width tables",
+    "PR 05: grapheme slot + clusters",
     "日本語 한국어 🦀 café",
+    "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
 ];
 
 fn main() -> io::Result<()> {
@@ -69,6 +70,7 @@ fn render_box(lines: &[&str]) -> String {
 #[cfg(test)]
 mod tests {
     use lunatui_bench::{AllocStats, WriteStats};
+    use lunatui_core::width;
 
     use super::{LINES, metrics_lines, render_box};
 
@@ -131,11 +133,15 @@ mod tests {
 
     #[test]
     fn the_demo_box_keeps_its_right_border_aligned() {
+        let text_width = LINES.iter().map(|line| width(line)).max().unwrap_or(0);
+        let border = "─".repeat(text_width + 2);
+        let pad = |line: &str| " ".repeat(text_width - width(line));
         let expected = format!(
-            "┌{border}┐\n│ Hello from lunatui{} │\n│ PR 04: Unicode width tables │\n│ 日本語 한국어 🦀 café{} │\n└{border}┘\n",
-            " ".repeat(9),
-            " ".repeat(6),
-            border = "─".repeat(29),
+            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 05: grapheme slot + clusters{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
+            pad0 = pad(LINES[0]),
+            pad1 = pad(LINES[1]),
+            pad2 = pad(LINES[2]),
+            pad3 = pad(LINES[3]),
         );
         assert_eq!(render_box(&LINES), expected);
     }
