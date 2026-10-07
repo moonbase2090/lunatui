@@ -33,7 +33,10 @@ fn tagged_clusters_use_bit_31() {
 #[test]
 fn continuation_glyph_matches_adr() {
     assert_eq!(CONTINUATION_GLYPH, 0x0011_0000);
-    assert_eq!(GlyphSlot::continuation().decode(), DecodedGlyph::Continuation);
+    assert_eq!(
+        GlyphSlot::continuation().decode(),
+        DecodedGlyph::Continuation
+    );
 }
 
 #[test]
