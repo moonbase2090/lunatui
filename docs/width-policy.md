@@ -27,17 +27,17 @@ East Asian Width `A` (ambiguous) is **narrow**, the Unicode default. Per-termina
 
 `width(text)` is the sum of `char_width` over the characters of `text`, with a fast path for ASCII.
 
-## Limits of this version
+## Grapheme clusters (PR 05)
 
-`width` measures character by character. Multi-codepoint grapheme clusters are not yet one unit:
+`width` and `lunatui_core::text_display_width` segment with Unicode extended grapheme rules, then measure each cluster with `cluster_display_width`. ZWJ emoji, VS16 sequences and regional-indicator flags take the width terminals usually draw:
 
-| Text | `width` now | What terminals usually draw |
-|---|---|---|
-| `👩‍💻` (woman, ZWJ, laptop) | 4 | 2 |
-| `❤️` (heart, VS16) | 1 | 2 |
-| `🇺🇸` (two regional indicators) | 4 | 2 |
+| Text | `width` |
+|---|---|
+| `👩‍💻` (woman, ZWJ, laptop) | 2 |
+| `❤️` (heart, VS16) | 2 |
+| `🇺🇸` (two regional indicators) | 2 |
 
-Cluster widths arrive with the grapheme slot (PR 05). Terminals that report DEC mode 2027 segment clusters the same way (§2.1). The `width_corpus` tests pin today's per-character values, so the change in PR 05 is visible.
+Terminals that report DEC mode 2027 segment clusters the same way (§2.1). Per-terminal overrides for ambiguous width still follow §2.5.
 
 ## Differences from `unicode-width` 0.2.2
 
