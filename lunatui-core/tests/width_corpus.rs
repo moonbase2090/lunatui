@@ -48,8 +48,8 @@ fn zero_width_space_takes_no_columns() {
 }
 
 #[test]
-fn multi_codepoint_clusters_are_measured_per_character_until_pr_05() {
-    assert_eq!(width("👩\u{200D}💻"), 4);
-    assert_eq!(width("❤\u{FE0F}"), 1);
-    assert_eq!(width("\u{1F1FA}\u{1F1F8}"), 4);
+fn multi_codepoint_clusters_use_grapheme_width() {
+    assert_eq!(width("👩\u{200D}💻"), 2);
+    assert_eq!(width("❤\u{FE0F}"), 2);
+    assert_eq!(width("\u{1F1FA}\u{1F1F8}"), 2);
 }
