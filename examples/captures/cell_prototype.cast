@@ -1,0 +1,6 @@
+{"version":3,"term":{"cols":92,"rows":14},"timestamp":1791328236,"command":"sh -c 'printf \"\\$ cargo run --release --example cell_prototype\\n\"; sleep 0.5; cargo run -q --release --example cell_prototype; sleep 2.5'","env":{"SHELL":"/bin/zsh"}}
+[0.007, "o", "$ cargo run --release --example cell_prototype\r\n"]
+[0.681, "o", "cell prototype (ADR 0001), release build\r\nratatui Cell: 48 bytes; packed cell: 16 bytes, aligned to 16\r\n\r\ngrid     frames       changed  ratatui diff  packed diff  u128 diff  speedup\r\n"]
+[0.474, "o", "200x60   identical          0      63.00 µs      7.33 µs    3.71 µs    17.0x\r\n200x60   tick              14      63.33 µs      7.71 µs    3.71 µs    17.1x\r\n200x60   scroll          3745      73.25 µs      6.58 µs    3.21 µs    22.8x\r\n"]
+[1.779, "o", "400x120  identical          0     245.67 µs     29.12 µs   14.67 µs    16.8x\r\n400x120  tick              25     245.50 µs     31.21 µs   14.50 µs    16.9x\r\n400x120  scroll          1318     256.88 µs     30.04 µs   12.54 µs    20.5x\r\n"]
+[2.514, "x", "0"]

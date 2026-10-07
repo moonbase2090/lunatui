@@ -27,3 +27,8 @@ test = true
 name = "ratatui_dashboard"
 path = "../examples/ratatui_dashboard.rs"
 test = true
+
+[[example]]
+name = "cell_prototype"
+path = "../examples/cell_prototype.rs"
+test = true
