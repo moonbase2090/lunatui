@@ -52,6 +52,13 @@ Every PR adds its entry under **Unreleased**.
 - `hello_box` example: a bordered box with text (PR 01, #3).
 - PRD, architecture overview and README (#1, #2).
 
+### Fixed
+
+- `cargo xtask check` scanned no files when git had no index (Rookrunner's
+  synthesized `.git`), and so failed on stale `docs/lints.md` listings. It now
+  lists the work tree's tracked and unignored files, and fails if it finds no
+  Rust sources (#14).
+
 ### Changed
 
 - Frame budget: the CI hard gate is a 16 ms maximum on shared runners, and
