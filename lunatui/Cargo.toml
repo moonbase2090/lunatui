@@ -32,3 +32,8 @@ test = true
 name = "cell_prototype"
 path = "../examples/cell_prototype.rs"
 test = true
+
+[[example]]
+name = "cell_dump"
+path = "../examples/cell_dump.rs"
+test = true
