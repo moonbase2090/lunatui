@@ -57,6 +57,8 @@ jobs:
           curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs -o "$RUNNER_TEMP/rustup-init.sh"
           sh "$RUNNER_TEMP/rustup-init.sh" -y --default-toolchain stable --profile minimal --no-modify-path
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Trust the workspace for git
+        run: git config --global --add safe.directory "$PWD"
       - run: cargo xtask check
 
   docs:
