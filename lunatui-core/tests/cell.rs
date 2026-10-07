@@ -74,3 +74,22 @@ fn from_bits_round_trips_a_styled_glyph() {
 fn from_bits_rejects_reserved_color_bits() {
     assert!(Cell::from_bits(Cell::BLANK.to_bits() | (1 << 56)).is_none());
 }
+
+#[test]
+fn color_rejects_noncanonical_default_payload() {
+    assert_eq!(Color::from_bits(0x0000_0001), None);
+    let bad = Cell::BLANK.to_bits() | (1_u128 << 32);
+    assert!(Cell::from_bits(bad).is_none());
+}
+
+#[test]
+fn color_rejects_indexed_payload_above_one_byte() {
+    assert_eq!(Color::from_bits(0x4000_0100), None);
+    let cell = Cell::from_parts(
+        GlyphSlot::from_bits(u32::from('x')),
+        Style::new().fg(Color::Indexed(1)),
+        Meta::default(),
+    );
+    let bad = cell.to_bits() | (0x100_u128 << 32);
+    assert!(Cell::from_bits(bad).is_none());
+}
