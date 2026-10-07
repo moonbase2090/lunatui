@@ -5,6 +5,11 @@
 #![doc = include_str!("../README.md")]
 #![no_std]
 
+mod grapheme;
 mod width;
 
+pub use grapheme::{
+    CLUSTER_TAG, CONTINUATION_GLYPH, ClusterId, ClusterTable, DecodedGlyph, GlyphSlot,
+    MAX_CLUSTER_IDS, cluster_display_width, text_display_width,
+};
 pub use width::{UNICODE_VERSION, char_width, width};

@@ -10,5 +10,9 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[dependencies]
+unicode-segmentation = "=1.13.3"
+
 [dev-dependencies]
+proptest = "=1.9.0"
 unicode-width = "=0.2.2"

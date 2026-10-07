@@ -10,6 +10,9 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `lunatui_core` grapheme slot types, per-frame `ClusterTable` with ID seeding,
+  and cluster-aware `width` / `text_display_width` (PR 05). `hello_box` adds a
+  line of ZWJ emoji, VS16 and a flag cluster.
 - ADR 0001 (DD-1, `docs/adr/0001-cell-format.md`): the 16-byte cell format,
   with the cell prototype in `lunatui-bench`, the `criterion_cell_prototype`
   bench and the `cell_prototype` example as evidence.
