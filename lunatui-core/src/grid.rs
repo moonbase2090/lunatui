@@ -5,6 +5,7 @@
 extern crate alloc;
 
 use alloc::borrow::ToOwned;
+use alloc::collections::BTreeSet;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt::Write as _;
@@ -177,9 +178,10 @@ impl Grid {
         let display = char_width(ch);
         for row in area.y..end_y.min(self.height) {
             let mut col = area.x;
-            while col < end_x.min(self.width) {
-                let glyph = glyph_for_char(ch, clusters);
-                if display == 2 && col + 1 < self.width {
+            let row_end = end_x.min(self.width);
+            while col < row_end {
+                if display == 2 && col + 1 < row_end {
+                    let glyph = glyph_for_char(ch, clusters);
                     self.erase_span(col, row, 2, style);
                     self.place(
                         col,
@@ -206,7 +208,12 @@ impl Grid {
                         ),
                     );
                     col += 2;
+                } else if display == 2 {
+                    self.erase_span(col, row, 1, style);
+                    self.place_blank(col, row, style);
+                    col += 1;
                 } else {
+                    let glyph = glyph_for_char(ch, clusters);
                     self.erase_span(col, row, 1, style);
                     self.place(
                         col,
@@ -231,7 +238,22 @@ impl Grid {
         let end_x = area.x.saturating_add(area.width);
         let end_y = area.y.saturating_add(area.height);
         for row in area.y..end_y.min(self.height) {
+            let mut columns = BTreeSet::new();
             for col in area.x..end_x.min(self.width) {
+                columns.insert(col);
+                if let Some(cell) = self.get(col, row) {
+                    match cell.meta().width {
+                        CellWidth::Two if col + 1 < self.width => {
+                            columns.insert(col + 1);
+                        }
+                        CellWidth::Continuation if col > 0 => {
+                            columns.insert(col - 1);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            for col in columns {
                 if let Some(cell) = self.get(col, row) {
                     let meta = Meta {
                         attrs: style.attrs,
