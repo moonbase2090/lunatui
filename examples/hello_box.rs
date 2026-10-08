@@ -6,17 +6,18 @@
 
 use std::env;
 use std::io::{self, Write};
-use std::iter;
 
 use lunatui_bench::{AllocStats, CountingAllocator, CountingWriter, WriteStats};
-use lunatui_core::{Cell, CellWidth, Color, GlyphSlot, Meta, Style, width};
+use lunatui_core::{
+    Cell, CellWidth, ClusterTable, Color, GlyphSlot, Grid, Meta, Rect, Style, width,
+};
 
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
 
 const LINES: [&str; 4] = [
     "Hello from lunatui",
-    "PR 06: packed 16-byte cells",
+    "PR 07: hello_box on Grid",
     "日本語 한국어 🦀 café",
     "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
 ];
@@ -78,19 +79,72 @@ fn writeln_cell_row(out: &mut impl Write, text: &str) -> io::Result<()> {
 }
 
 fn render_box(lines: &[&str]) -> String {
+    let mut clusters = ClusterTable::new();
+    let (grid, _) = render_box_grid(lines, &mut clusters);
+    grid.display_text(&clusters)
+}
+
+fn render_box_grid(lines: &[&str], clusters: &mut ClusterTable) -> (Grid, usize) {
     let text_width = lines.iter().map(|line| width(line)).max().unwrap_or(0);
-    let border = "─".repeat(text_width + 2);
+    let grid_w = u16::try_from(text_width + 4).unwrap_or(u16::MAX);
+    let grid_h = u16::try_from(lines.len() + 2).unwrap_or(u16::MAX);
+    let mut grid = Grid::new(grid_w, grid_h);
+    let style = Style::new();
 
-    let top = format!("┌{border}┐\n");
-    let rows = lines
-        .iter()
-        .map(|line| format!("│ {line}{} │\n", " ".repeat(text_width - width(line))));
-    let bottom = format!("└{border}┘\n");
+    grid.put_str(0, 0, style, "┌", clusters);
+    grid.fill(
+        Rect {
+            x: 1,
+            y: 0,
+            width: u16::try_from(text_width + 2).unwrap_or(u16::MAX),
+            height: 1,
+        },
+        style,
+        '─',
+        clusters,
+    );
+    grid.put_str(grid_w - 1, 0, style, "┐", clusters);
 
-    iter::once(top)
-        .chain(rows)
-        .chain(iter::once(bottom))
-        .collect()
+    for (index, line) in lines.iter().enumerate() {
+        let y = u16::try_from(index + 1).unwrap_or(u16::MAX);
+        let line_width = width(line);
+        let pad = text_width - line_width;
+        grid.put_str(0, y, style, "│", clusters);
+        grid.put_str(1, y, style, " ", clusters);
+        grid.put_str(2, y, style, line, clusters);
+        if pad > 0 {
+            grid.fill(
+                Rect {
+                    x: u16::try_from(2 + line_width).unwrap_or(u16::MAX),
+                    y,
+                    width: u16::try_from(pad).unwrap_or(u16::MAX),
+                    height: 1,
+                },
+                style,
+                ' ',
+                clusters,
+            );
+        }
+        grid.put_str(grid_w - 2, y, style, " ", clusters);
+        grid.put_str(grid_w - 1, y, style, "│", clusters);
+    }
+
+    let bottom = u16::try_from(lines.len() + 1).unwrap_or(u16::MAX);
+    grid.put_str(0, bottom, style, "└", clusters);
+    grid.fill(
+        Rect {
+            x: 1,
+            y: bottom,
+            width: u16::try_from(text_width + 2).unwrap_or(u16::MAX),
+            height: 1,
+        },
+        style,
+        '─',
+        clusters,
+    );
+    grid.put_str(grid_w - 1, bottom, style, "┘", clusters);
+
+    (grid, text_width)
 }
 
 #[cfg(test)]
@@ -163,7 +217,7 @@ mod tests {
         let border = "─".repeat(text_width + 2);
         let pad = |line: &str| " ".repeat(text_width - width(line));
         let expected = format!(
-            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 06: packed 16-byte cells{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
+            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 07: hello_box on Grid{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
             pad0 = pad(LINES[0]),
             pad1 = pad(LINES[1]),
             pad2 = pad(LINES[2]),
