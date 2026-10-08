@@ -1,0 +1,4 @@
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1791403754,"idle_time_limit":1.0,"command":"sh -c 'printf \"$ cargo run --example cell_dump\\n\"; sleep 0.5; cargo run -q --example cell_dump; sleep 2'","title":"4","env":{"SHELL":"/bin/zsh"}}
+[0.007, "o", "$ cargo run --example cell_dump\r\n"]
+[1.012, "o", "16-byte packed cells (PR 06, ADR 0001):\r\nblank: 00001000000000000000000000000020\r\ncorner: 00001000000000004000000e0000250c\r\nH: 000010000000000080cc884400000048\r\nwide_lead: 000020000000000080cc8844000065e5\r\n"]
+[2.011, "x", "0"]
