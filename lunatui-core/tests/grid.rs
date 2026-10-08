@@ -98,6 +98,99 @@ fn overwriting_continuation_clears_pair() {
 }
 
 #[test]
+fn fill_wide_char_in_one_column_area_becomes_blank() {
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    grid.fill(
+        Rect {
+            x: 1,
+            y: 0,
+            width: 1,
+            height: 1,
+        },
+        Style::new(),
+        '日',
+        &mut clusters,
+    );
+    assert_eq!(
+        grid.get(1, 0).map(|c| c.glyph().decode()),
+        Some(lunatui_core::DecodedGlyph::Inline(' '))
+    );
+    assert_eq!(grid.get(1, 0).map(|c| c.meta().width), Some(CellWidth::One));
+    assert_wide_invariants(&grid);
+}
+
+#[test]
+fn fill_wide_char_at_grid_edge_becomes_blank() {
+    let mut grid = Grid::new(3, 1);
+    let mut clusters = ClusterTable::new();
+    grid.fill(
+        Rect {
+            x: 2,
+            y: 0,
+            width: 1,
+            height: 1,
+        },
+        Style::new(),
+        '日',
+        &mut clusters,
+    );
+    assert_eq!(
+        grid.get(2, 0).map(|c| c.glyph().decode()),
+        Some(lunatui_core::DecodedGlyph::Inline(' '))
+    );
+    assert_wide_invariants(&grid);
+}
+
+#[test]
+fn set_style_on_continuation_also_styles_lead() {
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    grid.put_str(0, 0, Style::new(), "日", &mut clusters);
+    grid.set_style(
+        Rect {
+            x: 1,
+            y: 0,
+            width: 1,
+            height: 1,
+        },
+        Style::new().fg(Color::Indexed(11)),
+    );
+    assert_eq!(
+        grid.get(0, 0).map(|c| c.style().fg),
+        Some(Color::Indexed(11))
+    );
+    assert_eq!(
+        grid.get(1, 0).map(|c| c.style().fg),
+        Some(Color::Indexed(11))
+    );
+}
+
+#[test]
+fn set_style_on_lead_only_in_area_also_styles_continuation() {
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    grid.put_str(0, 0, Style::new(), "日", &mut clusters);
+    grid.set_style(
+        Rect {
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+        },
+        Style::new().fg(Color::Indexed(10)),
+    );
+    assert_eq!(
+        grid.get(0, 0).map(|c| c.style().fg),
+        Some(Color::Indexed(10))
+    );
+    assert_eq!(
+        grid.get(1, 0).map(|c| c.style().fg),
+        Some(Color::Indexed(10))
+    );
+}
+
+#[test]
 fn set_style_updates_colors_without_changing_glyph() {
     let mut grid = Grid::new(4, 1);
     let mut clusters = ClusterTable::new();
