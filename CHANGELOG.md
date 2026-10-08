@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- Leaf/trunk PR review policy with proof, testing, feature-gating and merge requirements (`REVIEW_POLICY.md`).
 - `lunatui_core::Cell`, `Color`, `Attrs`, `Style` and packed `to_bits` / `from_bits`
   (PR 06, ADR 0001). The `cell_dump` example prints sample 128-bit words; `hello_box`
   accepts `--cells` to dump packed cells for its corner glyphs.
