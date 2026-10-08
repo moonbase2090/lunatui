@@ -25,14 +25,8 @@ fn assert_wide_invariants(grid: &Grid) {
                         tail.map(lunatui_core::Cell::glyph),
                         Some(GlyphSlot::continuation())
                     );
-                    assert_eq!(
-                        tail.map(|c| c.meta().width),
-                        Some(CellWidth::Continuation)
-                    );
-                    assert_eq!(
-                        tail.map(lunatui_core::Cell::style),
-                        Some(cell.style())
-                    );
+                    assert_eq!(tail.map(|c| c.meta().width), Some(CellWidth::Continuation));
+                    assert_eq!(tail.map(lunatui_core::Cell::style), Some(cell.style()));
                 }
                 CellWidth::Continuation => {
                     assert!(x > 0);
@@ -117,7 +111,10 @@ fn set_style_updates_colors_without_changing_glyph() {
         },
         Style::new().fg(Color::Indexed(9)),
     );
-    assert_eq!(grid.get(0, 0).map(|c| c.style().fg), Some(Color::Indexed(9)));
+    assert_eq!(
+        grid.get(0, 0).map(|c| c.style().fg),
+        Some(Color::Indexed(9))
+    );
     assert_eq!(
         grid.get(0, 0).map(|c| c.glyph().decode()),
         Some(lunatui_core::DecodedGlyph::Inline('h'))
