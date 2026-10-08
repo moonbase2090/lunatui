@@ -9,20 +9,22 @@ use std::io::{self, Write};
 use std::iter;
 
 use lunatui_bench::{AllocStats, CountingAllocator, CountingWriter, WriteStats};
-use lunatui_core::width;
+use lunatui_core::{Cell, CellWidth, Color, GlyphSlot, Meta, Style, width};
 
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
 
 const LINES: [&str; 4] = [
     "Hello from lunatui",
-    "PR 05: grapheme slot + clusters",
+    "PR 06: packed 16-byte cells",
     "日本語 한국어 🦀 café",
     "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
 ];
 
 fn main() -> io::Result<()> {
-    let show_metrics = env::args().skip(1).any(|arg| arg == "--metrics");
+    let args: Vec<String> = env::args().skip(1).collect();
+    let show_metrics = args.iter().any(|arg| arg == "--metrics");
+    let show_cells = args.iter().any(|arg| arg == "--cells");
 
     let mut stdout = CountingWriter::new(io::stdout().lock());
     let (drawn, alloc) = ALLOC.measure(|| {
@@ -30,6 +32,13 @@ fn main() -> io::Result<()> {
         stdout.flush()
     });
     drawn?;
+
+    if show_cells {
+        let mut stdout = stdout.into_inner();
+        writeln_cell_row(&mut stdout, "┌H")?;
+        stdout.flush()?;
+        return Ok(());
+    }
 
     if show_metrics {
         let lines = metrics_lines(alloc, stdout.stats());
@@ -49,6 +58,23 @@ fn metrics_lines(alloc: AllocStats, write: WriteStats) -> [String; 3] {
             alloc.allocations, alloc.bytes_allocated
         ),
     ]
+}
+
+fn writeln_cell_row(out: &mut impl Write, text: &str) -> io::Result<()> {
+    writeln!(out, "packed cells (u128 hex):")?;
+    let style = Style::new().fg(Color::Indexed(12));
+    for ch in text.chars() {
+        let cell = Cell::from_parts(
+            GlyphSlot::from_bits(u32::from(ch)),
+            style,
+            Meta {
+                width: CellWidth::One,
+                ..Meta::default()
+            },
+        );
+        writeln!(out, "'{ch}': {:032x}", cell.to_bits())?;
+    }
+    Ok(())
 }
 
 fn render_box(lines: &[&str]) -> String {
@@ -137,7 +163,7 @@ mod tests {
         let border = "─".repeat(text_width + 2);
         let pad = |line: &str| " ".repeat(text_width - width(line));
         let expected = format!(
-            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 05: grapheme slot + clusters{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
+            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 06: packed 16-byte cells{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
             pad0 = pad(LINES[0]),
             pad1 = pad(LINES[1]),
             pad2 = pad(LINES[2]),

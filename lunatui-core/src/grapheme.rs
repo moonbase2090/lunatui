@@ -83,6 +83,12 @@ impl GlyphSlot {
         self.0
     }
 
+    /// Wraps a raw glyph slot word.
+    #[must_use]
+    pub fn from_bits(bits: u32) -> Self {
+        Self(bits)
+    }
+
     /// Decodes this slot.
     #[must_use]
     pub fn decode(self) -> DecodedGlyph {

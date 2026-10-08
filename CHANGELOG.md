@@ -10,6 +10,9 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `lunatui_core::Cell`, `Color`, `Attrs`, `Style` and packed `to_bits` / `from_bits`
+  (PR 06, ADR 0001). The `cell_dump` example prints sample 128-bit words; `hello_box`
+  accepts `--cells` to dump packed cells for its corner glyphs.
 - `lunatui_core` grapheme slot types, per-frame `ClusterTable` with ID seeding,
   and cluster-aware `width` / `text_display_width` (PR 05). `hello_box` adds a
   line of ZWJ emoji, VS16 and a flag cluster.
