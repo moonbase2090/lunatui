@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- Leaf/trunk PR review policy with proof, testing, feature-gating and merge requirements (`REVIEW_POLICY.md`).
 - `lunatui_core::Grid` with `put_str`, `fill`, `set_style`, per-row dirty spans and an
   internal styled-snapshot serializer; `hello_box` renders through the grid (PR 07).
 - `lunatui_core::Cell`, `Color`, `Attrs`, `Style` and packed `to_bits` / `from_bits`
