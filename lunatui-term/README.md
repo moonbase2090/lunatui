@@ -2,4 +2,4 @@
 
 Terminal layer for lunatui: encoder, capability probing, session and input parser.
 
-This crate is a stub from the workspace scaffold (PRD §8, PR 01). Its contents land in later roadmap PRs.
+PR 09 adds `lunatui_term::Encoder`: diff-driven frame encoding with pen-state SGR, cursor moves and a crossterm-compatible reset trailer. Capability probing, session and input parsing land in later roadmap PRs.

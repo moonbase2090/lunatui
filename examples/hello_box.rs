@@ -13,13 +13,14 @@ use lunatui_core::{
     Cell, CellWidth, ChangedRun, ClusterTable, Color, GlyphSlot, Grid, Meta, Rect, Style,
     diff_runs, width,
 };
+use lunatui_term::{ColorMode, Encoder};
 
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
 
 const LINES: [&str; 4] = [
     "Hello from lunatui",
-    "PR 08: hello_box on Grid",
+    "PR 09: hello_box on Grid",
     "日本語 한국어 🦀 café",
     "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
 ];
@@ -36,10 +37,18 @@ fn main() -> io::Result<()> {
     let show_metrics = args.iter().any(|arg| arg == "--metrics");
     let show_cells = args.iter().any(|arg| arg == "--cells");
     let show_diff = args.iter().any(|arg| arg == "--diff");
+    let show_encode = args.iter().any(|arg| arg == "--encode");
 
     let mut stdout = CountingWriter::new(io::stdout().lock());
     let (drawn, alloc) = ALLOC.measure(|| {
-        if show_diff {
+        if show_encode {
+            let mut clusters = ClusterTable::new();
+            let (next, _) = render_box_grid(&LINES, &mut clusters);
+            let prev = Grid::new(next.width(), next.height());
+            let mut encoder = Encoder::new();
+            let bytes = encoder.encode_diff(&prev, &next, &clusters, ColorMode::NoColor);
+            stdout.write_all(bytes)?;
+        } else if show_diff {
             let mut clusters = ClusterTable::new();
             let (prev, _) = render_box_grid(&LINES_FRAME0, &mut clusters);
             let (next, _) = render_box_grid(&LINES, &mut clusters);
@@ -247,6 +256,21 @@ mod tests {
     }
 
     #[test]
+    fn encode_flag_emits_ansi_bytes() {
+        use super::{LINES, render_box_grid};
+        use lunatui_core::{ClusterTable, Grid};
+        use lunatui_term::{ColorMode, Encoder};
+
+        let mut clusters = ClusterTable::new();
+        let (next, _) = render_box_grid(&LINES, &mut clusters);
+        let prev = Grid::new(next.width(), next.height());
+        let mut encoder = Encoder::new();
+        let bytes = encoder.encode_diff(&prev, &next, &clusters, ColorMode::NoColor);
+        assert!(bytes.len() > 32);
+        assert!(bytes.windows(2).any(|pair| pair == b"\x1b["));
+    }
+
+    #[test]
     fn diff_flag_reports_runs_for_the_subtitle_line() {
         use super::{LINES, LINES_FRAME0, format_diff_runs, render_box_grid};
         use lunatui_core::{ClusterTable, diff_runs};
@@ -268,7 +292,7 @@ mod tests {
         let border = "─".repeat(text_width + 2);
         let pad = |line: &str| " ".repeat(text_width - width(line));
         let expected = format!(
-            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 08: hello_box on Grid{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
+            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 09: hello_box on Grid{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
             pad0 = pad(LINES[0]),
             pad1 = pad(LINES[1]),
             pad2 = pad(LINES[2]),
