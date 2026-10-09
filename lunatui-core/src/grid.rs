@@ -84,6 +84,12 @@ impl Grid {
             .and_then(|idx| Cell::from_bits(self.cells[idx]))
     }
 
+    /// Packed cell word at `(x, y)`, or [`Cell::BLANK`] when out of bounds.
+    #[must_use]
+    pub fn cell_bits(&self, x: u16, y: u16) -> u128 {
+        self.get(x, y).map_or(Cell::BLANK.to_bits(), Cell::to_bits)
+    }
+
     /// Clears all row dirty flags and spans.
     pub fn clear_dirty(&mut self) {
         for row in &mut self.rows {
