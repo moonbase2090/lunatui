@@ -899,9 +899,11 @@ version = "0.0.0"
 name = "lunatui-term"
 version = "0.0.0"
 dependencies = [
+ "libc",
  "lunatui-bench",
  "lunatui-core",
  "ratatui",
+ "rustix",
 ]
 
 [[package]]
