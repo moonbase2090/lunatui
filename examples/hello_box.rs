@@ -5,17 +5,26 @@
 #![doc = include_str!("README.md")]
 
 use std::env;
+use std::fmt::Write as FmtWrite;
 use std::io::{self, Write};
 
 use lunatui_bench::{AllocStats, CountingAllocator, CountingWriter, WriteStats};
 use lunatui_core::{
-    Cell, CellWidth, ClusterTable, Color, GlyphSlot, Grid, Meta, Rect, Style, width,
+    Cell, CellWidth, ChangedRun, ClusterTable, Color, GlyphSlot, Grid, Meta, Rect, Style,
+    diff_runs, width,
 };
 
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
 
 const LINES: [&str; 4] = [
+    "Hello from lunatui",
+    "PR 08: hello_box on Grid",
+    "日本語 한국어 🦀 café",
+    "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
+];
+
+const LINES_FRAME0: [&str; 4] = [
     "Hello from lunatui",
     "PR 07: hello_box on Grid",
     "日本語 한국어 🦀 café",
@@ -26,10 +35,21 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
     let show_metrics = args.iter().any(|arg| arg == "--metrics");
     let show_cells = args.iter().any(|arg| arg == "--cells");
+    let show_diff = args.iter().any(|arg| arg == "--diff");
 
     let mut stdout = CountingWriter::new(io::stdout().lock());
     let (drawn, alloc) = ALLOC.measure(|| {
-        stdout.write_all(render_box(&LINES).as_bytes())?;
+        if show_diff {
+            let mut clusters = ClusterTable::new();
+            let (prev, _) = render_box_grid(&LINES_FRAME0, &mut clusters);
+            let (next, _) = render_box_grid(&LINES, &mut clusters);
+            let runs = diff_runs(&prev, &next);
+            let mut out = render_box(&LINES);
+            out.push_str(&format_diff_runs(&runs));
+            stdout.write_all(out.as_bytes())?;
+        } else {
+            stdout.write_all(render_box(&LINES).as_bytes())?;
+        }
         stdout.flush()
     });
     drawn?;
@@ -76,6 +96,21 @@ fn writeln_cell_row(out: &mut impl Write, text: &str) -> io::Result<()> {
         writeln!(out, "'{ch}': {:032x}", cell.to_bits())?;
     }
     Ok(())
+}
+
+fn format_diff_runs(runs: &[ChangedRun]) -> String {
+    let mut out = String::from("\nchanged runs (frame0 → frame1):\n");
+    for run in runs {
+        let _ = writeln!(
+            out,
+            "  row {:>2} cols {:>2}..{:>2} (width {})",
+            run.row,
+            run.col,
+            run.col + run.width,
+            run.width
+        );
+    }
+    out
 }
 
 fn render_box(lines: &[&str]) -> String {
@@ -212,12 +247,28 @@ mod tests {
     }
 
     #[test]
+    fn diff_flag_reports_runs_for_the_subtitle_line() {
+        use super::{LINES, LINES_FRAME0, format_diff_runs, render_box_grid};
+        use lunatui_core::{ClusterTable, diff_runs};
+
+        let mut clusters = ClusterTable::new();
+        let (prev, _) = render_box_grid(&LINES_FRAME0, &mut clusters);
+        let (next, _) = render_box_grid(&LINES, &mut clusters);
+        let runs = diff_runs(&prev, &next);
+        assert_ne!(runs, [] as [lunatui_core::ChangedRun; 0]);
+        assert!(runs.iter().all(|run| run.row == 2));
+        let summary = format_diff_runs(&runs);
+        assert!(summary.contains("changed runs"));
+        assert!(summary.contains("row  2"));
+    }
+
+    #[test]
     fn the_demo_box_keeps_its_right_border_aligned() {
         let text_width = LINES.iter().map(|line| width(line)).max().unwrap_or(0);
         let border = "─".repeat(text_width + 2);
         let pad = |line: &str| " ".repeat(text_width - width(line));
         let expected = format!(
-            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 07: hello_box on Grid{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
+            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 08: hello_box on Grid{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
             pad0 = pad(LINES[0]),
             pad1 = pad(LINES[1]),
             pad2 = pad(LINES[2]),
