@@ -4,7 +4,6 @@
 
 use lunatui_core::{Attrs, Color, Style, UnderlineStyle};
 
-/// Terminal pen state the encoder has already applied.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Pen {
     pub fg: Color,
@@ -22,7 +21,6 @@ impl Default for Pen {
     }
 }
 
-/// Writes one combined SGR sequence for the delta from `current` to `target`.
 pub(crate) fn write_sgr_delta(
     buffer: &mut Vec<u8>,
     current: &mut Pen,

@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/// Writes an absolute cursor position (CUP), 1-based row and column.
 pub(crate) fn write_cup(buffer: &mut Vec<u8>, col: u16, row: u16) {
     buffer.extend_from_slice(b"\x1b[");
     push_u16(buffer, row + 1);
