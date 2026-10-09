@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `lunatui_term::Encoder` (v1): pen-state SGR deltas, CUP cursor moves, printing through on the same row, and a crossterm-compatible reset trailer (PR 09). `hello_box --encode` draws the demo through the encoder.
 - `lunatui_core::diff_runs` and `ChangedRun`: scalar diff over dirty row spans into contiguous changed-cell runs (PR 08). `hello_box --diff` prints runs between two demo frames.
 - Leaf/trunk PR review policy with proof, testing, feature-gating and merge requirements (`REVIEW_POLICY.md`).
 - `lunatui_core::Grid` with `put_str`, `fill`, `set_style`, per-row dirty spans and an
