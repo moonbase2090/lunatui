@@ -857,6 +857,7 @@ version = "0.0.0"
 dependencies = [
  "lunatui-bench",
  "lunatui-core",
+ "lunatui-term",
  "ratatui",
 ]
 
@@ -897,6 +898,11 @@ version = "0.0.0"
 [[package]]
 name = "lunatui-term"
 version = "0.0.0"
+dependencies = [
+ "lunatui-bench",
+ "lunatui-core",
+ "ratatui",
+]
 
 [[package]]
 name = "lunatui-test"
