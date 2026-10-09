@@ -9,6 +9,7 @@ mod attr;
 mod cell;
 mod color;
 mod grapheme;
+mod grid;
 mod style;
 mod width;
 
@@ -19,5 +20,6 @@ pub use grapheme::{
     CLUSTER_TAG, CONTINUATION_GLYPH, ClusterId, ClusterTable, DecodedGlyph, GlyphSlot,
     MAX_CLUSTER_IDS, cluster_display_width, text_display_width,
 };
+pub use grid::{Grid, Rect, RowDirty};
 pub use style::Style;
 pub use width::{UNICODE_VERSION, char_width, width};
