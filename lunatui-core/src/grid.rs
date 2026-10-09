@@ -87,8 +87,7 @@ impl Grid {
     /// Packed cell word at `(x, y)`, or [`Cell::BLANK`] when out of bounds.
     #[must_use]
     pub fn cell_bits(&self, x: u16, y: u16) -> u128 {
-        self.get(x, y)
-            .map_or(Cell::BLANK.to_bits(), Cell::to_bits)
+        self.get(x, y).map_or(Cell::BLANK.to_bits(), Cell::to_bits)
     }
 
     /// Clears all row dirty flags and spans.
