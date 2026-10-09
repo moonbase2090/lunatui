@@ -2,7 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use lunatui_core::{ClusterTable, Grid};
+mod cursor;
+mod sgr;
+
+use lunatui_core::{CellWidth, ClusterTable, DecodedGlyph, Grid, diff_runs};
+
+use cursor::write_cup;
+use sgr::{Pen, write_sgr_delta};
 
 /// Whether the encoder writes color sequences.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,6 +23,9 @@ pub enum ColorMode {
 #[derive(Clone, Debug, Default)]
 pub struct Encoder {
     buffer: Vec<u8>,
+    pen: Pen,
+    cursor_col: u16,
+    cursor_row: u16,
 }
 
 impl Encoder {
@@ -27,14 +36,64 @@ impl Encoder {
     }
 
     /// Encodes `next` against `previous` into the internal buffer and returns the bytes.
+    ///
+    /// The output ends with the same reset trailer ratatui's crossterm backend emits after a draw.
     pub fn encode_diff(
         &mut self,
-        _previous: &Grid,
-        _next: &Grid,
-        _clusters: &ClusterTable,
-        _colors: ColorMode,
+        previous: &Grid,
+        next: &Grid,
+        clusters: &ClusterTable,
+        colors: ColorMode,
     ) -> &[u8] {
         self.buffer.clear();
+        self.pen = Pen::default();
+        self.cursor_col = 0;
+        self.cursor_row = 0;
+        let color = colors == ColorMode::TrueColor;
+        for run in diff_runs(previous, next) {
+            let mut col = run.col;
+            while col < run.col + run.width {
+                let Some(cell) = next.get(col, run.row) else {
+                    col += 1;
+                    continue;
+                };
+                if cell.meta().width == CellWidth::Continuation {
+                    col += 1;
+                    continue;
+                }
+                if col != self.cursor_col || run.row != self.cursor_row {
+                    write_cup(&mut self.buffer, col, run.row);
+                    self.cursor_col = col;
+                    self.cursor_row = run.row;
+                }
+                let style = cell.style();
+                write_sgr_delta(&mut self.buffer, &mut self.pen, style, color);
+                self.write_glyph(cell.glyph(), clusters);
+                let advance = match cell.meta().width {
+                    CellWidth::Two => 2,
+                    CellWidth::One | CellWidth::Continuation => 1,
+                };
+                self.cursor_col += advance;
+                col += advance;
+            }
+        }
+        self.buffer.extend_from_slice(b"\x1b[m\x1b[m\x1b[m\x1b[0m");
         &self.buffer
+    }
+
+    fn write_glyph(&mut self, glyph: lunatui_core::GlyphSlot, clusters: &ClusterTable) {
+        match glyph.decode() {
+            DecodedGlyph::Inline(scalar) => {
+                let mut chunk = [0u8; 4];
+                let text = scalar.encode_utf8(&mut chunk);
+                self.buffer.extend_from_slice(text.as_bytes());
+            }
+            DecodedGlyph::Cluster(id) => {
+                if let Some(text) = clusters.cluster_text(id) {
+                    self.buffer.extend_from_slice(text.as_bytes());
+                }
+            }
+            DecodedGlyph::Continuation => {}
+        }
     }
 }

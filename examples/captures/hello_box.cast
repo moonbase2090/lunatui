@@ -1,3 +1,3 @@
-{"version":3,"term":{"cols":80,"rows":24},"timestamp":1791563013,"command":"./target/debug/examples/hello_box --diff","title":"3","env":{"SHELL":"/bin/zsh"}}
-[0.154, "o", "┌──────────────────────────┐\r\n│ Hello from lunatui       │\r\n│ PR 08: hello_box on Grid │\r\n│ 日本語 한국어 🦀 café    │\r\n│ 👩‍💻 ❤️ 🇺🇸                 │\r\n└──────────────────────────┘\r\n\r\nchanged runs (frame0 → frame1):\r\n  row  2 cols  6.. 7 (width 1)\r\n"]
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1791569712,"command":"./target/debug/examples/hello_box --encode","title":"3","env":{"SHELL":"/bin/zsh"}}
+[0.151, "o", "┌──────────────────────────┐\u001b[2;1H│\u001b[2;3HHello\u001b[2;9Hfrom\u001b[2;14Hlunatui\u001b[2;28H│\u001b[3;1H│\u001b[3;3HPR\u001b[3;6H09:\u001b[3;10Hhello_box\u001b[3;20Hon\u001b[3;23HGrid\u001b[3;28H│\u001b[4;1H│\u001b[4;3H日本語\u001b[4;10H한국어\u001b[4;17H🦀\u001b[4;20Hcafé\u001b[4;28H│\u001b[5;1H│\u001b[5;3H👩‍💻\u001b[5;6H❤️\u001b[5;9H🇺🇸\u001b[5;28H│\u001b[6;1H└──────────────────────────┘\u001b[m\u001b[m\u001b[m\u001b[0m"]
 [0.000, "x", "0"]
