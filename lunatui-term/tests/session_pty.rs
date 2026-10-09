@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #![cfg(unix)]
-
 #![doc = include_str!("../README.md")]
 
 use std::fs::File;
@@ -25,7 +24,10 @@ fn session_enters_alt_screen_and_restores_on_drop() {
         output.windows(8).any(|w| w == b"\x1b[?1049l"),
         "expected alternate-screen leave"
     );
-    assert!(output.windows(5).any(|w| w == b"probe"), "expected frame bytes");
+    assert!(
+        output.windows(5).any(|w| w == b"probe"),
+        "expected frame bytes"
+    );
 }
 
 #[test]
