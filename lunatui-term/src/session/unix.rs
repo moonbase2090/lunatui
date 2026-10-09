@@ -181,14 +181,14 @@ fn open_controlling_tty() -> Result<File, SessionError> {
     let stdout = std::io::stdout();
     let stdout_fd = stdout.as_raw_fd();
     // SAFETY: `stdout_fd` comes from `AsRawFd` on the process stdout handle.
-    if isatty(unsafe { rustix::fd::BorrowedFd::borrow_raw(stdout_fd) }) {
-        // SAFETY: `dup` is called on a live fd returned from `AsRawFd` on stdout.
-        let dup = unsafe { libc::dup(stdout_fd) };
-        if dup < 0 {
-            return Err(SessionError::Io(io::Error::last_os_error()));
+    unsafe {
+        if isatty(rustix::fd::BorrowedFd::borrow_raw(stdout_fd)) {
+            let dup = libc::dup(stdout_fd);
+            if dup < 0 {
+                return Err(SessionError::Io(io::Error::last_os_error()));
+            }
+            return Ok(File::from_raw_fd(dup));
         }
-        // SAFETY: `dup` returns a new fd for the same open description when it succeeds.
-        return Ok(unsafe { File::from_raw_fd(dup) });
     }
     let tty = File::open("/dev/tty").map_err(SessionError::Io)?;
     if !isatty(&tty) {
