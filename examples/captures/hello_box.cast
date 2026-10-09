@@ -1,4 +1,7 @@
-{"version":3,"term":{"cols":80,"rows":24},"timestamp":1791403757,"idle_time_limit":1.0,"command":"sh -c 'printf \"$ cargo run --example hello_box -- --metrics\\n\"; sleep 0.6; cargo run -q --example hello_box -- --metrics; sleep 2.5'","title":"4","env":{"SHELL":"/bin/zsh"}}
-[0.006, "o", "$ cargo run --example hello_box -- --metrics\r\n"]
-[1.114, "o", "┌─────────────────────────────┐\r\n│ Hello from lunatui          │\r\n│ PR 06: packed 16-byte cells │\r\n│ 日本語 한국어 🦀 café       │\r\n│ 👩‍💻 ❤️ 🇺🇸                    │\r\n└─────────────────────────────┘\r\n┌────────────────────────────────┐\r\n│ write() calls: 1               │\r\n│ bytes written: 360             │\r\n│ allocations:   48 (2017 bytes) │\r\n└────────────────────────────────┘\r\n"]
-[2.508, "x", "0"]
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1791425063,"command":"sh -c 'printf \"$ ./target/debug/examples/hello_box\\n\"; ./target/debug/examples/hello_box; printf \"$ ./target/debug/examples/hello_box -- --metrics\\n\"; ./target/debug/examples/hello_box -- --metrics'","env":{"SHELL":"/bin/zsh"}}
+[0.007, "o", "$ ./target/debug/examples/hello_box\r\n"]
+[0.209, "o", "┌──────────────────────────┐\r\n│ Hello from lunatui       │\r\n│ PR 07: hello_box on Grid │\r\n│ 日本語 한국어 🦀 café    │\r\n│ 👩‍💻 ❤️ 🇺🇸                 │\r\n└──────────────────────────┘\r\n"]
+[0.000, "o", "$ ./target/debug/examples/hello_box -- --metrics\r\n"]
+[0.003, "o", "┌──────────────────────────┐\r\n│ Hello from lunatui       │\r\n│ PR 07: hello_box on Grid │\r\n│ 日本語 한국어 🦀 café    │\r\n│ 👩‍💻 ❤️ 🇺🇸                 │\r\n└──────────────────────────┘\r\n"]
+[0.001, "o", "┌─────────────────────────────────┐\r\n│ write() calls: 1                │\r\n│ bytes written: 330              │\r\n│ allocations:   298 (8211 bytes) │\r\n└─────────────────────────────────┘\r\n"]
+[0.000, "x", "0"]
