@@ -5,5 +5,7 @@
 #![doc = include_str!("../README.md")]
 
 mod encode;
+mod session;
 
 pub use encode::{ColorMode, Encoder};
+pub use session::{Session, SessionError, SessionOptions, SyncOutput};
