@@ -1,0 +1,2 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760100000, "title": "hello_box --oracle"}
+[0.0, "o", "oracle: match\ndiff-apply: match\nvt100 splits the ZWJ and flag clusters on row 4\n┌──────────────────────────┐\n│ Hello from lunatui       │\n│ PR 11: hello_box on Grid │\n│ 日本語 한국어 🦀 café    │\n│ 👩‍💻 ❤️ 🇺🇸                 │\n└──────────────────────────┘\n"]
