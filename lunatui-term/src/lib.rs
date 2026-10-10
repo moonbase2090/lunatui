@@ -4,8 +4,16 @@
 
 #![doc = include_str!("../README.md")]
 
+mod caps;
 mod encode;
 mod session;
 
+#[cfg(unix)]
+pub use caps::probe_fd;
+pub use caps::{
+    Caps, ColorDepth, DecModes, GRAPHEME_ENABLE, GraphicsProtocol, Hyperlinks, KeyboardProtocol,
+    Multiplexer, PROBE_BUDGET, PrivateMode, ProbeEnv, ProbeReply, Protocols, QUERIES,
+    RecordedTerminal, TermIdentity, WidthPolicy,
+};
 pub use encode::{ColorMode, Encoder};
 pub use session::{Session, SessionError, SessionOptions, SyncOutput};

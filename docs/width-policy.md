@@ -23,7 +23,7 @@ Why this order:
 - **Controls take no column (7).** They are never stored in a cell; the grid write APIs handle them.
 - **Soft hyphen is 1 (8).** Terminals and glibc `wcwidth` draw it as a visible hyphen, although Unicode marks it default-ignorable.
 
-East Asian Width `A` (ambiguous) is **narrow**, the Unicode default. Per-terminal overrides, such as treating ambiguous characters as wide in CJK locales, are part of the terminal width policy (§2.5) and come later.
+East Asian Width `A` (ambiguous) is **narrow**, the Unicode default. Per-terminal overrides are chosen by the capability probe (PR 12) and listed under [Probe fallback](#probe-fallback-pr-12).
 
 `width(text)` is the sum of `char_width` over the characters of `text`, with a fast path for ASCII.
 
@@ -37,7 +37,22 @@ East Asian Width `A` (ambiguous) is **narrow**, the Unicode default. Per-termina
 | `❤️` (heart, VS16) | 2 |
 | `🇺🇸` (two regional indicators) | 2 |
 
-Terminals that report DEC mode 2027 segment clusters the same way (§2.1). Per-terminal overrides for ambiguous width still follow §2.5.
+Terminals that report DEC mode 2027 segment clusters the same way (§2.1). When that mode is set or reset, the probe uses Unicode widths. Otherwise the fallback below applies.
+
+## Probe fallback (PR 12)
+
+`lunatui_term::probe_fd` (Unix) writes one query batch ending in primary device attributes and waits at most 200 ms. A DECRPM reply of set or reset for mode 2027 selects `WidthPolicy::Unicode` and, when the mode is reset, the probe writes `CSI ? 2027 h`.
+
+When mode 2027 is unreported, unrecognized, or permanently reset, the name (`XTVERSION`, else `TERM_PROGRAM`) selects the fallback:
+
+| Name contains | Policy |
+|---|---|
+| `apple_terminal`, `mintty` | ambiguous wide (`WidthPolicy::ambiguous_columns` is 2) |
+| `kitty`, `wezterm`, `ghostty`, `iterm`, `alacritty`, `foot`, `vscode`, `contour`, `rio`, `xterm`, `tmux`, `screen`, `prismattyc`, `warp` | Unicode (ambiguous columns are 1) |
+| anything else, and the locale language is `ja`, `ko`, or `zh` | ambiguous wide |
+| anything else | Unicode |
+
+`char_width` and `width` keep the Unicode tables above. Grid writes are not switched in this PR.
 
 ## Differences from `unicode-width` 0.2.2
 
