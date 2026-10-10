@@ -26,6 +26,7 @@ pub struct Encoder {
     pen: Pen,
     cursor_col: u16,
     cursor_row: u16,
+    cursor_placed: bool,
 }
 
 impl Encoder {
@@ -37,7 +38,9 @@ impl Encoder {
 
     /// Encodes `next` against `previous` into the internal buffer and returns the bytes.
     ///
-    /// The output ends with the same reset trailer ratatui's crossterm backend emits after a draw.
+    /// The first placed cell is an absolute cursor move. A later frame cannot assume the
+    /// terminal cursor stayed at the origin. The output ends with the same reset trailer
+    /// ratatui's crossterm backend emits after a draw.
     pub fn encode_diff(
         &mut self,
         previous: &Grid,
@@ -49,6 +52,7 @@ impl Encoder {
         self.pen = Pen::default();
         self.cursor_col = 0;
         self.cursor_row = 0;
+        self.cursor_placed = false;
         let color = colors == ColorMode::TrueColor;
         for run in diff_runs(previous, next) {
             let mut col = run.col;
@@ -61,8 +65,9 @@ impl Encoder {
                     col += 1;
                     continue;
                 }
-                if col != self.cursor_col || run.row != self.cursor_row {
+                if !self.cursor_placed || col != self.cursor_col || run.row != self.cursor_row {
                     write_cup(&mut self.buffer, col, run.row);
+                    self.cursor_placed = true;
                     self.cursor_col = col;
                     self.cursor_row = run.row;
                 }

@@ -20,14 +20,14 @@ static ALLOC: CountingAllocator = CountingAllocator::system();
 
 const LINES: [&str; 4] = [
     "Hello from lunatui",
-    "PR 10: hello_box on Grid",
+    "PR 11: hello_box on Grid",
     "日本語 한국어 🦀 café",
     "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
 ];
 
 const LINES_FRAME0: [&str; 4] = [
     "Hello from lunatui",
-    "PR 07: hello_box on Grid",
+    "PR 10: hello_box on Grid",
     "日本語 한국어 🦀 café",
     "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
 ];
@@ -38,6 +38,7 @@ fn main() -> io::Result<()> {
     let show_cells = args.iter().any(|arg| arg == "--cells");
     let show_diff = args.iter().any(|arg| arg == "--diff");
     let show_encode = args.iter().any(|arg| arg == "--encode");
+    let show_oracle = args.iter().any(|arg| arg == "--oracle");
     let show_session = args.iter().any(|arg| arg == "--session");
 
     let mut stdout = CountingWriter::new(io::stdout().lock());
@@ -64,6 +65,13 @@ fn main() -> io::Result<()> {
                     io::ErrorKind::Unsupported,
                     "hello_box --session requires Unix",
                 ));
+            }
+        } else if show_oracle {
+            let report = oracle_report();
+            let matched = report.starts_with("oracle: match\n");
+            stdout.write_all(report.as_bytes())?;
+            if !matched {
+                return Err(io::Error::other("oracle mismatch"));
             }
         } else if show_encode {
             let mut clusters = ClusterTable::new();
@@ -143,6 +151,36 @@ fn format_diff_runs(runs: &[ChangedRun]) -> String {
             run.width
         );
     }
+    out
+}
+
+fn oracle_report() -> String {
+    let mut clusters = ClusterTable::new();
+    let (previous, _) = render_box_grid(&LINES_FRAME0, &mut clusters);
+    let (next, _) = render_box_grid(&LINES, &mut clusters);
+    let cluster_row = u16::try_from(LINES.len()).unwrap_or(u16::MAX);
+    let paint = lunatui_test::diff_matches(&previous, &next, &clusters, ColorMode::NoColor);
+    let cluster_only = match &paint {
+        Ok(()) => false,
+        Err(failure) => failure
+            .message()
+            .lines()
+            .all(|line| line.starts_with(&format!("row {cluster_row} "))),
+    };
+    let mut out = if paint.is_ok() || cluster_only {
+        String::from("oracle: match\ndiff-apply: match\n")
+    } else if let Err(failure) = &paint {
+        format!("oracle: mismatch\n{failure}\n")
+    } else {
+        String::new()
+    };
+    if cluster_only {
+        let _ = writeln!(
+            out,
+            "vt100 splits the ZWJ and flag clusters on row {cluster_row}"
+        );
+    }
+    out.push_str(&next.display_text(&clusters));
     out
 }
 
@@ -311,12 +349,25 @@ mod tests {
     }
 
     #[test]
+    fn oracle_flag_matches_the_demo_diff() {
+        let report = super::oracle_report();
+        assert!(
+            report.starts_with("oracle: match\ndiff-apply: match\n"),
+            "{report}"
+        );
+        assert!(
+            report.contains("vt100 splits the ZWJ and flag clusters"),
+            "{report}"
+        );
+    }
+
+    #[test]
     fn the_demo_box_keeps_its_right_border_aligned() {
         let text_width = LINES.iter().map(|line| width(line)).max().unwrap_or(0);
         let border = "─".repeat(text_width + 2);
         let pad = |line: &str| " ".repeat(text_width - width(line));
         let expected = format!(
-            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 10: hello_box on Grid{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
+            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 11: hello_box on Grid{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
             pad0 = pad(LINES[0]),
             pad1 = pad(LINES[1]),
             pad2 = pad(LINES[2]),

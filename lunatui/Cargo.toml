@@ -15,6 +15,7 @@ workspace = true
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-term = { path = "../lunatui-term" }
+lunatui-test = { path = "../lunatui-test" }
 ratatui = "=0.30.2"
 
 # Examples live in the top-level `examples/` directory (PRD M13) and are

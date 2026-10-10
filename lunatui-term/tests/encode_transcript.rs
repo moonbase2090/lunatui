@@ -15,7 +15,7 @@ fn empty_to_two_ascii_cells_matches_transcript() {
     next.put_str(0, 0, Style::new(), "AB", &mut clusters);
     let mut encoder = Encoder::new();
     let bytes = encoder.encode_diff(&prev, &next, &clusters, ColorMode::NoColor);
-    assert_eq!(bytes, b"AB\x1b[m\x1b[m\x1b[m\x1b[0m");
+    assert_eq!(bytes, b"\x1b[1;1HAB\x1b[m\x1b[m\x1b[m\x1b[0m");
 }
 
 #[test]
