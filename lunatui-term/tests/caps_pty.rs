@@ -141,35 +141,45 @@ fn exchange(fixture: &[u8]) -> io::Result<(ProbeReply, Vec<u8>)> {
 fn open_pty() -> io::Result<(File, File)> {
     let mut master = 0;
     let mut slave = 0;
-    // SAFETY: `openpty` writes open fds to `master` and `slave` when it returns zero.
-    let rc = unsafe {
-        libc::openpty(
-            &raw mut master,
-            &raw mut slave,
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-        )
+    let rc = {
+        // SAFETY: `openpty` writes open fds to `master` and `slave` when it returns zero.
+        unsafe {
+            libc::openpty(
+                &raw mut master,
+                &raw mut slave,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        }
     };
     if rc != 0 {
         return Err(io::Error::last_os_error());
     }
-    // SAFETY: both fds were opened by `openpty` and are not owned elsewhere.
-    let master = unsafe { File::from_raw_fd(master) };
-    // SAFETY: both fds were opened by `openpty` and are not owned elsewhere.
-    let slave = unsafe { File::from_raw_fd(slave) };
+    let master = {
+        // SAFETY: `master` was opened by `openpty` and is not owned elsewhere.
+        unsafe { File::from_raw_fd(master) }
+    };
+    let slave = {
+        // SAFETY: `slave` was opened by `openpty` and is not owned elsewhere.
+        unsafe { File::from_raw_fd(slave) }
+    };
     Ok((master, slave))
 }
 
 fn set_nonblocking(file: &File) -> io::Result<()> {
     let fd = file.as_fd().as_raw_fd();
-    // SAFETY: `fd` is an open pty master. `F_GETFL` / `F_SETFL` only change its status flags.
-    let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
+    let flags = {
+        // SAFETY: `fd` is an open pty master. `F_GETFL` reads its status flags.
+        unsafe { libc::fcntl(fd, libc::F_GETFL) }
+    };
     if flags < 0 {
         return Err(io::Error::last_os_error());
     }
-    // SAFETY: same open fd, with the non-blocking bit added to the flags just read.
-    let rc = unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) };
+    let rc = {
+        // SAFETY: `fd` is the same open pty master. `F_SETFL` sets the non-blocking flag.
+        unsafe { libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK) }
+    };
     if rc < 0 {
         return Err(io::Error::last_os_error());
     }

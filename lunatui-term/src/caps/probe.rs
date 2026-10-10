@@ -130,8 +130,10 @@ fn wait_read(fd: BorrowedFd<'_>, timeout_ms: i32) -> io::Result<Wait> {
         events: libc::POLLIN,
         revents: 0,
     };
-    // SAFETY: `poll_fd` refers to an open descriptor and lives for this call. `nfds` is 1.
-    let ready = unsafe { libc::poll(&raw mut poll_fd, 1, timeout_ms) };
+    let ready = {
+        // SAFETY: `poll_fd` refers to an open descriptor and lives for this call. `nfds` is 1.
+        unsafe { libc::poll(&raw mut poll_fd, 1, timeout_ms) }
+    };
     if ready < 0 {
         let err = io::Error::last_os_error();
         if err.kind() == io::ErrorKind::Interrupted {
