@@ -26,6 +26,11 @@ path = "../examples/hello_box.rs"
 test = true
 
 [[example]]
+name = "caps"
+path = "../examples/caps.rs"
+test = true
+
+[[example]]
 name = "ratatui_dashboard"
 path = "../examples/ratatui_dashboard.rs"
 test = true

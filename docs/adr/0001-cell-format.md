@@ -111,7 +111,7 @@ Underline color, OSC 8 hyperlink ID and image placement live in a per-frame `Ext
 
 ### 4.8 Mode 2027 policy
 
-The capability probe (PR 12) asks DECRQM for mode 2027 (grapheme clusters). If the terminal supports it, lunatui enables it, so the terminal segments clusters as lunatui does, and cluster widths follow Unicode. If not, cluster widths come from the per-terminal width policy (§2.5). Support is probed at runtime and never assumed. Until the probe lands, cluster widths follow the Unicode rules in `docs/width-policy.md`.
+The capability probe (PR 12, `lunatui_term::Caps`) asks DECRQM for mode 2027 (grapheme clusters). If the terminal reports the mode set or reset, lunatui enables it when it is reset, so the terminal segments clusters as lunatui does, and cluster widths follow Unicode. If the mode is unreported, unrecognized, or locked off, cluster widths come from the per-terminal width policy (§2.5, `docs/width-policy.md`). Support is probed at runtime and never assumed. `char_width` still uses the Unicode tables; `WidthPolicy::ambiguous_columns` is the ambiguous-width fallback for callers.
 
 ## 5. Invariants
 
