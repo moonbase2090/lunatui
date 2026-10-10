@@ -67,29 +67,27 @@ jobs:
           fi
           {
             echo "tag=$TAG"
-            echo "tag_message<<EOF"
-            echo "$TAG_MESSAGE"
-            echo "EOF"
-            echo "release_title<<EOF"
-            echo "$TITLE"
-            echo "EOF"
-            echo "release_body<<EOF"
-            echo "$BODY"
-            echo "EOF"
+            printf 'tag_message=%s\n' "$(printf '%s' "$TAG_MESSAGE" | base64 -w0)"
+            printf 'release_title=%s\n' "$(printf '%s' "$TITLE" | base64 -w0)"
+            printf 'release_body=%s\n' "$(printf '%s' "$BODY" | base64 -w0)"
           } >>"$GITHUB_OUTPUT"
 
       - name: Build release binaries for strings scan
-        env:
-          RUSTFLAGS: -D warnings --remap-path-prefix=${{ github.workspace }}=. --remap-path-prefix=${{ env.HOME }}=~
-        run: cargo build --release --locked --example hello_box
+        run: |
+          set -euo pipefail
+          export RUSTFLAGS="-D warnings --remap-path-prefix=${GITHUB_WORKSPACE}=. --remap-path-prefix=${HOME}=~"
+          cargo build --release --locked --example hello_box
 
       - name: Scan release text and artifacts
         env:
-          TAG_MESSAGE: ${{ steps.meta.outputs.tag_message }}
-          RELEASE_TITLE: ${{ steps.meta.outputs.release_title }}
-          RELEASE_BODY: ${{ steps.meta.outputs.release_body }}
+          TAG_MESSAGE_B64: ${{ steps.meta.outputs.tag_message }}
+          RELEASE_TITLE_B64: ${{ steps.meta.outputs.release_title }}
+          RELEASE_BODY_B64: ${{ steps.meta.outputs.release_body }}
         run: |
           set -euo pipefail
+          TAG_MESSAGE="$(printf '%s' "$TAG_MESSAGE_B64" | base64 -d)"
+          RELEASE_TITLE="$(printf '%s' "$RELEASE_TITLE_B64" | base64 -d)"
+          RELEASE_BODY="$(printf '%s' "$RELEASE_BODY_B64" | base64 -d)"
           chmod +x scripts/check-release-text.sh
           ./scripts/check-release-text.sh \
             --tag-message "$TAG_MESSAGE" \
