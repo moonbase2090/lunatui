@@ -11,6 +11,10 @@ autoexamples = false
 [lints]
 workspace = true
 
+[features]
+default = []
+color-profiles = ["lunatui-theme/color-profiles"]
+
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
@@ -35,6 +39,7 @@ test = true
 name = "gradient"
 path = "../examples/gradient.rs"
 test = true
+required-features = ["color-profiles"]
 
 [[example]]
 name = "ratatui_dashboard"
