@@ -64,10 +64,13 @@ fn run_probe_in_pty(mode: &str) -> Vec<u8> {
 
     let mut command = Command::new(probe);
     command.arg(mode);
+    let master_fd = master;
+    let slave_fd = slave;
     // SAFETY: `login_tty` runs in the child between `fork` and `exec` with a valid slave fd.
     unsafe {
         command.pre_exec(move || {
-            if libc::login_tty(slave) != 0 {
+            libc::close(master_fd);
+            if libc::login_tty(slave_fd) != 0 {
                 return Err(io::Error::last_os_error());
             }
             Ok(())
@@ -75,8 +78,17 @@ fn run_probe_in_pty(mode: &str) -> Vec<u8> {
     }
 
     let Ok(mut child) = command.spawn() else {
+        // SAFETY: `openpty` fds are open in this process.
+        unsafe {
+            libc::close(master);
+            libc::close(slave);
+        }
         return Vec::new();
     };
+    // SAFETY: Parent must drop its slave fd so the master reader sees EOF when the child exits.
+    unsafe {
+        libc::close(slave);
+    }
     let master_file = {
         // SAFETY: `master` is an open fd returned by `openpty`.
         unsafe { File::from_raw_fd(master) }
