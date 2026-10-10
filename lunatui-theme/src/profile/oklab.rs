@@ -11,7 +11,6 @@ struct Lab {
     b: f64,
 }
 
-/// Lowest palette index in `indices` whose `OKLab` distance to `rgb` is smallest.
 pub(crate) fn nearest(rgb: [u8; 3], indices: impl IntoIterator<Item = u8>) -> u8 {
     let target = lab(rgb);
     let mut indices = indices.into_iter();

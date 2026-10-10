@@ -23,7 +23,6 @@ const ANSI: [[u8; 3]; 16] = [
 
 const CUBE: [u8; 6] = [0, 95, 135, 175, 215, 255];
 
-/// RGB of xterm's 256-color palette entry `index`.
 pub(crate) fn rgb(index: u8) -> [u8; 3] {
     if index < 16 {
         return ANSI[usize::from(index)];
