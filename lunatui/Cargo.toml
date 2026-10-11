@@ -52,6 +52,11 @@ path = "../examples/cell_prototype.rs"
 test = true
 
 [[example]]
+name = "layout_prototype"
+path = "../examples/layout_prototype.rs"
+test = true
+
+[[example]]
 name = "cell_dump"
 path = "../examples/cell_dump.rs"
 test = true

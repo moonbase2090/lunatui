@@ -1,0 +1,2 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760100000, "title": "layout_prototype"}
+[0.0, "o", "┌ layout ──────────────────┐\n│ width 40  10  7 15  8    │\n│ width 80  10 21 41  8    │\n│ 20 fill   200 -> 10 each │\n└──────────────────────────┘\n"]
