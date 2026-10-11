@@ -9,3 +9,12 @@ repository.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+lunatui-core = { path = "../lunatui-core" }
+num-bigint = "0.4"
+num-traits = "0.2"
+
+[dev-dependencies]
+proptest = "=1.9.0"
+ratatui = "=0.30.2"

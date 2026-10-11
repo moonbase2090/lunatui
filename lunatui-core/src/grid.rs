@@ -30,6 +30,19 @@ pub struct Rect {
     pub height: u16,
 }
 
+impl Rect {
+    /// A rectangle at `(x, y)` with the given size.
+    #[must_use]
+    pub const fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+}
+
 /// Per-row damage: whether the row changed since the last [`Grid::clear_dirty`], and the
 /// column span `[min_x, max_x)` that was touched (PRD §2.3).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
