@@ -107,44 +107,64 @@ impl Input {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::VecDeque;
     use std::io::{self, Read};
+    use std::sync::mpsc::{self, Receiver, Sender};
 
     use lunatui_term::{Event, KeyCode, KeyEvent};
 
     use crate::Input;
 
     struct FakeSource {
-        bytes: Vec<u8>,
-        delivered: bool,
+        reads: VecDeque<Vec<u8>>,
+        ready: Sender<()>,
+        release: Receiver<()>,
     }
 
     impl FakeSource {
-        fn new(bytes: Vec<u8>) -> Self {
+        fn from_reads(
+            reads: Vec<Vec<u8>>,
+            barrier_sender: Sender<()>,
+            continue_receiver: Receiver<()>,
+        ) -> Self {
             Self {
-                bytes,
-                delivered: false,
+                reads: reads.into(),
+                ready: barrier_sender,
+                release: continue_receiver,
             }
         }
     }
 
     impl Read for FakeSource {
         fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
-            if self.delivered {
-                return Ok(0);
+            if let Some(bytes) = self.reads.pop_front() {
+                buffer[..bytes.len()].copy_from_slice(&bytes);
+                return Ok(bytes.len());
             }
-            self.delivered = true;
-            let length = self.bytes.len().min(buffer.len());
-            buffer[..length].copy_from_slice(&self.bytes[..length]);
-            Ok(length)
+            self.ready
+                .send(())
+                .map_err(|_| io::Error::other("test receiver closed"))?;
+            self.release
+                .recv()
+                .map_err(|_| io::Error::other("test release closed"))?;
+            Ok(0)
         }
     }
 
     #[test]
     fn bursts_coalesce_to_one_frame() -> Result<(), Box<dyn std::error::Error>> {
-        let source = FakeSource::new(b"abc".to_vec());
+        let (barrier_sender, barrier_receiver) = mpsc::channel();
+        let (continue_sender, continue_receiver) = mpsc::channel();
+        let source = FakeSource::from_reads(
+            vec![b"a".to_vec(), b"b".to_vec(), b"c".to_vec()],
+            barrier_sender,
+            continue_receiver,
+        );
         let mut input = Input::from_reader(source)?;
+        barrier_receiver.recv()?;
 
         let frame = input.next_frame()?.ok_or("source ended before its burst")?;
+        continue_sender.send(())?;
 
         assert_eq!(
             frame,
