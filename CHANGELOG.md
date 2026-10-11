@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- ADR 0002 (DD-2, `docs/adr/0002-layout-engine.md`): constraint semantics, the closed-form split, the kasuari boundary, ratatui parity, and the plan for memo, `Grid`, `Stack` and `Auto`. The prototype is `layout_prototype` in `lunatui-bench`; `lunatui-layout` stays a stub until PR 14.
 - `lunatui_theme::Profile` (feature `color-profiles`, off by default): truecolor, 256, 16, and mono. `downsample` picks the nearest xterm color in `OKLab` (PR 13). The `gradient` example prints one hue ramp in all four profiles when the feature is enabled.
 - `lunatui_term::Caps`: environment plus one query batch ending in primary device attributes, including DECRQM for modes 2026 and 2027. Mode 2027 is enabled when the terminal reports it reset. Otherwise `WidthPolicy` is Unicode or ambiguous-wide from the terminal name and locale (PR 12). The `caps` example prints that result in a box.
 - `lunatui_test` vt100 oracle: `diff_matches` checks `oracle(old + encode(diff(old, new))) == new`, a differential harness under `lunatui-term/tests/differential/`, and `fuzz_encoder` (PR 11). `hello_box --oracle` prints the oracle result for the demo's two frames. The encoder now places an absolute cursor move on the first cell of every frame, because a later frame cannot assume the cursor is still at the origin.
