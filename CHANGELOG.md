@@ -77,6 +77,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
+- REVIEW_POLICY.md gains a Review exceptions section: docs-only and changelog-only PRs merge on green checks plus the release-text check, a SHIP carries over an unchanged-diff rebase or label change, leaf Windows fixes batch their runtime proof before release, and security, trunk, CI, release and public-API PRs keep a full cross-family review at the exact tip.
 - Frame budget: the CI hard gate is a 16 ms maximum on shared runners, and
   the 8 ms maximum is the target, measured on a dedicated machine and reported
   in every Proof section (#6).
