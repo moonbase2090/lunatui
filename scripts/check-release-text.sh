@@ -233,19 +233,24 @@ is_archive() {
   esac
 }
 
-scan_archive_artifact() {
-  local archive="$1"
-  local tmpdir member rel label
-  tmpdir="$(mktemp -d)"
+extract_archive() {
+  local archive="$1" tmpdir="$2"
   case "$archive" in
     *.tar.gz | *.tgz) tar -xzf "$archive" -C "$tmpdir" ;;
     *.tar) tar -xf "$archive" -C "$tmpdir" ;;
     *.zip) unzip -q -o "$archive" -d "$tmpdir" ;;
-    *)
-      rm -rf "$tmpdir"
-      return
-      ;;
+    *) return 1 ;;
   esac
+}
+
+scan_archive_artifact() {
+  local archive="$1"
+  local tmpdir member rel label
+  tmpdir="$(mktemp -d)"
+  if ! extract_archive "$archive" "$tmpdir"; then
+    rm -rf "$tmpdir"
+    return 1
+  fi
   while IFS= read -r -d '' member; do
     rel="${member#"$tmpdir"/}"
     label="${archive}:${rel}"
@@ -311,7 +316,14 @@ for dir in "${ARTIFACT_DIRS[@]}"; do
       *.rlib | *.a | *.d | *.rmeta) continue ;;
     esac
     if is_archive "$artifact"; then
-      record_hits < <(scan_archive_artifact "$artifact")
+      archive_hits="$(mktemp)"
+      if ! scan_archive_artifact "$artifact" >"$archive_hits"; then
+        rm -f "$archive_hits"
+        echo "check-release-text: archive extraction failed: $artifact" >&2
+        exit 1
+      fi
+      record_hits <"$archive_hits"
+      rm -f "$archive_hits"
       continue
     fi
     if [[ -x "$artifact" ]] || file "$artifact" 2>/dev/null | grep -q 'executable'; then
