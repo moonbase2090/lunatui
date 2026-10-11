@@ -6,6 +6,7 @@
 
 mod caps;
 mod encode;
+mod input;
 mod session;
 
 #[cfg(unix)]
@@ -16,4 +17,8 @@ pub use caps::{
     RecordedTerminal, TermIdentity, WidthPolicy,
 };
 pub use encode::{ColorMode, Encoder};
+pub use input::{
+    Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
+    MouseUnit, Parser, Paste, Scroll, fuzz_input_parser,
+};
 pub use session::{Session, SessionError, SessionOptions, SyncOutput};
