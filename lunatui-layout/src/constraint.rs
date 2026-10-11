@@ -5,7 +5,7 @@
 /// One segment's claim on the axis being divided.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Constraint {
-    /// At least this many cells. In [`Flex::Legacy`] it stays at this size unless it is the
+    /// At least this many cells. In [`crate::Flex::Legacy`] it stays at this size unless it is the
     /// leftover sink. In every other flex it also shares leftover with [`Constraint::Fill`].
     Min(u16),
     /// At most this many cells, and this many when there is room.

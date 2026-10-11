@@ -155,8 +155,8 @@ fn zero_width_segments_stay_inside_after_overlap() {
         Constraint::Length(1),
         Constraint::Length(10),
     ])
-        .spacing(-1)
-        .split(Rect::new(0, 0, 3, 1));
+    .spacing(-1)
+    .split(Rect::new(0, 0, 3, 1));
     assert_eq!(
         solved
             .segments

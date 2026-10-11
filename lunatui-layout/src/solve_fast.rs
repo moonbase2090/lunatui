@@ -539,12 +539,7 @@ fn shrink_gaps(gaps: &mut [i64], mut excess: i64) {
     }
 }
 
-pub(crate) fn place(
-    area: Rect,
-    axis: Axis,
-    sizes: &[u16],
-    gaps: &[i64],
-) -> (Vec<Rect>, Vec<Rect>) {
+pub(crate) fn place(area: Rect, axis: Axis, sizes: &[u16], gaps: &[i64]) -> (Vec<Rect>, Vec<Rect>) {
     let mut cursor = 0_i64;
     let mut spacers = Vec::with_capacity(gaps.len());
     let mut segments = Vec::with_capacity(sizes.len());
@@ -623,7 +618,7 @@ fn mul_rem(value: u64, weight: u64, total: u64) -> u64 {
 mod ratio_extras_tests {
     use alloc::vec::Vec;
 
-    use super::{axis_sizes, grant_family_extras, Constraint, Flex};
+    use super::{Constraint, Flex, axis_sizes, grant_family_extras};
 
     #[test]
     fn large_ratio_denominators_still_allocate_extras() {

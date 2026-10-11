@@ -13,11 +13,7 @@ fn axis_use(width: u16, constraints: &[Constraint], flex: Flex, spacing: i16) ->
         .flex(flex)
         .spacing(spacing)
         .split(Rect::new(0, 0, width, 1));
-    let segments = solved
-        .segments
-        .iter()
-        .map(|rect| rect.width)
-        .sum::<u16>();
+    let segments = solved.segments.iter().map(|rect| rect.width).sum::<u16>();
     let gaps = solved
         .spacers
         .iter()
@@ -25,7 +21,10 @@ fn axis_use(width: u16, constraints: &[Constraint], flex: Flex, spacing: i16) ->
         .map(i64::from)
         .sum::<i64>();
     let total = i64::from(segments) + gaps;
-    (u16::try_from(total.max(0)).unwrap_or(u16::MAX), solved.needs_solver)
+    (
+        u16::try_from(total.max(0)).unwrap_or(u16::MAX),
+        solved.needs_solver,
+    )
 }
 
 proptest! {
