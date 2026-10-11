@@ -67,9 +67,8 @@ GENERIC_PATTERNS=(
 EMAIL_PATTERN='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
 
 TMP_EXTRA="$(mktemp)"
-TMP_GENERIC="$(mktemp)"
-TMP_FULL="$(mktemp)"
-trap 'rm -f "$TMP_EXTRA" "$TMP_EXTRA.tag" "$TMP_EXTRA.title" "$TMP_EXTRA.body" "$TMP_GENERIC" "$TMP_FULL"' EXIT
+TMP_PATTERNS="$(mktemp)"
+trap 'rm -f "$TMP_EXTRA" "$TMP_EXTRA.tag" "$TMP_EXTRA.title" "$TMP_EXTRA.body" "$TMP_PATTERNS"' EXIT
 
 RELEASE_SURFACE_FILES=()
 if [[ -n "$TAG_MESSAGE" ]]; then
@@ -85,26 +84,17 @@ if [[ -n "$RELEASE_BODY" ]]; then
   RELEASE_SURFACE_FILES+=("$TMP_EXTRA.body")
 fi
 
-write_patterns() {
-  local dest="$1"
-  local include_denylist="$2"
-  {
-    for pat in "${GENERIC_PATTERNS[@]}"; do
-      printf '%s\n' "$pat"
-    done
-    if [[ "$include_denylist" == "1" ]]; then
-      if [[ -f "$DENYLIST_FILE" ]]; then
-        grep -v '^[[:space:]]*$' "$DENYLIST_FILE" | grep -v '^[[:space:]]*#' || true
-      fi
-      if [[ -n "${RELEASE_DENYLIST:-}" ]]; then
-        printf '%s\n' "$RELEASE_DENYLIST"
-      fi
-    fi
-  } >"$dest"
-}
-
-write_patterns "$TMP_GENERIC" 0
-write_patterns "$TMP_FULL" 1
+{
+  for pat in "${GENERIC_PATTERNS[@]}"; do
+    printf '%s\n' "$pat"
+  done
+  if [[ -f "$DENYLIST_FILE" ]]; then
+    grep -v '^[[:space:]]*$' "$DENYLIST_FILE" | grep -v '^[[:space:]]*#' || true
+  fi
+  if [[ -n "${RELEASE_DENYLIST:-}" ]]; then
+    printf '%s\n' "$RELEASE_DENYLIST"
+  fi
+} >"$TMP_PATTERNS"
 
 collect_changelog_files() {
   local f
@@ -124,25 +114,26 @@ collect_doc_files() {
 }
 
 report_text_hit() {
-  local file="$1"
+  local label="$1"
   local line_no="$2"
-  echo "${file}:${line_no}"
+  echo "${label}:${line_no}"
 }
 
 scan_text_file() {
   local file="$1"
-  local patterns="$2"
+  local label="${2:-$file}"
   local pat line_no
   while IFS= read -r pat || [[ -n "$pat" ]]; do
     [[ -z "$pat" ]] && continue
     while IFS= read -r line_no; do
-      [[ -n "$line_no" ]] && report_text_hit "$file" "$line_no"
+      [[ -n "$line_no" ]] && report_text_hit "$label" "$line_no"
     done < <(grep -niE "$pat" "$file" 2>/dev/null | cut -d: -f1 || true)
-  done <"$patterns"
+  done <"$TMP_PATTERNS"
 }
 
 check_disallowed_emails() {
   local file="$1"
+  local label="${2:-$file}"
   local line_no content email
   while IFS= read -r line_no; do
     [[ -z "$line_no" ]] && continue
@@ -150,7 +141,7 @@ check_disallowed_emails() {
     while IFS= read -r email; do
       [[ -z "$email" ]] && continue
       if [[ "$email" != "$ALLOWED_EMAIL" ]]; then
-        report_text_hit "$file" "$line_no"
+        report_text_hit "$label" "$line_no"
       fi
     done < <(grep -oE "$EMAIL_PATTERN" <<<"$content" || true)
   done < <(grep -niE "$EMAIL_PATTERN" "$file" 2>/dev/null | cut -d: -f1 || true)
@@ -158,25 +149,20 @@ check_disallowed_emails() {
 
 scan_text_file_full() {
   local file="$1"
-  scan_text_file "$file" "$TMP_FULL"
-  check_disallowed_emails "$file"
+  local label="${2:-$file}"
+  scan_text_file "$file" "$label"
+  check_disallowed_emails "$file" "$label"
 }
 
-scan_text_file_generic() {
-  local file="$1"
-  scan_text_file "$file" "$TMP_GENERIC"
-  check_disallowed_emails "$file"
-}
-
-scan_strings_artifact() {
-  local artifact="$1"
+scan_strings_content() {
+  local label="$1"
   local pat line_no
   while IFS= read -r pat || [[ -n "$pat" ]]; do
     [[ -z "$pat" ]] && continue
     while IFS= read -r line_no; do
-      [[ -n "$line_no" ]] && echo "${artifact}:strings:${line_no}"
-    done < <(strings "$artifact" 2>/dev/null | grep -niE "$pat" 2>/dev/null | cut -d: -f1 || true)
-  done <"$TMP_FULL"
+      [[ -n "$line_no" ]] && echo "${label}:strings:${line_no}"
+    done < <(strings "$2" 2>/dev/null | grep -niE "$pat" 2>/dev/null | cut -d: -f1 || true)
+  done <"$TMP_PATTERNS"
 
   line_no=0
   while IFS= read -r content; do
@@ -184,10 +170,46 @@ scan_strings_artifact() {
     while IFS= read -r email; do
       [[ -z "$email" ]] && continue
       if [[ "$email" != "$ALLOWED_EMAIL" ]]; then
-        echo "${artifact}:strings:${line_no}"
+        echo "${label}:strings:${line_no}"
       fi
     done < <(grep -oE "$EMAIL_PATTERN" <<<"$content" || true)
-  done < <(strings "$artifact" 2>/dev/null || true)
+  done < <(strings "$2" 2>/dev/null || true)
+}
+
+scan_strings_artifact() {
+  scan_strings_content "$1" "$2"
+}
+
+is_archive() {
+  case "$1" in
+    *.tar | *.tar.gz | *.tgz | *.zip) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+scan_archive_artifact() {
+  local archive="$1"
+  local tmpdir member rel label
+  tmpdir="$(mktemp -d)"
+  case "$archive" in
+    *.tar.gz | *.tgz) tar -xzf "$archive" -C "$tmpdir" ;;
+    *.tar) tar -xf "$archive" -C "$tmpdir" ;;
+    *.zip) unzip -q -o "$archive" -d "$tmpdir" ;;
+    *)
+      rm -rf "$tmpdir"
+      return
+      ;;
+  esac
+  while IFS= read -r -d '' member; do
+    rel="${member#"$tmpdir"/}"
+    label="${archive}:${rel}"
+    if file -b "$member" 2>/dev/null | grep -qiE 'text|ascii|utf-8|empty'; then
+      scan_text_file_full "$member" "$label"
+    else
+      scan_strings_content "$label" "$member"
+    fi
+  done < <(find "$tmpdir" -type f -print0 2>/dev/null || true)
+  rm -rf "$tmpdir"
 }
 
 record_hits() {
@@ -203,7 +225,7 @@ HITS=0
 
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
-  record_hits < <(scan_text_file_generic "$file")
+  record_hits < <(scan_text_file_full "$file")
 done < <(collect_doc_files | sort -u)
 
 while IFS= read -r file; do
@@ -233,13 +255,12 @@ for dir in "${ARTIFACT_DIRS[@]}"; do
     case "$artifact" in
       *.rlib | *.a | *.d | *.rmeta) continue ;;
     esac
-    base="${artifact##*/}"
-    if [[ "$base" =~ \.(tar|tar\.gz|tgz|zip|dmg|msi|deb)$ ]]; then
-      record_hits < <(scan_strings_artifact "$artifact")
+    if is_archive "$artifact"; then
+      record_hits < <(scan_archive_artifact "$artifact")
       continue
     fi
     if [[ -x "$artifact" ]] || file "$artifact" 2>/dev/null | grep -q 'executable'; then
-      record_hits < <(scan_strings_artifact "$artifact")
+      record_hits < <(scan_strings_artifact "$artifact" "$artifact")
     fi
   done < <(find "$dir" -maxdepth 1 -type f -print0 2>/dev/null || true)
 done
