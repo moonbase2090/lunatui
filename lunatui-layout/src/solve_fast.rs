@@ -569,7 +569,7 @@ fn along(area: Rect, axis: Axis, start: i64, size: i64) -> Rect {
         Axis::Vertical => i64::from(area.height),
     };
     let size = size.max(0);
-    let lo = start.max(0);
+    let lo = start.max(0).min(axis_len);
     let hi = (start + size).min(axis_len);
     let extent = (hi - lo).max(0);
     let origin = u16::try_from(lo).unwrap_or(u16::MAX);

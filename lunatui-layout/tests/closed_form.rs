@@ -150,6 +150,28 @@ fn negative_spacing_clips_segments_to_the_inner_area() {
 }
 
 #[test]
+fn zero_width_segments_stay_inside_after_overlap() {
+    let solved = Layout::horizontal([
+        Constraint::Length(10),
+        Constraint::Length(1),
+        Constraint::Length(10),
+    ])
+        .spacing(-1)
+        .split(Rect::new(0, 0, 3, 1));
+    assert_eq!(
+        solved
+            .segments
+            .iter()
+            .map(|rect| rect.width)
+            .collect::<Vec<_>>(),
+        [3, 0, 0]
+    );
+    for rect in &solved.segments {
+        assert!(rect.x.saturating_add(rect.width) <= 3);
+    }
+}
+
+#[test]
 fn spacing_that_does_not_fit_asks_for_the_solver() {
     let solved = Layout::horizontal([Constraint::Length(10), Constraint::Length(10)])
         .spacing(30)
