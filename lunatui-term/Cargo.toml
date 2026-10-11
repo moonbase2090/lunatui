@@ -27,3 +27,8 @@ ratatui = "=0.30.2"
 name = "session-pty-probe"
 path = "src/bin/session_pty_probe.rs"
 test = false
+
+[[bin]]
+name = "fuzz_input_parser"
+path = "../fuzz/fuzz_input_parser.rs"
+test = false
