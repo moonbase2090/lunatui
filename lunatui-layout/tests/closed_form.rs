@@ -139,6 +139,17 @@ fn a_minimum_that_cannot_fit_asks_for_the_solver() {
 }
 
 #[test]
+fn negative_spacing_clips_segments_to_the_inner_area() {
+    let solved = Layout::horizontal([Constraint::Length(4), Constraint::Length(4)])
+        .spacing(-5)
+        .split(Rect::new(0, 0, 3, 1));
+    for rect in &solved.segments {
+        assert!(rect.x >= 0);
+        assert!(rect.x.saturating_add(rect.width) <= 3);
+    }
+}
+
+#[test]
 fn spacing_that_does_not_fit_asks_for_the_solver() {
     let solved = Layout::horizontal([Constraint::Length(10), Constraint::Length(10)])
         .spacing(30)

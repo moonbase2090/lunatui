@@ -564,8 +564,16 @@ pub(crate) fn place(
 }
 
 fn along(area: Rect, axis: Axis, start: i64, size: i64) -> Rect {
-    let origin = u16::try_from(start.max(0)).unwrap_or(u16::MAX);
-    let extent = u16::try_from(size.max(0)).unwrap_or(u16::MAX);
+    let axis_len = match axis {
+        Axis::Horizontal => i64::from(area.width),
+        Axis::Vertical => i64::from(area.height),
+    };
+    let size = size.max(0);
+    let lo = start.max(0);
+    let hi = (start + size).min(axis_len);
+    let extent = (hi - lo).max(0);
+    let origin = u16::try_from(lo).unwrap_or(u16::MAX);
+    let extent = u16::try_from(extent).unwrap_or(u16::MAX);
     match axis {
         Axis::Horizontal => Rect {
             x: area.x.saturating_add(origin),
