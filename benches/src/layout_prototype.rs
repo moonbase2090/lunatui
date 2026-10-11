@@ -328,18 +328,10 @@ fn grant(sizes: &mut [u64], parts: &[(usize, u128, u128)], mut extras: u64) {
 }
 
 fn add_frac(num: u128, den: u128, rem: u128, part_den: u128) -> Option<(u128, u128)> {
-    let Some(left) = num.checked_mul(part_den) else {
-        return None;
-    };
-    let Some(right) = rem.checked_mul(den) else {
-        return None;
-    };
-    let Some(sum) = left.checked_add(right) else {
-        return None;
-    };
-    let Some(next_den) = den.checked_mul(part_den) else {
-        return None;
-    };
+    let left = num.checked_mul(part_den)?;
+    let right = rem.checked_mul(den)?;
+    let sum = left.checked_add(right)?;
+    let next_den = den.checked_mul(part_den)?;
     let divisor = gcd(sum, next_den).max(1);
     Some((sum / divisor, next_den / divisor))
 }
@@ -420,8 +412,18 @@ fn round_frac(num: u128, den: u128) -> u64 {
     if den == 0 {
         return 0;
     }
+    let quotient = num / den;
+    let remainder = num % den;
+    if remainder == 0 {
+        return u64::try_from(quotient).unwrap_or(u64::MAX);
+    }
     let half = den / 2;
-    u64::try_from(num.saturating_add(half) / den).unwrap_or(u64::MAX)
+    let round_up = match remainder.checked_add(half) {
+        Some(sum) => sum >= den,
+        None => true,
+    };
+    let rounded = quotient + u128::from(round_up);
+    u64::try_from(rounded).unwrap_or(u64::MAX)
 }
 
 fn gcd(mut a: u128, mut b: u128) -> u128 {
@@ -763,8 +765,8 @@ mod ratio_extras_tests {
 
     #[test]
     fn large_ratio_denominators_still_allocate_extras() {
-        let constraints: Vec<Constraint> = (0..8)
-            .map(|index| Constraint::Ratio(1, 65_536 + index as u32))
+        let constraints: Vec<Constraint> = (0..8_u32)
+            .map(|denom| Constraint::Ratio(1, 65_536 + denom))
             .collect();
         let mut sizes = vec![0_u64; constraints.len()];
         grant_family_extras(&mut sizes, &constraints, 65_535);
@@ -772,6 +774,23 @@ mod ratio_extras_tests {
         assert_eq!(
             extras, 8,
             "expected eight largest-remainder extras, got {extras}"
+        );
+    }
+
+    #[test]
+    fn merged_fraction_half_add_overflow_still_rounds_extras() {
+        let constraints = [
+            Constraint::Ratio(33_227, 3_350_000_003),
+            Constraint::Ratio(33_228, 3_350_001_007),
+            Constraint::Ratio(33_229, 3_350_002_003),
+            Constraint::Ratio(33_230, 3_350_003_003),
+        ];
+        let mut sizes = vec![0_u64; constraints.len()];
+        grant_family_extras(&mut sizes, &constraints, 65_535);
+        assert_eq!(
+            sizes.iter().sum::<u64>(),
+            3,
+            "fractional sum is about 2.6, so half-away rounding grants three extras"
         );
     }
 
