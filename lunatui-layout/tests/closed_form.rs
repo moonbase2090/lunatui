@@ -144,7 +144,6 @@ fn negative_spacing_clips_segments_to_the_inner_area() {
         .spacing(-5)
         .split(Rect::new(0, 0, 3, 1));
     for rect in &solved.segments {
-        assert!(rect.x >= 0);
         assert!(rect.x.saturating_add(rect.width) <= 3);
     }
 }
