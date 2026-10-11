@@ -6,6 +6,19 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+autotests = false
 
 [lints]
 workspace = true
+
+[features]
+default = []
+color-profiles = []
+
+[[test]]
+name = "downsample"
+path = "tests/downsample.rs"
+required-features = ["color-profiles"]
+
+[dependencies]
+lunatui-core = { version = "0.0.0", path = "../lunatui-core" }

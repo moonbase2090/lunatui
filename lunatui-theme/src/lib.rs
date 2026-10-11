@@ -3,3 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #![doc = include_str!("../README.md")]
+
+#[cfg(feature = "color-profiles")]
+mod profile;
+
+#[cfg(feature = "color-profiles")]
+pub use profile::Profile;

@@ -11,10 +11,15 @@ autoexamples = false
 [lints]
 workspace = true
 
+[features]
+default = []
+color-profiles = ["lunatui-theme/color-profiles"]
+
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-term = { path = "../lunatui-term" }
+lunatui-theme = { path = "../lunatui-theme" }
 lunatui-test = { path = "../lunatui-test" }
 ratatui = "=0.30.2"
 
@@ -29,6 +34,12 @@ test = true
 name = "caps"
 path = "../examples/caps.rs"
 test = true
+
+[[example]]
+name = "gradient"
+path = "../examples/gradient.rs"
+test = true
+required-features = ["color-profiles"]
 
 [[example]]
 name = "ratatui_dashboard"

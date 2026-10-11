@@ -865,6 +865,7 @@ dependencies = [
  "lunatui-core",
  "lunatui-term",
  "lunatui-test",
+ "lunatui-theme",
  "ratatui",
 ]
 
@@ -931,6 +932,9 @@ version = "0.0.0"
 [[package]]
 name = "lunatui-theme"
 version = "0.0.0"
+dependencies = [
+ "lunatui-core",
+]
 
 [[package]]
 name = "lunatui-widgets"
