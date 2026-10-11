@@ -4,5 +4,6 @@
 
 #![doc = include_str!("../README.md")]
 
-#[cfg(test)]
 mod input;
+
+pub use input::Input;

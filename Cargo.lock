@@ -911,6 +911,9 @@ version = "0.0.0"
 [[package]]
 name = "lunatui-runtime"
 version = "0.0.0"
+dependencies = [
+ "lunatui-term",
+]
 
 [[package]]
 name = "lunatui-term"
