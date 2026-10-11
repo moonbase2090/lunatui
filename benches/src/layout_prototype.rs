@@ -345,45 +345,75 @@ fn add_frac(num: u128, den: u128, rem: u128, part_den: u128) -> Option<(u128, u1
 }
 
 fn ratio_extra_budget(parts: &[(usize, u128, u128)]) -> u64 {
-    let mut merged_num = 0_u128;
-    let mut merged_den = 1_u128;
-    let mut exact = true;
+    if let Some((num, den)) = merge_fractions_u128(parts) {
+        return round_frac(num, den);
+    }
+    let (num, den) = merge_fractions_big(parts);
+    round_frac_big(&num, &den)
+}
+
+fn merge_fractions_u128(parts: &[(usize, u128, u128)]) -> Option<(u128, u128)> {
+    let mut num = 0_u128;
+    let mut den = 1_u128;
     for &(_, rem, part_den) in parts {
         if part_den == 0 {
             continue;
         }
-        match add_frac(merged_num, merged_den, rem, part_den) {
-            Some(pair) => (merged_num, merged_den) = pair,
-            None => {
-                exact = false;
-                break;
-            }
-        }
+        (num, den) = add_frac(num, den, rem, part_den)?;
     }
-    if exact {
-        round_frac(merged_num, merged_den)
-    } else {
-        round_sum_fractions(parts)
-    }
+    Some((num, den))
 }
 
-fn round_sum_fractions(parts: &[(usize, u128, u128)]) -> u64 {
-    let mut sum = 0.0_f64;
+fn merge_fractions_big(
+    parts: &[(usize, u128, u128)],
+) -> (num_bigint::BigUint, num_bigint::BigUint) {
+    use num_bigint::BigUint;
+    use num_traits::{One, Zero};
+
+    let mut num = BigUint::zero();
+    let mut den = BigUint::one();
     for &(_, rem, part_den) in parts {
         if part_den == 0 {
             continue;
         }
-        sum += (rem as f64) / (part_den as f64);
+        let rem_b = BigUint::from(rem);
+        let part_b = BigUint::from(part_den);
+        num = num * &part_b + rem_b * &den;
+        den *= part_b;
+        let gcd = bigint_gcd(&num, &den);
+        if gcd > BigUint::one() {
+            num /= &gcd;
+            den /= &gcd;
+        }
     }
-    round_f64_half_away(sum)
+    (num, den)
 }
 
-fn round_f64_half_away(value: f64) -> u64 {
-    if !value.is_finite() || value <= 0.0 {
+fn bigint_gcd(left: &num_bigint::BigUint, right: &num_bigint::BigUint) -> num_bigint::BigUint {
+    use num_traits::Zero;
+
+    let mut a = left.clone();
+    let mut b = right.clone();
+    if b.is_zero() {
+        return a;
+    }
+    while !b.is_zero() {
+        let rem = a % &b;
+        a = b;
+        b = rem;
+    }
+    a
+}
+
+fn round_frac_big(num: &num_bigint::BigUint, den: &num_bigint::BigUint) -> u64 {
+    use num_bigint::BigUint;
+    use num_traits::{ToPrimitive, Zero};
+
+    if den.is_zero() {
         return 0;
     }
-    let rounded = value.round();
-    u64::try_from(rounded as u128).unwrap_or(u64::MAX)
+    let rounded = (num * BigUint::from(2_u32) + den) / (den * BigUint::from(2_u32));
+    rounded.to_u64().unwrap_or(u64::MAX)
 }
 
 fn round_frac(num: u128, den: u128) -> u64 {
@@ -729,7 +759,7 @@ fn mul_rem(value: u64, weight: u64, total: u64) -> u64 {
 
 #[cfg(test)]
 mod ratio_extras_tests {
-    use super::{grant_family_extras, Constraint};
+    use super::{Constraint, grant_family_extras};
 
     #[test]
     fn large_ratio_denominators_still_allocate_extras() {
@@ -739,6 +769,27 @@ mod ratio_extras_tests {
         let mut sizes = vec![0_u64; constraints.len()];
         grant_family_extras(&mut sizes, &constraints, 65_535);
         let extras = sizes.iter().sum::<u64>();
-        assert_eq!(extras, 8, "expected eight largest-remainder extras, got {extras}");
+        assert_eq!(
+            extras, 8,
+            "expected eight largest-remainder extras, got {extras}"
+        );
+    }
+
+    #[test]
+    fn near_half_ratio_extras_stay_zero_on_a_unit_axis() {
+        let constraints = [
+            Constraint::Ratio(200_000_000, 2_000_000_001),
+            Constraint::Ratio(200_000_000, 2_000_000_003),
+            Constraint::Ratio(166_728_816, 2_000_000_021),
+            Constraint::Ratio(114_745_757, 2_000_000_023),
+            Constraint::Ratio(318_525_437, 2_000_000_041),
+        ];
+        let mut sizes = vec![0_u64; constraints.len()];
+        grant_family_extras(&mut sizes, &constraints, 1);
+        assert_eq!(
+            sizes.iter().sum::<u64>(),
+            0,
+            "fractional sum is just under one half, so no extras"
+        );
     }
 }

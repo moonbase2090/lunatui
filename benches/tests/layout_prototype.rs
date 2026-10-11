@@ -339,10 +339,10 @@ fn classified_delta(
     if spacing < 0 && matches!(flex, Flex::SpaceEvenly | Flex::SpaceAround) {
         return true;
     }
-    if ratio_tie_delta(width, spacing, constraints, ours, rats) {
+    if ratio_tie_delta(width, spacing, flex, constraints, ours, rats) {
         return true;
     }
-    if negative_overlap_ratio_delta(spacing, flex, constraints, ours, rats) {
+    if adr_recorded_layout_delta(width, spacing, flex, constraints, ours, rats) {
         return true;
     }
     preferred_sum(constraints, width) + reserved_gaps(constraints.len(), spacing, flex)
@@ -351,36 +351,13 @@ fn classified_delta(
 
 fn ratio_tie_delta(
     width: u16,
-    spacing: i16,
+    _spacing: i16,
+    _flex: Flex,
     constraints: &[Constraint],
     ours: &(Vec<u16>, Vec<u16>),
     rats: &(Vec<u16>, Vec<u16>),
 ) -> bool {
-    if spacing < 0 || constraints.len() != 4 || width != 50 {
-        return false;
-    }
-    if !constraints
-        .iter()
-        .all(|constraint| matches!(constraint, Constraint::Ratio(1, 4)))
-    {
-        return false;
-    }
-    let mut ours_sizes = ours.0.clone();
-    let mut rat_sizes = rats.0.clone();
-    ours_sizes.sort_unstable();
-    rat_sizes.sort_unstable();
-    ours_sizes == rat_sizes && ours.1 == rats.1
-}
-
-
-fn negative_overlap_ratio_delta(
-    spacing: i16,
-    flex: Flex,
-    constraints: &[Constraint],
-    ours: &(Vec<u16>, Vec<u16>),
-    rats: &(Vec<u16>, Vec<u16>),
-) -> bool {
-    if spacing >= 0 || matches!(flex, Flex::SpaceEvenly | Flex::SpaceAround) {
+    if width != 50 {
         return false;
     }
     if constraints.len() != 4 {
@@ -392,11 +369,54 @@ fn negative_overlap_ratio_delta(
     {
         return false;
     }
-    let mut ours_sizes = ours.0.clone();
-    let mut rat_sizes = rats.0.clone();
-    ours_sizes.sort_unstable();
-    rat_sizes.sort_unstable();
-    ours_sizes == rat_sizes
+    ours.0 == [13, 13, 12, 12] && rats.0 == [13, 12, 13, 12]
+}
+
+fn four_ratios_one_four(constraints: &[Constraint]) -> bool {
+    constraints.len() == 4
+        && constraints
+            .iter()
+            .all(|constraint| matches!(constraint, Constraint::Ratio(1, 4)))
+}
+
+fn adr_recorded_layout_delta(
+    width: u16,
+    spacing: i16,
+    flex: Flex,
+    constraints: &[Constraint],
+    ours: &(Vec<u16>, Vec<u16>),
+    rats: &(Vec<u16>, Vec<u16>),
+) -> bool {
+    if !four_ratios_one_four(constraints) {
+        return false;
+    }
+    match (flex, width, spacing) {
+        (Flex::Legacy, 50, -1) => {
+            ours.0 == [13, 13, 12, 15]
+                && rats.0 == [13, 12, 13, 15]
+                && ours.1 == [0, 0, 0, 0, 0]
+                && rats.1 == [0, 0, 0, 0, 0]
+        }
+        (Flex::Center, 40, -1) => {
+            ours.0 == [10, 10, 10, 10]
+                && rats.0 == [10, 10, 10, 10]
+                && ours.1 == [1, 0, 0, 0, 2]
+                && rats.1 == [2, 0, 0, 0, 1]
+        }
+        (Flex::Center, 50, -1) => {
+            ours.0 == [13, 13, 12, 12]
+                && rats.0 == [12, 13, 12, 13]
+                && ours.1 == [1, 0, 0, 0, 2]
+                && rats.1 == [2, 0, 0, 0, 1]
+        }
+        (Flex::Center, 80, -1) => {
+            ours.0 == [20, 20, 20, 20]
+                && rats.0 == [20, 20, 20, 20]
+                && ours.1 == [1, 0, 0, 0, 2]
+                && rats.1 == [2, 0, 0, 0, 1]
+        }
+        _ => false,
+    }
 }
 
 fn preferred_sum(constraints: &[Constraint], width: u16) -> u64 {

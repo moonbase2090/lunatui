@@ -121,6 +121,8 @@ Checked against ratatui 0.30.2 in `benches/tests/layout_prototype.rs`. On the fi
 | Four `Ratio(1, 4)` in 50 | 13, 13, 12, 12 | 13, 12, 13, 12 | Both sum to 50. lunatui gives extra cells to the lowest indexes. ratatui rounds cumulative `f64` edges, which alternates. |
 | Preferred sizes exceed the area | Clip the tail, lowest priority first | kasuari equalizes equal-strength constraints (three `Length(20)` in 40 become 13, 14, 13) | The fast path stays a single clip. PR 15's suite records this. It is not a `needs_solver` case. |
 | Negative spacing with `SpaceEvenly` or `SpaceAround` | Overlap applies to middle gaps only | Spacer equality pulls the end gaps too | Deferred to PR 15. |
+| Four `Ratio(1, 4)` in 50, `Legacy`, spacing −1 | segments 13, 13, 12, 15 | segments 13, 12, 13, 15 | Negative overlap plus largest-remainder tie order (same family as the width-50 row). |
+| Four `Ratio(1, 4)`, `Center`, spacing −1 | end gaps 1 and 2 (width 40/50/80) | end gaps 2 and 1 | Center packing with overlap keeps middle gaps only; ratatui redistributes end gaps. Recorded per width in the parity suite. |
 | `Fill(0)` beside a positive `Fill` | The zero takes nothing | A weight of `1e-6` takes a dust share | A lone `Fill(0)` still takes the leftover, which matches the ratatui `Flex::Legacy` diagram. |
 
 `Legacy` excess, `Start` / `End` / `Center` packing, `SpaceBetween` / `SpaceEvenly` / `SpaceAround` on a row that fits, and weighted `Fill` match the ratatui diagrams in its `Flex` and `Constraint` docs, including `Percentage(75)` plus `Fill(1)` at 38 and 12.
