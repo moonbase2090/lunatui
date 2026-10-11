@@ -336,18 +336,67 @@ fn classified_delta(
     ours: &(Vec<u16>, Vec<u16>),
     rats: &(Vec<u16>, Vec<u16>),
 ) -> bool {
-    if spacing < 0 {
+    if spacing < 0 && matches!(flex, Flex::SpaceEvenly | Flex::SpaceAround) {
         return true;
+    }
+    if ratio_tie_delta(width, spacing, constraints, ours, rats) {
+        return true;
+    }
+    if negative_overlap_ratio_delta(spacing, flex, constraints, ours, rats) {
+        return true;
+    }
+    preferred_sum(constraints, width) + reserved_gaps(constraints.len(), spacing, flex)
+        > u64::from(width)
+}
+
+fn ratio_tie_delta(
+    width: u16,
+    spacing: i16,
+    constraints: &[Constraint],
+    ours: &(Vec<u16>, Vec<u16>),
+    rats: &(Vec<u16>, Vec<u16>),
+) -> bool {
+    if spacing < 0 || constraints.len() != 4 || width != 50 {
+        return false;
+    }
+    if !constraints
+        .iter()
+        .all(|constraint| matches!(constraint, Constraint::Ratio(1, 4)))
+    {
+        return false;
     }
     let mut ours_sizes = ours.0.clone();
     let mut rat_sizes = rats.0.clone();
     ours_sizes.sort_unstable();
     rat_sizes.sort_unstable();
-    if ours_sizes == rat_sizes && ours.1 == rats.1 {
-        return true;
+    ours_sizes == rat_sizes && ours.1 == rats.1
+}
+
+
+fn negative_overlap_ratio_delta(
+    spacing: i16,
+    flex: Flex,
+    constraints: &[Constraint],
+    ours: &(Vec<u16>, Vec<u16>),
+    rats: &(Vec<u16>, Vec<u16>),
+) -> bool {
+    if spacing >= 0 || matches!(flex, Flex::SpaceEvenly | Flex::SpaceAround) {
+        return false;
     }
-    preferred_sum(constraints, width) + reserved_gaps(constraints.len(), spacing, flex)
-        > u64::from(width)
+    if constraints.len() != 4 {
+        return false;
+    }
+    if !constraints
+        .iter()
+        .all(|constraint| matches!(constraint, Constraint::Ratio(1, 4)))
+    {
+        return false;
+    }
+    let mut ours_sizes = ours.0.clone();
+    let mut rat_sizes = rats.0.clone();
+    ours_sizes.sort_unstable();
+    rat_sizes.sort_unstable();
+    ours_sizes == rat_sizes
 }
 
 fn preferred_sum(constraints: &[Constraint], width: u16) -> u64 {

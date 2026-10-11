@@ -268,8 +268,6 @@ fn grant_family_extras(sizes: &mut [u64], constraints: &[Constraint], len: u16) 
     let mut percent_exact = 0_u128;
     let mut percent_floor = 0_u64;
     let mut percent_parts = Vec::new();
-    let mut ratio_num = 0_u128;
-    let mut ratio_den = 1_u128;
     let mut ratio_parts = Vec::new();
     for (index, constraint) in constraints.iter().enumerate() {
         match *constraint {
@@ -286,7 +284,6 @@ fn grant_family_extras(sizes: &mut [u64], constraints: &[Constraint], len: u16) 
                 let numer = u128::from(len) * u128::from(numer);
                 let base = u64::try_from(numer / denom).unwrap_or(u64::MAX);
                 sizes[index] = base;
-                (ratio_num, ratio_den) = add_frac(ratio_num, ratio_den, numer % denom, denom);
                 ratio_parts.push((index, numer % denom, denom));
             }
             _ => {}
@@ -298,7 +295,7 @@ fn grant_family_extras(sizes: &mut [u64], constraints: &[Constraint], len: u16) 
         &percent_parts,
         percent_target.saturating_sub(percent_floor),
     );
-    grant(sizes, &ratio_parts, round_frac(ratio_num, ratio_den));
+    grant(sizes, &ratio_parts, ratio_extra_budget(&ratio_parts));
 }
 
 fn grant(sizes: &mut [u64], parts: &[(usize, u128, u128)], mut extras: u64) {
@@ -330,21 +327,63 @@ fn grant(sizes: &mut [u64], parts: &[(usize, u128, u128)], mut extras: u64) {
     }
 }
 
-fn add_frac(num: u128, den: u128, rem: u128, part_den: u128) -> (u128, u128) {
+fn add_frac(num: u128, den: u128, rem: u128, part_den: u128) -> Option<(u128, u128)> {
     let Some(left) = num.checked_mul(part_den) else {
-        return (num, den);
+        return None;
     };
     let Some(right) = rem.checked_mul(den) else {
-        return (num, den);
+        return None;
     };
     let Some(sum) = left.checked_add(right) else {
-        return (num, den);
+        return None;
     };
     let Some(next_den) = den.checked_mul(part_den) else {
-        return (num, den);
+        return None;
     };
     let divisor = gcd(sum, next_den).max(1);
-    (sum / divisor, next_den / divisor)
+    Some((sum / divisor, next_den / divisor))
+}
+
+fn ratio_extra_budget(parts: &[(usize, u128, u128)]) -> u64 {
+    let mut merged_num = 0_u128;
+    let mut merged_den = 1_u128;
+    let mut exact = true;
+    for &(_, rem, part_den) in parts {
+        if part_den == 0 {
+            continue;
+        }
+        match add_frac(merged_num, merged_den, rem, part_den) {
+            Some(pair) => (merged_num, merged_den) = pair,
+            None => {
+                exact = false;
+                break;
+            }
+        }
+    }
+    if exact {
+        round_frac(merged_num, merged_den)
+    } else {
+        round_sum_fractions(parts)
+    }
+}
+
+fn round_sum_fractions(parts: &[(usize, u128, u128)]) -> u64 {
+    let mut sum = 0.0_f64;
+    for &(_, rem, part_den) in parts {
+        if part_den == 0 {
+            continue;
+        }
+        sum += (rem as f64) / (part_den as f64);
+    }
+    round_f64_half_away(sum)
+}
+
+fn round_f64_half_away(value: f64) -> u64 {
+    if !value.is_finite() || value <= 0.0 {
+        return 0;
+    }
+    let rounded = value.round();
+    u64::try_from(rounded as u128).unwrap_or(u64::MAX)
 }
 
 fn round_frac(num: u128, den: u128) -> u64 {
@@ -686,4 +725,20 @@ fn mul_rem(value: u64, weight: u64, total: u64) -> u64 {
     }
     let product = u128::from(value) * u128::from(weight);
     u64::try_from(product % u128::from(total)).unwrap_or(0)
+}
+
+#[cfg(test)]
+mod ratio_extras_tests {
+    use super::{grant_family_extras, Constraint};
+
+    #[test]
+    fn large_ratio_denominators_still_allocate_extras() {
+        let constraints: Vec<Constraint> = (0..8)
+            .map(|index| Constraint::Ratio(1, 65_536 + index as u32))
+            .collect();
+        let mut sizes = vec![0_u64; constraints.len()];
+        grant_family_extras(&mut sizes, &constraints, 65_535);
+        let extras = sizes.iter().sum::<u64>();
+        assert_eq!(extras, 8, "expected eight largest-remainder extras, got {extras}");
+    }
 }
