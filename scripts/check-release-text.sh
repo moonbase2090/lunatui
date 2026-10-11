@@ -96,6 +96,22 @@ fi
   fi
 } >"$TMP_PATTERNS"
 
+validate_patterns_file() {
+  local line_no=0 pat rc
+  while IFS= read -r pat || [[ -n "$pat" ]]; do
+    line_no=$((line_no + 1))
+    [[ -z "$pat" ]] && continue
+    rc=0
+    printf '\n' | grep -qiE -- "$pat" >/dev/null 2>&1 || rc=$?
+    if [[ "$rc" -eq 2 ]]; then
+      echo "check-release-text: invalid regex at patterns:${line_no}" >&2
+      exit 2
+    fi
+  done <"$TMP_PATTERNS"
+}
+
+validate_patterns_file
+
 collect_changelog_files() {
   local f
   for f in CHANGELOG CHANGELOG.md RELEASING.md; do
@@ -119,22 +135,51 @@ report_text_hit() {
   echo "${label}:${line_no}"
 }
 
+grep_pattern_lines() {
+  local pat="$1"
+  local input="$2"
+  local out rc=0
+  if [[ "$input" == "-" ]]; then
+    out="$(grep -niE -- "$pat" 2>/dev/null)" || rc=$?
+  else
+    out="$(grep -niE -- "$pat" "$input" 2>/dev/null)" || rc=$?
+  fi
+  if [[ "$rc" -eq 2 ]]; then
+    echo "check-release-text: pattern application failed (invalid regex?)" >&2
+    exit 2
+  fi
+  printf '%s' "$out"
+}
+
+grep_stream_lines() {
+  local pat="$1"
+  local out rc=0
+  out="$(grep -niE -- "$pat" 2>/dev/null)" || rc=$?
+  if [[ "$rc" -eq 2 ]]; then
+    echo "check-release-text: pattern application failed (invalid regex?)" >&2
+    exit 2
+  fi
+  printf '%s' "$out"
+}
+
 scan_text_file() {
   local file="$1"
   local label="${2:-$file}"
-  local pat line_no
+  local pat line_no matches
   while IFS= read -r pat || [[ -n "$pat" ]]; do
     [[ -z "$pat" ]] && continue
+    matches="$(grep_pattern_lines "$pat" "$file")"
     while IFS= read -r line_no; do
       [[ -n "$line_no" ]] && report_text_hit "$label" "$line_no"
-    done < <(grep -niE "$pat" "$file" 2>/dev/null | cut -d: -f1 || true)
+    done < <(printf '%s\n' "$matches" | cut -d: -f1)
   done <"$TMP_PATTERNS"
 }
 
 check_disallowed_emails() {
   local file="$1"
   local label="${2:-$file}"
-  local line_no content email
+  local line_no content email matches
+  matches="$(grep_pattern_lines "$EMAIL_PATTERN" "$file")"
   while IFS= read -r line_no; do
     [[ -z "$line_no" ]] && continue
     content="$(sed -n "${line_no}p" "$file")"
@@ -144,7 +189,7 @@ check_disallowed_emails() {
         report_text_hit "$label" "$line_no"
       fi
     done < <(grep -oE "$EMAIL_PATTERN" <<<"$content" || true)
-  done < <(grep -niE "$EMAIL_PATTERN" "$file" 2>/dev/null | cut -d: -f1 || true)
+  done < <(printf '%s\n' "$matches" | cut -d: -f1)
 }
 
 scan_text_file_full() {
@@ -156,12 +201,13 @@ scan_text_file_full() {
 
 scan_strings_content() {
   local label="$1"
-  local pat line_no
+  local pat line_no matches
   while IFS= read -r pat || [[ -n "$pat" ]]; do
     [[ -z "$pat" ]] && continue
+    matches="$(strings "$2" 2>/dev/null | grep_stream_lines "$pat")"
     while IFS= read -r line_no; do
       [[ -n "$line_no" ]] && echo "${label}:strings:${line_no}"
-    done < <(strings "$2" 2>/dev/null | grep -niE "$pat" 2>/dev/null | cut -d: -f1 || true)
+    done < <(printf '%s\n' "$matches" | cut -d: -f1)
   done <"$TMP_PATTERNS"
 
   line_no=0
@@ -203,12 +249,21 @@ scan_archive_artifact() {
   while IFS= read -r -d '' member; do
     rel="${member#"$tmpdir"/}"
     label="${archive}:${rel}"
+    if [[ -L "$member" ]]; then
+      local target tmp_link
+      target="$(readlink "$member")"
+      tmp_link="$(mktemp)"
+      printf '%s' "$target" >"$tmp_link"
+      scan_text_file_full "$tmp_link" "${label}@symlink"
+      rm -f "$tmp_link"
+      continue
+    fi
     if file -b "$member" 2>/dev/null | grep -qiE 'text|ascii|utf-8|empty'; then
       scan_text_file_full "$member" "$label"
     else
       scan_strings_content "$label" "$member"
     fi
-  done < <(find "$tmpdir" -type f -print0 2>/dev/null || true)
+  done < <(find "$tmpdir" \( -type f -o -type l \) -print0 2>/dev/null || true)
   rm -rf "$tmpdir"
 }
 
