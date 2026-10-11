@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Fixed
+
+- The `gradient` example command is `cargo run --example gradient --features color-profiles`. Each profile step is a swatch painted with SGR foreground and background (`38;2` / `48;2` for truecolor, `38;5` / `48;5` for indexed) instead of hex and palette numbers. `examples/captures/gradient.cast` records that output. The `color-profiles` feature stays off by default.
+
 ### Added
 
 - ADR 0002 (DD-2, `docs/adr/0002-layout-engine.md`): constraint semantics, the closed-form split, the kasuari boundary, ratatui parity, and the plan for memo, `Grid`, `Stack` and `Auto`. The prototype is `layout_prototype` in `lunatui-bench`; `lunatui-layout` stays a stub until PR 14.
