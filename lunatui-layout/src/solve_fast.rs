@@ -19,7 +19,6 @@ struct Spec {
     shrink: u8,
 }
 
-/// Closed-form segment sizes and gaps for one axis (ADR 0002 §4.2).
 pub(crate) fn axis_sizes(
     len: u16,
     constraints: &[Constraint],
