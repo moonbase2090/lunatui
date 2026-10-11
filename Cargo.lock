@@ -892,6 +892,13 @@ dependencies = [
 [[package]]
 name = "lunatui-layout"
 version = "0.0.0"
+dependencies = [
+ "lunatui-core",
+ "num-bigint",
+ "num-traits",
+ "proptest",
+ "ratatui",
+]
 
 [[package]]
 name = "lunatui-prismattyc"
