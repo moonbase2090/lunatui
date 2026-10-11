@@ -375,6 +375,29 @@ fn a_long_paste_is_split_into_1024_byte_chunks() {
 }
 
 #[test]
+fn a_scalar_crossing_the_chunk_boundary_keeps_the_paste() {
+    let mut payload = vec![b'a'; 1023];
+    payload.extend_from_slice("é".as_bytes());
+    let mut bytes = b"\x1b[200~".to_vec();
+    bytes.extend_from_slice(&payload);
+    bytes.extend_from_slice(b"\x1b[201~");
+    let mut parser = Parser::new();
+    let mut events = Vec::new();
+    let split = b"\x1b[200~".len() + 1023 + 1;
+    events.extend(parser.push(&bytes[..split]));
+    events.extend(parser.push(&bytes[split..]));
+    events.extend(parser.flush());
+    assert_eq!(events.first(), Some(&Event::Paste(Paste::Start)));
+    assert_eq!(events.last(), Some(&Event::Paste(Paste::End)));
+    assert_eq!(pasted(&events), format!("{}é", "a".repeat(1023)));
+    for event in &events {
+        if let Event::Paste(Paste::Chunk(chunk)) = event {
+            assert!(chunk.len() <= 1024);
+        }
+    }
+}
+
+#[test]
 fn one_byte_at_a_time_matches_the_buffer() {
     let bytes = b"a\x1b[A\x1b[I";
     let whole = parse(bytes);

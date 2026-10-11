@@ -194,7 +194,11 @@ impl Parser {
         let keep = holdback(&self.pending);
         let safe_end = self.pending.len().saturating_sub(keep);
         if safe_end >= CHUNK {
-            let take = chunk_end(&self.pending[..safe_end]).max(1);
+            let take = valid_prefix_len(&self.pending[..safe_end]);
+            if take == 0 {
+                self.pending.drain(..1);
+                return true;
+            }
             let text = self.pending[..take].to_vec();
             self.pending.drain(..take);
             emit_chunks(&text, out);
@@ -453,36 +457,29 @@ fn holdback(bytes: &[u8]) -> usize {
     0
 }
 
-fn chunk_end(bytes: &[u8]) -> usize {
-    let mut end = bytes.len().min(CHUNK);
-    if end == bytes.len() || end == 0 {
-        return end;
-    }
-    while end > 0 && bytes[end] & 0b1100_0000 == 0b1000_0000 {
-        end -= 1;
-    }
-    if end == 0 {
-        bytes.len().min(CHUNK)
-    } else {
-        end
+fn valid_prefix_len(bytes: &[u8]) -> usize {
+    let limit = bytes.len().min(CHUNK);
+    match std::str::from_utf8(&bytes[..limit]) {
+        Ok(_) => limit,
+        Err(error) => error.valid_up_to(),
     }
 }
 
 fn emit_chunks(bytes: &[u8], out: &mut Vec<Event>) {
     let mut start = 0;
     while start < bytes.len() {
-        let end = start + chunk_end(&bytes[start..]);
-        if end == start {
+        let take = valid_prefix_len(&bytes[start..]);
+        if take == 0 {
             start += 1;
             continue;
         }
-        match std::str::from_utf8(&bytes[start..end]) {
-            Ok(text) if !text.is_empty() => {
-                out.push(Event::Paste(Paste::Chunk(String::from(text))));
-                start = end;
-            }
-            Ok(_) => start = end,
-            Err(_) => start += 1,
+        let Ok(text) = std::str::from_utf8(&bytes[start..start + take]) else {
+            start += 1;
+            continue;
+        };
+        if !text.is_empty() {
+            out.push(Event::Paste(Paste::Chunk(String::from(text))));
         }
+        start += take;
     }
 }
