@@ -66,7 +66,7 @@ Use `docs/conventions.md` §6 and PRD M17 for mutation-testing guidance and miss
 - Merge commits only. No admin overrides.
 - Code-scanning threads are resolved only when they are report-only or addressed, never just to unblock a merge.
 - Releases and tags need owner approval.
-- A PR changing a path protected by `.github/CODEOWNERS` also needs the `mb2090-signoff` label, which Moonbase applies, **except docs-only PRs** (every changed file is under `docs/`, `.cursor/skills/`, or ends in `.md`). Those never need `mb2090-signoff`; `cargo xtask signoff` and the Sign-off workflow treat them as clear.
+- A PR changing a path protected by `.github/CODEOWNERS` also needs the `mb2090-signoff` label, which Moonbase applies, **except docs-only PRs** (every changed file is a markdown file under the repo root, under `docs/`, or under `.cursor/skills/`, excluding `docs/lints.md` and `docs/conventions.md`). Those never need `mb2090-signoff`; `cargo xtask signoff` and the Sign-off workflow treat them as clear.
 
 ## Review exceptions
 
