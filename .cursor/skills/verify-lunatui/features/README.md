@@ -25,3 +25,4 @@ Read this index before driving the repo. Each feature file is a user- or reviewe
 - [Workspace gates](./workspace-gates.md) — fmt, comments, and crate README checks via `cargo xtask check`.
 - [Hello box example](./hello-box.md) — mixed-width boxed demo and metrics line.
 - [Keys example](./keys.md) — decoder demo from captured bytes / stdin.
+- [Live dashboard example](./live-dashboard.md) — scheduler-driven demo snapshot and bench summary.

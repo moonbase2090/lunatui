@@ -1,0 +1,24 @@
+ lunatui live dashboard                                               04:48:49  
+ tick    42  scroll    3  events     1557                                       
+ scrolling log                                                                  
+ [003] worker-3: processed batch 3 (51 rows)                                    
+ [004] worker-4: processed batch 4 (68 rows)                                    
+ [005] worker-5: processed batch 5 (85 rows)                                    
+ [006] worker-6: processed batch 6 (102 rows)                                   
+ [007] worker-7: processed batch 7 (119 rows)                                   
+ [008] worker-0: processed batch 8 (136 rows)                                   
+ [009] worker-1: processed batch 9 (153 rows)                                   
+ [010] worker-2: processed batch 10 (170 rows)                                  
+ [011] worker-3: processed batch 11 (187 rows)                                  
+ [012] worker-4: processed batch 12 (204 rows)                                  
+ [013] worker-5: processed batch 13 (221 rows)                                  
+ [014] worker-6: processed batch 14 (238 rows)                                  
+ [015] worker-7: processed batch 15 (255 rows)                                  
+ [016] worker-0: processed batch 16 (272 rows)                                  
+ [017] worker-1: processed batch 17 (289 rows)                                  
+ [018] worker-2: processed batch 18 (306 rows)                                  
+ [019] worker-3: processed batch 19 (323 rows)                                  
+ [020] worker-4: processed batch 20 (340 rows)                                  
+ [021] worker-5: processed batch 21 (357 rows)                                  
+                                                                                
+ ⠹  dogfood · compare to ratatui_dashboard baseline                             
