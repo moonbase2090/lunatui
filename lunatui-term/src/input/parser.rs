@@ -1,6 +1,5 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
 
 use super::keys::{
     KeyEvent, encode_key, ground_key, key_from_arrow, key_from_kitty, key_from_ss3, key_from_tilde,

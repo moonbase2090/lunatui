@@ -20,7 +20,7 @@ members = [
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.88"
-license = "MPL-2.0"
+license = "MIT"
 repository = "https://github.com/moonbase2090/lunatui"
 
 # PRD M10 and M16: docs on every public item, pedantic clippy, and restriction

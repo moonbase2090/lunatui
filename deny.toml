@@ -11,7 +11,7 @@ yanked = "deny"
 version = 2
 # Widen deliberately as dependencies arrive. MIT, Apache-2.0 and Unicode-3.0
 # arrived with criterion and gungraun (PR 02), Zlib with ratatui (foldhash).
-allow = ["MPL-2.0", "MIT", "Apache-2.0", "Unicode-3.0", "Zlib"]
+allow = ["MIT", "MIT", "Apache-2.0", "Unicode-3.0", "Zlib"]
 confidence-threshold = 0.9
 
 [bans]

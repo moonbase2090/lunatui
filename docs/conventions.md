@@ -123,13 +123,12 @@ The default is no comments. These are the only exceptions MB2090 has approved. A
 |---|---|---|
 | `///` rustdoc | On public API items only | M14 |
 | `#![doc = include_str!("<path>/README.md")]` | Crate root of every target, for crate-level docs: libraries (`../README.md`), examples (`README.md`), benches, integration tests and `xtask` (`../README.md`) | MB2090, 2026-10-06 |
-| License header (text below) | First three lines of every `.rs` file | MB2090, 2026-10-06 |
+| License header (text below) | First two lines of every `.rs` file | MB2090, 2026-10-12 |
 | `// SAFETY: <why the unsafe contract holds>`, optionally continued on the following `//` lines | Immediately before an `unsafe` block or `unsafe impl` | MB2090, 2026-10-06 |
 
 The license header, exactly:
 
 ```rust
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
 ```
