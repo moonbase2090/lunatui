@@ -14,6 +14,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `lunatui_runtime::Input` reads terminal input on a worker thread and coalesces event bursts into frames (PR 21, stacked on #32).
 - ADR 0002 (DD-2, `docs/adr/0002-layout-engine.md`): constraint semantics, the closed-form split, the kasuari boundary, ratatui parity, and the plan for memo, `Grid`, `Stack` and `Auto`. The prototype is `layout_prototype` in `lunatui-bench`; `lunatui-layout` stays a stub until PR 14.
 - `lunatui_term::Parser` decodes legacy keys, kitty keyboard sequences, SGR and X10 mouse, bracketed paste and focus (PR 20). `fuzz_input_parser` checks that arbitrary bytes stay bounded and are fully consumed. The `keys` example prints a captured key, mouse, paste and focus stream.
 - `lunatui_theme::Profile` (feature `color-profiles`, off by default): truecolor, 256, 16, and mono. `downsample` picks the nearest xterm color in `OKLab` (PR 13). The `gradient` example prints one hue ramp in all four profiles when the feature is enabled.
