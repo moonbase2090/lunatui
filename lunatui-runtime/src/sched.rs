@@ -15,6 +15,12 @@ pub enum State {
     Animating,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DirtyResume {
+    Idle,
+    Animating,
+}
+
 /// What the host loop should do after `Scheduler::poll`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SchedulePoll {
@@ -35,6 +41,7 @@ pub struct Scheduler {
     timer_wakeups: u64,
     dropped_frames: u64,
     last_now: Duration,
+    dirty_resume: Option<DirtyResume>,
 }
 
 impl Scheduler {
@@ -48,6 +55,7 @@ impl Scheduler {
             timer_wakeups: 0,
             dropped_frames: 0,
             last_now: Duration::ZERO,
+            dirty_resume: None,
         }
     }
 
@@ -61,6 +69,31 @@ impl Scheduler {
             timer_wakeups: 0,
             dropped_frames: 0,
             last_now: Duration::ZERO,
+            dirty_resume: None,
+        }
+    }
+
+    fn note_dirty(&mut self) {
+        if self.state != State::Dirty {
+            self.dirty_resume = Some(match self.state {
+                State::Animating => DirtyResume::Animating,
+                State::Idle | State::Dirty => DirtyResume::Idle,
+            });
+        }
+        self.state = State::Dirty;
+    }
+
+    fn settle_after_dirty_present(&mut self) {
+        let resume = self.dirty_resume.unwrap_or(DirtyResume::Idle);
+        self.dirty_resume = None;
+        match resume {
+            DirtyResume::Idle => {
+                self.state = State::Idle;
+                self.next_frame_at = None;
+            }
+            DirtyResume::Animating => {
+                self.state = State::Animating;
+            }
         }
     }
 
@@ -84,7 +117,7 @@ impl Scheduler {
 
     /// Input arrived; coalesce into a dirty frame.
     pub fn on_input(&mut self) {
-        self.state = State::Dirty;
+        self.note_dirty();
     }
 
     /// Resume animation ticks at `now`.
@@ -105,7 +138,7 @@ impl Scheduler {
     pub fn poll(&mut self, now: Duration, input_available: bool) -> SchedulePoll {
         self.last_now = now;
         if input_available {
-            self.state = State::Dirty;
+            self.note_dirty();
         }
         match self.state {
             State::Idle => SchedulePoll::WaitInput,
@@ -125,6 +158,10 @@ impl Scheduler {
     /// Record a completed present; applies backpressure while animating.
     pub fn after_present(&mut self, now: Duration, write_duration: Duration) {
         self.last_now = now;
+        if self.state == State::Dirty {
+            self.settle_after_dirty_present();
+            return;
+        }
         if self.state != State::Animating {
             return;
         }

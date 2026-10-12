@@ -22,7 +22,6 @@ const LOG_LINES: usize = 200;
 const DEFAULT_WIDTH: u16 = 200;
 const DEFAULT_HEIGHT: u16 = 60;
 
-/// Dogfood state: animation tick, log scroll, and prebuilt log lines.
 #[derive(Clone, Debug)]
 struct Model {
     tick: u32,
@@ -327,10 +326,9 @@ fn terminal_size() -> Option<(u16, u16)> {
         ws_xpixel: 0,
         ws_ypixel: 0,
     };
-    // SAFETY: `TIOCGWINSZ` reads the tty geometry for stdout when it is a terminal.
-    let ok = unsafe {
-        libc::ioctl(stdout.as_raw_fd(), libc::TIOCGWINSZ, &raw mut winsize) == 0
-    };
+    let ok =
+        // SAFETY: TIOCGWINSZ reads the tty geometry for stdout when it is a terminal.
+        unsafe { libc::ioctl(stdout.as_raw_fd(), libc::TIOCGWINSZ, &raw mut winsize) == 0 };
     if !ok || winsize.ws_col == 0 || winsize.ws_row == 0 {
         return None;
     }

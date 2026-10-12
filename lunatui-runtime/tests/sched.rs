@@ -44,6 +44,30 @@ fn dirty_poll_always_renders() {
 }
 
 #[test]
+fn dirty_settles_to_idle_after_present() {
+    let mut sched = Scheduler::idle();
+    assert_eq!(sched.poll(Duration::ZERO, true), SchedulePoll::Render);
+    sched.after_present(Duration::ZERO, Duration::ZERO);
+    assert_eq!(sched.state(), State::Idle);
+    assert_eq!(sched.poll(Duration::ZERO, false), SchedulePoll::WaitInput);
+    assert_eq!(sched.poll(Duration::ZERO, false), SchedulePoll::WaitInput);
+}
+
+#[test]
+fn dirty_during_animation_resumes_animating() {
+    let mut sched = Scheduler::animating(FRAME);
+    assert_eq!(sched.poll(Duration::ZERO, false), SchedulePoll::Render);
+    sched.after_present(Duration::ZERO, Duration::ZERO);
+    assert_eq!(sched.poll(Duration::from_millis(5), true), SchedulePoll::Render);
+    sched.after_present(Duration::from_millis(5), Duration::ZERO);
+    assert_eq!(sched.state(), State::Animating);
+    assert_eq!(
+        sched.poll(Duration::from_millis(5), false),
+        SchedulePoll::SleepUntil(FRAME)
+    );
+}
+
+#[test]
 fn slow_present_drops_intermediate_animation_frames() {
     let mut sched = Scheduler::animating(FRAME);
     assert_eq!(sched.poll(Duration::ZERO, false), SchedulePoll::Render);
