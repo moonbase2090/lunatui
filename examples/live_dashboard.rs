@@ -49,7 +49,18 @@ impl Model {
 }
 
 fn main() -> io::Result<()> {
-    let options = parse_args(env::args().skip(1).collect())?;
+    let args: Vec<String> = env::args().skip(1).collect();
+    let snapshot = args.iter().any(|arg| arg == "--snapshot");
+    let flag_args: Vec<String> = args
+        .iter()
+        .filter(|arg| *arg != "--snapshot")
+        .cloned()
+        .collect();
+    let options = parse_args(&flag_args)?;
+    if snapshot {
+        print_snapshot(&options);
+        return Ok(());
+    }
     let times = if io::stdout().is_terminal() {
         run_live(&options)?
     } else {
@@ -76,7 +87,7 @@ struct Options {
     frames: u32,
 }
 
-fn parse_args(args: Vec<String>) -> io::Result<Options> {
+fn parse_args(args: &[String]) -> io::Result<Options> {
     let mut width = None;
     let mut height = None;
     let mut frames = FRAMES;
@@ -162,7 +173,9 @@ fn run_bench(options: &Options) -> io::Result<Option<FrameTimes>> {
                 let encode_start = epoch.elapsed();
                 let payload = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
                 let encode_done = epoch.elapsed();
-                let _payload = payload;
+                if payload.is_empty() && tick > 0 {
+                    return Err(io::Error::other("encode_diff returned an empty payload"));
+                }
                 samples.push(start.elapsed());
                 prev = next;
                 next = Grid::new(options.width, options.height);
@@ -232,7 +245,7 @@ fn run_live(options: &Options) -> io::Result<Option<FrameTimes>> {
                 }
             }
         }
-        return Ok(FrameTimes::from_samples(&samples));
+        Ok(FrameTimes::from_samples(&samples))
     }
     #[cfg(not(unix))]
     {
@@ -269,7 +282,7 @@ fn render_frame(
 
     let bold = Attrs::default().set_bold(true);
     let header_style = Style::new().fg(accent).bg(bg).with_attrs(bold);
-    let clock = format_clock(model.tick);
+    let clock = format_clock();
     grid.put_str(1, 0, header_style, "lunatui live dashboard", clusters);
     let clock_x = width.saturating_sub(u16::try_from(display_width(&clock) + 2).unwrap_or(2));
     grid.put_str(clock_x, 0, header_style, &clock, clusters);
@@ -314,12 +327,12 @@ fn render_frame(
 
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-fn format_clock(tick: u32) -> String {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0);
-    let seconds = millis / 1000 + u128::from(tick);
+fn format_clock() -> String {
+    let millis = match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => duration.as_millis(),
+        Err(_) => 0,
+    };
+    let seconds = millis / 1000;
     let hours = (seconds / 3600) % 24;
     let minutes = (seconds / 60) % 60;
     let secs = seconds % 60;
@@ -381,14 +394,38 @@ fn millis(duration: Duration) -> String {
     format!("{:.3} ms", duration.as_secs_f64() * 1000.0)
 }
 
+fn print_snapshot(options: &Options) {
+    let mut model = Model::new();
+    model.tick = 42;
+    model.scroll = 3;
+    let mut grid = Grid::new(options.width, options.height);
+    let mut clusters = ClusterTable::new();
+    render_frame(
+        &model,
+        &mut grid,
+        &mut clusters,
+        options.width,
+        options.height,
+    );
+    for y in 0..options.height {
+        let mut line = String::new();
+        for x in 0..options.width {
+            let ch = match grid.get(x, y) {
+                Some(cell) => char::from_u32(cell.glyph().bits()).unwrap_or(' '),
+                None => ' ',
+            };
+            line.push(ch);
+        }
+        println!("{line}");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
 
     use lunatui_bench::ceiling::FrameTimes;
-    use lunatui_core::ClusterTable;
-
-    use lunatui_core::Grid;
+    use lunatui_core::{Cell, ClusterTable, Grid};
 
     use super::{Model, Options, parse_args, render_frame, summary};
 
@@ -408,32 +445,38 @@ mod tests {
 
     #[test]
     fn parse_args_accepts_explicit_geometry() {
-        let options = parse_args(vec![
-            "--width".into(),
-            "80".into(),
-            "--height".into(),
-            "24".into(),
-            "--frames".into(),
-            "3".into(),
-        ])
-        .expect("parse");
+        let args = [
+            "--width".to_string(),
+            "80".to_string(),
+            "--height".to_string(),
+            "24".to_string(),
+            "--frames".to_string(),
+            "3".to_string(),
+        ];
         assert_eq!(
-            options,
-            Options {
+            parse_args(&args).ok(),
+            Some(Options {
                 width: 80,
                 height: 24,
                 frames: 3,
-            }
+            })
         );
     }
 
     #[test]
-    fn render_frame_fills_the_grid() {
+    fn render_frame_writes_header_text() {
+        use lunatui_core::GlyphSlot;
+
         let model = Model::new();
         let mut grid = Grid::new(40, 10);
         let mut clusters = ClusterTable::new();
         render_frame(&model, &mut grid, &mut clusters, 40, 10);
-        assert!(grid.get(1, 0).is_some());
-        assert!(grid.get(1, 9).is_some());
+        assert_eq!(grid.get(1, 0).map(Cell::glyph), GlyphSlot::inline_scalar('l'));
+        let space = GlyphSlot::inline_scalar(' ');
+        let status_bits = grid.get(1, 9).map(|cell| cell.glyph().bits());
+        assert!(matches!(
+            (status_bits, space),
+            (Some(bits), Some(space_glyph)) if bits != space_glyph.bits()
+        ));
     }
 }

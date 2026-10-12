@@ -14,7 +14,7 @@ Each example runs from the repository root with one command (PRD M13). Every fea
 | `ratatui_dashboard` | `cargo run --release --example ratatui_dashboard` | The ratatui baseline dashboard scene (PR 03), drawn live on ratatui 0.30.2 for 240 frames at about 60 fps. It then prints the draw-time p50, p99 and maximum against the 8 ms frame target, naming the build profile, because only a release build is a fair number. This is the scene lunatui is measured against. | PR 03 |
 | `cell_prototype` | `cargo run --release --example cell_prototype` | The evidence for ADR 0001 (DD-1). It packs PR 03's dashboard frames into 16-byte prototype cells, checks that the packed diff finds the same changed cells as ratatui, and compares diff times: ratatui's 48-byte cells, the packed struct, and rows stored as `u128` words. | DD-1 |
 
-Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cast` replays with `asciinema play`. `captures/hello_box_oracle.cast` is `cargo run -q --example hello_box -- --oracle`. `captures/caps.cast` is `cargo run -q --example caps` with `TERM=xterm-256color`, `COLORTERM=truecolor`, and `TERM_PROGRAM=Apple_Terminal` (not a tty, so the box shows the ambiguous-wide fallback). `captures/gradient.cast` is `cargo run -q --example gradient --features color-profiles`. `captures/layout_prototype.cast` is `cargo run -q --example layout_prototype`. `captures/keys.cast` is `cargo run -q --example keys`. `captures/live_dashboard.cast` is `cargo run -q --release --example live_dashboard -- --width 80 --height 24 --frames 4` (non-tty bench summary).
+Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cast` replays with `asciinema play`. `captures/hello_box_oracle.cast` is `cargo run -q --example hello_box -- --oracle`. `captures/caps.cast` is `cargo run -q --example caps` with `TERM=xterm-256color`, `COLORTERM=truecolor`, and `TERM_PROGRAM=Apple_Terminal` (not a tty, so the box shows the ambiguous-wide fallback). `captures/gradient.cast` is `cargo run -q --example gradient --features color-profiles`. `captures/layout_prototype.cast` is `cargo run -q --example layout_prototype`. `captures/keys.cast` is `cargo run -q --example keys`. `captures/live_dashboard.cast` is `cargo run -q --example live_dashboard -- --snapshot --width 80 --height 24` (one rendered frame). Bench summary: `cargo run -q --release --example live_dashboard -- --width 80 --height 24 --frames 4`.
 
 ![Capture of the hello box example](captures/hello_box.png)
 
@@ -23,6 +23,8 @@ Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cas
 ![Capture of the ratatui dashboard example](captures/ratatui_dashboard.png)
 
 ![Capture of the cell prototype example](captures/cell_prototype.png)
+
+![Capture of the live dashboard example](captures/live_dashboard.png)
 
 Examples live in this directory and are registered as `[[example]]` targets of the `lunatui` facade crate (`lunatui/Cargo.toml`).
 
