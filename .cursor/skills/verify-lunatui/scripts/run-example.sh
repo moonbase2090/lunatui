@@ -19,6 +19,22 @@ safe_component() {
   return 0
 }
 
+refuse_bad_log_dest() {
+  if [ -L "$log" ]; then
+    echo "log path is a symlink; refusing to write" >&2
+    return 1
+  fi
+  if [ -d "$log" ]; then
+    echo "log path is a directory; refusing to write" >&2
+    return 1
+  fi
+  if [ -e "$log" ] && [ ! -f "$log" ]; then
+    echo "log path must be absent or a regular file" >&2
+    return 1
+  fi
+  return 0
+}
+
 run_id=${RUN_ID:-$(date +%s)}
 if ! safe_component "$run_id" || ! safe_component "$name"; then
   echo "RUN_ID and example name must be single safe path components" >&2
@@ -47,8 +63,7 @@ case "$log" in
     ;;
 esac
 
-if [ -L "$log" ]; then
-  echo "log path is a symlink; refusing to write" >&2
+if ! refuse_bad_log_dest; then
   exit 2
 fi
 
@@ -69,11 +84,14 @@ fi
 status=$?
 set -e
 
-if [ -L "$log" ]; then
+if ! refuse_bad_log_dest; then
   rm -f "$tmp"
-  echo "log path is a symlink; refusing to replace" >&2
   exit 2
 fi
 mv -f "$tmp" "$log"
+if [ ! -f "$log" ]; then
+  echo "failed to install log at $log" >&2
+  exit 2
+fi
 echo "wrote $log (exit $status)"
 exit "$status"
