@@ -14,8 +14,6 @@ pub enum SyncOutput {
     Disabled,
 }
 
-/// Options for [`Session::enter`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// Stub mirror of Unix mouse tracking (always disabled on non-Unix).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum MouseTracking {
@@ -26,6 +24,8 @@ pub enum MouseTracking {
     Sgr,
 }
 
+/// Options for [`Session::enter`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SessionOptions {
     /// Synchronized output wrapping for [`Session::present_frame`].
     pub sync_output: SyncOutput,
