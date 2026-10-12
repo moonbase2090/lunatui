@@ -437,10 +437,11 @@ mod tests {
             p99: Duration::from_micros(1_250),
             max: Duration::from_millis(2),
         };
-        assert!(
-            summary(200, 60, times, "release build", "lunatui live_dashboard")
-                .contains("p50 0.500 ms")
-        );
+        let text = summary(200, 60, times, "release build", "lunatui live_dashboard");
+        assert!(text.contains("p50 0.500 ms"));
+        assert!(text.contains("p99 1.250 ms"));
+        assert!(text.contains("max 2.000 ms"));
+        assert!(text.contains("within the 8.000 ms target"));
     }
 
     #[test]
@@ -471,7 +472,10 @@ mod tests {
         let mut grid = Grid::new(40, 10);
         let mut clusters = ClusterTable::new();
         render_frame(&model, &mut grid, &mut clusters, 40, 10);
-        assert_eq!(grid.get(1, 0).map(Cell::glyph), GlyphSlot::inline_scalar('l'));
+        assert_eq!(
+            grid.get(1, 0).map(Cell::glyph),
+            GlyphSlot::inline_scalar('l')
+        );
         let space = GlyphSlot::inline_scalar(' ');
         let status_bits = grid.get(1, 9).map(|cell| cell.glyph().bits());
         assert!(matches!(
