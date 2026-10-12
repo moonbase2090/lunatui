@@ -11,10 +11,42 @@ if [ "${1:-}" = "--" ]; then
 fi
 root=$(cd "$(dirname "$0")/../../../.." && pwd)
 cd "$root"
+
+safe_component() {
+  case "$1" in
+    ''|*/*|*..*|.[!.]*|..) return 1 ;;
+  esac
+  return 0
+}
+
 run_id=${RUN_ID:-$(date +%s)}
-out_dir="$root/.cursor/skills/verify-lunatui/artifacts/$run_id"
+if ! safe_component "$run_id" || ! safe_component "$name"; then
+  echo "RUN_ID and example name must be single safe path components" >&2
+  exit 2
+fi
+
+artifacts_root="$root/.cursor/skills/verify-lunatui/artifacts"
+mkdir -p "$artifacts_root"
+out_dir="$artifacts_root/$run_id"
 mkdir -p "$out_dir"
+artifacts_root=$(cd "$artifacts_root" && pwd -P)
+out_dir=$(cd "$out_dir" && pwd -P)
+case "$out_dir" in
+  "$artifacts_root"/*) ;;
+  *)
+    echo "artifact directory escapes $artifacts_root" >&2
+    exit 2
+    ;;
+esac
 log="$out_dir/${name}.log"
+case "$log" in
+  "$out_dir"/*) ;;
+  *)
+    echo "log path escapes artifact directory" >&2
+    exit 2
+    ;;
+esac
+
 set +e
 if [ $# -gt 0 ]; then
   cargo run -q -p lunatui --example "$name" -- "$@" >"$log" 2>&1
