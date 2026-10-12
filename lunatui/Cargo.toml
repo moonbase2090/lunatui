@@ -23,6 +23,9 @@ lunatui-theme = { path = "../lunatui-theme" }
 lunatui-test = { path = "../lunatui-test" }
 ratatui = "=0.30.2"
 
+[target.'cfg(unix)'.dev-dependencies]
+libc = "0.2.190"
+
 # Examples live in the top-level `examples/` directory (PRD M13) and are
 # listed here so each one runs with `cargo run --example <name>`.
 [[example]]
@@ -64,4 +67,19 @@ test = true
 [[example]]
 name = "cell_dump"
 path = "../examples/cell_dump.rs"
+test = true
+
+[[example]]
+name = "live_dashboard"
+path = "../examples/live_dashboard.rs"
+test = true
+
+[[example]]
+name = "unicode_stress"
+path = "../examples/unicode_stress.rs"
+test = true
+
+[[example]]
+name = "resize_torture"
+path = "../examples/resize_torture.rs"
 test = true
