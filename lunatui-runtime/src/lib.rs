@@ -5,6 +5,8 @@
 
 #[cfg(feature = "app")]
 mod app;
+mod focus;
+mod hit;
 mod input;
 #[cfg(feature = "app")]
 mod options;
@@ -14,6 +16,8 @@ mod sched;
 
 #[cfg(feature = "app")]
 pub use app::{App, ControlFlow};
+pub use focus::{FocusDirection, FocusManager};
+pub use hit::{HitId, HitMap};
 pub use input::Input;
 #[cfg(feature = "app")]
 pub use options::RunOptions;

@@ -19,5 +19,5 @@ pub trait App {
     fn update(&mut self, event: &Event) -> ControlFlow;
 
     /// Draw the current UI into `grid` for `area`.
-    fn render(&self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable);
+    fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable);
 }

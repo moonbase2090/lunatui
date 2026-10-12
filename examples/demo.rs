@@ -11,9 +11,10 @@ use std::time::{Duration, Instant};
 use lunatui_bench::ceiling::{FRAME_TARGET, FrameTimes, Verdict};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs};
 use lunatui_runtime::{
-    App, ControlFlow, RunOptions, SchedulePoll, Scheduler, is_quit, render_once, run,
+    App, ControlFlow, FocusDirection, FocusManager, HitId, HitMap, RunOptions, SchedulePoll,
+    Scheduler, is_quit, render_once, run,
 };
-use lunatui_term::{ColorMode, Encoder, Event, KeyCode};
+use lunatui_term::{ColorMode, Encoder, Event, KeyCode, KeyEvent, MouseButton, MouseKind};
 
 const DEFAULT_WIDTH: u16 = 80;
 const DEFAULT_HEIGHT: u16 = 24;
@@ -73,7 +74,7 @@ impl App for Hello {
         }
     }
 
-    fn render(&self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
+    fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
         let style = Style::new().fg(Color::Rgb(0x7a, 0xa2, 0xf7));
         grid.put_str(area.x + 2, area.y + 2, style, "Hello, lunatui", clusters);
         grid.put_str(
@@ -86,9 +87,38 @@ impl App for Hello {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+const HIT_DEC: HitId = HitId(1);
+const HIT_INC: HitId = HitId(2);
+
+#[derive(Clone, Debug)]
 struct Counter {
     value: i32,
+    hits: HitMap,
+    focus: FocusManager,
+    hover: Option<HitId>,
+    drag: Option<HitId>,
+}
+
+impl Default for Counter {
+    fn default() -> Self {
+        Self {
+            value: 0,
+            hits: HitMap::new(),
+            focus: FocusManager::new(),
+            hover: None,
+            drag: None,
+        }
+    }
+}
+
+impl Counter {
+    fn activate(&mut self, id: HitId) {
+        if id == HIT_DEC {
+            self.value -= 1;
+        } else if id == HIT_INC {
+            self.value += 1;
+        }
+    }
 }
 
 impl App for Counter {
@@ -96,22 +126,113 @@ impl App for Counter {
         if is_quit(event) {
             return ControlFlow::Break;
         }
-        if let Event::Key(key) = event {
-            if matches!(key.code, KeyCode::Char('+' | '=')) {
-                self.value += 1;
-            } else if key.code == KeyCode::Char('-') {
-                self.value -= 1;
-            }
+        match event {
+            Event::Key(key) => self.on_key(key),
+            Event::Mouse(mouse) => self.on_mouse(mouse),
+            _ => {}
         }
         ControlFlow::Continue
     }
 
-    fn render(&self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
+    fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
         let title = Style::new().fg(Color::Rgb(0x9e, 0xce, 0x6a));
         grid.put_str(area.x + 2, area.y + 2, title, "Counter", clusters);
-        let line = format!("value: {value}  (+ / -, q quit)", value = self.value);
+        let line = format!("value: {value}", value = self.value);
         grid.put_str(area.x + 2, area.y + 4, Style::new(), &line, clusters);
+        grid.put_str(
+            area.x + 2,
+            area.y + 6,
+            Style::new(),
+            "Tab/click buttons; q quit",
+            clusters,
+        );
+
+        let dec = Rect::new(area.x + 2, area.y + 8, 5, 1);
+        let inc = Rect::new(area.x + 9, area.y + 8, 5, 1);
+        self.hits.clear();
+        self.hits.push(HIT_DEC, dec, 0);
+        self.hits.push(HIT_INC, inc, 1);
+        self.focus.sync(vec![(HIT_DEC, dec), (HIT_INC, inc)]);
+
+        let focused = self.focus.focused();
+        draw_button(
+            grid,
+            dec,
+            "[ - ]",
+            focused == Some(HIT_DEC),
+            self.hover == Some(HIT_DEC),
+            clusters,
+        );
+        draw_button(
+            grid,
+            inc,
+            "[ + ]",
+            focused == Some(HIT_INC),
+            self.hover == Some(HIT_INC),
+            clusters,
+        );
     }
+}
+
+impl Counter {
+    fn on_key(&mut self, key: &KeyEvent) {
+        match key.code {
+            KeyCode::Tab => self.focus.tab(key.modifiers.is_shift()),
+            KeyCode::Up => self.focus.arrow(FocusDirection::Up),
+            KeyCode::Down => self.focus.arrow(FocusDirection::Down),
+            KeyCode::Left => self.focus.arrow(FocusDirection::Left),
+            KeyCode::Right => self.focus.arrow(FocusDirection::Right),
+            KeyCode::Enter | KeyCode::Char(' ') => {
+                if let Some(id) = self.focus.focused() {
+                    self.activate(id);
+                }
+            }
+            KeyCode::Char('+' | '=') => self.value += 1,
+            KeyCode::Char('-') => self.value -= 1,
+            _ => {}
+        }
+    }
+
+    fn on_mouse(&mut self, mouse: &lunatui_term::MouseEvent) {
+        if mouse.unit != lunatui_term::MouseUnit::Cells {
+            return;
+        }
+        match mouse.kind {
+            MouseKind::Down(MouseButton::Left) => {
+                if let Some(id) = self.hits.pick(mouse.column, mouse.row) {
+                    self.drag = Some(id);
+                    self.focus.focus(id);
+                    self.activate(id);
+                }
+            }
+            MouseKind::Up(MouseButton::Left) => {
+                self.drag = None;
+            }
+            MouseKind::Drag(MouseButton::Left) | MouseKind::Move => {
+                self.hover = self.hits.pick(mouse.column, mouse.row);
+            }
+            _ => {}
+        }
+    }
+}
+
+fn draw_button(
+    grid: &mut Grid,
+    area: Rect,
+    label: &str,
+    focused: bool,
+    hovered: bool,
+    clusters: &mut ClusterTable,
+) {
+    let accent = Color::Rgb(0x7a, 0xa2, 0xf7);
+    let style = if focused {
+        Style::new().fg(Color::Rgb(0x1a, 0x1b, 0x26)).bg(accent)
+    } else if hovered {
+        Style::new().fg(accent)
+    } else {
+        Style::new()
+    };
+    grid.put_str(area.x, area.y, style, label, clusters);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -195,10 +316,14 @@ fn terminal_size() -> Option<(u16, u16)> {
 
 fn print_snapshot(counter: bool, geometry: Geometry) {
     let (grid, _) = if counter {
-        let app = Counter { value: 3 };
-        render_once(&app, geometry.width, geometry.height)
+        let mut app = Counter {
+            value: 3,
+            ..Counter::default()
+        };
+        render_once(&mut app, geometry.width, geometry.height)
     } else {
-        render_once(&Hello, geometry.width, geometry.height)
+        let mut hello = Hello;
+        render_once(&mut hello, geometry.width, geometry.height)
     };
     for y in 0..geometry.height {
         let mut line = String::new();
@@ -214,7 +339,10 @@ fn print_snapshot(counter: bool, geometry: Geometry) {
 }
 
 fn run_bench(_counter: bool, geometry: Geometry) -> io::Result<FrameTimes> {
-    let mut app = Counter { value: 0 };
+    let mut app = Counter {
+        value: 0,
+        ..Counter::default()
+    };
     let mut prev = Grid::new(geometry.width, geometry.height);
     let mut next = Grid::new(geometry.width, geometry.height);
     let mut clusters = ClusterTable::new();
@@ -292,7 +420,8 @@ mod tests {
 
     #[test]
     fn hello_renders_title_glyph() {
-        let (grid, _) = lunatui_runtime::render_once(&Hello, 40, 10);
+        let mut hello = Hello;
+        let (grid, _) = lunatui_runtime::render_once(&mut hello, 40, 10);
         assert_eq!(
             grid.get(2, 2).map(Cell::glyph),
             GlyphSlot::inline_scalar('H')
