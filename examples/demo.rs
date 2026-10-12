@@ -43,19 +43,14 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
     let times = run_bench(counter, geometry)?;
+    let label = if counter {
+        "lunatui demo counter (App + run)"
+    } else {
+        "lunatui demo hello (App + run, bench uses counter render path)"
+    };
     println!(
         "{}",
-        bench_summary(
-            geometry.width,
-            geometry.height,
-            times,
-            build_profile(),
-            if counter {
-                "lunatui demo counter (App + run)"
-            } else {
-                "lunatui demo hello (App + run)"
-            },
-        )
+        bench_summary(geometry.width, geometry.height, times, build_profile(), label)
     );
     Ok(())
 }
@@ -223,11 +218,7 @@ impl App for DemoApp {
 }
 
 fn run_bench(counter: bool, geometry: Geometry) -> io::Result<FrameTimes> {
-    let app = if counter {
-        DemoApp::Counter(Counter { value: 0 })
-    } else {
-        DemoApp::Hello(Hello)
-    };
+    let mut app = DemoApp::Counter(Counter { value: 0 });
     let mut prev = Grid::new(geometry.width, geometry.height);
     let mut next = Grid::new(geometry.width, geometry.height);
     let mut clusters = ClusterTable::new();
@@ -245,6 +236,9 @@ fn run_bench(counter: bool, geometry: Geometry) -> io::Result<FrameTimes> {
             SchedulePoll::SleepUntil(deadline) => thread::sleep(deadline.saturating_sub(now)),
             SchedulePoll::Render => {
                 let start = Instant::now();
+                if let DemoApp::Counter(counter) = &mut app {
+                    counter.value = i32::try_from(frame).unwrap_or(0);
+                }
                 next.fill(area, Style::new().bg(Color::Default), ' ', &mut clusters);
                 app.render(&mut next, area, &mut clusters);
                 let runs = diff_runs(&prev, &next);
