@@ -17,7 +17,7 @@ Each example runs from the repository root with one command (PRD M13). Every fea
 
 Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cast` replays with `asciinema play`. `captures/hello_box_oracle.cast` is `cargo run -q --example hello_box -- --oracle`. `captures/caps.cast` is `cargo run -q --example caps` with `TERM=xterm-256color`, `COLORTERM=truecolor`, and `TERM_PROGRAM=Apple_Terminal` (not a tty, so the box shows the ambiguous-wide fallback). `captures/gradient.cast` is `cargo run -q --example gradient --features color-profiles`. `captures/layout_prototype.cast` is `cargo run -q --example layout_prototype`. `captures/keys.cast` is `cargo run -q --example keys`. `captures/live_dashboard.cast` is `cargo run -q --example live_dashboard -- --snapshot --width 80 --height 24` (one rendered frame). Bench summary: `cargo run -q --release --example live_dashboard -- --width 80 --height 24 --frames 4`.
 
-`captures/demo.cast` is `cargo run -q --example demo --features app -- --snapshot --width 80 --height 24`. Bench summary: `cargo run -q --release --example demo --features app -- --width 80 --height 24`.
+`captures/demo.cast` is `cargo run -q --example demo --features app -- --counter --snapshot --width 80 --height 24`. Bench summary: `cargo run -q --release --example demo --features app -- --width 80 --height 24`.
 
 ![Capture of the hello box example](captures/hello_box.png)
 
