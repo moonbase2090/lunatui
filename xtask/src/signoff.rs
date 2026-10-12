@@ -54,7 +54,6 @@ fn is_machine_policy_doc(path: &str) -> bool {
     matches!(path, "docs/lints.md" | "docs/conventions.md")
 }
 
-/// Paths that qualify a pull request as docs-only for sign-off exemption.
 fn is_docs_only_path(path: &str) -> bool {
     if is_machine_policy_doc(path) {
         return false;
