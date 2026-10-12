@@ -19,9 +19,13 @@ Applications implement:
 
 State lives on the app struct. Widgets, IDs, memo, and `Ui` layout sugar are deferred to DD-3 follow-ups in PR 24–28.
 
+### Feature flag
+
+`App`, `RunOptions`, and `run` live behind the `app` Cargo feature on `lunatui-runtime` and `lunatui` (off by default per `REVIEW_POLICY.md`). The `demo` example enables it with `--features app`.
+
 ### `run`
 
-`lunatui_runtime::run(app, RunOptions)` (re-exported as `lunatui::run`):
+`lunatui_runtime::run(app, RunOptions)` (re-exported as `lunatui::run` when `app` is enabled):
 
 - Unix TTY only; alternate screen via `Session` with synchronized output.
 - Input thread via `Input::from_reader(stdin)`.

@@ -34,7 +34,7 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
     if io::stdout().is_terminal() {
-        let options = RunOptions::new(geometry.width, geometry.height, 60);
+        let options = RunOptions::new(geometry.width, geometry.height);
         if counter {
             run(Counter::default(), options)?;
         } else {

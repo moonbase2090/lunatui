@@ -8,18 +8,12 @@ pub struct RunOptions {
     pub width: u16,
     /// Terminal height in rows.
     pub height: u16,
-    /// Maximum animation rate when the scheduler is animating.
-    pub fps_cap: u32,
 }
 
 impl RunOptions {
     /// Builds options for a fullscreen session at the given size.
     #[must_use]
-    pub const fn new(width: u16, height: u16, fps_cap: u32) -> Self {
-        Self {
-            width,
-            height,
-            fps_cap,
-        }
+    pub const fn new(width: u16, height: u16) -> Self {
+        Self { width, height }
     }
 }

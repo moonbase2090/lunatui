@@ -19,6 +19,8 @@ fn demo_snapshot_prints_hello_line() -> Result<(), Box<dyn std::error::Error>> {
             "--quiet",
             "-p",
             "lunatui",
+            "--features",
+            "app",
             "--example",
             "demo",
             "--",

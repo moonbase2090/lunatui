@@ -23,7 +23,6 @@ use crate::sched::{SchedulePoll, Scheduler};
 /// Returns I/O, session, or encoder errors from the host loop.
 #[cfg(unix)]
 pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
-    let _fps_cap = options.fps_cap;
     if !io::stdout().is_terminal() {
         return Err(io::Error::new(
             io::ErrorKind::Unsupported,
@@ -170,8 +169,8 @@ mod tests {
 
     #[test]
     fn run_options_round_trip() {
-        let options = RunOptions::new(80, 24, 60);
+        let options = RunOptions::new(80, 24);
         assert_eq!(options.width, 80);
-        assert_eq!(options.fps_cap, 60);
+        assert_eq!(options.height, 24);
     }
 }
