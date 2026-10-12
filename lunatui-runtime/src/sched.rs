@@ -111,7 +111,7 @@ impl Scheduler {
         }
         let skipped = late.as_nanos() / period;
         if skipped > 0 {
-            self.dropped_frames += skipped as u64;
+            self.dropped_frames += u64::try_from(skipped).unwrap_or(u64::MAX);
         }
         self.next_frame_at = Some(finished.saturating_add(self.frame_period));
     }

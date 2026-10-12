@@ -148,18 +148,19 @@ fn run_bench(options: &Options) -> io::Result<Option<FrameTimes>> {
             }
             SchedulePoll::Render => {
                 model.tick = tick;
-                model.scroll = usize::try_from(tick / 4 % u32::try_from(LOG_LINES).unwrap_or(1))
-                    .unwrap_or(0);
+                model.scroll =
+                    usize::try_from(tick / 4 % u32::try_from(LOG_LINES).unwrap_or(1)).unwrap_or(0);
                 let start = Instant::now();
-                render_frame(&model, &mut next, &mut clusters, options.width, options.height);
+                render_frame(
+                    &model,
+                    &mut next,
+                    &mut clusters,
+                    options.width,
+                    options.height,
+                );
                 let runs = diff_runs(&prev, &next);
                 let encode_start = epoch.elapsed();
-                let payload = encoder.encode_diff(
-                    &prev,
-                    &next,
-                    &clusters,
-                    ColorMode::TrueColor,
-                );
+                let payload = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
                 let encode_done = epoch.elapsed();
                 let _payload = payload;
                 samples.push(start.elapsed());
@@ -173,7 +174,9 @@ fn run_bench(options: &Options) -> io::Result<Option<FrameTimes>> {
             }
         }
     }
-    FrameTimes::from_samples(&samples).ok_or_else(|| io::Error::other("no samples")).map(Some)
+    FrameTimes::from_samples(&samples)
+        .ok_or_else(|| io::Error::other("no samples"))
+        .map(Some)
 }
 
 fn run_live(options: &Options) -> io::Result<Option<FrameTimes>> {
@@ -208,24 +211,23 @@ fn run_live(options: &Options) -> io::Result<Option<FrameTimes>> {
                         usize::try_from(tick / 4 % u32::try_from(LOG_LINES).unwrap_or(1))
                             .unwrap_or(0);
                     let start = Instant::now();
-                    render_frame(&model, &mut next, &mut clusters, options.width, options.height);
-                    let _runs = diff_runs(&prev, &next);
-                    let payload = encoder.encode_diff(
-                        &prev,
-                        &next,
-                        &clusters,
-                        ColorMode::TrueColor,
+                    render_frame(
+                        &model,
+                        &mut next,
+                        &mut clusters,
+                        options.width,
+                        options.height,
                     );
+                    let _runs = diff_runs(&prev, &next);
+                    let payload =
+                        encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
                     let present_start = epoch.elapsed();
                     session.present_frame(payload)?;
                     let present_done = epoch.elapsed();
                     samples.push(start.elapsed());
                     prev = next;
                     next = Grid::new(options.width, options.height);
-                    sched.after_present(
-                        present_start,
-                        present_done.saturating_sub(present_start),
-                    );
+                    sched.after_present(present_start, present_done.saturating_sub(present_start));
                     tick += 1;
                 }
             }
@@ -283,7 +285,13 @@ fn render_frame(
     let log_top = 3_u16;
     let log_bottom = height.saturating_sub(2);
     if log_top < log_bottom {
-        grid.put_str(1, 2, Style::new().fg(accent).bg(bg), "scrolling log", clusters);
+        grid.put_str(
+            1,
+            2,
+            Style::new().fg(accent).bg(bg),
+            "scrolling log",
+            clusters,
+        );
         let visible = usize::from(log_bottom - log_top);
         for row in 0..visible {
             let line_index = (model.scroll + row) % model.log.len();
@@ -295,7 +303,13 @@ fn render_frame(
 
     let spinner = SPINNER[usize::try_from(model.tick % 10).unwrap_or(0)];
     let status = format!("{spinner}  dogfood · compare to ratatui_dashboard baseline");
-    grid.put_str(1, height - 1, Style::new().fg(accent).bg(bg), &status, clusters);
+    grid.put_str(
+        1,
+        height - 1,
+        Style::new().fg(accent).bg(bg),
+        &status,
+        clusters,
+    );
 }
 
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -386,8 +400,10 @@ mod tests {
             p99: Duration::from_micros(1_250),
             max: Duration::from_millis(2),
         };
-        assert!(summary(200, 60, times, "release build", "lunatui live_dashboard")
-            .contains("p50 0.500 ms"));
+        assert!(
+            summary(200, 60, times, "release build", "lunatui live_dashboard")
+                .contains("p50 0.500 ms")
+        );
     }
 
     #[test]
