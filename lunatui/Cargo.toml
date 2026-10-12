@@ -15,6 +15,9 @@ workspace = true
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 
+[dependencies]
+lunatui-runtime = { path = "../lunatui-runtime" }
+
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
@@ -71,4 +74,9 @@ test = true
 [[example]]
 name = "live_dashboard"
 path = "../examples/live_dashboard.rs"
+test = true
+
+[[example]]
+name = "demo"
+path = "../examples/demo.rs"
 test = true

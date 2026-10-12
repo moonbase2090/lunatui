@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
 lunatui-term = { version = "0.0.0", path = "../lunatui-term" }
 
 [lints]
