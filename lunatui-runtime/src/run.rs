@@ -6,7 +6,8 @@ use std::time::Instant;
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs};
 use lunatui_term::{
-    ColorMode, Encoder, Event, KeyCode, Modifiers, Session, SessionOptions, SyncOutput,
+    ColorMode, Encoder, Event, KeyCode, Modifiers, MouseTracking, Session, SessionOptions,
+    SyncOutput,
 };
 
 use crate::app::{App, ControlFlow};
@@ -35,6 +36,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         io::stdout(),
         SessionOptions {
             sync_output: SyncOutput::Enabled,
+            mouse_tracking: MouseTracking::Sgr,
         },
     )?;
     let area = Rect::new(0, 0, options.width, options.height);

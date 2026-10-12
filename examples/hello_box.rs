@@ -54,6 +54,7 @@ fn main() -> io::Result<()> {
                     io::stdout().lock(),
                     SessionOptions {
                         sync_output: SyncOutput::Enabled,
+                        mouse_tracking: lunatui_term::MouseTracking::Disabled,
                     },
                 )?;
                 session.present_frame(bytes)?;

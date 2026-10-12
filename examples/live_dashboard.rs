@@ -205,6 +205,7 @@ fn run_live(options: &Options) -> io::Result<Option<FrameTimes>> {
             stdout,
             SessionOptions {
                 sync_output: SyncOutput::Enabled,
+                mouse_tracking: lunatui_term::MouseTracking::Disabled,
             },
         )?;
         let epoch = Instant::now();

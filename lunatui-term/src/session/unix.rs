@@ -18,6 +18,18 @@ const SHOW_CURSOR: &[u8] = b"\x1b[?25h";
 const HIDE_CURSOR: &[u8] = b"\x1b[?25l";
 const SYNC_BEGIN: &[u8] = b"\x1b[?2026h";
 const SYNC_END: &[u8] = b"\x1b[?2026l";
+const MOUSE_ENABLE: &[u8] = b"\x1b[?1000h\x1b[?1002h\x1b[?1003h\x1b[?1006h";
+const MOUSE_DISABLE: &[u8] = b"\x1b[?1006l\x1b[?1003l\x1b[?1002l\x1b[?1000l";
+
+/// Whether the session enables extended mouse reporting.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum MouseTracking {
+    /// No mouse events.
+    #[default]
+    Disabled,
+    /// SGR mouse modes 1000, 1002, 1003, and 1006.
+    Sgr,
+}
 
 /// Whether frame payloads are wrapped in synchronized-update sequences.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -33,12 +45,15 @@ pub enum SyncOutput {
 pub struct SessionOptions {
     /// Synchronized output wrapping for [`Session::present_frame`].
     pub sync_output: SyncOutput,
+    /// Pointer reporting for interactive apps.
+    pub mouse_tracking: MouseTracking,
 }
 
 impl Default for SessionOptions {
     fn default() -> Self {
         Self {
             sync_output: SyncOutput::Enabled,
+            mouse_tracking: MouseTracking::Disabled,
         }
     }
 }
@@ -92,6 +107,7 @@ pub struct Session<W> {
     tty: File,
     saved: Termios,
     sync_output: SyncOutput,
+    mouse_tracking: MouseTracking,
     frame_buf: Vec<u8>,
     active: bool,
 }
@@ -125,6 +141,7 @@ impl<W: Write> Session<W> {
             tty,
             saved,
             sync_output: options.sync_output,
+            mouse_tracking: options.mouse_tracking,
             frame_buf: Vec::new(),
             active: true,
         };
@@ -150,6 +167,9 @@ impl<W> Session<W> {
     fn write_startup(&mut self) -> Result<(), SessionError> {
         write_tty(&self.tty, ENTER_ALT)?;
         write_tty(&self.tty, HIDE_CURSOR)?;
+        if self.mouse_tracking == MouseTracking::Sgr {
+            write_tty(&self.tty, MOUSE_ENABLE)?;
+        }
         Ok(())
     }
 
@@ -158,6 +178,9 @@ impl<W> Session<W> {
             return;
         }
         self.active = false;
+        if self.mouse_tracking == MouseTracking::Sgr {
+            let _ = write_tty(&self.tty, MOUSE_DISABLE);
+        }
         let _ = write_tty(&self.tty, SHOW_CURSOR);
         let _ = write_tty(&self.tty, LEAVE_ALT);
         let _ = tcsetattr(&self.tty, OptionalActions::Now, &self.saved);

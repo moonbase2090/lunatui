@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+#![cfg(feature = "app")]
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::Rect;

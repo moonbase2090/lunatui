@@ -30,6 +30,19 @@ fn session_enters_alt_screen_and_restores_on_drop() {
 }
 
 #[test]
+fn session_enables_sgr_mouse_when_requested() {
+    let output = run_probe_in_pty("mouse");
+    assert!(
+        output.windows(8).any(|w| w == b"\x1b[?1006h"),
+        "expected SGR mouse enable"
+    );
+    assert!(
+        output.windows(8).any(|w| w == b"\x1b[?1006l"),
+        "expected SGR mouse disable on restore"
+    );
+}
+
+#[test]
 fn session_restores_after_panic() {
     let output = run_probe_in_pty("panic");
     assert!(
