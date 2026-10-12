@@ -7,7 +7,12 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+app = []
+
 [dependencies]
+lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
 lunatui-term = { version = "0.0.0", path = "../lunatui-term" }
 
 [lints]

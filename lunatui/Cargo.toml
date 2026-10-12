@@ -14,13 +14,17 @@ workspace = true
 [features]
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
+app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
+
+[dependencies]
+lunatui-runtime = { path = "../lunatui-runtime", optional = true }
 
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-term = { path = "../lunatui-term" }
 lunatui-theme = { path = "../lunatui-theme" }
-lunatui-runtime = { path = "../lunatui-runtime" }
+lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
 ratatui = "=0.30.2"
 libc = "0.2.190"
@@ -72,3 +76,9 @@ test = true
 name = "live_dashboard"
 path = "../examples/live_dashboard.rs"
 test = true
+
+[[example]]
+name = "demo"
+path = "../examples/demo.rs"
+test = true
+required-features = ["app"]
