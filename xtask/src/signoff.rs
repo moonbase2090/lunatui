@@ -4,6 +4,7 @@
 
 use std::fs;
 use std::io;
+use std::path::Path;
 use std::process::ExitCode;
 
 use crate::git;
@@ -43,7 +44,33 @@ fn protected_changes(base: &str, head: &str) -> io::Result<Vec<String>> {
         .collect())
 }
 
+fn is_markdown_path(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+}
+
+fn is_machine_policy_doc(path: &str) -> bool {
+    matches!(path, "docs/lints.md" | "docs/conventions.md")
+}
+
+fn is_docs_only_path(path: &str) -> bool {
+    if is_machine_policy_doc(path) {
+        return false;
+    }
+    if path.starts_with(".cursor/skills/") {
+        return is_markdown_path(path);
+    }
+    if path.starts_with("docs/") {
+        return is_markdown_path(path);
+    }
+    is_markdown_path(path)
+}
+
 fn needs_signoff<'a>(changed: &'a [String], codeowners: &str) -> Vec<&'a str> {
+    if changed.iter().all(|path| is_docs_only_path(path)) {
+        return Vec::new();
+    }
     let patterns: Vec<&str> = codeowners
         .lines()
         .map(str::trim)
@@ -76,6 +103,8 @@ mod tests {
 /Cargo.toml @mb2090
 /Cargo.lock @mb2090
 /.github/ @mb2090
+/docs/lints.md @mb2090
+/docs/conventions.md @mb2090
 ";
 
     fn protected(changed: &[&str]) -> Vec<String> {
@@ -102,7 +131,11 @@ mod tests {
                 ".github/CODEOWNERS",
                 "docs/lints.md"
             ]),
-            [".github/workflows/ci.yml", ".github/CODEOWNERS"]
+            [
+                ".github/workflows/ci.yml",
+                ".github/CODEOWNERS",
+                "docs/lints.md"
+            ]
         );
     }
 
@@ -112,5 +145,43 @@ mod tests {
             protected(&["benches/src/report.rs", "examples/hello_box.rs"]),
             Vec::<String>::new()
         );
+    }
+
+    #[test]
+    fn docs_only_markdown_skips_signoff() {
+        assert_eq!(
+            protected(&[
+                "docs/adr/0001.md",
+                "REVIEW_POLICY.md",
+                ".cursor/skills/verify-lunatui/SKILL.md",
+            ]),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn machine_policy_docs_still_need_signoff() {
+        assert_eq!(protected(&["docs/lints.md"]), ["docs/lints.md"]);
+        assert_eq!(protected(&["docs/conventions.md"]), ["docs/conventions.md"]);
+    }
+
+    #[test]
+    fn skill_scripts_are_not_docs_only_exemptions() {
+        assert_eq!(
+            protected(&[".cursor/skills/verify-lunatui/scripts/doctor.sh"]),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            protected(&[
+                ".cursor/skills/verify-lunatui/SKILL.md",
+                ".cursor/skills/verify-lunatui/scripts/doctor.sh",
+            ]),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn mixed_docs_and_codeowners_still_needs_signoff() {
+        assert_eq!(protected(&["docs/guide.md", "Cargo.toml"]), ["Cargo.toml"]);
     }
 }
