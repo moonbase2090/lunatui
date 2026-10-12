@@ -1,1 +1,3 @@
 target/
+.cursor/skills/verify-lunatui/artifacts/*
+!.cursor/skills/verify-lunatui/artifacts/.gitkeep

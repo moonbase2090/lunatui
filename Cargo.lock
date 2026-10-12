@@ -861,8 +861,10 @@ dependencies = [
 name = "lunatui"
 version = "0.0.0"
 dependencies = [
+ "libc",
  "lunatui-bench",
  "lunatui-core",
+ "lunatui-runtime",
  "lunatui-term",
  "lunatui-test",
  "lunatui-theme",

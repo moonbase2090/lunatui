@@ -20,8 +20,10 @@ lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-term = { path = "../lunatui-term" }
 lunatui-theme = { path = "../lunatui-theme" }
+lunatui-runtime = { path = "../lunatui-runtime" }
 lunatui-test = { path = "../lunatui-test" }
 ratatui = "=0.30.2"
+libc = "0.2.190"
 
 # Examples live in the top-level `examples/` directory (PRD M13) and are
 # listed here so each one runs with `cargo run --example <name>`.
@@ -64,4 +66,9 @@ test = true
 [[example]]
 name = "cell_dump"
 path = "../examples/cell_dump.rs"
+test = true
+
+[[example]]
+name = "live_dashboard"
+path = "../examples/live_dashboard.rs"
 test = true
