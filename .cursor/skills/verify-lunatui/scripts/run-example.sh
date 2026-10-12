@@ -47,13 +47,33 @@ case "$log" in
     ;;
 esac
 
+if [ -L "$log" ]; then
+  echo "log path is a symlink; refusing to write" >&2
+  exit 2
+fi
+
+tmp="$out_dir/.${name}.log.$$"
+umask 077
+if [ -e "$tmp" ] || [ -L "$tmp" ]; then
+  echo "temporary log path already exists" >&2
+  exit 2
+fi
+: >"$tmp"
+
 set +e
 if [ $# -gt 0 ]; then
-  cargo run -q -p lunatui --example "$name" -- "$@" >"$log" 2>&1
+  cargo run -q -p lunatui --example "$name" -- "$@" >"$tmp" 2>&1
 else
-  cargo run -q -p lunatui --example "$name" >"$log" 2>&1
+  cargo run -q -p lunatui --example "$name" >"$tmp" 2>&1
 fi
 status=$?
 set -e
+
+if [ -L "$log" ]; then
+  rm -f "$tmp"
+  echo "log path is a symlink; refusing to replace" >&2
+  exit 2
+fi
+mv -f "$tmp" "$log"
 echo "wrote $log (exit $status)"
 exit "$status"
