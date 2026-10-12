@@ -68,6 +68,21 @@ fn dirty_during_animation_resumes_animating() {
 }
 
 #[test]
+fn slow_dirty_present_during_animation_applies_backpressure() {
+    let mut sched = Scheduler::animating(FRAME);
+    assert_eq!(sched.poll(Duration::ZERO, false), SchedulePoll::Render);
+    sched.after_present(Duration::ZERO, Duration::ZERO);
+    assert_eq!(sched.poll(Duration::from_millis(5), true), SchedulePoll::Render);
+    sched.after_present(Duration::from_millis(5), FRAME.saturating_mul(2));
+    assert!(sched.dropped_frames() >= 1);
+    assert_eq!(sched.state(), State::Animating);
+    assert_ne!(
+        sched.poll(Duration::from_millis(5), false),
+        SchedulePoll::Render
+    );
+}
+
+#[test]
 fn slow_present_drops_intermediate_animation_frames() {
     let mut sched = Scheduler::animating(FRAME);
     assert_eq!(sched.poll(Duration::ZERO, false), SchedulePoll::Render);

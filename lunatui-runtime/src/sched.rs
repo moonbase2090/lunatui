@@ -83,7 +83,7 @@ impl Scheduler {
         self.state = State::Dirty;
     }
 
-    fn settle_after_dirty_present(&mut self) {
+    fn settle_after_dirty_present(&mut self, now: Duration, write_duration: Duration) {
         let resume = self.dirty_resume.unwrap_or(DirtyResume::Idle);
         self.dirty_resume = None;
         match resume {
@@ -93,8 +93,27 @@ impl Scheduler {
             }
             DirtyResume::Animating => {
                 self.state = State::Animating;
+                self.apply_animation_backpressure(now, write_duration);
             }
         }
+    }
+
+    fn apply_animation_backpressure(&mut self, now: Duration, write_duration: Duration) {
+        let finished = now.saturating_add(write_duration);
+        let deadline = self.next_frame_at.unwrap_or(finished);
+        if finished <= deadline {
+            return;
+        }
+        let late = finished.saturating_sub(deadline);
+        let period = self.frame_period.as_nanos();
+        if period == 0 {
+            return;
+        }
+        let skipped = late.as_nanos() / period;
+        if skipped > 0 {
+            self.dropped_frames += skipped as u64;
+        }
+        self.next_frame_at = Some(finished.saturating_add(self.frame_period));
     }
 
     /// Timer wakeups requested by [`SchedulePoll::SleepUntil`].
@@ -159,26 +178,11 @@ impl Scheduler {
     pub fn after_present(&mut self, now: Duration, write_duration: Duration) {
         self.last_now = now;
         if self.state == State::Dirty {
-            self.settle_after_dirty_present();
+            self.settle_after_dirty_present(now, write_duration);
             return;
         }
-        if self.state != State::Animating {
-            return;
+        if self.state == State::Animating {
+            self.apply_animation_backpressure(now, write_duration);
         }
-        let finished = now.saturating_add(write_duration);
-        let deadline = self.next_frame_at.unwrap_or(finished);
-        if finished <= deadline {
-            return;
-        }
-        let late = finished.saturating_sub(deadline);
-        let period = self.frame_period.as_nanos();
-        if period == 0 {
-            return;
-        }
-        let skipped = late.as_nanos() / period;
-        if skipped > 0 {
-            self.dropped_frames += skipped as u64;
-        }
-        self.next_frame_at = Some(finished.saturating_add(self.frame_period));
     }
 }
