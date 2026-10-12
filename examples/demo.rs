@@ -9,7 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_bench::ceiling::{FRAME_TARGET, FrameTimes, Verdict};
-use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Style, diff_runs};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs};
 use lunatui_runtime::{
     App, ControlFlow, RunOptions, SchedulePoll, Scheduler, is_quit, render_once, run,
 };
@@ -38,7 +38,7 @@ fn main() -> io::Result<()> {
         if counter {
             run(Counter::default(), options)?;
         } else {
-            run(Hello::default(), options)?;
+            run(Hello, options)?;
         }
         return Ok(());
     }
@@ -50,7 +50,13 @@ fn main() -> io::Result<()> {
     };
     println!(
         "{}",
-        bench_summary(geometry.width, geometry.height, times, build_profile(), label)
+        bench_summary(
+            geometry.width,
+            geometry.height,
+            times,
+            build_profile(),
+            label
+        )
     );
     Ok(())
 }
@@ -91,10 +97,10 @@ impl App for Counter {
             return ControlFlow::Break;
         }
         if let Event::Key(key) = event {
-            match key.code {
-                KeyCode::Char('+') | KeyCode::Char('=') => self.value += 1,
-                KeyCode::Char('-') => self.value -= 1,
-                _ => {}
+            if matches!(key.code, KeyCode::Char('+' | '=')) {
+                self.value += 1;
+            } else if key.code == KeyCode::Char('-') {
+                self.value -= 1;
             }
         }
         ControlFlow::Continue
@@ -161,14 +167,25 @@ fn parse_u16(value: Option<&String>, flag: &str) -> io::Result<u16> {
 fn terminal_size() -> Option<(u16, u16)> {
     #[cfg(unix)]
     {
-        let (cols, rows) = unsafe {
-            let mut size: libc::winsize = core::mem::zeroed();
-            if libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, &mut size) != 0 {
-                return None;
-            }
-            (size.ws_col, size.ws_row)
+        use std::os::fd::AsRawFd;
+
+        let stdout = io::stdout();
+        if !stdout.is_terminal() {
+            return None;
+        }
+        let mut winsize = libc::winsize {
+            ws_row: 0,
+            ws_col: 0,
+            ws_xpixel: 0,
+            ws_ypixel: 0,
         };
-        Some((cols, rows))
+        let ok =
+            // SAFETY: TIOCGWINSZ reads the tty geometry for stdout when it is a terminal.
+            unsafe { libc::ioctl(stdout.as_raw_fd(), libc::TIOCGWINSZ, &raw mut winsize) == 0 };
+        if !ok || winsize.ws_col == 0 || winsize.ws_row == 0 {
+            return None;
+        }
+        Some((winsize.ws_col, winsize.ws_row))
     }
     #[cfg(not(unix))]
     {
@@ -196,29 +213,8 @@ fn print_snapshot(counter: bool, geometry: Geometry) {
     }
 }
 
-enum DemoApp {
-    Hello(Hello),
-    Counter(Counter),
-}
-
-impl App for DemoApp {
-    fn update(&mut self, event: &Event) -> ControlFlow {
-        match self {
-            Self::Hello(app) => app.update(event),
-            Self::Counter(app) => app.update(event),
-        }
-    }
-
-    fn render(&self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
-        match self {
-            Self::Hello(app) => app.render(grid, area, clusters),
-            Self::Counter(app) => app.render(grid, area, clusters),
-        }
-    }
-}
-
-fn run_bench(counter: bool, geometry: Geometry) -> io::Result<FrameTimes> {
-    let mut app = DemoApp::Counter(Counter { value: 0 });
+fn run_bench(_counter: bool, geometry: Geometry) -> io::Result<FrameTimes> {
+    let mut app = Counter { value: 0 };
     let mut prev = Grid::new(geometry.width, geometry.height);
     let mut next = Grid::new(geometry.width, geometry.height);
     let mut clusters = ClusterTable::new();
@@ -236,9 +232,7 @@ fn run_bench(counter: bool, geometry: Geometry) -> io::Result<FrameTimes> {
             SchedulePoll::SleepUntil(deadline) => thread::sleep(deadline.saturating_sub(now)),
             SchedulePoll::Render => {
                 let start = Instant::now();
-                if let DemoApp::Counter(counter) = &mut app {
-                    counter.value = i32::try_from(frame).unwrap_or(0);
-                }
+                app.value = i32::try_from(frame).unwrap_or(0);
                 next.fill(area, Style::new().bg(Color::Default), ' ', &mut clusters);
                 app.render(&mut next, area, &mut clusters);
                 let runs = diff_runs(&prev, &next);
@@ -269,13 +263,7 @@ fn build_profile() -> &'static str {
     }
 }
 
-fn bench_summary(
-    width: u16,
-    height: u16,
-    times: FrameTimes,
-    profile: &str,
-    label: &str,
-) -> String {
+fn bench_summary(width: u16, height: u16, times: FrameTimes, profile: &str, label: &str) -> String {
     let verdict = match times.verdict() {
         Verdict::WithinTarget => "within",
         Verdict::OverTarget | Verdict::OverCeiling => "over",
@@ -315,20 +303,24 @@ mod tests {
     fn counter_increments_on_plus() {
         let mut counter = Counter::default();
         let plus = Event::Key(KeyEvent::press(KeyCode::Char('+')));
-        assert_eq!(counter.update(&plus), lunatui_runtime::ControlFlow::Continue);
+        assert_eq!(
+            counter.update(&plus),
+            lunatui_runtime::ControlFlow::Continue
+        );
         assert_eq!(counter.value, 1);
     }
 
     #[test]
-    fn parse_geometry_accepts_explicit_size() {
+    fn parse_geometry_accepts_explicit_size() -> Result<(), Box<dyn std::error::Error>> {
         let args = [
             "--width".to_string(),
             "80".to_string(),
             "--height".to_string(),
             "24".to_string(),
         ];
-        let geometry = parse_geometry(&args).expect("geometry");
+        let geometry = parse_geometry(&args)?;
         assert_eq!(geometry.width, 80);
         assert_eq!(geometry.height, 24);
+        Ok(())
     }
 }

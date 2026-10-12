@@ -115,11 +115,7 @@ pub fn is_quit(event: &Event) -> bool {
 }
 
 /// Renders `app` once into a fresh grid (for snapshots and benches).
-pub fn render_once<A: App>(
-    app: &A,
-    width: u16,
-    height: u16,
-) -> (Grid, ClusterTable) {
+pub fn render_once<A: App>(app: &A, width: u16, height: u16) -> (Grid, ClusterTable) {
     let area = Rect::new(0, 0, width, height);
     let mut grid = Grid::new(width, height);
     let mut clusters = ClusterTable::new();
@@ -144,7 +140,12 @@ mod tests {
             ControlFlow::Continue
         }
 
-        fn render(&self, grid: &mut lunatui_core::Grid, area: lunatui_core::Rect, clusters: &mut lunatui_core::ClusterTable) {
+        fn render(
+            &self,
+            grid: &mut lunatui_core::Grid,
+            area: lunatui_core::Rect,
+            clusters: &mut lunatui_core::ClusterTable,
+        ) {
             grid.put_str(
                 area.x + 1,
                 area.y + 1,
@@ -164,7 +165,10 @@ mod tests {
     #[test]
     fn render_once_writes_hello() {
         let (grid, _) = render_once(&Hello, 20, 5);
-        assert_eq!(grid.get(1, 1).map(lunatui_core::Cell::glyph), GlyphSlot::inline_scalar('h'));
+        assert_eq!(
+            grid.get(1, 1).map(lunatui_core::Cell::glyph),
+            GlyphSlot::inline_scalar('h')
+        );
     }
 
     #[test]
