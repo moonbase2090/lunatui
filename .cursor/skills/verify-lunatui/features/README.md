@@ -18,6 +18,7 @@ Read this index before driving the repo. Each feature file is a user- or reviewe
 
 - Gate proof: include `doctor.log` showing `xtask check: ok`.
 - Example proof: include the `.log` file and cite the command line in the PR Proof section.
+- Committed reference bundle for this skill: `artifacts/verify-seed/` (`doctor.log`, `keys.log`, `hello_box.log`).
 - If an example needs a real tty and cannot run headless, record `verified-unreachable` with the attempted command and missing prerequisite.
 
 ## Features
