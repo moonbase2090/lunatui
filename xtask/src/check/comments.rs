@@ -1,6 +1,5 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
 
 mod scanner;
 
@@ -11,14 +10,13 @@ use scanner::{Comment, CommentKind, scan};
 use super::Violation;
 
 pub(crate) const LICENSE_HEADER: &str = "\
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
 ";
 
 const SAFETY_PREFIX: &str = "// SAFETY: ";
 
-const HEADER_MESSAGE: &str = "missing or altered license header (M14): the file must start with the approved MPL-2.0 header and a blank line";
+const HEADER_MESSAGE: &str = "missing or altered license header (M14): the file must start with the approved MIT SPDX header and a blank line";
 
 const LINE_COMMENT_MESSAGE: &str = "comment not allowed (M14): the only approved comments are the license header and `// SAFETY:` directly before `unsafe`";
 
@@ -115,7 +113,7 @@ mod tests {
 
     #[test]
     fn an_altered_license_header_is_rejected() {
-        let source = LICENSE_HEADER.replace("v. 2.0", "v. 2.1") + "\nfn main() {}\n";
+        let source = LICENSE_HEADER.replace("MIT", "Apache-2.0") + "\nfn main() {}\n";
         assert_eq!(violations(Path::new("a.rs"), &source).len(), 1);
     }
 
@@ -131,14 +129,14 @@ mod tests {
 
     #[test]
     fn plain_comments_are_rejected() {
-        assert_eq!(violation_lines("// note\nfn main() {}\n"), [5]);
+        assert_eq!(violation_lines("// note\nfn main() {}\n"), [4]);
     }
 
     #[test]
     fn inner_and_block_doc_comments_are_rejected() {
         assert_eq!(
             violation_lines("//! crate\n/** item */\nfn main() {}\n"),
-            [5, 6]
+            [4, 5]
         );
     }
 
@@ -158,11 +156,11 @@ mod tests {
 
     #[test]
     fn a_safety_comment_not_before_unsafe_is_rejected() {
-        assert_eq!(violation_lines("// SAFETY: nothing here\nfn f() {}\n"), [5]);
+        assert_eq!(violation_lines("// SAFETY: nothing here\nfn f() {}\n"), [4]);
     }
 
     #[test]
     fn a_plain_comment_before_unsafe_is_rejected() {
-        assert_eq!(violation_lines("// trust me\nunsafe fn f() {}\n"), [5]);
+        assert_eq!(violation_lines("// trust me\nunsafe fn f() {}\n"), [4]);
     }
 }

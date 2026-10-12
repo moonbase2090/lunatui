@@ -4,7 +4,7 @@
 
 - **Name: `lunatui`** (recommended in §12; final confirmation is open decision D1). Every crate and snippet uses it, so a rename is one pass.
 - **Binding sections:** §M (Development methodology) and §T (Team model and review protocol) are **binding working rules** for everyone contributing, human or AI. The PR acceptance template (§8.0) enforces them. Every other section is the product plan and may change through the decision process in §11.
-- **License:** MPL-2.0. **Repo:** `github.com/moonbase2090/lunatui`. Open source, Rust.
+- **License:** MIT (relicensed from MPL-2.0 in 2026). **Repo:** `github.com/moonbase2090/lunatui`. Open source, Rust.
 - **Rules for numbers:** "measured" means taken from my ratatui v0.30.2 runs on a shared 8-vCPU Xeon box (indicative, not absolute). "Target" is a goal. "Estimate" is a judgment, not a measurement.
 
 ---
@@ -823,7 +823,7 @@ lunatui is demoable early and continuously, so development can be watched in fli
 - **The default is no comments.** Names, types and tests must explain the code. No `//` or `/* */` comments and no `//!` inner docs, in every crate.
 - **Documentation:** `///` rustdoc on public API items, with `missing_docs` on. Crate-level docs use `#![doc = include_str!("../README.md")]`.
 - **Exactly two approved comment exceptions (MB2090 rulings, Oct 6, 2026):**
-  1. The MPL-2.0 license header at the top of every source file. Its text is fixed and identical in every file (`docs/conventions.md` §10).
+  1. The MIT SPDX license header at the top of every source file. Its text is fixed and identical in every file (`docs/conventions.md` §10).
   2. `// SAFETY:` comments on `unsafe` blocks. `clippy::undocumented_unsafe_blocks` is denied, so every `unsafe` block has one.
 - **New exceptions need MB2090's explicit approval.** Other comment types may be allowed case by case where they make sense. Propose a new exception in its own small PR, or flag it in a PR body as needing MB2090 sign-off. Once approved, it is added to the comment check's allowlist and listed in `docs/conventions.md` §10. Never add an exception on your own or slip a comment past the check.
 - CI enforces this with a check script that allows only the approved forms and fails on any other comment. Plain comments are not visible to clippy or dylint, so the script is the enforcement.
