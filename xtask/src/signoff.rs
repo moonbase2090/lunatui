@@ -43,7 +43,14 @@ fn protected_changes(base: &str, head: &str) -> io::Result<Vec<String>> {
         .collect())
 }
 
+fn is_docs_only_path(path: &str) -> bool {
+    path.ends_with(".md") || path.starts_with("docs/") || path.starts_with(".cursor/skills/")
+}
+
 fn needs_signoff<'a>(changed: &'a [String], codeowners: &str) -> Vec<&'a str> {
+    if changed.iter().all(|path| is_docs_only_path(path)) {
+        return Vec::new();
+    }
     let patterns: Vec<&str> = codeowners
         .lines()
         .map(str::trim)
@@ -112,5 +119,23 @@ mod tests {
             protected(&["benches/src/report.rs", "examples/hello_box.rs"]),
             Vec::<String>::new()
         );
+    }
+
+    #[test]
+    fn docs_only_changes_skip_signoff_even_for_codeowners_paths() {
+        assert_eq!(
+            protected(&[
+                "docs/adr/0001.md",
+                "REVIEW_POLICY.md",
+                ".cursor/skills/verify-lunatui/SKILL.md",
+                ".cursor/skills/verify-lunatui/scripts/doctor.sh",
+            ]),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn mixed_docs_and_codeowners_still_needs_signoff() {
+        assert_eq!(protected(&["docs/guide.md", "Cargo.toml"]), ["Cargo.toml"]);
     }
 }
