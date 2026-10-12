@@ -1,0 +1,2 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760100000, "title": "live_dashboard"}
+[0.0, "o", "lunatui live_dashboard (Scheduler + Grid + diff_runs + Encoder), 80x24, 4 frames, release build: p50 0.075 ms, p99 0.131 ms, max 0.131 ms (within the 8.000 ms target); ratatui baseline: `cargo run --release --example ratatui_dashboard`\n"]

@@ -5,5 +5,7 @@
 #![doc = include_str!("../README.md")]
 
 mod input;
+mod sched;
 
 pub use input::Input;
+pub use sched::{SchedulePoll, Scheduler, State};
