@@ -133,6 +133,11 @@ fn render_present<A: App>(
     next.fill(area, Style::new().bg(Color::Default), ' ', clusters);
     app.render(next, area, clusters);
     let runs = diff_runs(prev, next);
+    if let Some(palette) = app.token_palette() {
+        encoder.set_token_palette(palette.to_vec());
+    } else {
+        encoder.set_token_palette(Vec::new());
+    }
     let payload = encoder.encode_diff(prev, next, clusters, ColorMode::TrueColor);
     if !runs.is_empty() {
         session.present_frame(payload)?;

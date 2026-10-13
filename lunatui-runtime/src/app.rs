@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{ClusterTable, Grid, Rect};
+use lunatui_core::{ClusterTable, Color, Grid, Rect};
 use lunatui_term::Event;
 
 /// Whether the host loop should keep running.
@@ -24,5 +24,10 @@ pub trait App {
     /// When true, [`run`](crate::run::run) schedules timer-driven frames until this returns false.
     fn needs_animation_frames(&self) -> bool {
         false
+    }
+
+    /// When set, [`run`](crate::run::run) resolves [`Color::Token`] through this palette at encode time.
+    fn token_palette(&self) -> Option<&[Color]> {
+        None
     }
 }

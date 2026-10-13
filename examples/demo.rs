@@ -15,6 +15,7 @@ use lunatui_runtime::{
     Scheduler, Spring, Tween, is_quit, render_once, run,
 };
 use lunatui_term::{ColorMode, Encoder, Event, KeyCode, KeyEvent, MouseButton, MouseKind};
+use lunatui_theme::{Theme, Token, Variant};
 
 const DEFAULT_WIDTH: u16 = 80;
 const DEFAULT_HEIGHT: u16 = 24;
@@ -104,10 +105,14 @@ struct Counter {
     focus: FocusManager,
     hover: Option<HitId>,
     drag: Option<HitId>,
+    theme: Theme,
+    palette: Vec<Color>,
 }
 
 impl Counter {
     fn new(motion: bool) -> Self {
+        let theme = Theme::builtin(Variant::Dark);
+        let palette = theme.palette();
         Self {
             value: 0,
             motion,
@@ -125,7 +130,18 @@ impl Counter {
             focus: FocusManager::new(),
             hover: None,
             drag: None,
+            theme,
+            palette,
         }
+    }
+
+    fn toggle_theme(&mut self) {
+        let next = match self.theme.variant() {
+            Variant::Light => Variant::Dark,
+            Variant::Dark => Variant::Light,
+        };
+        self.theme = Theme::builtin(next);
+        self.palette = self.theme.palette();
     }
 
     fn activate(&mut self, id: HitId) {
@@ -177,6 +193,10 @@ impl App for Counter {
         self.motion && (!self.display.is_settled() || self.accent_running())
     }
 
+    fn token_palette(&self) -> Option<&[Color]> {
+        Some(&self.palette)
+    }
+
     fn update(&mut self, event: &Event) -> ControlFlow {
         if is_quit(event) {
             return ControlFlow::Break;
@@ -191,10 +211,13 @@ impl App for Counter {
 
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
         self.sync_motion_clock();
-        let title = Style::new().fg(Color::Rgb(0x9e, 0xce, 0x6a));
+        let surface = Style::new().bg(Color::Token(Token::Surface0.id()));
+        grid.fill(area, surface, ' ', clusters);
+        let title = Style::new().fg(Color::Token(Token::Accent.id()));
         grid.put_str(area.x + 2, area.y + 2, title, "Counter", clusters);
         let line = format!("value: {value}", value = self.shown_value());
-        grid.put_str(area.x + 2, area.y + 4, Style::new(), &line, clusters);
+        let text = Style::new().fg(Color::Token(Token::TextPrimary.id()));
+        grid.put_str(area.x + 2, area.y + 4, text, &line, clusters);
         if self.motion {
             let elapsed = self.motion_clock.saturating_sub(self.accent_start);
             let bar = self.accent.sample(elapsed);
@@ -205,7 +228,7 @@ impl App for Counter {
             area.x + 2,
             area.y + 6,
             Style::new(),
-            "Tab/click buttons; q quit",
+            "Tab/click; t theme; q quit",
             clusters,
         );
 
@@ -249,6 +272,7 @@ impl Counter {
                     self.activate(id);
                 }
             }
+            KeyCode::Char('t') => self.toggle_theme(),
             KeyCode::Char('+' | '=') => {
                 self.value += 1;
                 if self.motion {

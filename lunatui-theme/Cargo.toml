@@ -20,5 +20,12 @@ name = "downsample"
 path = "tests/downsample.rs"
 required-features = ["color-profiles"]
 
+[[test]]
+name = "theme_tokens"
+path = "tests/theme_tokens.rs"
+
 [dependencies]
 lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+toml = "0.8.23"
