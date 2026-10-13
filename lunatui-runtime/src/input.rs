@@ -12,6 +12,8 @@ pub struct Input {
     receiver: Receiver<io::Result<Vec<Event>>>,
     pending_error: Option<io::Error>,
     finished: bool,
+    #[cfg(windows)]
+    worker: Option<lunatui_term::sys::windows::InputWorker>,
 }
 
 impl Input {
@@ -28,12 +30,13 @@ impl Input {
         #[cfg(windows)]
         {
             let (sender, receiver) = mpsc::channel();
-            lunatui_term::sys::windows::spawn_input_reader(sender)?;
-            return Ok(Self {
+            let worker = lunatui_term::sys::windows::spawn_input_reader(sender)?;
+            Ok(Self {
                 receiver,
                 pending_error: None,
                 finished: false,
-            });
+                worker: Some(worker),
+            })
         }
         #[cfg(not(any(unix, windows)))]
         {
@@ -85,6 +88,8 @@ impl Input {
             receiver,
             pending_error: None,
             finished: false,
+            #[cfg(windows)]
+            worker: None,
         })
     }
 

@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 use std::io;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
-use std::thread;
+use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use crossterm::event::{self, Event as CrosstermEvent, MouseButton as CrosstermMouseButton};
@@ -12,6 +14,21 @@ use crate::input::{
     Event, Focus, KeyCode, KeyEvent, Modifiers, MouseButton, MouseEvent, MouseKind, MouseUnit,
     Scroll,
 };
+
+/// Joins the crossterm input worker on drop after setting [`shutdown`].
+pub struct InputWorker {
+    shutdown: Arc<AtomicBool>,
+    join: Option<JoinHandle<()>>,
+}
+
+impl Drop for InputWorker {
+    fn drop(&mut self) {
+        self.shutdown.store(true, Ordering::SeqCst);
+        if let Some(join) = self.join.take() {
+            let _ = join.join();
+        }
+    }
+}
 
 /// Maps a crossterm event into a lunatui [`Event`].
 #[must_use]
@@ -115,27 +132,34 @@ fn map_mouse_button(raw: CrosstermMouseButton) -> MouseButton {
     }
 }
 
-/// Starts a worker that reads crossterm console events (D3).
+/// Starts a worker that polls crossterm console events (D3).
 ///
 /// # Errors
 ///
 /// Returns an error when the worker thread cannot be spawned.
-pub fn spawn_input_reader(
-    sender: Sender<io::Result<Vec<Event>>>,
-) -> io::Result<thread::JoinHandle<()>> {
-    thread::Builder::new()
+pub fn spawn_input_reader(sender: Sender<io::Result<Vec<Event>>>) -> io::Result<InputWorker> {
+    let shutdown = Arc::new(AtomicBool::new(false));
+    let stop = Arc::clone(&shutdown);
+    let join = thread::Builder::new()
         .name(String::from("lunatui-windows-input"))
         .spawn(move || {
-            loop {
-                match event::read() {
-                    Ok(raw) => {
-                        let Some(mapped) = map_event(raw) else {
-                            continue;
-                        };
-                        if sender.send(Ok(vec![mapped])).is_err() {
+            while !stop.load(Ordering::SeqCst) {
+                match event::poll(Duration::from_millis(50)) {
+                    Ok(true) => match event::read() {
+                        Ok(raw) => {
+                            let Some(mapped) = map_event(raw) else {
+                                continue;
+                            };
+                            if sender.send(Ok(vec![mapped])).is_err() {
+                                return;
+                            }
+                        }
+                        Err(error) => {
+                            let _ = sender.send(Err(error));
                             return;
                         }
-                    }
+                    },
+                    Ok(false) => {}
                     Err(error) => {
                         let _ = sender.send(Err(error));
                         return;
@@ -143,7 +167,11 @@ pub fn spawn_input_reader(
                 }
             }
         })
-        .map_err(|error| io::Error::other(error))
+        .map_err(io::Error::other)?;
+    Ok(InputWorker {
+        shutdown,
+        join: Some(join),
+    })
 }
 
 /// Non-blocking poll for already-queued crossterm events.
