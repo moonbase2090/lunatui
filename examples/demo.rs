@@ -466,19 +466,37 @@ fn spring_target_for(value: i32) -> f32 {
 }
 
 fn nearest_i16(value: f32) -> i16 {
+    let lower = floor_i16(value);
+    if lower == i16::MAX {
+        return lower;
+    }
+    let upper = lower + 1;
+    let clamped = value.clamp(f32::from(i16::MIN), f32::from(i16::MAX));
+    let toward_lower = clamped - f32::from(lower);
+    let toward_upper = f32::from(upper) - clamped;
+    if toward_upper < toward_lower {
+        upper
+    } else {
+        lower
+    }
+}
+
+fn floor_i16(value: f32) -> i16 {
     let clamped = value.clamp(f32::from(i16::MIN), f32::from(i16::MAX));
     let mut low = i32::from(i16::MIN);
     let mut high = i32::from(i16::MAX);
-    while low < high {
+    let mut answer = i16::MIN;
+    while low <= high {
         let mid = low + (high - low) / 2;
         let sample = f32::from(i16::try_from(mid).unwrap_or(0));
-        if sample < clamped {
+        if sample <= clamped {
+            answer = i16::try_from(mid).unwrap_or(i16::MIN);
             low = mid + 1;
         } else {
-            high = mid;
+            high = mid - 1;
         }
     }
-    i16::try_from(low).unwrap_or(0)
+    answer
 }
 
 fn build_profile() -> &'static str {
@@ -514,7 +532,7 @@ mod tests {
     use lunatui_runtime::App;
     use lunatui_term::{Event, KeyCode, KeyEvent};
 
-    use super::{Counter, Hello, parse_geometry};
+    use super::{Counter, Hello, nearest_i16, parse_geometry};
 
     #[test]
     fn hello_renders_title_glyph() {
@@ -535,6 +553,12 @@ mod tests {
             lunatui_runtime::ControlFlow::Continue
         );
         assert_eq!(counter.value, 1);
+    }
+
+    #[test]
+    fn nearest_i16_rounds_negative_spring_values() {
+        assert_eq!(nearest_i16(-0.8), -1);
+        assert_eq!(nearest_i16(-0.2), 0);
     }
 
     #[test]
