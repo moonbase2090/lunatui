@@ -180,6 +180,13 @@ impl Input {
     }
 }
 
+#[cfg(windows)]
+impl Drop for Input {
+    fn drop(&mut self) {
+        drop(self.worker.take());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::VecDeque;
