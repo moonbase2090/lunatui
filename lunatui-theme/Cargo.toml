@@ -24,6 +24,15 @@ required-features = ["color-profiles"]
 name = "theme_tokens"
 path = "tests/theme_tokens.rs"
 
+[[test]]
+name = "bundled_themes"
+path = "tests/bundled_themes.rs"
+
+[[test]]
+name = "bundled_profiles"
+path = "tests/bundled_profiles.rs"
+required-features = ["color-profiles"]
+
 [dependencies]
 lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
 serde = { version = "1.0.228", features = ["derive"] }

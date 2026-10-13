@@ -1,0 +1,15 @@
+# id = "hive-tri-tone"
+# name = "Hive Tri-Tone"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "dark"
+
+[tokens]
+"surface.0" = "#221f1a"
+"surface.1" = "#34312b"
+"text.primary" = "#d3c9ba"
+"accent" = "#665035"
+"ok" = "#e0a458"
+"warn" = "#e0a458"
+"fail" = "#ff6b6b"
+"focus.ring" = "#e0a458"

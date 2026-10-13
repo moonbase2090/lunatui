@@ -3,6 +3,8 @@
 
 use lunatui_core::Color;
 
+#[cfg(feature = "color-profiles")]
+use crate::profile::Profile;
 use crate::token::Token;
 
 /// Light or dark palette variant (OSC 11 probe selects the default).
@@ -81,6 +83,16 @@ impl Theme {
     #[must_use]
     pub fn palette(&self) -> Vec<Color> {
         self.colors.to_vec()
+    }
+
+    /// Token palette after downsampling each color into `profile`.
+    #[cfg(feature = "color-profiles")]
+    #[must_use]
+    pub fn palette_for(&self, profile: Profile) -> Vec<Color> {
+        self.colors
+            .iter()
+            .map(|&color| profile.downsample(color))
+            .collect()
     }
 
     /// Overrides one token color.

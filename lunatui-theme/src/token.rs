@@ -64,6 +64,21 @@ impl Token {
         }
     }
 
+    /// Every built-in token in stable id order.
+    #[must_use]
+    pub const fn all() -> [Self; Self::COUNT] {
+        [
+            Self::Surface0,
+            Self::Surface1,
+            Self::TextPrimary,
+            Self::Accent,
+            Self::Ok,
+            Self::Warn,
+            Self::Fail,
+            Self::FocusRing,
+        ]
+    }
+
     /// Parses a token name from theme files.
     #[must_use]
     pub fn from_name(name: &str) -> Option<Self> {

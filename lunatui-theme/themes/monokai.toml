@@ -1,0 +1,15 @@
+# id = "monokai"
+# name = "Monokai"
+# source = https://monokai.nl/
+# license = Prismattyc-authored mapping from publicly documented classic colors
+variant = "dark"
+
+[tokens]
+"surface.0" = "#272822"
+"surface.1" = "#3e3d32"
+"text.primary" = "#f8f8f2"
+"accent" = "#49483e"
+"ok" = "#a6e22e"
+"warn" = "#e6db74"
+"fail" = "#ff6b6b"
+"focus.ring" = "#f8f8f2"

@@ -1,0 +1,15 @@
+# id = "monokai-vivid"
+# name = "Monokai Vivid"
+# source = https://github.com/mbadolato/iTerm2-Color-Schemes
+# license = Terminal colors: iTerm2-Color-Schemes catalog, MIT (per-theme copyright stays with the original author, unnamed in the catalog); chrome tokens: Prismattyc-derived
+variant = "dark"
+
+[tokens]
+"surface.0" = "#121212"
+"surface.1" = "#2e2e2e"
+"text.primary" = "#f9f9f9"
+"accent" = "#ffffff"
+"ok" = "#98e123"
+"warn" = "#fff30a"
+"fail" = "#ff6b6b"
+"focus.ring" = "#fb0007"

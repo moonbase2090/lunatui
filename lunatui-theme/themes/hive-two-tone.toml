@@ -1,0 +1,15 @@
+# id = "hive-two-tone"
+# name = "Hive Two-Tone"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "dark"
+
+[tokens]
+"surface.0" = "#1b1916"
+"surface.1" = "#302c26"
+"text.primary" = "#e4d2ab"
+"accent" = "#674d2a"
+"ok" = "#f0a63c"
+"warn" = "#f0a63c"
+"fail" = "#ff6b6b"
+"focus.ring" = "#f0a63c"

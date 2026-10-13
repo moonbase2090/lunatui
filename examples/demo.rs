@@ -15,11 +15,18 @@ use lunatui_runtime::{
     Scheduler, Spring, Tween, is_quit, render_once, run,
 };
 use lunatui_term::{ColorMode, Encoder, Event, KeyCode, KeyEvent, MouseButton, MouseKind};
-use lunatui_theme::{Theme, Token, Variant};
+use lunatui_theme::{Theme, Token, Variant, load_bundled};
 
 const DEFAULT_WIDTH: u16 = 80;
 const DEFAULT_HEIGHT: u16 = 24;
 const BENCH_FRAMES: u32 = 4;
+
+fn bundled_or_builtin(id: &'static str) -> (&'static str, Theme) {
+    load_bundled(id).map_or_else(
+        |_| ("builtin", Theme::builtin(Variant::Dark)),
+        |theme| (id, theme),
+    )
+}
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -106,12 +113,13 @@ struct Counter {
     hover: Option<HitId>,
     drag: Option<HitId>,
     theme: Theme,
+    theme_id: &'static str,
     palette: Vec<Color>,
 }
 
 impl Counter {
     fn new(motion: bool) -> Self {
-        let theme = Theme::builtin(Variant::Dark);
+        let (theme_id, theme) = bundled_or_builtin("prismattyc-dark");
         let palette = theme.palette();
         Self {
             value: 0,
@@ -131,16 +139,23 @@ impl Counter {
             hover: None,
             drag: None,
             theme,
+            theme_id,
             palette,
         }
     }
 
     fn toggle_theme(&mut self) {
-        let next = match self.theme.variant() {
-            Variant::Light => Variant::Dark,
-            Variant::Dark => Variant::Light,
+        let next_id = match self.theme_id {
+            "prismattyc-dark" | "prismattyc" | "prismattyc-default" => "prismattyc-light",
+            "prismattyc-light" => "prismattyc-dark",
+            _ => match self.theme.variant() {
+                Variant::Light => "prismattyc-dark",
+                Variant::Dark => "prismattyc-light",
+            },
         };
-        self.theme = Theme::builtin(next);
+        let (theme_id, theme) = bundled_or_builtin(next_id);
+        self.theme_id = theme_id;
+        self.theme = theme;
         self.palette = self.theme.palette();
     }
 
@@ -228,7 +243,7 @@ impl App for Counter {
             area.x + 2,
             area.y + 6,
             Style::new(),
-            "Tab/click; t theme; q quit",
+            "Tab/click; t prismattyc light/dark; q quit",
             clusters,
         );
 

@@ -1,0 +1,15 @@
+# id = "tokyo-night"
+# name = "Tokyo Night"
+# source = https://github.com/folke/tokyonight.nvim/blob/main/extras/alacritty/tokyonight_night.toml
+# license = Apache-2.0
+variant = "dark"
+
+[tokens]
+"surface.0" = "#1a1b26"
+"surface.1" = "#24283b"
+"text.primary" = "#c0caf5"
+"accent" = "#33467c"
+"ok" = "#9ece6a"
+"warn" = "#e0af68"
+"fail" = "#ff6b6b"
+"focus.ring" = "#c0caf5"

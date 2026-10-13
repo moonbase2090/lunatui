@@ -16,7 +16,7 @@ pub struct ThemeLoadError {
 }
 
 impl ThemeLoadError {
-    fn new(message: impl Into<String>) -> Self {
+    pub(crate) fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
         }
@@ -45,7 +45,7 @@ struct ThemeFile {
 pub fn theme_from_json(source: &str) -> Result<Theme, ThemeLoadError> {
     let file: ThemeFile = serde_json::from_str(source)
         .map_err(|error| ThemeLoadError::new(format!("json: {error}")))?;
-    build_theme(file)
+    build_theme(file, false)
 }
 
 /// Loads a theme from TOML.
@@ -56,11 +56,41 @@ pub fn theme_from_json(source: &str) -> Result<Theme, ThemeLoadError> {
 pub fn theme_from_toml(source: &str) -> Result<Theme, ThemeLoadError> {
     let file: ThemeFile =
         toml::from_str(source).map_err(|error| ThemeLoadError::new(format!("toml: {error}")))?;
-    build_theme(file)
+    build_theme(file, false)
 }
 
-fn build_theme(file: ThemeFile) -> Result<Theme, ThemeLoadError> {
+/// Loads a theme from TOML and requires every semantic token to be present.
+///
+/// # Errors
+///
+/// Returns [`ThemeLoadError`] when the TOML is invalid or any token is missing.
+pub fn theme_from_toml_strict(source: &str) -> Result<Theme, ThemeLoadError> {
+    let file: ThemeFile =
+        toml::from_str(source).map_err(|error| ThemeLoadError::new(format!("toml: {error}")))?;
+    build_theme(file, true)
+}
+
+/// Loads a theme from JSON and requires every semantic token to be present.
+///
+/// # Errors
+///
+/// Returns [`ThemeLoadError`] when the JSON is invalid or any token is missing.
+pub fn theme_from_json_strict(source: &str) -> Result<Theme, ThemeLoadError> {
+    let file: ThemeFile = serde_json::from_str(source)
+        .map_err(|error| ThemeLoadError::new(format!("json: {error}")))?;
+    build_theme(file, true)
+}
+
+fn build_theme(file: ThemeFile, require_all_tokens: bool) -> Result<Theme, ThemeLoadError> {
     let variant = parse_variant(&file.variant)?;
+    if require_all_tokens {
+        for token in Token::all() {
+            let name = token.name();
+            if !file.tokens.contains_key(name) {
+                return Err(ThemeLoadError::new(format!("missing token: {name}")));
+            }
+        }
+    }
     let mut theme = Theme::builtin(variant);
     for (name, hex) in file.tokens {
         let token = Token::from_name(&name)

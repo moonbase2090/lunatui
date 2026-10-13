@@ -1,0 +1,15 @@
+# id = "hive-complementary"
+# name = "Hive Complementary"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "dark"
+
+[tokens]
+"surface.0" = "#1e2222"
+"surface.1" = "#303434"
+"text.primary" = "#ccd5d0"
+"accent" = "#64523a"
+"ok" = "#e0a458"
+"warn" = "#e0a458"
+"fail" = "#ff6b6b"
+"focus.ring" = "#e0a458"

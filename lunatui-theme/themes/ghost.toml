@@ -1,0 +1,15 @@
+# id = "ghost"
+# name = "Ghost"
+# source = https://github.com/ghostty-org/ghostty
+# license = MIT
+variant = "dark"
+
+[tokens]
+"surface.0" = "#282c34"
+"surface.1" = "#3e4451"
+"text.primary" = "#ffffff"
+"accent" = "#ffffff"
+"ok" = "#b5bd68"
+"warn" = "#f0c674"
+"fail" = "#ff6b6b"
+"focus.ring" = "#ffffff"

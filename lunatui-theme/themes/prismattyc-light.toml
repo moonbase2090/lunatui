@@ -1,0 +1,15 @@
+# id = "prismattyc-light"
+# name = "Prismattyc Light"
+# source = https://github.com/Moonbase2090/Prismattyc
+# license = Project-local palette; Graphite Light tokens (docs/design/graphite-ui-brief.md), ANSI from hive-muted-professional-light
+variant = "light"
+
+[tokens]
+"surface.0" = "#ffffff"
+"surface.1" = "#ffffff"
+"text.primary" = "#1f2329"
+"accent" = "#dbe7fb"
+"ok" = "#1f8a55"
+"warn" = "#b87a0a"
+"fail" = "#c2392b"
+"focus.ring" = "#1f2329"
