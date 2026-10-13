@@ -14,17 +14,30 @@ pub enum SyncOutput {
     Disabled,
 }
 
+/// Stub mirror of Unix mouse tracking (always disabled on non-Unix).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum MouseTracking {
+    /// No mouse events.
+    #[default]
+    Disabled,
+    /// SGR mouse modes (Unix only).
+    Sgr,
+}
+
 /// Options for [`Session::enter`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SessionOptions {
     /// Synchronized output wrapping for [`Session::present_frame`].
     pub sync_output: SyncOutput,
+    /// Pointer reporting (unsupported on non-Unix stubs).
+    pub mouse_tracking: MouseTracking,
 }
 
 impl Default for SessionOptions {
     fn default() -> Self {
         Self {
             sync_output: SyncOutput::Enabled,
+            mouse_tracking: MouseTracking::Disabled,
         }
     }
 }

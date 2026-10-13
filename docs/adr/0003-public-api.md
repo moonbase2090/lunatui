@@ -15,7 +15,7 @@ lunatui needs a single entry point for interactive examples and dogfood apps. PR
 Applications implement:
 
 - `update(&mut self, &Event) -> ControlFlow` — handle input; return `Break` to quit.
-- `render(&self, &mut Grid, Rect, &mut ClusterTable)` — draw the current frame into the grid.
+- `render(&mut self, &mut Grid, Rect, &mut ClusterTable)` — draw the current frame into the grid (mutable so render can register hits).
 
 State lives on the app struct. Widgets, IDs, memo, and `Ui` layout sugar are deferred to DD-3 follow-ups in PR 24–28.
 

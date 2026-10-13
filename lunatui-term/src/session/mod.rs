@@ -5,10 +5,10 @@
 mod unix;
 
 #[cfg(unix)]
-pub use unix::{Session, SessionError, SessionOptions, SyncOutput};
+pub use unix::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
 
 #[cfg(not(unix))]
 mod stub;
 
 #[cfg(not(unix))]
-pub use stub::{Session, SessionError, SessionOptions, SyncOutput};
+pub use stub::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};

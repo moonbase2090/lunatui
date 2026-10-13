@@ -24,6 +24,7 @@ fn demo_snapshot_prints_hello_line() -> Result<(), Box<dyn std::error::Error>> {
             "--example",
             "demo",
             "--",
+            "--counter",
             "--snapshot",
             "--width",
             "80",
@@ -37,7 +38,8 @@ fn demo_snapshot_prints_hello_line() -> Result<(), Box<dyn std::error::Error>> {
         String::from_utf8_lossy(&output.stderr)
     );
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("Hello, lunatui"), "{stdout}");
-    assert!(stdout.contains("PR 23"), "{stdout}");
+    assert!(stdout.contains("Counter"), "{stdout}");
+    assert!(stdout.contains("[ - ]"), "{stdout}");
+    assert!(stdout.contains("[ + ]"), "{stdout}");
     Ok(())
 }

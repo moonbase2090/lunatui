@@ -20,4 +20,4 @@ pub use input::{
     Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
     MouseUnit, Parser, Paste, Scroll, fuzz_input_parser,
 };
-pub use session::{Session, SessionError, SessionOptions, SyncOutput};
+pub use session::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
