@@ -1,0 +1,15 @@
+# id = "hive-night-hive"
+# name = "Hive Night Hive"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "dark"
+
+[tokens]
+"surface.0" = "#1d1d28"
+"surface.1" = "#302e3a"
+"text.primary" = "#cbc5da"
+"accent" = "#5f4d40"
+"ok" = "#d3a05e"
+"warn" = "#d3a05e"
+"fail" = "#ff6b6b"
+"focus.ring" = "#d3a05e"

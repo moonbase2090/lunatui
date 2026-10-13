@@ -1,0 +1,15 @@
+# id = "hive-split-complementary"
+# name = "Hive Split-Complementary"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "dark"
+
+[tokens]
+"surface.0" = "#202025"
+"surface.1" = "#323236"
+"text.primary" = "#d0cdc4"
+"accent" = "#665039"
+"ok" = "#e2a350"
+"warn" = "#e2a350"
+"fail" = "#ff6b6b"
+"focus.ring" = "#e2a350"

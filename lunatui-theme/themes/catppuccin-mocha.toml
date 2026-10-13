@@ -1,0 +1,15 @@
+# id = "catppuccin-mocha"
+# name = "Catppuccin Mocha"
+# source = https://github.com/catppuccin/palette/blob/main/palette.json
+# license = MIT
+variant = "dark"
+
+[tokens]
+"surface.0" = "#1e1e2e"
+"surface.1" = "#313244"
+"text.primary" = "#cdd6f4"
+"accent" = "#585b70"
+"ok" = "#a6e3a1"
+"warn" = "#fab387"
+"fail" = "#ff6b6b"
+"focus.ring" = "#f5e0dc"

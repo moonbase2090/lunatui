@@ -1,0 +1,15 @@
+# id = "hive-high-contrast-dual"
+# name = "Hive High-Contrast Dual"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "dark"
+
+[tokens]
+"surface.0" = "#100f0e"
+"surface.1" = "#262422"
+"text.primary" = "#f2ead6"
+"accent" = "#584c2a"
+"ok" = "#e6c25a"
+"warn" = "#e6c25a"
+"fail" = "#ff6b6b"
+"focus.ring" = "#e6c25a"

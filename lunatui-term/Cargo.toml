@@ -21,7 +21,12 @@ libc = "0.2.190"
 libc = "0.2.190"
 lunatui-bench = { path = "../benches" }
 lunatui-test = { path = "../lunatui-test" }
+lunatui-theme = { path = "../lunatui-theme" }
 ratatui = "=0.30.2"
+
+[[test]]
+name = "theme_reencode"
+path = "tests/theme_reencode.rs"
 
 [[bin]]
 name = "session-pty-probe"

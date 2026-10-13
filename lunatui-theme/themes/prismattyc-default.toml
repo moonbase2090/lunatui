@@ -1,0 +1,15 @@
+# id = "prismattyc-default"
+# name = "Prismattyc Default"
+# source = https://github.com/Moonbase2090/Prismattyc
+# license = Project-local palette; no external source
+variant = "dark"
+
+[tokens]
+"surface.0" = "#121214"
+"surface.1" = "#2a364a"
+"text.primary" = "#d0d0d0"
+"accent" = "#0000ee"
+"ok" = "#4cd18b"
+"warn" = "#ffb454"
+"fail" = "#ff6b6b"
+"focus.ring" = "#d0d0d0"

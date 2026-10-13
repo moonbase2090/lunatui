@@ -1,0 +1,15 @@
+# id = "monokai-pro"
+# name = "Monokai Pro (CE)"
+# source = https://github.com/monokai-pro/opencode
+# license = MIT (Monokai Pro Community Edition, © 2025 Monokai)
+variant = "dark"
+
+[tokens]
+"surface.0" = "#2d2a2e"
+"surface.1" = "#403e41"
+"text.primary" = "#fcfcfa"
+"accent" = "#5b595c"
+"ok" = "#a9dc76"
+"warn" = "#ffd866"
+"fail" = "#ff6188"
+"focus.ring" = "#fcfcfa"

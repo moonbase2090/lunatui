@@ -1,0 +1,15 @@
+# id = "hive-analogous"
+# name = "Hive Analogous"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "dark"
+
+[tokens]
+"surface.0" = "#27211e"
+"surface.1" = "#39322e"
+"text.primary" = "#d8c9b8"
+"accent" = "#6a5137"
+"ok" = "#e0a458"
+"warn" = "#e0a458"
+"fail" = "#ff6b6b"
+"focus.ring" = "#e0a458"

@@ -1,0 +1,15 @@
+# id = "dracula"
+# name = "Dracula"
+# source = https://draculatheme.com/spec
+# license = MIT
+variant = "dark"
+
+[tokens]
+"surface.0" = "#282a36"
+"surface.1" = "#44475a"
+"text.primary" = "#f8f8f2"
+"accent" = "#44475a"
+"ok" = "#50fa7b"
+"warn" = "#ffb86c"
+"fail" = "#ff6b6b"
+"focus.ring" = "#f8f8f2"

@@ -4,7 +4,7 @@
 mod cursor;
 mod sgr;
 
-use lunatui_core::{CellWidth, ClusterTable, DecodedGlyph, Grid, diff_runs};
+use lunatui_core::{CellWidth, ClusterTable, Color, DecodedGlyph, Grid, diff_runs};
 
 use cursor::write_cup;
 use sgr::{Pen, write_sgr_delta};
@@ -26,6 +26,7 @@ pub struct Encoder {
     cursor_col: u16,
     cursor_row: u16,
     cursor_placed: bool,
+    token_palette: Vec<Color>,
 }
 
 impl Encoder {
@@ -33,6 +34,11 @@ impl Encoder {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Token colors resolve through this palette during encoding (PRD §2.11).
+    pub fn set_token_palette(&mut self, palette: Vec<Color>) {
+        self.token_palette = palette;
     }
 
     /// Encodes `next` against `previous` into the internal buffer and returns the bytes.
@@ -71,7 +77,13 @@ impl Encoder {
                     self.cursor_row = run.row;
                 }
                 let style = cell.style();
-                write_sgr_delta(&mut self.buffer, &mut self.pen, style, color);
+                write_sgr_delta(
+                    &mut self.buffer,
+                    &mut self.pen,
+                    style,
+                    color,
+                    &self.token_palette,
+                );
                 self.write_glyph(cell.glyph(), clusters);
                 let advance = match cell.meta().width {
                     CellWidth::Two => 2,

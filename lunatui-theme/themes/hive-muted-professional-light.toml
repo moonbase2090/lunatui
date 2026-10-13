@@ -1,0 +1,15 @@
+# id = "hive-muted-professional-light"
+# name = "Hive Muted Professional Light"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "light"
+
+[tokens]
+"surface.0" = "#eef0f1"
+"surface.1" = "#e1e4e5"
+"text.primary" = "#3a3f45"
+"accent" = "#d5ccbb"
+"ok" = "#96702f"
+"warn" = "#96702f"
+"fail" = "#ff6b6b"
+"focus.ring" = "#96702f"

@@ -25,9 +25,14 @@ pub(crate) fn write_sgr_delta(
     current: &mut Pen,
     target: Style,
     colors: bool,
+    token_palette: &[Color],
 ) {
     let effective = if colors {
-        target
+        Style {
+            fg: resolve_token_color(target.fg, token_palette),
+            bg: resolve_token_color(target.bg, token_palette),
+            attrs: target.attrs,
+        }
     } else {
         Style::new().with_attrs(target.attrs)
     };
@@ -128,6 +133,13 @@ fn append_color_params(params: &mut String, fg: bool, color: Color) {
                 push_param(params, &format!("48;5;{index}"));
             }
         }
+    }
+}
+
+fn resolve_token_color(color: Color, palette: &[Color]) -> Color {
+    match color {
+        Color::Token(id) => palette.get(id as usize).copied().unwrap_or(color),
+        other => other,
     }
 }
 

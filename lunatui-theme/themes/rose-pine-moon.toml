@@ -1,0 +1,15 @@
+# id = "rose-pine-moon"
+# name = "Rosé Pine Moon"
+# source = https://github.com/rose-pine/rose-pine-palette/blob/main/palette.json
+# license = MIT
+variant = "dark"
+
+[tokens]
+"surface.0" = "#232136"
+"surface.1" = "#393552"
+"text.primary" = "#e0def4"
+"accent" = "#44415a"
+"ok" = "#9ccfd8"
+"warn" = "#f6c177"
+"fail" = "#ff6b6b"
+"focus.ring" = "#e0def4"

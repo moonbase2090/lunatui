@@ -1,0 +1,15 @@
+# id = "hive-monochromatic-light"
+# name = "Hive Monochromatic Light"
+# source = Hive TUI Variants — design package
+# license = MIT — Moonbase 2090 LLC (Hive TUI design package palettes)
+variant = "light"
+
+[tokens]
+"surface.0" = "#f2ede4"
+"surface.1" = "#e6e1d7"
+"text.primary" = "#443c2f"
+"accent" = "#ddcaac"
+"ok" = "#a8701c"
+"warn" = "#a8701c"
+"fail" = "#ff6b6b"
+"focus.ring" = "#a8701c"

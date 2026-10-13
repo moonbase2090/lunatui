@@ -1,0 +1,15 @@
+# id = "monokai-remastered"
+# name = "Monokai Remastered"
+# source = https://github.com/mbadolato/iTerm2-Color-Schemes
+# license = Terminal colors: iTerm2-Color-Schemes catalog, MIT (per-theme copyright stays with the original author, unnamed in the catalog); chrome tokens: Prismattyc-derived
+variant = "dark"
+
+[tokens]
+"surface.0" = "#0c0c0c"
+"surface.1" = "#252525"
+"text.primary" = "#d9d9d9"
+"accent" = "#343434"
+"ok" = "#98e024"
+"warn" = "#fd971f"
+"fail" = "#ff6b6b"
+"focus.ring" = "#fc971f"

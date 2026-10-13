@@ -1,0 +1,15 @@
+# id = "japanesque"
+# name = "Japanesque"
+# source = https://github.com/mbadolato/iTerm2-Color-Schemes
+# license = Terminal colors: iTerm2-Color-Schemes catalog, MIT (per-theme copyright stays with the original author, unnamed in the catalog); chrome tokens: Prismattyc-derived
+variant = "dark"
+
+[tokens]
+"surface.0" = "#1e1e1e"
+"surface.1" = "#383837"
+"text.primary" = "#f7f6ec"
+"accent" = "#175877"
+"ok" = "#7bb75b"
+"warn" = "#e9b32a"
+"fail" = "#ff6b6b"
+"focus.ring" = "#edcf4f"

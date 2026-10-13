@@ -1,0 +1,15 @@
+# id = "prismattyc"
+# name = "Prismattyc (match system)"
+# source = https://github.com/Moonbase2090/Prismattyc
+# license = Project-local palette; Graphite Dark tokens (docs/design/graphite-ui-brief.md), ANSI from prismattyc-default
+variant = "dark"
+
+[tokens]
+"surface.0" = "#181b21"
+"surface.1" = "#1a1d23"
+"text.primary" = "#d9dde4"
+"accent" = "#2a3a55"
+"ok" = "#4cc98a"
+"warn" = "#f2b84b"
+"fail" = "#ff7a6b"
+"focus.ring" = "#e6e9ee"
