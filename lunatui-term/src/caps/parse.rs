@@ -47,6 +47,7 @@ pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
     }
 }
 
+#[cfg(unix)]
 pub(crate) fn has_device_attributes(bytes: &[u8]) -> bool {
     let mut scan = Scan::new(bytes);
     while let Some(event) = scan.next_event() {
