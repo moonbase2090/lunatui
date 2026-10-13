@@ -20,4 +20,9 @@ pub trait App {
 
     /// Draw the current UI into `grid` for `area`.
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable);
+
+    /// When true, [`run`](crate::run::run) schedules timer-driven frames until this returns false.
+    fn needs_animation_frames(&self) -> bool {
+        false
+    }
 }
