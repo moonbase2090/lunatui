@@ -170,7 +170,6 @@ impl<W: Write> Session<W> {
         undo_console_start(&mut self.writer, marks);
         let _ = disable_raw_mode();
     }
-
 }
 
 impl<W: Write> Drop for Session<W> {
@@ -228,20 +227,19 @@ fn compose_frame(buffer: &mut Vec<u8>, payload: &[u8], sync: SyncOutput) {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        ConsoleMarks, MouseTracking, SyncOutput, apply_console_start, compose_frame,
-        undo_console_start,
-    };
+    use super::{MouseTracking, SyncOutput, apply_console_start, compose_frame};
     use std::io::{self, Write};
 
-    struct FailOnNthWrite {
+    struct FailOnceAfterBytes {
         buffer: Vec<u8>,
-        fail_after: usize,
+        fail_after_bytes: usize,
+        failed_once: bool,
     }
 
-    impl Write for FailOnNthWrite {
+    impl Write for FailOnceAfterBytes {
         fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-            if self.buffer.len() >= self.fail_after {
+            if !self.failed_once && self.buffer.len() >= self.fail_after_bytes {
+                self.failed_once = true;
                 return Err(io::Error::other("write failed"));
             }
             self.buffer.extend_from_slice(buf);
@@ -264,9 +262,10 @@ mod tests {
 
     #[test]
     fn setup_rolls_back_after_hide_cursor_write_fails() {
-        let mut writer = FailOnNthWrite {
+        let mut writer = FailOnceAfterBytes {
             buffer: Vec::new(),
-            fail_after: ENTER_ALT.len(),
+            fail_after_bytes: ENTER_ALT.len(),
+            failed_once: false,
         };
         let err = apply_console_start(&mut writer, MouseTracking::Disabled)
             .expect_err("second write should fail");
@@ -276,17 +275,18 @@ mod tests {
 
     #[test]
     fn setup_rolls_back_after_mouse_enable_write_fails() {
-        let mut writer = FailOnNthWrite {
+        let mut writer = FailOnceAfterBytes {
             buffer: Vec::new(),
-            fail_after: ENTER_ALT.len() + HIDE_CURSOR.len(),
+            fail_after_bytes: ENTER_ALT.len() + HIDE_CURSOR.len(),
+            failed_once: false,
         };
-        let err = apply_console_start(&mut writer, MouseTracking::Sgr).expect_err("mouse write fails");
+        let err =
+            apply_console_start(&mut writer, MouseTracking::Sgr).expect_err("mouse write fails");
         assert!(matches!(err, super::SessionError::Io(_)));
         assert!(writer.buffer.ends_with(LEAVE_ALT));
     }
 
     const ENTER_ALT: &[u8] = b"\x1b[?1049h";
     const LEAVE_ALT: &[u8] = b"\x1b[?1049l";
-    const SHOW_CURSOR: &[u8] = b"\x1b[?25h";
     const HIDE_CURSOR: &[u8] = b"\x1b[?25l";
 }

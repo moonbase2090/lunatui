@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-#![cfg(unix)]
 #![doc = include_str!("../README.md")]
+#![cfg(unix)]
 
 use std::fs::File;
 use std::io::{self, Read, Write};
