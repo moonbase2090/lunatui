@@ -130,9 +130,12 @@ fn render_present<A: App>(
     frames: &mut FrameState,
     session: &mut Session<impl Write>,
 ) -> io::Result<()> {
-    frames
-        .next
-        .fill(area, Style::new().bg(Color::Default), ' ', &mut frames.clusters);
+    frames.next.fill(
+        area,
+        Style::new().bg(Color::Default),
+        ' ',
+        &mut frames.clusters,
+    );
     app.render(&mut frames.next, area, &mut frames.clusters);
     let palette = app.token_palette().map(<[Color]>::to_vec);
     if palette != frames.last_palette {
