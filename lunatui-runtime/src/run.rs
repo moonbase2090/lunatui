@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 use std::io::{self, IsTerminal, Write};
-use std::time::Instant;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs};
 use lunatui_term::{
@@ -13,7 +14,7 @@ use lunatui_term::{
 use crate::app::{App, ControlFlow};
 use crate::input::Input;
 use crate::options::RunOptions;
-use crate::sched::{SchedulePoll, Scheduler};
+use crate::sched::{SchedulePoll, Scheduler, State};
 
 /// Runs `app` in the alternate screen until it returns [`ControlFlow::Break`] or input ends.
 ///
@@ -50,31 +51,65 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
     let mut quit = false;
     while !quit {
         let now = epoch.elapsed();
-        if matches!(sched.poll(now, false), SchedulePoll::Render) {
-            let present_start = epoch.elapsed();
-            render_present(
-                &mut app,
-                area,
-                &mut prev,
-                &mut next,
-                &mut clusters,
-                &mut encoder,
-                &mut session,
-            )?;
-            let present_done = epoch.elapsed();
-            sched.after_present(present_start, present_done.saturating_sub(present_start));
+        sync_scheduler(&mut sched, &app, now);
+        match sched.poll(now, false) {
+            SchedulePoll::Render => {
+                let present_start = epoch.elapsed();
+                render_present(
+                    &mut app,
+                    area,
+                    &mut prev,
+                    &mut next,
+                    &mut clusters,
+                    &mut encoder,
+                    &mut session,
+                )?;
+                let present_done = epoch.elapsed();
+                sched.after_present(present_start, present_done.saturating_sub(present_start));
+            }
+            SchedulePoll::SleepUntil(deadline) => {
+                thread::sleep(deadline.saturating_sub(now));
+            }
+            SchedulePoll::WaitInput => {}
         }
-        let Some(events) = input.next_frame()? else {
-            break;
-        };
-        for event in events {
-            if app.update(&event) == ControlFlow::Break {
-                quit = true;
+
+        if let Some(events) = input.try_next_frame()? {
+            for event in events {
+                if app.update(&event) == ControlFlow::Break {
+                    quit = true;
+                }
+            }
+            sched.on_input();
+            continue;
+        }
+
+        if app.needs_animation_frames() {
+            continue;
+        }
+
+        match input.next_frame()? {
+            None => break,
+            Some(events) => {
+                for event in events {
+                    if app.update(&event) == ControlFlow::Break {
+                        quit = true;
+                    }
+                }
+                sched.on_input();
             }
         }
-        sched.on_input();
     }
     Ok(())
+}
+
+fn sync_scheduler<A: App>(sched: &mut Scheduler, app: &A, now: Duration) {
+    if app.needs_animation_frames() {
+        if sched.state() == State::Idle {
+            sched.resume_animation(now);
+        }
+    } else if sched.state() == State::Animating {
+        sched.settle_idle();
+    }
 }
 
 /// Runs `app` on non-Unix hosts (unsupported).

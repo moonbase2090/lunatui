@@ -47,7 +47,19 @@ fn color_tween_blends_rgb_in_oklab_at_midpoint() {
     let to = Color::Rgb(255, 255, 255);
     let tween = Tween::new(from, to, Duration::from_secs(1), Ease::Linear);
     let mid = tween.sample(Duration::from_millis(500));
-    assert_eq!(mid, Color::Rgb(145, 86, 0));
+    assert_eq!(mid, Color::Rgb(99, 99, 99));
+}
+
+#[test]
+fn rect_tween_floors_fractional_cells_at_tiny_progress() {
+    let tween = Tween::new(
+        Rect::new(0, 0, 0, 1),
+        Rect::new(0, 0, u16::MAX, 1),
+        Duration::from_secs(1),
+        Ease::Linear,
+    );
+    let early = tween.sample(Duration::from_micros(100));
+    assert_eq!(early.width, 6);
 }
 
 #[test]

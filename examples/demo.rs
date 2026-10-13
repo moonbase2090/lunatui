@@ -166,9 +166,17 @@ impl Counter {
             self.value
         }
     }
+
+    fn accent_running(&self) -> bool {
+        self.motion_clock.saturating_sub(self.accent_start) < self.accent.duration()
+    }
 }
 
 impl App for Counter {
+    fn needs_animation_frames(&self) -> bool {
+        self.motion && (!self.display.is_settled() || self.accent_running())
+    }
+
     fn update(&mut self, event: &Event) -> ControlFlow {
         if is_quit(event) {
             return ControlFlow::Break;

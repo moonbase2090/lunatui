@@ -104,24 +104,18 @@ fn fraction_floor(span: u16, progress: f32) -> u16 {
     if progress >= 1.0 {
         return span;
     }
-    let permille = f32_permille(progress);
-    let step = u32::from(span) * permille / 1000;
-    u16::try_from(step).unwrap_or(span)
-}
-
-fn f32_permille(progress: f32) -> u32 {
-    if progress <= 0.0 {
-        0
-    } else if progress >= 1.0 {
-        1000
-    } else {
-        let threshold = progress * 1000.0;
-        let mut units = 0_u32;
-        while f32::from(u16::try_from(units).unwrap_or(1000)) < threshold && units < 1000 {
-            units += 1;
+    let target = f64::from(span) * f64::from(progress);
+    let mut low = 0_u16;
+    let mut high = span;
+    while low < high {
+        let mid = low + (high - low) / 2;
+        if f64::from(mid + 1) <= target {
+            low = mid + 1;
+        } else {
+            high = mid;
         }
-        units
     }
+    low
 }
 
 #[derive(Clone, Copy)]
@@ -155,8 +149,8 @@ fn rgb_to_oklab(rgb: [u8; 3]) -> Oklab {
     let short = short.cbrt();
     Oklab {
         lightness: 0.210_454_255_3 * long + 0.793_617_785_0 * medium - 0.004_072_046_8 * short,
-        a: 1.977_998_495_1 * long - 2.357_996_504_2 * medium + 0.061_581_897_7 * short,
-        b: 0.943_152_168_7 * long + 0.116_596_280_4 * medium - 0.059_801_647_9 * short,
+        a: 1.977_998_495_1 * long - 2.428_592_205_0 * medium + 0.450_593_709_9 * short,
+        b: 0.025_904_037_1 * long + 0.782_771_766_2 * medium - 0.808_675_766_0 * short,
     }
 }
 
