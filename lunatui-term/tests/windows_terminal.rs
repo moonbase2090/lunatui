@@ -35,7 +35,7 @@ mod smoke {
         );
         let mut encoder = Encoder::new();
         let payload = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
-        assert!(payload.windows(2).any(|pair| pair == b"1;2;3"));
+        assert!(payload.contains(b"38;2;1;2;3"));
     }
 }
 
