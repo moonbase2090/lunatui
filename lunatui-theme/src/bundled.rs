@@ -1,8 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Prismattyc host palettes ported to lunatui semantic tokens (`themes/*.toml`).
-
 use crate::serde::{ThemeLoadError, theme_from_toml_strict};
 use crate::theme::Theme;
 
