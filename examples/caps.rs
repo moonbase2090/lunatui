@@ -3,8 +3,9 @@
 
 #![doc = include_str!("README.md")]
 
-use std::fs::File;
 use std::io::{self, IsTerminal, Write};
+#[cfg(unix)]
+use std::fs::File;
 
 use lunatui_core::width;
 use lunatui_term::{
