@@ -10,7 +10,6 @@ pub struct HitId(
     pub u32,
 );
 
-/// One interactive region recorded during a frame render.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct HitRegion {
     id: HitId,
