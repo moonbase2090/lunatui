@@ -16,6 +16,14 @@ use crate::input::Input;
 use crate::options::RunOptions;
 use crate::sched::{SchedulePoll, Scheduler, State};
 
+struct FrameState {
+    prev: Grid,
+    next: Grid,
+    clusters: ClusterTable,
+    encoder: Encoder,
+    last_palette: Option<Vec<Color>>,
+}
+
 /// Runs `app` in the alternate screen until it returns [`ControlFlow::Break`] or input ends.
 ///
 /// Requires a Unix terminal on stdin and stdout. Non-interactive stdout is rejected.
@@ -41,31 +49,24 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         },
     )?;
     let area = Rect::new(0, 0, options.width, options.height);
-    let mut prev = Grid::new(options.width, options.height);
-    let mut next = Grid::new(options.width, options.height);
-    let mut clusters = ClusterTable::new();
-    let mut encoder = Encoder::new();
+    let mut frames = FrameState {
+        prev: Grid::new(options.width, options.height),
+        next: Grid::new(options.width, options.height),
+        clusters: ClusterTable::new(),
+        encoder: Encoder::new(),
+        last_palette: None,
+    };
     let mut sched = Scheduler::idle();
     sched.on_input();
     let epoch = Instant::now();
     let mut quit = false;
-    let mut last_palette: Option<Vec<Color>> = None;
     while !quit {
         let now = epoch.elapsed();
         sync_scheduler(&mut sched, &app, now);
         match sched.poll(now, false) {
             SchedulePoll::Render => {
                 let present_start = epoch.elapsed();
-                render_present(
-                    &mut app,
-                    area,
-                    &mut prev,
-                    &mut next,
-                    &mut clusters,
-                    &mut encoder,
-                    &mut session,
-                    &mut last_palette,
-                )?;
+                render_present(&mut app, area, &mut frames, &mut session)?;
                 let present_done = epoch.elapsed();
                 sched.after_present(present_start, present_done.saturating_sub(present_start));
             }
@@ -126,32 +127,35 @@ pub fn run<A: App>(_app: A, _options: RunOptions) -> io::Result<()> {
 fn render_present<A: App>(
     app: &mut A,
     area: Rect,
-    prev: &mut Grid,
-    next: &mut Grid,
-    clusters: &mut ClusterTable,
-    encoder: &mut Encoder,
+    frames: &mut FrameState,
     session: &mut Session<impl Write>,
-    last_palette: &mut Option<Vec<Color>>,
 ) -> io::Result<()> {
-    next.fill(area, Style::new().bg(Color::Default), ' ', clusters);
-    app.render(next, area, clusters);
-    let palette = app.token_palette().map(|colors| colors.to_vec());
-    if palette != *last_palette {
-        *prev = Grid::new(area.width, area.height);
-        *last_palette = palette;
+    frames
+        .next
+        .fill(area, Style::new().bg(Color::Default), ' ', &mut frames.clusters);
+    app.render(&mut frames.next, area, &mut frames.clusters);
+    let palette = app.token_palette().map(<[Color]>::to_vec);
+    if palette != frames.last_palette {
+        frames.prev = Grid::new(area.width, area.height);
+        frames.last_palette = palette;
     }
-    let runs = diff_runs(prev, next);
-    if let Some(colors) = last_palette.as_ref() {
-        encoder.set_token_palette(colors.clone());
+    let runs = diff_runs(&frames.prev, &frames.next);
+    if let Some(colors) = frames.last_palette.as_ref() {
+        frames.encoder.set_token_palette(colors.clone());
     } else {
-        encoder.set_token_palette(Vec::new());
+        frames.encoder.set_token_palette(Vec::new());
     }
-    let payload = encoder.encode_diff(prev, next, clusters, ColorMode::TrueColor);
+    let payload = frames.encoder.encode_diff(
+        &frames.prev,
+        &frames.next,
+        &frames.clusters,
+        ColorMode::TrueColor,
+    );
     if !runs.is_empty() {
         session.present_frame(payload)?;
     }
-    *prev = next.clone();
-    *next = Grid::new(area.width, area.height);
+    frames.prev = frames.next.clone();
+    frames.next = Grid::new(area.width, area.height);
     Ok(())
 }
 
