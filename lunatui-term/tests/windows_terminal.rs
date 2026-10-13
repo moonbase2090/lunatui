@@ -23,17 +23,18 @@ mod smoke {
 
     #[test]
     fn encoder_emits_vt_for_windows_terminal() {
-        let mut grid = Grid::new(3, 2);
+        let prev = Grid::new(3, 2);
+        let mut next = Grid::new(3, 2);
         let mut clusters = ClusterTable::new();
         let area = Rect::new(0, 0, 3, 2);
-        grid.fill(
+        next.fill(
             area,
             Style::new().fg(Color::Rgb(1, 2, 3)),
             'x',
             &mut clusters,
         );
         let mut encoder = Encoder::new();
-        let payload = encoder.encode_diff(&grid, &grid, &clusters, ColorMode::TrueColor);
+        let payload = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
         assert!(payload.windows(2).any(|pair| pair == b"1;2;3"));
     }
 }
