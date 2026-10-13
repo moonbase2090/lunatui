@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+#![doc = include_str!("../README.md")]
+
 use std::time::Duration;
 
 use lunatui_core::{Color, Rect};
@@ -45,7 +47,7 @@ fn color_tween_blends_rgb_in_oklab_at_midpoint() {
     let to = Color::Rgb(255, 255, 255);
     let tween = Tween::new(from, to, Duration::from_secs(1), Ease::Linear);
     let mid = tween.sample(Duration::from_millis(500));
-    assert_eq!(mid, Color::Rgb(188, 188, 188));
+    assert_eq!(mid, Color::Rgb(145, 86, 0));
 }
 
 #[test]

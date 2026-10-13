@@ -3,6 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
+mod anim;
 #[cfg(feature = "app")]
 mod app;
 #[cfg(feature = "app")]
@@ -16,6 +17,7 @@ mod options;
 mod run;
 mod sched;
 
+pub use anim::{Clock, Ease, Spring, Tween};
 #[cfg(feature = "app")]
 pub use app::{App, ControlFlow};
 #[cfg(feature = "app")]

@@ -11,8 +11,8 @@ use std::time::{Duration, Instant};
 use lunatui_bench::ceiling::{FRAME_TARGET, FrameTimes, Verdict};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs};
 use lunatui_runtime::{
-    App, ControlFlow, FocusDirection, FocusManager, HitId, HitMap, RunOptions, SchedulePoll,
-    Scheduler, is_quit, render_once, run,
+    App, ControlFlow, Ease, FocusDirection, FocusManager, HitId, HitMap, RunOptions, SchedulePoll,
+    Scheduler, Spring, Tween, is_quit, render_once, run,
 };
 use lunatui_term::{ColorMode, Encoder, Event, KeyCode, KeyEvent, MouseButton, MouseKind};
 
@@ -23,21 +23,22 @@ const BENCH_FRAMES: u32 = 4;
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
     let counter = args.iter().any(|arg| arg == "--counter");
+    let motion = args.iter().any(|arg| arg == "--motion");
     let snapshot = args.iter().any(|arg| arg == "--snapshot");
     let flag_args: Vec<String> = args
         .iter()
-        .filter(|arg| *arg != "--counter" && *arg != "--snapshot")
+        .filter(|arg| *arg != "--counter" && *arg != "--motion" && *arg != "--snapshot")
         .cloned()
         .collect();
     let geometry = parse_geometry(&flag_args)?;
     if snapshot {
-        print_snapshot(counter, geometry);
+        print_snapshot(counter, motion, geometry);
         return Ok(());
     }
     if io::stdout().is_terminal() {
         let options = RunOptions::new(geometry.width, geometry.height);
         if counter {
-            run(Counter::default(), options)?;
+            run(Counter::new(motion), options)?;
         } else {
             run(Hello, options)?;
         }
@@ -93,30 +94,76 @@ const HIT_INC: HitId = HitId(2);
 #[derive(Clone, Debug)]
 struct Counter {
     value: i32,
+    motion: bool,
+    display: Spring,
+    accent: Tween<Color>,
+    accent_start: Duration,
+    motion_clock: Duration,
+    last_tick: Option<Instant>,
     hits: HitMap,
     focus: FocusManager,
     hover: Option<HitId>,
     drag: Option<HitId>,
 }
 
-impl Default for Counter {
-    fn default() -> Self {
+impl Counter {
+    fn new(motion: bool) -> Self {
         Self {
             value: 0,
+            motion,
+            display: Spring::new(0.0),
+            accent: Tween::new(
+                Color::Rgb(0x1e, 0x1e, 0x2e),
+                Color::Rgb(0x9e, 0xce, 0x6a),
+                Duration::from_millis(400),
+                Ease::InOutCubic,
+            ),
+            accent_start: Duration::ZERO,
+            motion_clock: Duration::ZERO,
+            last_tick: None,
             hits: HitMap::new(),
             focus: FocusManager::new(),
             hover: None,
             drag: None,
         }
     }
-}
 
-impl Counter {
     fn activate(&mut self, id: HitId) {
         if id == HIT_DEC {
             self.value -= 1;
         } else if id == HIT_INC {
             self.value += 1;
+        }
+        if self.motion {
+            self.display.set_target(spring_target_for(self.value));
+            self.accent_start = self.motion_clock;
+        }
+    }
+
+    fn tick_motion(&mut self, delta: Duration) {
+        if !self.motion {
+            return;
+        }
+        self.motion_clock += delta;
+        self.display.advance(delta);
+    }
+
+    fn sync_motion_clock(&mut self) {
+        if !self.motion {
+            return;
+        }
+        let now = Instant::now();
+        if let Some(prev) = self.last_tick {
+            self.tick_motion(now.saturating_duration_since(prev));
+        }
+        self.last_tick = Some(now);
+    }
+
+    fn shown_value(&self) -> i32 {
+        if self.motion {
+            i32::from(nearest_i16(self.display.value()))
+        } else {
+            self.value
         }
     }
 }
@@ -135,10 +182,17 @@ impl App for Counter {
     }
 
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
+        self.sync_motion_clock();
         let title = Style::new().fg(Color::Rgb(0x9e, 0xce, 0x6a));
         grid.put_str(area.x + 2, area.y + 2, title, "Counter", clusters);
-        let line = format!("value: {value}", value = self.value);
+        let line = format!("value: {value}", value = self.shown_value());
         grid.put_str(area.x + 2, area.y + 4, Style::new(), &line, clusters);
+        if self.motion {
+            let elapsed = self.motion_clock.saturating_sub(self.accent_start);
+            let bar = self.accent.sample(elapsed);
+            let bar_rect = Rect::new(area.x + 2, area.y + 5, 20, 1);
+            grid.fill(bar_rect, Style::new().bg(bar), ' ', clusters);
+        }
         grid.put_str(
             area.x + 2,
             area.y + 6,
@@ -187,8 +241,20 @@ impl Counter {
                     self.activate(id);
                 }
             }
-            KeyCode::Char('+' | '=') => self.value += 1,
-            KeyCode::Char('-') => self.value -= 1,
+            KeyCode::Char('+' | '=') => {
+                self.value += 1;
+                if self.motion {
+                    self.display.set_target(spring_target_for(self.value));
+                    self.accent_start = self.motion_clock;
+                }
+            }
+            KeyCode::Char('-') => {
+                self.value -= 1;
+                if self.motion {
+                    self.display.set_target(spring_target_for(self.value));
+                    self.accent_start = self.motion_clock;
+                }
+            }
             _ => {}
         }
     }
@@ -314,12 +380,18 @@ fn terminal_size() -> Option<(u16, u16)> {
     }
 }
 
-fn print_snapshot(counter: bool, geometry: Geometry) {
+fn print_snapshot(counter: bool, motion: bool, geometry: Geometry) {
     let (grid, _) = if counter {
-        let mut app = Counter {
-            value: 3,
-            ..Counter::default()
-        };
+        let mut app = Counter::new(motion);
+        app.value = 3;
+        if motion {
+            app.display.set_target(spring_target_for(app.value));
+            for _ in 0..20 {
+                app.tick_motion(Duration::from_millis(16));
+            }
+            app.accent_start = Duration::from_millis(200);
+            app.tick_motion(Duration::from_millis(200));
+        }
         render_once(&mut app, geometry.width, geometry.height)
     } else {
         let mut hello = Hello;
@@ -339,10 +411,7 @@ fn print_snapshot(counter: bool, geometry: Geometry) {
 }
 
 fn run_bench(_counter: bool, geometry: Geometry) -> io::Result<FrameTimes> {
-    let mut app = Counter {
-        value: 0,
-        ..Counter::default()
-    };
+    let mut app = Counter::new(false);
     let mut prev = Grid::new(geometry.width, geometry.height);
     let mut next = Grid::new(geometry.width, geometry.height);
     let mut clusters = ClusterTable::new();
@@ -381,6 +450,27 @@ fn run_bench(_counter: bool, geometry: Geometry) -> io::Result<FrameTimes> {
         }
     }
     FrameTimes::from_samples(&samples).ok_or_else(|| io::Error::other("no samples"))
+}
+
+fn spring_target_for(value: i32) -> f32 {
+    let capped = value.clamp(i32::from(i16::MIN), i32::from(i16::MAX));
+    f32::from(i16::try_from(capped).unwrap_or(0))
+}
+
+fn nearest_i16(value: f32) -> i16 {
+    let clamped = value.clamp(f32::from(i16::MIN), f32::from(i16::MAX));
+    let mut low = i32::from(i16::MIN);
+    let mut high = i32::from(i16::MAX);
+    while low < high {
+        let mid = low + (high - low) / 2;
+        let sample = f32::from(i16::try_from(mid).unwrap_or(0));
+        if sample < clamped {
+            low = mid + 1;
+        } else {
+            high = mid;
+        }
+    }
+    i16::try_from(low).unwrap_or(0)
 }
 
 fn build_profile() -> &'static str {
@@ -430,7 +520,7 @@ mod tests {
 
     #[test]
     fn counter_increments_on_plus() {
-        let mut counter = Counter::default();
+        let mut counter = Counter::new(false);
         let plus = Event::Key(KeyEvent::press(KeyCode::Char('+')));
         assert_eq!(
             counter.update(&plus),
