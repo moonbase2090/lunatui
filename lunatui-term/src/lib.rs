@@ -8,6 +8,10 @@ mod encode;
 mod input;
 mod session;
 
+/// Windows console VT output and crossterm input (PR 27).
+#[cfg(windows)]
+pub mod sys;
+
 #[cfg(unix)]
 pub use caps::probe_fd;
 pub use caps::{

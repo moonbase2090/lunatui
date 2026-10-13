@@ -4,11 +4,17 @@
 #[cfg(unix)]
 mod unix;
 
+#[cfg(windows)]
+mod windows;
+
+#[cfg(not(any(unix, windows)))]
+mod stub;
+
 #[cfg(unix)]
 pub use unix::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
 
-#[cfg(not(unix))]
-mod stub;
+#[cfg(windows)]
+pub use windows::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
 
-#[cfg(not(unix))]
+#[cfg(not(any(unix, windows)))]
 pub use stub::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};

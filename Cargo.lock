@@ -923,6 +923,7 @@ dependencies = [
 name = "lunatui-term"
 version = "0.0.0"
 dependencies = [
+ "crossterm",
  "libc",
  "lunatui-bench",
  "lunatui-core",

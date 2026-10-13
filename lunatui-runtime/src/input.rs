@@ -15,6 +15,35 @@ pub struct Input {
 }
 
 impl Input {
+    /// Opens platform input (Unix stdin bytes or Windows crossterm events).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the worker thread cannot be started.
+    pub fn open() -> io::Result<Self> {
+        #[cfg(unix)]
+        {
+            Self::from_reader(io::stdin())
+        }
+        #[cfg(windows)]
+        {
+            let (sender, receiver) = mpsc::channel();
+            lunatui_term::sys::windows::spawn_input_reader(sender)?;
+            return Ok(Self {
+                receiver,
+                pending_error: None,
+                finished: false,
+            });
+        }
+        #[cfg(not(any(unix, windows)))]
+        {
+            Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "lunatui input is only supported on Unix and Windows",
+            ))
+        }
+    }
+
     /// Starts a worker that reads terminal bytes from `reader`.
     ///
     /// # Errors
