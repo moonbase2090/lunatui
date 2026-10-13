@@ -49,6 +49,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
     sched.on_input();
     let epoch = Instant::now();
     let mut quit = false;
+    let mut last_palette: Option<Vec<Color>> = None;
     while !quit {
         let now = epoch.elapsed();
         sync_scheduler(&mut sched, &app, now);
@@ -63,6 +64,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
                     &mut clusters,
                     &mut encoder,
                     &mut session,
+                    &mut last_palette,
                 )?;
                 let present_done = epoch.elapsed();
                 sched.after_present(present_start, present_done.saturating_sub(present_start));
@@ -129,12 +131,18 @@ fn render_present<A: App>(
     clusters: &mut ClusterTable,
     encoder: &mut Encoder,
     session: &mut Session<impl Write>,
+    last_palette: &mut Option<Vec<Color>>,
 ) -> io::Result<()> {
     next.fill(area, Style::new().bg(Color::Default), ' ', clusters);
     app.render(next, area, clusters);
+    let palette = app.token_palette().map(|colors| colors.to_vec());
+    if palette != *last_palette {
+        *prev = Grid::new(area.width, area.height);
+        *last_palette = palette;
+    }
     let runs = diff_runs(prev, next);
-    if let Some(palette) = app.token_palette() {
-        encoder.set_token_palette(palette.to_vec());
+    if let Some(colors) = last_palette.as_ref() {
+        encoder.set_token_palette(colors.clone());
     } else {
         encoder.set_token_palette(Vec::new());
     }

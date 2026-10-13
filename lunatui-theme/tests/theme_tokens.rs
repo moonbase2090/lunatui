@@ -18,9 +18,8 @@ fn builtin_light_and_dark_resolve_text_primary_differently() {
 
 #[test]
 fn json_theme_loads_token_colors() -> Result<(), ThemeLoadError> {
-    let theme = theme_from_json(
-        "{\"variant\":\"light\",\"tokens\":{\"text.primary\":\"112233\"}}",
-    )?;
+    let theme =
+        theme_from_json("{\"variant\":\"light\",\"tokens\":{\"text.primary\":\"112233\"}}")?;
     assert_eq!(
         theme.resolve(Token::TextPrimary),
         Color::Rgb(0x11, 0x22, 0x33)
