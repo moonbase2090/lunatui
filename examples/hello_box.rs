@@ -12,7 +12,9 @@ use lunatui_core::{
     Cell, CellWidth, ChangedRun, ClusterTable, Color, GlyphSlot, Grid, Meta, Rect, Style,
     diff_runs, width,
 };
-use lunatui_term::{ColorMode, Encoder, Session, SessionOptions, SyncOutput};
+use lunatui_term::{ColorMode, Encoder};
+#[cfg(unix)]
+use lunatui_term::{Session, SessionOptions, SyncOutput};
 
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
