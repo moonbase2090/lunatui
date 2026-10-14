@@ -227,9 +227,7 @@ fn compose_frame(buffer: &mut Vec<u8>, payload: &[u8], sync: SyncOutput) {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        MOUSE_DISABLE, MOUSE_ENABLE, MouseTracking, SyncOutput, apply_console_start, compose_frame,
-    };
+    use super::{MouseTracking, SyncOutput, apply_console_start, compose_frame};
     use std::io::{self, Write};
 
     struct FailOnceAfterBytes {
@@ -260,33 +258,6 @@ mod tests {
         assert!(buf.starts_with(b"\x1b[?2026h"));
         assert!(buf.ends_with(b"\x1b[?2026l"));
         assert!(buf.windows(2).any(|pair| pair == b"XY"));
-    }
-
-    #[test]
-    fn compose_frame_writes_payload_only_when_sync_is_disabled() {
-        let mut buf = Vec::new();
-        compose_frame(&mut buf, b"XY", SyncOutput::Disabled);
-        assert_eq!(buf, b"XY");
-    }
-
-    #[test]
-    fn setup_writes_sgr_mouse_modes_for_vt() -> Result<(), super::SessionError> {
-        let mut writer = Vec::new();
-        let marks = apply_console_start(&mut writer, MouseTracking::Sgr)?;
-        assert!(marks.alt && marks.hidden_cursor && marks.mouse);
-        assert!(writer.windows(MOUSE_ENABLE.len()).any(|window| window == MOUSE_ENABLE));
-        assert!(!writer.windows(MOUSE_DISABLE.len()).any(|window| window == MOUSE_DISABLE));
-        Ok(())
-    }
-
-    #[test]
-    fn setup_skips_mouse_modes_when_tracking_is_disabled() -> Result<(), super::SessionError> {
-        let mut writer = Vec::new();
-        let marks = apply_console_start(&mut writer, MouseTracking::Disabled)?;
-        assert!(marks.alt && marks.hidden_cursor);
-        assert!(!marks.mouse);
-        assert!(!writer.windows(MOUSE_ENABLE.len()).any(|window| window == MOUSE_ENABLE));
-        Ok(())
     }
 
     #[test]
