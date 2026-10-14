@@ -12,4 +12,4 @@ workspace = true
 
 [dependencies]
 lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
-lunatui-theme = { version = "0.0.0", path = "../lunatui-theme" }
+lunatui-theme = { version = "0.0.0", path = "../lunatui-theme", features = ["color-profiles"] }
