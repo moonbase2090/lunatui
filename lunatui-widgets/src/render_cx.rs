@@ -4,7 +4,7 @@
 use lunatui_core::{ClusterTable, Color, Grid, Style};
 use lunatui_theme::{Theme, Token};
 
-/// Grid, theme, and cluster state for [`Widget::render`] (PRD §3.2 / DD-3).
+/// Grid, theme, and cluster state for [`Widget::render`](crate::Widget::render) (PRD §3.2 / DD-3).
 pub struct RenderCx<'a> {
     grid: &'a mut Grid,
     clusters: &'a mut ClusterTable,
