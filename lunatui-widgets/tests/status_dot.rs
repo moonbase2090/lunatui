@@ -25,10 +25,12 @@ fn snapshot_at(
 }
 
 fn token_for(state: StatusState) -> Token {
-    match state {
-        StatusState::Ok => Token::Ok,
-        StatusState::Fail => Token::Fail,
-        StatusState::Idle => Token::TextPrimary,
+    if matches!(state, StatusState::Ok) {
+        Token::Ok
+    } else if matches!(state, StatusState::Fail) {
+        Token::Fail
+    } else {
+        Token::TextPrimary
     }
 }
 
@@ -42,6 +44,24 @@ fn measure_is_one_cell() {
 fn measure_clamps_to_available() {
     let dot = StatusDot::new(StatusState::Ok);
     assert_eq!(dot.measure(Size::new(0, 0)), Size::new(0, 0));
+}
+
+#[test]
+fn render_skips_zero_area() -> Result<(), Box<dyn std::error::Error>> {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(4, 2);
+    let mut clusters = ClusterTable::new();
+    let dot = StatusDot::new(StatusState::Ok);
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    dot.render(Rect::new(2, 0, 0, 0), &mut cx);
+    let skipped = grid.get(2, 0).ok_or("missing cell")?;
+    let mut grid2 = Grid::new(4, 2);
+    let mut clusters2 = ClusterTable::new();
+    let mut cx2 = RenderCx::new(&mut grid2, &mut clusters2, &theme);
+    dot.render(Rect::new(2, 0, 1, 1), &mut cx2);
+    let painted = grid2.get(2, 0).ok_or("missing cell")?;
+    assert_ne!(skipped.glyph().bits(), painted.glyph().bits());
+    Ok(())
 }
 
 #[test]

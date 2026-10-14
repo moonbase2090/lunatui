@@ -8,10 +8,12 @@ use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{RenderCx, StatusDot, StatusState, Widget};
 
 fn token_for(state: StatusState) -> Token {
-    match state {
-        StatusState::Ok => Token::Ok,
-        StatusState::Fail => Token::Fail,
-        StatusState::Idle => Token::TextPrimary,
+    if matches!(state, StatusState::Ok) {
+        Token::Ok
+    } else if matches!(state, StatusState::Fail) {
+        Token::Fail
+    } else {
+        Token::TextPrimary
     }
 }
 
@@ -28,7 +30,7 @@ fn snapshot_with_profile(
     let mut grid = Grid::new(width, height);
     let mut clusters = ClusterTable::new();
     let dot = StatusDot::new(state);
-    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).with_profile(profile);
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).profile(profile);
     dot.render(Rect::new(x, y, 1, 1), &mut cx);
     grid.styled_snapshot(&clusters)
 }

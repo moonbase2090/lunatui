@@ -56,7 +56,7 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 |---|---|
 | One widget per file, `lunatui-widgets/src/<widget>.rs`. | Review |
 | A widget is a struct that borrows its data (`'a`) and is built with `new` plus builder methods (§4). | Review |
-| It implements `Widget` with `render(&self, area: Rect, cx: &mut RenderCx)` and `measure(&self, avail: Size) -> Size`. `render` takes `&self` and never consumes the widget. | Review |
+| It implements `Widget` with `render(&self, area: Rect, cx: &mut RenderCx<'_>)` and `measure(&self, avail: Size) -> Size`. `Size` is defined in `lunatui-core`. `render` takes `&self` and never consumes the widget. | Review |
 | State that must survive frames (focus, hover, animation, scroll) lives in the app or the runtime, keyed by the widget's ID (PRD §2.2), not in the widget. | Review |
 | Every visual state has a styled snapshot test (M6). | Review |
 

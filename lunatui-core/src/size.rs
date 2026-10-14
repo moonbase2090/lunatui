@@ -12,6 +12,15 @@ pub struct Size {
 
 impl Size {
     /// Builds a size from component lengths.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use lunatui_core::Size;
+    ///
+    /// let one = Size::new(1, 1);
+    /// assert_eq!(one.width, 1);
+    /// ```
     #[must_use]
     pub const fn new(width: u16, height: u16) -> Self {
         Self { width, height }

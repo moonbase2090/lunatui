@@ -1,9 +1,10 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{Rect, Style};
+use lunatui_core::{Rect, Size, Style};
+use lunatui_theme::Token;
 
-use crate::{RenderCx, Size, Widget};
+use crate::{RenderCx, Widget};
 
 /// Semantic status indicator (PRD §3.2 sketch).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -12,13 +13,14 @@ pub struct StatusDot {
 }
 
 /// Visual state for [`StatusDot`].
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StatusState {
     /// Success tone.
     Ok,
     /// Error tone.
     Fail,
-    /// Neutral / idle tone.
+    /// Neutral / idle tone (`Token::TextPrimary`; no `dim` token yet).
     Idle,
 }
 
@@ -31,13 +33,16 @@ impl StatusDot {
 }
 
 impl Widget for StatusDot {
-    fn render(&self, area: Rect, cx: &mut RenderCx) {
+    fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        if area.width == 0 || area.height == 0 {
+            return;
+        }
         let token = match self.state {
-            StatusState::Ok => "ok",
-            StatusState::Fail => "fail",
-            StatusState::Idle => "text.primary",
+            StatusState::Ok => Token::Ok,
+            StatusState::Fail => Token::Fail,
+            StatusState::Idle => Token::TextPrimary,
         };
-        let color = cx.token_color(token);
+        let color = cx.token(token);
         cx.put_str(area.x, area.y, "●", Style::new().fg(color));
     }
 
