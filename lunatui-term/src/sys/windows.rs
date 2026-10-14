@@ -11,8 +11,8 @@ use std::time::Duration;
 use crossterm::event::{self, Event as CrosstermEvent, MouseButton as CrosstermMouseButton};
 
 use crate::input::{
-    Event, Focus, KeyCode, KeyEvent, Modifiers, MouseButton, MouseEvent, MouseKind, MouseUnit,
-    Scroll,
+    Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
+    MouseUnit, Scroll,
 };
 
 /// Joins the crossterm input worker on drop after setting [`shutdown`].
@@ -35,12 +35,25 @@ impl Drop for InputWorker {
 pub fn map_event(raw: CrosstermEvent) -> Option<Event> {
     match raw {
         CrosstermEvent::Key(key) => {
-            if CrosstermEvent::Key(key).is_key_release() {
+            // Console hosts report a release for every key. The VT parser only
+            // emits releases for kitty event types, so a console release is dropped.
+            if key.kind == event::KeyEventKind::Release {
                 return None;
             }
             let code = map_key_code(key.code)?;
-            let modifiers = map_modifiers(key.modifiers);
-            Some(Event::Key(KeyEvent::press(code).modifiers(modifiers)))
+            let mut modifiers = map_modifiers(key.modifiers);
+            // Conhost reports Shift+Tab as BackTab with no shift bit. VT CSI Z is Tab+shift.
+            if matches!(key.code, event::KeyCode::BackTab) {
+                modifiers = modifiers.shift();
+            }
+            let kind = if key.kind == event::KeyEventKind::Repeat {
+                KeyKind::Repeat
+            } else {
+                KeyKind::Press
+            };
+            Some(Event::Key(
+                KeyEvent::press(code).modifiers(modifiers).kind(kind),
+            ))
         }
         CrosstermEvent::Mouse(mouse) => Some(Event::Mouse(map_mouse(mouse))),
         CrosstermEvent::Paste(text) => Some(Event::Paste(crate::input::Paste::Chunk(text))),
@@ -188,4 +201,239 @@ pub fn try_read_events() -> io::Result<Vec<Event>> {
         }
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use crossterm::event::{
+        Event as CrosstermEvent, KeyCode as CrosstermKeyCode, KeyEvent as CrosstermKeyEvent,
+        KeyEventKind, KeyModifiers, MouseButton as CrosstermMouseButton,
+        MouseEvent as CrosstermMouseEvent, MouseEventKind,
+    };
+
+    use crate::input::{
+        Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
+        MouseUnit, Parser, Paste, Scroll,
+    };
+
+    use super::map_event;
+
+    fn parse(bytes: &[u8]) -> Vec<Event> {
+        let mut parser = Parser::new();
+        let mut events = parser.push(bytes);
+        events.extend(parser.flush());
+        events
+    }
+
+    fn key(code: CrosstermKeyCode, modifiers: KeyModifiers, kind: KeyEventKind) -> CrosstermEvent {
+        CrosstermEvent::Key(CrosstermKeyEvent::new_with_kind(code, modifiers, kind))
+    }
+
+    #[test]
+    fn console_backtab_matches_vt_shift_tab() {
+        let mapped = map_event(key(
+            CrosstermKeyCode::BackTab,
+            KeyModifiers::SHIFT,
+            KeyEventKind::Press,
+        ))
+        .expect("backtab");
+        assert_eq!(parse(b"\x1b[Z"), vec![mapped]);
+    }
+
+    #[test]
+    fn console_backtab_without_shift_bit_still_matches_vt() {
+        let mapped = map_event(key(
+            CrosstermKeyCode::BackTab,
+            KeyModifiers::empty(),
+            KeyEventKind::Press,
+        ))
+        .expect("backtab");
+        assert_eq!(
+            mapped,
+            Event::Key(KeyEvent::press(KeyCode::Tab).modifiers(Modifiers::new().shift()))
+        );
+    }
+
+    #[test]
+    fn console_repeat_matches_vt_repeat() {
+        let mapped = map_event(key(
+            CrosstermKeyCode::Char('a'),
+            KeyModifiers::empty(),
+            KeyEventKind::Repeat,
+        ))
+        .expect("repeat");
+        assert_eq!(parse(b"\x1b[97;1:2u"), vec![mapped]);
+    }
+
+    #[test]
+    fn console_release_is_dropped() {
+        assert_eq!(
+            map_event(key(
+                CrosstermKeyCode::Char('a'),
+                KeyModifiers::empty(),
+                KeyEventKind::Release,
+            )),
+            None
+        );
+    }
+
+    #[test]
+    fn console_resize_is_dropped() {
+        assert_eq!(map_event(CrosstermEvent::Resize(80, 24)), None);
+    }
+
+    #[test]
+    fn console_lock_and_media_keys_are_dropped() {
+        assert_eq!(
+            map_event(key(
+                CrosstermKeyCode::CapsLock,
+                KeyModifiers::empty(),
+                KeyEventKind::Press,
+            )),
+            None
+        );
+        assert_eq!(
+            map_event(key(
+                CrosstermKeyCode::Null,
+                KeyModifiers::empty(),
+                KeyEventKind::Press,
+            )),
+            None
+        );
+    }
+
+    #[test]
+    fn console_modifiers_match_named_bits() {
+        let mapped = map_event(key(
+            CrosstermKeyCode::Char('c'),
+            KeyModifiers::SHIFT
+                | KeyModifiers::ALT
+                | KeyModifiers::CONTROL
+                | KeyModifiers::SUPER
+                | KeyModifiers::HYPER
+                | KeyModifiers::META,
+            KeyEventKind::Press,
+        ))
+        .expect("modified key");
+        assert_eq!(
+            mapped,
+            Event::Key(
+                KeyEvent::press(KeyCode::Char('c')).modifiers(
+                    Modifiers::new()
+                        .shift()
+                        .alt()
+                        .control()
+                        .super_key()
+                        .hyper()
+                        .meta()
+                )
+            )
+        );
+    }
+
+    #[test]
+    fn console_mouse_buttons_map_to_cell_events() {
+        let down = map_event(CrosstermEvent::Mouse(CrosstermMouseEvent {
+            kind: MouseEventKind::Down(CrosstermMouseButton::Left),
+            column: 3,
+            row: 4,
+            modifiers: KeyModifiers::SHIFT,
+        }))
+        .expect("down");
+        assert_eq!(
+            down,
+            Event::Mouse(MouseEvent {
+                kind: MouseKind::Down(MouseButton::Left),
+                column: 3,
+                row: 4,
+                modifiers: Modifiers::new().shift(),
+                unit: MouseUnit::Cells,
+            })
+        );
+        let up = map_event(CrosstermEvent::Mouse(CrosstermMouseEvent {
+            kind: MouseEventKind::Up(CrosstermMouseButton::Right),
+            column: 1,
+            row: 2,
+            modifiers: KeyModifiers::empty(),
+        }))
+        .expect("up");
+        assert_eq!(
+            up,
+            Event::Mouse(MouseEvent {
+                kind: MouseKind::Up(MouseButton::Right),
+                column: 1,
+                row: 2,
+                modifiers: Modifiers::new(),
+                unit: MouseUnit::Cells,
+            })
+        );
+        let drag = map_event(CrosstermEvent::Mouse(CrosstermMouseEvent {
+            kind: MouseEventKind::Drag(CrosstermMouseButton::Middle),
+            column: 0,
+            row: 0,
+            modifiers: KeyModifiers::empty(),
+        }))
+        .expect("drag");
+        assert_eq!(
+            drag,
+            Event::Mouse(MouseEvent {
+                kind: MouseKind::Drag(MouseButton::Middle),
+                column: 0,
+                row: 0,
+                modifiers: Modifiers::new(),
+                unit: MouseUnit::Cells,
+            })
+        );
+    }
+
+    #[test]
+    fn console_mouse_scroll_and_move_map() {
+        let cases = [
+            (MouseEventKind::Moved, MouseKind::Move),
+            (MouseEventKind::ScrollUp, MouseKind::Scroll(Scroll::Up)),
+            (MouseEventKind::ScrollDown, MouseKind::Scroll(Scroll::Down)),
+            (MouseEventKind::ScrollLeft, MouseKind::Scroll(Scroll::Left)),
+            (
+                MouseEventKind::ScrollRight,
+                MouseKind::Scroll(Scroll::Right),
+            ),
+        ];
+        for (raw_kind, kind) in cases {
+            let mapped = map_event(CrosstermEvent::Mouse(CrosstermMouseEvent {
+                kind: raw_kind,
+                column: 8,
+                row: 1,
+                modifiers: KeyModifiers::empty(),
+            }))
+            .expect("mouse");
+            assert_eq!(
+                mapped,
+                Event::Mouse(MouseEvent {
+                    kind,
+                    column: 8,
+                    row: 1,
+                    modifiers: Modifiers::new(),
+                    unit: MouseUnit::Cells,
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn console_paste_is_a_chunk() {
+        let mapped = map_event(CrosstermEvent::Paste(String::from("hello"))).expect("paste");
+        assert_eq!(mapped, Event::Paste(Paste::Chunk(String::from("hello"))));
+    }
+
+    #[test]
+    fn console_focus_maps_in_and_out() {
+        assert_eq!(
+            map_event(CrosstermEvent::FocusGained),
+            Some(Event::Focus(Focus::In))
+        );
+        assert_eq!(
+            map_event(CrosstermEvent::FocusLost),
+            Some(Event::Focus(Focus::Out))
+        );
+    }
 }
