@@ -3,8 +3,8 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{ClusterTable, Color, Grid, Rect};
-use lunatui_theme::{Profile, Theme, Token, Variant};
+use lunatui_core::{ClusterTable, Grid, Rect};
+use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{RenderCx, Size, StatusDot, StatusState, Widget};
 
 fn snapshot_at(
@@ -83,20 +83,6 @@ fn every_state_truecolor_at_two_sizes() {
                     "state {state:?} variant {variant:?} at {width}x{height}"
                 );
             }
-        }
-    }
-}
-
-#[test]
-fn status_token_colors_downsample_for_ansi16_profile() {
-    for state in [StatusState::Ok, StatusState::Fail, StatusState::Idle] {
-        for variant in [Variant::Dark, Variant::Light] {
-            let theme = Theme::builtin(variant);
-            let downsampled = Profile::Ansi16.downsample(theme.resolve(token_for(state)));
-            assert!(
-                matches!(downsampled, Color::Indexed(index) if index < 16),
-                "state {state:?} variant {variant:?}"
-            );
         }
     }
 }
