@@ -9,3 +9,16 @@ repository.workspace = true
 
 [lints]
 workspace = true
+
+[features]
+default = []
+color-profiles = ["lunatui-theme/color-profiles"]
+
+[dependencies]
+lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
+lunatui-theme = { version = "0.0.0", path = "../lunatui-theme" }
+
+[[test]]
+name = "status_dot_color_profiles"
+path = "tests/status_dot_color_profiles.rs"
+required-features = ["color-profiles"]

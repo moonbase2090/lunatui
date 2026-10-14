@@ -42,6 +42,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --workspace
       - run: cargo test --workspace
+      - run: cargo test -p lunatui-widgets --features color-profiles
       # `app` is off by default. Select the packages that define it so
       # Windows and macOS build and test that feature, including the demo.
       - run: cargo build -p lunatui -p lunatui-runtime --features app

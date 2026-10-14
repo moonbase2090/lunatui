@@ -17,7 +17,7 @@ Applications implement:
 - `update(&mut self, &Event) -> ControlFlow` — handle input; return `Break` to quit.
 - `render(&mut self, &mut Grid, Rect, &mut ClusterTable)` — draw the current frame into the grid (mutable so render can register hits).
 
-State lives on the app struct. Widgets, IDs, memo, and `Ui` layout sugar are deferred to DD-3 follow-ups in PR 24–28.
+State lives on the app struct. Widgets, IDs, memo, and `Ui` layout sugar are deferred to DD-3 follow-ups in PR 24–28. **`Widget` / `RenderCx` shipped in PR 28** — see [ADR 0004](0004-widget-trait-render-cx.md).
 
 ### Feature flag
 

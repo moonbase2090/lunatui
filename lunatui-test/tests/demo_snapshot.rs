@@ -41,5 +41,6 @@ fn demo_snapshot_prints_hello_line() -> Result<(), Box<dyn std::error::Error>> {
     assert!(stdout.contains("Counter"), "{stdout}");
     assert!(stdout.contains("[ - ]"), "{stdout}");
     assert!(stdout.contains("[ + ]"), "{stdout}");
+    assert!(stdout.contains('●'), "{stdout}");
     Ok(())
 }

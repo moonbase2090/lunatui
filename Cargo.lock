@@ -868,6 +868,7 @@ dependencies = [
  "lunatui-term",
  "lunatui-test",
  "lunatui-theme",
+ "lunatui-widgets",
  "ratatui",
 ]
 
@@ -960,6 +961,10 @@ dependencies = [
 [[package]]
 name = "lunatui-widgets"
 version = "0.0.0"
+dependencies = [
+ "lunatui-core",
+ "lunatui-theme",
+]
 
 [[package]]
 name = "mac_address"
