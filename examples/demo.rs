@@ -16,6 +16,7 @@ use lunatui_runtime::{
 };
 use lunatui_term::{ColorMode, Encoder, Event, KeyCode, KeyEvent, MouseButton, MouseKind};
 use lunatui_theme::{Theme, Token, Variant, load_bundled};
+use lunatui_widgets::{RenderCx, StatusDot, StatusState, Widget};
 
 const DEFAULT_WIDTH: u16 = 80;
 const DEFAULT_HEIGHT: u16 = 24;
@@ -230,6 +231,17 @@ impl App for Counter {
         grid.fill(area, surface, ' ', clusters);
         let title = Style::new().fg(Color::Token(Token::Accent.id()));
         grid.put_str(area.x + 2, area.y + 2, title, "Counter", clusters);
+        let dot_state = if self.value >= 0 {
+            StatusState::Ok
+        } else {
+            StatusState::Fail
+        };
+        let dot_area = Rect::new(area.x + 11, area.y + 2, 1, 1);
+        let dot = StatusDot::new(dot_state);
+        {
+            let mut cx = RenderCx::new(grid, clusters, &self.theme);
+            dot.render(dot_area, &mut cx);
+        }
         let line = format!("value: {value}", value = self.shown_value());
         let text = Style::new().fg(Color::Token(Token::TextPrimary.id()));
         grid.put_str(area.x + 2, area.y + 4, text, &line, clusters);
