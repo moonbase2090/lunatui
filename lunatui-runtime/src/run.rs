@@ -26,12 +26,12 @@ struct FrameState {
 
 /// Runs `app` in the alternate screen until it returns [`ControlFlow::Break`] or input ends.
 ///
-/// Requires a Unix terminal on stdin and stdout. Non-interactive stdout is rejected.
+/// Requires an interactive terminal on stdin and stdout.
 ///
 /// # Errors
 ///
 /// Returns I/O, session, or encoder errors from the host loop.
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
     if !io::stdout().is_terminal() {
         return Err(io::Error::new(
@@ -39,8 +39,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
             "lunatui_runtime::run requires an interactive terminal",
         ));
     }
-    let stdin = io::stdin();
-    let mut input = Input::from_reader(stdin)?;
+    let mut input = Input::open()?;
     let mut session = Session::enter_with_options(
         io::stdout(),
         SessionOptions {
@@ -115,12 +114,12 @@ fn sync_scheduler<A: App>(sched: &mut Scheduler, app: &A, now: Duration) {
     }
 }
 
-/// Runs `app` on non-Unix hosts (unsupported).
-#[cfg(not(unix))]
+/// Runs `app` on hosts without a supported terminal backend.
+#[cfg(not(any(unix, windows)))]
 pub fn run<A: App>(_app: A, _options: RunOptions) -> io::Result<()> {
     Err(io::Error::new(
         io::ErrorKind::Unsupported,
-        "lunatui_runtime::run requires Unix",
+        "lunatui_runtime::run requires Unix or Windows",
     ))
 }
 

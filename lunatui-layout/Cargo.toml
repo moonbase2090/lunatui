@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-core = { path = "../lunatui-core" }
+lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
 num-bigint = { version = "0.4", default-features = false }
 num-traits = { version = "0.2", default-features = false }
 

@@ -333,8 +333,8 @@ fn a_paste_round_trips_as_start_chunk_and_end() {
 #[test]
 fn paste_split_across_pushes_concatenates() {
     let mut parser = Parser::new();
-    let mut events = parser.push(b"\x1b[200~hel");
-    events.extend(parser.push(b"lo\x1b[201~"));
+    let mut events = parser.push(b"\x1b[200~he");
+    events.extend(parser.push(b"llo\x1b[201~"));
     events.extend(parser.flush());
     assert_eq!(pasted(&events), "hello");
     assert!(

@@ -17,7 +17,7 @@ color-profiles = ["lunatui-theme/color-profiles"]
 app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
 
 [dependencies]
-lunatui-runtime = { path = "../lunatui-runtime", optional = true }
+lunatui-runtime = { version = "0.0.0", path = "../lunatui-runtime", optional = true }
 
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }

@@ -3,6 +3,9 @@
 [default.extend-identifiers]
 # Mermaid node ID in docs/architecture.md (PrismattycBackend, native).
 PN = "PN"
+# Fraction constraint docs/code use numer/denom (numerator / denominator).
+numer = "numer"
+denom = "denom"
 
 [default.extend-words]
 ratatui = "ratatui"

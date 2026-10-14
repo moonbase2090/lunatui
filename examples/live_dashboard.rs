@@ -13,7 +13,9 @@ use lunatui_core::{
     Attrs, ClusterTable, Color, Grid, Rect, Style, diff_runs, width as display_width,
 };
 use lunatui_runtime::{SchedulePoll, Scheduler};
-use lunatui_term::{ColorMode, Encoder, Session, SessionOptions, SyncOutput};
+use lunatui_term::{ColorMode, Encoder};
+#[cfg(unix)]
+use lunatui_term::{Session, SessionOptions, SyncOutput};
 
 const FRAMES: u32 = 240;
 const FRAME_INTERVAL: Duration = Duration::from_micros(16_667);

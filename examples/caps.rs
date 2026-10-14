@@ -3,6 +3,7 @@
 
 #![doc = include_str!("README.md")]
 
+#[cfg(unix)]
 use std::fs::File;
 use std::io::{self, IsTerminal, Write};
 
