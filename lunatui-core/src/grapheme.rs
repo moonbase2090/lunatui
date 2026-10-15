@@ -288,6 +288,29 @@ pub fn text_display_width(text: &str) -> usize {
     }
 }
 
+/// Prefix of `text` whose [`text_display_width`] is at most `max_cols`.
+#[must_use]
+pub fn clip_display_prefix(text: &str, max_cols: u16) -> &str {
+    if max_cols == 0 {
+        return "";
+    }
+    let max = usize::from(max_cols);
+    if text_display_width(text) <= max {
+        return text;
+    }
+    let mut cols = 0usize;
+    let mut end = 0usize;
+    for grapheme in UnicodeSegmentation::graphemes(text, true) {
+        let w = cluster_display_width(grapheme);
+        if cols + w > max {
+            break;
+        }
+        cols += w;
+        end += grapheme.len();
+    }
+    &text[..end]
+}
+
 fn regional_indicator(c: char) -> bool {
     matches!(c, '\u{1F1E6}'..='\u{1F1FF}')
 }

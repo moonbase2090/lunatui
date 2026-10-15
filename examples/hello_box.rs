@@ -15,20 +15,22 @@ use lunatui_core::{
 use lunatui_term::{ColorMode, Encoder};
 #[cfg(unix)]
 use lunatui_term::{Session, SessionOptions, SyncOutput};
+use lunatui_theme::{Theme, Variant};
+use lunatui_widgets::{Block, RenderCx, Widget};
 
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
 
 const LINES: [&str; 4] = [
     "Hello from lunatui",
-    "PR 11: hello_box on Grid",
+    "PR 29: hello_box on Block",
     "日本語 한국어 🦀 café",
     "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
 ];
 
 const LINES_FRAME0: [&str; 4] = [
     "Hello from lunatui",
-    "PR 10: hello_box on Grid",
+    "PR 11: hello_box on Gridd",
     "日本語 한국어 🦀 café",
     "👩\u{200D}💻 ❤\u{FE0F} 🇺🇸",
 ];
@@ -197,60 +199,38 @@ fn render_box_grid(lines: &[&str], clusters: &mut ClusterTable) -> (Grid, usize)
     let grid_w = u16::try_from(text_width + 4).unwrap_or(u16::MAX);
     let grid_h = u16::try_from(lines.len() + 2).unwrap_or(u16::MAX);
     let mut grid = Grid::new(grid_w, grid_h);
+    let theme = Theme::builtin(Variant::Dark);
+    let block = Block::bordered();
+    let area = Rect::new(0, 0, grid_w, grid_h);
+    let mut cx = RenderCx::new(&mut grid, clusters, &theme);
+    block.render(area, &mut cx);
+    let inner = block.inner(area);
     let style = Style::new();
-
-    grid.put_str(0, 0, style, "┌", clusters);
-    grid.fill(
-        Rect {
-            x: 1,
-            y: 0,
-            width: u16::try_from(text_width + 2).unwrap_or(u16::MAX),
-            height: 1,
-        },
-        style,
-        '─',
-        clusters,
-    );
-    grid.put_str(grid_w - 1, 0, style, "┐", clusters);
-
     for (index, line) in lines.iter().enumerate() {
-        let y = u16::try_from(index + 1).unwrap_or(u16::MAX);
+        let y = inner
+            .y
+            .saturating_add(u16::try_from(index).unwrap_or(u16::MAX));
         let line_width = width(line);
         let pad = text_width - line_width;
-        grid.put_str(0, y, style, "│", clusters);
-        grid.put_str(1, y, style, " ", clusters);
-        grid.put_str(2, y, style, line, clusters);
+        cx.put_str(inner.x, y, " ", style);
+        cx.put_str(inner.x.saturating_add(1), y, line, style);
         if pad > 0 {
-            grid.fill(
-                Rect {
-                    x: u16::try_from(2 + line_width).unwrap_or(u16::MAX),
+            let pad_x = inner
+                .x
+                .saturating_add(2)
+                .saturating_add(u16::try_from(line_width).unwrap_or(u16::MAX));
+            for offset in 0..pad {
+                cx.put_str(
+                    pad_x.saturating_add(u16::try_from(offset).unwrap_or(u16::MAX)),
                     y,
-                    width: u16::try_from(pad).unwrap_or(u16::MAX),
-                    height: 1,
-                },
-                style,
-                ' ',
-                clusters,
-            );
+                    " ",
+                    style,
+                );
+            }
         }
-        grid.put_str(grid_w - 2, y, style, " ", clusters);
-        grid.put_str(grid_w - 1, y, style, "│", clusters);
+        let right_pad_x = inner.x.saturating_add(inner.width.saturating_sub(1));
+        cx.put_str(right_pad_x, y, " ", style);
     }
-
-    let bottom = u16::try_from(lines.len() + 1).unwrap_or(u16::MAX);
-    grid.put_str(0, bottom, style, "└", clusters);
-    grid.fill(
-        Rect {
-            x: 1,
-            y: bottom,
-            width: u16::try_from(text_width + 2).unwrap_or(u16::MAX),
-            height: 1,
-        },
-        style,
-        '─',
-        clusters,
-    );
-    grid.put_str(grid_w - 1, bottom, style, "┘", clusters);
 
     (grid, text_width)
 }
@@ -369,7 +349,7 @@ mod tests {
         let border = "─".repeat(text_width + 2);
         let pad = |line: &str| " ".repeat(text_width - width(line));
         let expected = format!(
-            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 11: hello_box on Grid{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
+            "┌{border}┐\n│ Hello from lunatui{pad0} │\n│ PR 29: hello_box on Block{pad1} │\n│ 日本語 한국어 🦀 café{pad2} │\n│ 👩\u{200D}💻 ❤\u{FE0F} 🇺🇸{pad3} │\n└{border}┘\n",
             pad0 = pad(LINES[0]),
             pad1 = pad(LINES[1]),
             pad2 = pad(LINES[2]),
