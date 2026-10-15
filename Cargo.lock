@@ -878,6 +878,10 @@ version = "0.0.0"
 dependencies = [
  "criterion",
  "gungraun",
+ "lunatui-core",
+ "lunatui-text",
+ "lunatui-theme",
+ "lunatui-widgets",
  "num-bigint",
  "num-traits",
  "ratatui",
@@ -947,6 +951,11 @@ dependencies = [
 [[package]]
 name = "lunatui-text"
 version = "0.0.0"
+dependencies = [
+ "lunatui-core",
+ "proptest",
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "lunatui-theme"
@@ -963,8 +972,10 @@ name = "lunatui-widgets"
 version = "0.0.0"
 dependencies = [
  "lunatui-core",
+ "lunatui-text",
  "lunatui-theme",
  "ratatui",
+ "unicode-segmentation",
 ]
 
 [[package]]
