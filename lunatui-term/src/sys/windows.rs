@@ -35,14 +35,11 @@ impl Drop for InputWorker {
 pub fn map_event(raw: CrosstermEvent) -> Option<Event> {
     match raw {
         CrosstermEvent::Key(key) => {
-            // Console hosts report a release for every key. The VT parser only
-            // emits releases for kitty event types, so a console release is dropped.
             if key.kind == event::KeyEventKind::Release {
                 return None;
             }
             let code = map_key_code(key.code)?;
             let mut modifiers = map_modifiers(key.modifiers);
-            // Conhost reports Shift+Tab as BackTab with no shift bit. VT CSI Z is Tab+shift.
             if matches!(key.code, event::KeyCode::BackTab) {
                 modifiers = modifiers.shift();
             }
