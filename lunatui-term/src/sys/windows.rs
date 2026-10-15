@@ -11,8 +11,8 @@ use std::time::Duration;
 use crossterm::event::{self, Event as CrosstermEvent, MouseButton as CrosstermMouseButton};
 
 use crate::input::{
-    Event, Focus, KeyCode, KeyEvent, Modifiers, MouseButton, MouseEvent, MouseKind, MouseUnit,
-    Scroll,
+    Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
+    MouseUnit, Scroll,
 };
 
 /// Joins the crossterm input worker on drop after setting [`shutdown`].
@@ -35,12 +35,22 @@ impl Drop for InputWorker {
 pub fn map_event(raw: CrosstermEvent) -> Option<Event> {
     match raw {
         CrosstermEvent::Key(key) => {
-            if CrosstermEvent::Key(key).is_key_release() {
+            if key.kind == event::KeyEventKind::Release {
                 return None;
             }
             let code = map_key_code(key.code)?;
-            let modifiers = map_modifiers(key.modifiers);
-            Some(Event::Key(KeyEvent::press(code).modifiers(modifiers)))
+            let mut modifiers = map_modifiers(key.modifiers);
+            if matches!(key.code, event::KeyCode::BackTab) {
+                modifiers = modifiers.shift();
+            }
+            let kind = if key.kind == event::KeyEventKind::Repeat {
+                KeyKind::Repeat
+            } else {
+                KeyKind::Press
+            };
+            Some(Event::Key(
+                KeyEvent::press(code).modifiers(modifiers).kind(kind),
+            ))
         }
         CrosstermEvent::Mouse(mouse) => Some(Event::Mouse(map_mouse(mouse))),
         CrosstermEvent::Paste(text) => Some(Event::Paste(crate::input::Paste::Chunk(text))),
@@ -85,21 +95,12 @@ fn map_key_code(raw: event::KeyCode) -> Option<KeyCode> {
         event::KeyCode::End => Some(KeyCode::End),
         event::KeyCode::PageUp => Some(KeyCode::PageUp),
         event::KeyCode::PageDown => Some(KeyCode::PageDown),
-        event::KeyCode::Tab => Some(KeyCode::Tab),
+        event::KeyCode::Tab | event::KeyCode::BackTab => Some(KeyCode::Tab),
         event::KeyCode::Backspace => Some(KeyCode::Backspace),
         event::KeyCode::Delete => Some(KeyCode::Delete),
         event::KeyCode::Insert => Some(KeyCode::Insert),
         event::KeyCode::Esc => Some(KeyCode::Esc),
         event::KeyCode::F(n) => Some(KeyCode::F(n)),
-        event::KeyCode::Null => None,
-        event::KeyCode::BackTab => Some(KeyCode::Tab),
-        event::KeyCode::Media(_)
-        | event::KeyCode::Modifier(_)
-        | event::KeyCode::CapsLock
-        | event::KeyCode::ScrollLock
-        | event::KeyCode::NumLock
-        | event::KeyCode::PrintScreen
-        | event::KeyCode::Pause => None,
         _ => None,
     }
 }
