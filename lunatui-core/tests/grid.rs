@@ -302,3 +302,48 @@ proptest! {
         }
     }
 }
+
+#[test]
+fn put_str_cluster_wider_than_two_stays_aligned() {
+    let mut grid = Grid::new(8, 1);
+    let mut clusters = ClusterTable::new();
+    grid.put_str(0, 0, Style::new(), "\u{1100}\u{1100}Z", &mut clusters);
+    assert_wide_invariants(&grid);
+    assert_eq!(grid.get(4, 0).map(|c| c.meta().width), Some(CellWidth::One));
+    assert_eq!(grid.get(0, 0).map(|c| c.meta().width), Some(CellWidth::Two));
+    assert_eq!(grid.get(2, 0).map(|c| c.meta().width), Some(CellWidth::Two));
+}
+
+#[test]
+fn put_str_wide_grapheme_keeps_trailing_combining_mark() {
+    use lunatui_core::DecodedGlyph;
+
+    let mut grid = Grid::new(8, 1);
+    let mut clusters = ClusterTable::new();
+    grid.put_str(
+        0,
+        0,
+        Style::new(),
+        "\u{1100}\u{1100}\u{0301}",
+        &mut clusters,
+    );
+    assert_wide_invariants(&grid);
+    let text = grid
+        .get(2, 0)
+        .map_or(String::new(), |cell| match cell.glyph().decode() {
+            DecodedGlyph::Inline(scalar) => scalar.to_string(),
+            DecodedGlyph::Cluster(id) => clusters
+                .cluster_text(id)
+                .map_or_else(String::new, str::to_owned),
+            DecodedGlyph::Continuation => String::new(),
+        });
+    assert!(text.contains('\u{0301}'));
+}
+
+#[test]
+fn put_str_lone_combining_mark_takes_no_column() {
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    grid.put_str(0, 0, Style::new(), "\u{301}Z", &mut clusters);
+    assert_eq!(grid.row_display(0, &clusters), "Z   ");
+}

@@ -130,62 +130,100 @@ impl Grid {
             return;
         }
         let mut col = x;
+        let mut buf = [0u8; 4];
         for grapheme in UnicodeSegmentation::graphemes(text, true) {
             if col >= self.width {
                 break;
             }
             let display = cluster_display_width(grapheme);
-            if display == 0 {
-                self.erase_span(col, y, 1, style);
-                let glyph = clusters.glyph_for(grapheme);
-                let meta = Meta {
-                    width: CellWidth::One,
-                    ..Meta::default()
-                };
-                self.place(col, y, Cell::from_parts(glyph, style, meta));
+            if display <= 2 {
+                col = self.put_cluster(col, y, style, grapheme, display, clusters);
                 continue;
             }
-            let span = u16::try_from(display).unwrap_or(1);
-            self.erase_span(col, y, span, style);
-            if display == 2 {
-                if col + 1 >= self.width {
-                    self.place_blank(col, y, style);
-                    col += 1;
+            let mut anchor_col: Option<u16> = None;
+            for ch in grapheme.chars() {
+                if col >= self.width {
+                    break;
+                }
+                let width = char_width(ch);
+                if width == 0 {
+                    if let Some(lead) = anchor_col {
+                        self.attach_combining(lead, y, ch, clusters);
+                    }
                     continue;
                 }
-                let glyph = clusters.glyph_for(grapheme);
-                let lead = Cell::from_parts(
-                    glyph,
-                    style,
-                    Meta {
-                        width: CellWidth::Two,
-                        ..Meta::default()
-                    },
-                );
-                let tail = Cell::from_parts(
-                    GlyphSlot::continuation(),
-                    style,
-                    Meta {
-                        width: CellWidth::Continuation,
-                        ..Meta::default()
-                    },
-                );
-                self.place(col, y, lead);
-                self.place(col + 1, y, tail);
-                col += 2;
-            } else {
-                let glyph = clusters.glyph_for(grapheme);
-                let cell = Cell::from_parts(
-                    glyph,
-                    style,
-                    Meta {
-                        width: CellWidth::One,
-                        ..Meta::default()
-                    },
-                );
-                self.place(col, y, cell);
-                col += 1;
+                let scalar = ch.encode_utf8(&mut buf);
+                let lead = col;
+                col = self.put_cluster(col, y, style, scalar, width, clusters);
+                anchor_col = Some(lead);
             }
+        }
+    }
+
+    fn attach_combining(&mut self, col: u16, y: u16, mark: char, clusters: &mut ClusterTable) {
+        let Some(cell) = self.get(col, y) else {
+            return;
+        };
+        if cell.meta().width == CellWidth::Continuation {
+            return;
+        }
+        let mut text = glyph_text(cell.glyph(), clusters);
+        text.push(mark);
+        let glyph = clusters.glyph_for(&text);
+        let updated = Cell::from_parts(glyph, cell.style(), cell.meta());
+        self.place(col, y, updated);
+    }
+
+    fn put_cluster(
+        &mut self,
+        col: u16,
+        y: u16,
+        style: Style,
+        grapheme: &str,
+        display: usize,
+        clusters: &mut ClusterTable,
+    ) -> u16 {
+        if display == 0 {
+            return col;
+        }
+        let span = u16::try_from(display).unwrap_or(1);
+        self.erase_span(col, y, span, style);
+        let glyph = clusters.glyph_for(grapheme);
+        if display == 2 {
+            if col + 1 >= self.width {
+                self.place_blank(col, y, style);
+                return col + 1;
+            }
+            let lead = Cell::from_parts(
+                glyph,
+                style,
+                Meta {
+                    width: CellWidth::Two,
+                    ..Meta::default()
+                },
+            );
+            let tail = Cell::from_parts(
+                GlyphSlot::continuation(),
+                style,
+                Meta {
+                    width: CellWidth::Continuation,
+                    ..Meta::default()
+                },
+            );
+            self.place(col, y, lead);
+            self.place(col + 1, y, tail);
+            col + 2
+        } else {
+            let cell = Cell::from_parts(
+                glyph,
+                style,
+                Meta {
+                    width: CellWidth::One,
+                    ..Meta::default()
+                },
+            );
+            self.place(col, y, cell);
+            col + 1
         }
     }
 
