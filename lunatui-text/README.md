@@ -2,4 +2,4 @@
 
 Text for lunatui: borrowed spans, lines and text, measurement, `WrapCache` and `RowSource`.
 
-This crate is a stub from the workspace scaffold (PRD §8, PR 01). Its contents land in later roadmap PRs.
+`wrap` provides word wrapping and [`WrapCache`](src/wrap/cache.rs) row indices (PRD §2.5, roadmap PR 30).

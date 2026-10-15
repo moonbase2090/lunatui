@@ -83,3 +83,8 @@ name = "demo"
 path = "../examples/demo.rs"
 test = true
 required-features = ["app"]
+
+[[example]]
+name = "gallery"
+path = "../examples/gallery.rs"
+test = true

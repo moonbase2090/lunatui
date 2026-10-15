@@ -9,3 +9,10 @@ repository.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
+unicode-segmentation = "=1.13.3"
+
+[dev-dependencies]
+proptest = "=1.9.0"
