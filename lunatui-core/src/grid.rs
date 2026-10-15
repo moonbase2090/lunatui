@@ -140,8 +140,6 @@ impl Grid {
                 col = self.put_cluster(col, y, style, grapheme, display, clusters);
                 continue;
             }
-            // The cell model has no cell wider than two columns, and terminals advance
-            // by each scalar's width; place the scalars one by one so the grid stays aligned.
             for ch in grapheme.chars() {
                 if col >= self.width {
                     break;
@@ -152,9 +150,6 @@ impl Grid {
         }
     }
 
-    /// Places one cluster of display width 0, 1 or 2 at `col`; returns the next column.
-    ///
-    /// Width-0 clusters (a lone combining mark) occupy no column and are dropped.
     fn put_cluster(
         &mut self,
         col: u16,
