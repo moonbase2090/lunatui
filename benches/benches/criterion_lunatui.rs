@@ -4,7 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use lunatui_bench::scenes::lunatui::log;
+use lunatui_bench::scenes::lunatui::{log, table};
 
 const WIDTH: u16 = 400;
 const HEIGHT: u16 = 120;
@@ -20,5 +20,16 @@ fn log_wrap_scroll(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, log_wrap_scroll);
+fn table_build(c: &mut Criterion) {
+    let rows = table::rows(500);
+    let mut group = c.benchmark_group("lunatui_table");
+    for built in [118, 500] {
+        group.bench_function(format!("build_{built}_rows"), |b| {
+            b.iter(|| table::render(&rows, built, WIDTH, HEIGHT));
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, log_wrap_scroll, table_build);
 criterion_main!(benches);

@@ -16,6 +16,7 @@ color-profiles = ["lunatui-theme/color-profiles"]
 
 [dependencies]
 lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
+lunatui-layout = { version = "0.0.0", path = "../lunatui-layout" }
 lunatui-text = { version = "0.0.0", path = "../lunatui-text" }
 lunatui-theme = { version = "0.0.0", path = "../lunatui-theme" }
 unicode-segmentation = "=1.13.3"
@@ -34,6 +35,10 @@ path = "tests/block_ratatui.rs"
 [[test]]
 name = "paragraph_ratatui"
 path = "tests/paragraph_ratatui.rs"
+
+[[test]]
+name = "table"
+path = "tests/table.rs"
 
 [[test]]
 name = "status_dot_color_profiles"
