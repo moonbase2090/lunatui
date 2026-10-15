@@ -12,9 +12,7 @@ pub struct List<S> {
     source: S,
     style: Style,
     highlight: Style,
-    /// Row index shown at the top of the viewport (vertical scroll).
     offset: usize,
-    /// Focused row, highlighted when visible.
     selected: Option<usize>,
 }
 
