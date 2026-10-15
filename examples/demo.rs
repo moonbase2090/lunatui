@@ -16,7 +16,7 @@ use lunatui_runtime::{
 };
 use lunatui_term::{ColorMode, Encoder, Event, KeyCode, KeyEvent, MouseButton, MouseKind};
 use lunatui_theme::{Theme, Token, Variant, load_bundled};
-use lunatui_widgets::{RenderCx, StatusDot, StatusState, Widget};
+use lunatui_widgets::{Block, RenderCx, StatusDot, StatusState, Widget};
 
 const DEFAULT_WIDTH: u16 = 80;
 const DEFAULT_HEIGHT: u16 = 24;
@@ -85,14 +85,19 @@ impl App for Hello {
     }
 
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
-        let style = Style::new().fg(Color::Rgb(0x7a, 0xa2, 0xf7));
-        grid.put_str(area.x + 2, area.y + 2, style, "Hello, lunatui", clusters);
-        grid.put_str(
-            area.x + 2,
-            area.y + 4,
-            Style::new(),
+        let (theme_id, theme) = bundled_or_builtin("prismattyc-dark");
+        let _ = theme_id;
+        let block = Block::bordered().title("lunatui");
+        let mut cx = RenderCx::new(grid, clusters, &theme);
+        block.render(area, &mut cx);
+        let inner = block.inner(area);
+        let accent = Style::new().fg(Color::Rgb(0x7a, 0xa2, 0xf7));
+        cx.put_str(inner.x, inner.y.saturating_add(1), "Hello, lunatui", accent);
+        cx.put_str(
+            inner.x,
+            inner.y.saturating_add(3),
             "PR 23: App + run() — press q to quit",
-            clusters,
+            Style::new(),
         );
     }
 }
@@ -228,39 +233,47 @@ impl App for Counter {
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
         self.sync_motion_clock();
         let surface = Style::new().bg(Color::Token(Token::Surface0.id()));
-        grid.fill(area, surface, ' ', clusters);
-        let title = Style::new().fg(Color::Token(Token::Accent.id()));
-        grid.put_str(area.x + 2, area.y + 2, title, "Counter", clusters);
+        let border = Style::new().fg(Color::Token(Token::Accent.id()));
+        let block = Block::bordered()
+            .title("Counter")
+            .style(surface)
+            .border_style(border);
+        let mut cx = RenderCx::new(grid, clusters, &self.theme);
+        block.render(area, &mut cx);
+        let inner = block.inner(area);
         let dot_state = if self.value >= 0 {
             StatusState::Ok
         } else {
             StatusState::Fail
         };
-        let dot_area = Rect::new(area.x + 11, area.y + 2, 1, 1);
+        let dot_area = Rect::new(
+            inner.x.saturating_add(inner.width.saturating_sub(1)),
+            inner.y,
+            1,
+            1,
+        );
         let dot = StatusDot::new(dot_state);
-        {
-            let mut cx = RenderCx::new(grid, clusters, &self.theme);
-            dot.render(dot_area, &mut cx);
-        }
+        dot.render(dot_area, &mut cx);
         let line = format!("value: {value}", value = self.shown_value());
         let text = Style::new().fg(Color::Token(Token::TextPrimary.id()));
-        grid.put_str(area.x + 2, area.y + 4, text, &line, clusters);
+        let value_y = inner.y.saturating_add(1);
+        cx.put_str(inner.x, value_y, &line, text);
         if self.motion {
             let elapsed = self.motion_clock.saturating_sub(self.accent_start);
             let bar = self.accent.sample(elapsed);
-            let bar_rect = Rect::new(area.x + 2, area.y + 5, 20, 1);
-            grid.fill(bar_rect, Style::new().bg(bar), ' ', clusters);
+            let bar_rect = Rect::new(inner.x, inner.y.saturating_add(2), 20, 1);
+            cx.set_style(bar_rect, Style::new().bg(bar));
         }
-        grid.put_str(
-            area.x + 2,
-            area.y + 6,
-            Style::new(),
+        cx.put_str(
+            inner.x,
+            inner.y.saturating_add(4),
             "Tab/click; t prismattyc light/dark; q quit",
-            clusters,
+            Style::new(),
         );
 
-        let dec = Rect::new(area.x + 2, area.y + 8, 5, 1);
-        let inc = Rect::new(area.x + 9, area.y + 8, 5, 1);
+        let btn_y = inner.y.saturating_add(6);
+        let dec = Rect::new(inner.x, btn_y, 5, 1);
+        let inc = Rect::new(inner.x.saturating_add(7), btn_y, 5, 1);
         self.hits.clear();
         self.hits.push(HIT_DEC, dec, 0);
         self.hits.push(HIT_INC, inc, 1);
@@ -579,9 +592,10 @@ fn millis(duration: Duration) -> String {
 
 #[cfg(test)]
 mod tests {
-    use lunatui_core::{Cell, GlyphSlot};
+    use lunatui_core::{Cell, GlyphSlot, Rect};
     use lunatui_runtime::App;
     use lunatui_term::{Event, KeyCode, KeyEvent};
+    use lunatui_widgets::Block;
 
     use super::{Counter, Hello, nearest_i16, parse_geometry};
 
@@ -589,8 +603,11 @@ mod tests {
     fn hello_renders_title_glyph() {
         let mut hello = Hello;
         let (grid, _) = lunatui_runtime::render_once(&mut hello, 40, 10);
+        let block = Block::bordered().title("lunatui");
+        let inner = block.inner(Rect::new(0, 0, 40, 10));
         assert_eq!(
-            grid.get(2, 2).map(Cell::glyph),
+            grid.get(inner.x, inner.y.saturating_add(1))
+                .map(Cell::glyph),
             GlyphSlot::inline_scalar('H')
         );
     }
