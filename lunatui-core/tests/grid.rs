@@ -320,18 +320,23 @@ fn put_str_wide_grapheme_keeps_trailing_combining_mark() {
 
     let mut grid = Grid::new(8, 1);
     let mut clusters = ClusterTable::new();
-    grid.put_str(0, 0, Style::new(), "\u{1100}\u{1100}\u{0301}", &mut clusters);
+    grid.put_str(
+        0,
+        0,
+        Style::new(),
+        "\u{1100}\u{1100}\u{0301}",
+        &mut clusters,
+    );
     assert_wide_invariants(&grid);
-    let lead = grid.get(2, 0);
-    assert!(lead.is_some());
-    let glyph = lead.unwrap().glyph();
-    let text = match glyph.decode() {
-        DecodedGlyph::Inline(scalar) => scalar.to_string(),
-        DecodedGlyph::Cluster(id) => clusters
-            .cluster_text(id)
-            .map_or_else(|| String::new(), str::to_owned),
-        DecodedGlyph::Continuation => String::new(),
-    };
+    let text = grid
+        .get(2, 0)
+        .map_or(String::new(), |cell| match cell.glyph().decode() {
+            DecodedGlyph::Inline(scalar) => scalar.to_string(),
+            DecodedGlyph::Cluster(id) => clusters
+                .cluster_text(id)
+                .map_or_else(String::new, str::to_owned),
+            DecodedGlyph::Continuation => String::new(),
+        });
     assert!(text.contains('\u{0301}'));
 }
 
