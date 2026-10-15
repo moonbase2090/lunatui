@@ -140,14 +140,44 @@ impl Grid {
                 col = self.put_cluster(col, y, style, grapheme, display, clusters);
                 continue;
             }
+            let mut anchor_col: Option<u16> = None;
             for ch in grapheme.chars() {
                 if col >= self.width {
                     break;
                 }
+                let width = char_width(ch);
+                if width == 0 {
+                    if let Some(lead) = anchor_col {
+                        self.attach_combining(lead, y, ch, clusters);
+                    }
+                    continue;
+                }
                 let scalar = ch.encode_utf8(&mut buf);
-                col = self.put_cluster(col, y, style, scalar, char_width(ch), clusters);
+                let lead = col;
+                col = self.put_cluster(col, y, style, scalar, width, clusters);
+                anchor_col = Some(lead);
             }
         }
+    }
+
+    fn attach_combining(
+        &mut self,
+        col: u16,
+        y: u16,
+        mark: char,
+        clusters: &mut ClusterTable,
+    ) {
+        let Some(cell) = self.get(col, y) else {
+            return;
+        };
+        if cell.meta().width == CellWidth::Continuation {
+            return;
+        }
+        let mut text = glyph_text(cell.glyph(), clusters);
+        text.push(mark);
+        let glyph = clusters.glyph_for(&text);
+        let updated = Cell::from_parts(glyph, cell.style(), cell.meta());
+        self.place(col, y, updated);
     }
 
     fn put_cluster(
