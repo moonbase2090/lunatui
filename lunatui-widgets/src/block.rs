@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{Rect, Size, Style, symbols::border, width};
+use lunatui_core::{Rect, Size, Style, clip_display_prefix, symbols::border, width};
 
 use crate::borders::{BorderType, Borders};
 use crate::padding::Padding;
@@ -310,11 +310,16 @@ impl Block {
             Alignment::Left => {
                 let mut x = band.x;
                 for (index, entry) in titles.iter().enumerate() {
-                    let w = title_width(entry);
                     if x >= band.x + band.width {
                         break;
                     }
-                    put_symbol(cx, x, band.y, &entry.text, style);
+                    let remaining = band.x + band.width - x;
+                    let text = clip_display_prefix(&entry.text, remaining);
+                    let w = str_display_width(text);
+                    if w == 0 {
+                        break;
+                    }
+                    put_symbol(cx, x, band.y, text, style);
                     x = x.saturating_add(w);
                     if index + 1 < titles.len() {
                         x = x.saturating_add(1);
@@ -330,8 +335,17 @@ impl Block {
                 let x = band.x.saturating_add(band.width.saturating_sub(total) / 2);
                 let mut cursor = x;
                 for (index, entry) in titles.iter().enumerate() {
-                    put_symbol(cx, cursor, band.y, &entry.text, style);
-                    cursor = cursor.saturating_add(title_width(entry));
+                    if cursor >= band.x + band.width {
+                        break;
+                    }
+                    let remaining = band.x + band.width - cursor;
+                    let text = clip_display_prefix(&entry.text, remaining);
+                    let w = str_display_width(text);
+                    if w == 0 {
+                        break;
+                    }
+                    put_symbol(cx, cursor, band.y, text, style);
+                    cursor = cursor.saturating_add(w);
                     if index + 1 < titles.len() {
                         cursor = cursor.saturating_add(1);
                     }
@@ -345,8 +359,17 @@ impl Block {
                     .saturating_sub(1);
                 let mut x = band.x.saturating_add(band.width.saturating_sub(total));
                 for (index, entry) in titles.iter().enumerate() {
-                    put_symbol(cx, x, band.y, &entry.text, style);
-                    x = x.saturating_add(title_width(entry));
+                    if x >= band.x + band.width {
+                        break;
+                    }
+                    let remaining = band.x + band.width - x;
+                    let text = clip_display_prefix(&entry.text, remaining);
+                    let w = str_display_width(text);
+                    if w == 0 {
+                        break;
+                    }
+                    put_symbol(cx, x, band.y, text, style);
+                    x = x.saturating_add(w);
                     if index + 1 < titles.len() {
                         x = x.saturating_add(1);
                     }
@@ -390,7 +413,11 @@ impl Widget for Block {
 }
 
 fn title_width(entry: &TitleEntry) -> u16 {
-    u16::try_from(width(&entry.text)).unwrap_or(u16::MAX)
+    str_display_width(&entry.text)
+}
+
+fn str_display_width(text: &str) -> u16 {
+    u16::try_from(width(text)).unwrap_or(u16::MAX)
 }
 
 fn put_symbol(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, style: Style) {

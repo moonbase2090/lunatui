@@ -12,6 +12,7 @@ mod grapheme;
 mod grid;
 mod size;
 mod style;
+/// Border, corner, and line glyphs for drawing widgets.
 pub mod symbols;
 mod width;
 
@@ -21,7 +22,7 @@ pub use color::Color;
 pub use diff::{ChangedRun, diff_runs, diff_runs_naive};
 pub use grapheme::{
     CLUSTER_TAG, CONTINUATION_GLYPH, ClusterId, ClusterTable, DecodedGlyph, GlyphSlot,
-    MAX_CLUSTER_IDS, cluster_display_width, text_display_width,
+    MAX_CLUSTER_IDS, clip_display_prefix, cluster_display_width, text_display_width,
 };
 pub use grid::{Grid, Rect, RowDirty};
 pub use size::Size;
