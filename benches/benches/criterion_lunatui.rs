@@ -3,8 +3,6 @@
 
 #![doc = include_str!("../README.md")]
 
-use std::io;
-
 use criterion::{Criterion, criterion_group, criterion_main};
 use lunatui_bench::scenes::lunatui::log;
 

@@ -43,6 +43,6 @@ fn main() -> io::Result<()> {
     let mut encoder = Encoder::new();
     let prev = Grid::new(width, height);
     let bytes = encoder.encode_diff(&prev, &grid, &clusters, ColorMode::NoColor);
-    io::stdout().write_all(&bytes)?;
+    io::stdout().write_all(bytes)?;
     Ok(())
 }

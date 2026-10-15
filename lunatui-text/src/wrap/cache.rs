@@ -17,7 +17,7 @@ pub struct WrapCache {
 }
 
 impl WrapCache {
-    /// Empty cache; call [`sync`] before reading rows.
+    /// Empty cache; call [`Self::sync`] before reading rows.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

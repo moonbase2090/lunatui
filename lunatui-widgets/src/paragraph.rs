@@ -87,13 +87,13 @@ impl Widget for Paragraph {
     }
 
     fn measure(&self, avail: Size) -> Size {
-        let width = avail.width.max(1);
-        let rows = self.row_index(width).len();
+        if avail.width == 0 || avail.height == 0 {
+            return Size::new(0, 0);
+        }
+        let rows = self.row_index(avail.width).len();
         Size::new(
-            width,
-            u16::try_from(rows)
-                .unwrap_or(u16::MAX)
-                .min(avail.height.max(1)),
+            avail.width,
+            u16::try_from(rows).unwrap_or(u16::MAX).min(avail.height),
         )
     }
 }

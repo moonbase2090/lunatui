@@ -68,33 +68,98 @@ fn wrap_logical_line(
         row_starts.push(base_offset);
         return;
     }
+    let graphemes: Vec<(usize, &str)> = grapheme_offsets(line).collect();
+    if graphemes.is_empty() {
+        row_starts.push(base_offset);
+        return;
+    }
     row_starts.push(base_offset);
     let mut col = 0usize;
-    for (byte, grapheme) in grapheme_offsets(line) {
-        let width = cluster_display_width(grapheme);
-        if width > max {
-            continue;
-        }
-        let is_ws = grapheme.chars().all(char::is_whitespace);
-        if is_ws {
+    let mut index = 0usize;
+    while index < graphemes.len() {
+        let (byte, grapheme) = graphemes[index];
+        if grapheme.chars().all(char::is_whitespace) {
+            let width = cluster_display_width(grapheme);
+            if width > max {
+                index += 1;
+                continue;
+            }
             if col == 0 && trim {
+                index += 1;
                 continue;
             }
             if col > 0 && col + width > max {
                 push_row_start(line, byte, trim, base_offset, row_starts);
                 col = 0;
                 if trim {
+                    index += 1;
                     continue;
                 }
             }
             col += width;
+            index += 1;
             continue;
         }
-        if col > 0 && col + width > max {
-            push_row_start(line, byte, trim, base_offset, row_starts);
+        let word_byte = byte;
+        let mut word_width = 0usize;
+        let mut end = index;
+        while end < graphemes.len() {
+            let (_, g) = graphemes[end];
+            if g.chars().all(char::is_whitespace) {
+                break;
+            }
+            let w = cluster_display_width(g);
+            if w > max {
+                break;
+            }
+            word_width += w;
+            end += 1;
+        }
+        if end == index {
+            index += 1;
+            continue;
+        }
+        if col > 0 && col + word_width > max {
+            push_row_start(line, word_byte, trim, base_offset, row_starts);
             col = 0;
         }
-        col += width;
+        if word_width > max {
+            hard_break_word(
+                &graphemes[index..end],
+                line,
+                trim,
+                base_offset,
+                max,
+                row_starts,
+                &mut col,
+            );
+            index = end;
+            continue;
+        }
+        col += word_width;
+        index = end;
+    }
+}
+
+fn hard_break_word(
+    graphemes: &[(usize, &str)],
+    line: &str,
+    trim: bool,
+    base_offset: usize,
+    max: usize,
+    row_starts: &mut Vec<usize>,
+    col: &mut usize,
+) {
+    for &(byte, grapheme) in graphemes {
+        let width = cluster_display_width(grapheme);
+        if width > max {
+            continue;
+        }
+        if *col > 0 && *col + width > max {
+            push_row_start(line, byte, trim, base_offset, row_starts);
+            *col = 0;
+        }
+        *col += width;
     }
 }
 
