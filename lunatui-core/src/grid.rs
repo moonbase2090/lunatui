@@ -160,13 +160,7 @@ impl Grid {
         }
     }
 
-    fn attach_combining(
-        &mut self,
-        col: u16,
-        y: u16,
-        mark: char,
-        clusters: &mut ClusterTable,
-    ) {
+    fn attach_combining(&mut self, col: u16, y: u16, mark: char, clusters: &mut ClusterTable) {
         let Some(cell) = self.get(col, y) else {
             return;
         };
