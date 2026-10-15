@@ -147,17 +147,29 @@ impl TextView {
         if area.width == 0 || area.height == 0 {
             return;
         }
-        let wrap = self.paragraph.wrap.unwrap_or(Wrap { trim: true });
-        self.cache.sync(self.paragraph.text(), area.width, wrap);
-        paint_rows(
-            self.cache.index(),
-            self.paragraph.text(),
-            area,
-            self.paragraph.scroll,
-            self.paragraph.wrap.is_some(),
-            self.paragraph.style,
-            cx,
-        );
+        if let Some(wrap) = self.paragraph.wrap {
+            self.cache.sync(self.paragraph.text(), area.width, wrap);
+            paint_rows(
+                self.cache.index(),
+                self.paragraph.text(),
+                area,
+                self.paragraph.scroll,
+                true,
+                self.paragraph.style,
+                cx,
+            );
+        } else {
+            let index = unwrap_rows(self.paragraph.text());
+            paint_rows(
+                &index,
+                self.paragraph.text(),
+                area,
+                self.paragraph.scroll,
+                false,
+                self.paragraph.style,
+                cx,
+            );
+        }
     }
 }
 
@@ -174,7 +186,7 @@ fn paint_rows(
     text: &str,
     area: Rect,
     scroll: Scroll,
-    wrapped: bool,
+    _wrapped: bool,
     style: Style,
     cx: &mut RenderCx<'_>,
 ) {
@@ -183,14 +195,8 @@ fn paint_rows(
     for row in 0..area.height {
         let visual = first_row + usize::from(row);
         let line = index.row_text(text, visual).unwrap_or("");
-        let clipped = if wrapped {
-            line
-        } else {
-            clip_display_prefix(line, area.width)
-        };
-        let draw = skip_columns(clipped, h_scroll);
-        let remaining = area.width;
-        let draw = clip_display_prefix(draw, remaining);
+        let line = skip_columns(line, h_scroll);
+        let draw = clip_display_prefix(line, area.width);
         cx.put_str(area.x, area.y + row, draw, style);
     }
 }

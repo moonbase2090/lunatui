@@ -11,7 +11,7 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
-use ratatui::widgets::{Paragraph as RatParagraph, Widget as RatWidget, Wrap as RatWrap};
+use ratatui::widgets::{Paragraph as RatParagraph, Wrap as RatWrap};
 
 fn lunatui_lines(paragraph: &Paragraph, width: u16, height: u16) -> Vec<String> {
     let theme = Theme::builtin(Variant::Dark);
@@ -42,6 +42,17 @@ fn wrapped_log_line_matches_ratatui() {
     let text = "[0001] lint warning in src/lib.rs line 1 consider removing the borrow here\n";
     let width = 40;
     let height = 4;
+    let paragraph = Paragraph::new(text).wrap(Wrap { trim: true });
+    let ours = lunatui_lines(&paragraph, width, height);
+    let theirs = ratatui_lines(text, width, height);
+    assert_eq!(ours, theirs);
+}
+
+#[test]
+fn overlong_word_wrap_matches_ratatui() {
+    let text = "abcdef\n";
+    let width = 3;
+    let height = 3;
     let paragraph = Paragraph::new(text).wrap(Wrap { trim: true });
     let ours = lunatui_lines(&paragraph, width, height);
     let theirs = ratatui_lines(text, width, height);

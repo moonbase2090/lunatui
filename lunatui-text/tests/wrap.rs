@@ -20,3 +20,20 @@ fn empty_line_after_newline_has_a_row() {
     let index = wrap_rows(text, 10, Wrap { trim: true });
     assert!(index.len() >= 3);
 }
+
+#[test]
+fn overlong_word_splits_across_rows() {
+    let index = wrap_rows("abcdef", 3, Wrap { trim: true });
+    assert_eq!(index.len(), 2);
+    assert_eq!(index.row_text("abcdef", 0), Some("abc"));
+    assert_eq!(index.row_text("abcdef", 1), Some("def"));
+}
+
+#[test]
+fn exact_width_word_without_trim_does_not_add_empty_row() {
+    let index = wrap_rows("abcd e", 4, Wrap { trim: false });
+    let rows: Vec<_> = (0..index.len())
+        .map(|row| index.row_text("abcd e", row).unwrap_or(""))
+        .collect();
+    assert!(!rows.iter().any(|row| row.is_empty()));
+}

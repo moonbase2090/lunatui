@@ -1,8 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Word-wrapping and cached row indices (PRD §2.5).
-
 extern crate alloc;
 
 use alloc::vec::Vec;
@@ -70,79 +68,68 @@ fn wrap_logical_line(
         row_starts.push(base_offset);
         return;
     }
-    let graphemes: Vec<(usize, &str)> = UnicodeSegmentation::graphemes(line, true)
-        .scan(0usize, |byte, g| {
-            let start = *byte;
-            *byte += g.len();
-            Some((start, g))
-        })
-        .collect();
-    if graphemes.is_empty() {
-        row_starts.push(base_offset);
-        return;
-    }
     row_starts.push(base_offset);
     let mut col = 0usize;
-    let mut index = 0usize;
-    while index < graphemes.len() {
-        let (word_byte, word_width, after_word) = next_word(&graphemes, index);
-        let (_ws_byte, ws_width, after_ws) = next_whitespace(&graphemes, after_word);
-        let add = if col == 0 && trim {
-            word_width
-        } else {
-            ws_width + word_width
-        };
-        if col > 0 && col + add > max {
-            let row_byte = word_byte;
-            row_starts.push(base_offset + row_byte);
-            col = word_width;
-            index = after_word;
+    for (byte, grapheme) in grapheme_offsets(line) {
+        let width = cluster_display_width(grapheme);
+        if width > max {
             continue;
         }
-        if col == 0 && trim {
-            col += word_width;
-        } else {
-            col += ws_width + word_width;
+        let is_ws = grapheme.chars().all(char::is_whitespace);
+        if is_ws {
+            if col == 0 && trim {
+                continue;
+            }
+            if col > 0 && col + width > max {
+                push_row_start(line, byte, trim, base_offset, row_starts);
+                col = 0;
+                if trim {
+                    continue;
+                }
+            }
+            col += width;
+            continue;
         }
-        if col > max && word_width <= max {
-            row_starts.push(base_offset + word_byte);
-            col = word_width;
+        if col > 0 && col + width > max {
+            push_row_start(line, byte, trim, base_offset, row_starts);
+            col = 0;
         }
-        index = after_ws;
+        col += width;
     }
 }
 
-fn next_word(graphemes: &[(usize, &str)], start: usize) -> (usize, usize, usize) {
-    let mut index = start;
-    let mut width = 0usize;
-    while index < graphemes.len() {
-        let (_byte, g) = graphemes[index];
-        if g.chars().all(char::is_whitespace) {
-            break;
-        }
-        width += cluster_display_width(g);
-        index += 1;
-        if index >= graphemes.len() {
-            return (graphemes[start].0, width, index);
+fn push_row_start(
+    line: &str,
+    byte_in_line: usize,
+    trim: bool,
+    base_offset: usize,
+    row_starts: &mut Vec<usize>,
+) {
+    let mut at = byte_in_line.min(line.len());
+    if trim {
+        for (byte, grapheme) in grapheme_offsets(line) {
+            if byte < byte_in_line {
+                continue;
+            }
+            if grapheme.chars().all(char::is_whitespace) {
+                at = byte + grapheme.len();
+            } else {
+                break;
+            }
         }
     }
-    let byte = graphemes.get(start).map_or(0, |(b, _)| *b);
-    (byte, width, index)
+    let offset = base_offset + at;
+    if row_starts.last().copied() != Some(offset) {
+        row_starts.push(offset);
+    }
 }
 
-fn next_whitespace(graphemes: &[(usize, &str)], start: usize) -> (usize, usize, usize) {
-    let mut index = start;
-    let mut width = 0usize;
-    let byte = graphemes.get(start).map_or(0, |(b, _)| *b);
-    while index < graphemes.len() {
-        let (_, g) = graphemes[index];
-        if !g.chars().all(char::is_whitespace) {
-            break;
-        }
-        width += cluster_display_width(g);
-        index += 1;
-    }
-    (byte, width, index)
+fn grapheme_offsets(line: &str) -> impl Iterator<Item = (usize, &str)> {
+    UnicodeSegmentation::graphemes(line, true).scan(0usize, |byte, g| {
+        let start = *byte;
+        *byte += g.len();
+        Some((start, g))
+    })
 }
 
 /// Re-wraps `text` without caching (for tests and cache validation).
