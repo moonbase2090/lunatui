@@ -18,6 +18,17 @@ color-profiles = ["lunatui-theme/color-profiles"]
 lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
 lunatui-theme = { version = "0.0.0", path = "../lunatui-theme" }
 
+[dev-dependencies]
+ratatui = "=0.30.2"
+
+[[test]]
+name = "block"
+path = "tests/block.rs"
+
+[[test]]
+name = "block_ratatui"
+path = "tests/block_ratatui.rs"
+
 [[test]]
 name = "status_dot_color_profiles"
 path = "tests/status_dot_color_profiles.rs"

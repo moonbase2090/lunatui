@@ -12,6 +12,7 @@ mod grapheme;
 mod grid;
 mod size;
 mod style;
+pub mod symbols;
 mod width;
 
 pub use attr::{Attrs, UnderlineStyle};

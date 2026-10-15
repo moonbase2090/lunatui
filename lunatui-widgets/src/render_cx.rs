@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{ClusterTable, Color, Grid, Style};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Token};
 
 #[cfg(feature = "color-profiles")]
@@ -81,5 +81,10 @@ impl<'a> RenderCx<'a> {
     /// Does not clip to a widget area; callers must stay inside their `Rect` (see ADR 0004).
     pub fn put_str(&mut self, x: u16, y: u16, text: &str, style: Style) {
         self.grid.put_str(x, y, style, text, self.clusters);
+    }
+
+    /// Applies `style` to every cell in `area`, keeping glyphs unchanged.
+    pub fn set_style(&mut self, area: Rect, style: Style) {
+        self.grid.set_style(area, style);
     }
 }
