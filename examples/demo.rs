@@ -631,21 +631,31 @@ fn print_porting_snapshot(geometry: Geometry) {
         .title("porting guide L2")
         .render(Rect::new(0, 0, width, height), &mut cx);
     let half = width / 2;
+    let panel_h = 8.min(height.saturating_sub(2));
+    let left_w = half.saturating_sub(1).max(1);
+    let right_w = width.saturating_sub(half).saturating_sub(1).max(1);
+    let inner_w = width.saturating_sub(2).max(1);
     Block::bordered()
         .title("native")
-        .render(Rect::new(1, 1, half - 1, 8), &mut cx);
+        .render(Rect::new(1, 1, left_w, panel_h), &mut cx);
     RatatuiWidget::new(RatBlock::bordered().title("ratatui"))
-        .render(Rect::new(half, 1, half - 1, 8), &mut cx);
+        .render(Rect::new(half, 1, right_w, panel_h), &mut cx);
     let para = Line::from(vec![
         Span::styled("port ", Style::default().add_modifier(Modifier::BOLD)),
         Span::styled("text", Style::default().fg(Color::Green)),
     ]);
-    RatatuiWidget::new(Paragraph::new(para)).render(Rect::new(1, 10, width - 2, 4), &mut cx);
+    RatatuiWidget::new(Paragraph::new(para)).render(
+        Rect::new(1, 10.min(height.saturating_sub(1)), inner_w, 4.min(height.saturating_sub(10))),
+        &mut cx,
+    );
     let list = RatatuiStatefulWidget::new(
         List::new(vec![ListItem::new("one"), ListItem::new("two")]).highlight_symbol("> "),
         ListState::default().with_selected(Some(0)),
     );
-    list.render(Rect::new(1, 15, width - 2, height.saturating_sub(17)), &mut cx);
+    list.render(
+        Rect::new(1, 15.min(height.saturating_sub(1)), inner_w, height.saturating_sub(17).max(1)),
+        &mut cx,
+    );
     for row in 0..height {
         println!("{}", grid.row_display(row, &clusters));
     }
@@ -753,7 +763,7 @@ mod tests {
     use lunatui_term::{Event, KeyCode, KeyEvent};
     use lunatui_widgets::Block;
 
-    use super::{Counter, Hello, nearest_i16, parse_geometry};
+    use super::{Counter, Geometry, Hello, nearest_i16, parse_geometry, print_porting_snapshot};
 
     #[test]
     fn hello_renders_title_glyph() {
@@ -783,6 +793,14 @@ mod tests {
     fn nearest_i16_rounds_negative_spring_values() {
         assert_eq!(nearest_i16(-0.8), -1);
         assert_eq!(nearest_i16(-0.2), 0);
+    }
+
+    #[test]
+    fn porting_snapshot_handles_minimal_geometry() {
+        print_porting_snapshot(Geometry {
+            width: 1,
+            height: 1,
+        });
     }
 
     #[test]
