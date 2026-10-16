@@ -33,6 +33,19 @@ fn gauge_and_spinner_render() {
 }
 
 #[test]
+fn text_input_caret_aligns_after_wide_grapheme() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    let value = "界abcd";
+    let cursor = "界ab".len();
+    TextInput::new(value, cursor).render(Rect::new(0, 0, 4, 1), &mut cx);
+    let row = grid.row_display(0, &clusters);
+    assert_eq!(row.find('│'), Some(2));
+}
+
+#[test]
 fn text_input_renders_cursor() {
     let theme = Theme::builtin(Variant::Dark);
     let mut grid = Grid::new(10, 1);

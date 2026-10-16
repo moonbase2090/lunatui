@@ -68,10 +68,11 @@ impl Widget for TextInput {
         let cursor_col = display_col_at_byte(&self.value, self.cursor);
         let start_col = window_start_col(cursor_col, inner.width);
         let start_byte = byte_at_display_col(&self.value, start_col);
+        let window_col = display_col_at_byte(&self.value, start_byte);
         let window = self.value.get(start_byte..).unwrap_or("");
         let visible = clip_display_prefix(window, inner.width);
         cx.put_str(inner.x, y, visible, self.style);
-        let rel = cursor_col.saturating_sub(start_col);
+        let rel = cursor_col.saturating_sub(window_col);
         let col = u16::try_from(rel).unwrap_or(0);
         if col < inner.width {
             cx.put_str(inner.x + col, y, "│", self.cursor_style);

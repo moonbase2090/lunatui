@@ -99,6 +99,9 @@ fn thumb_position(offset: usize, content: usize, viewport: usize, track: usize, 
         return 0;
     }
     let offset = offset.min(scrollable);
-    let y = offset.saturating_mul(max_y) / scrollable;
-    u16::try_from(y).unwrap_or(0)
+    if offset >= scrollable {
+        return u16::try_from(max_y).unwrap_or(0);
+    }
+    let y = (offset as u128) * (max_y as u128) / (scrollable as u128);
+    u16::try_from(usize::try_from(y).unwrap_or(max_y)).unwrap_or(0)
 }
