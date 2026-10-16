@@ -52,7 +52,7 @@ fn main() -> io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{render_frame};
+    use super::render_frame;
 
     #[test]
     fn list_selection_visible() {

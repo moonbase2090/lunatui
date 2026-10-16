@@ -612,7 +612,7 @@ fn millis(duration: Duration) -> String {
     format!("{:.3} ms", duration.as_secs_f64() * 1000.0)
 }
 
-fn print_porting_snapshot(geometry: Geometry) {
+fn render_porting_snapshot(geometry: Geometry) -> (lunatui_core::Grid, lunatui_core::ClusterTable) {
     use lunatui_core::{ClusterTable, Grid, Rect};
     use lunatui_ratatui::{RatatuiStatefulWidget, RatatuiWidget};
     use lunatui_theme::{Theme, Variant};
@@ -645,7 +645,12 @@ fn print_porting_snapshot(geometry: Geometry) {
         Span::styled("text", Style::default().fg(Color::Green)),
     ]);
     RatatuiWidget::new(Paragraph::new(para)).render(
-        Rect::new(1, 10.min(height.saturating_sub(1)), inner_w, 4.min(height.saturating_sub(10))),
+        Rect::new(
+            1,
+            10.min(height.saturating_sub(1)),
+            inner_w,
+            4.min(height.saturating_sub(10)),
+        ),
         &mut cx,
     );
     let list = RatatuiStatefulWidget::new(
@@ -653,10 +658,20 @@ fn print_porting_snapshot(geometry: Geometry) {
         ListState::default().with_selected(Some(0)),
     );
     list.render(
-        Rect::new(1, 15.min(height.saturating_sub(1)), inner_w, height.saturating_sub(17).max(1)),
+        Rect::new(
+            1,
+            15.min(height.saturating_sub(1)),
+            inner_w,
+            height.saturating_sub(17).max(1),
+        ),
         &mut cx,
     );
-    for row in 0..height {
+    (grid, clusters)
+}
+
+fn print_porting_snapshot(geometry: Geometry) {
+    let (grid, clusters) = render_porting_snapshot(geometry);
+    for row in 0..grid.height() {
         println!("{}", grid.row_display(row, &clusters));
     }
 }
@@ -763,7 +778,9 @@ mod tests {
     use lunatui_term::{Event, KeyCode, KeyEvent};
     use lunatui_widgets::Block;
 
-    use super::{Counter, Geometry, Hello, nearest_i16, parse_geometry, print_porting_snapshot};
+    use super::{
+        Counter, Geometry, Hello, nearest_i16, parse_geometry, render_porting_snapshot,
+    };
 
     #[test]
     fn hello_renders_title_glyph() {
@@ -797,10 +814,16 @@ mod tests {
 
     #[test]
     fn porting_snapshot_handles_minimal_geometry() {
-        print_porting_snapshot(Geometry {
+        let (grid, clusters) = render_porting_snapshot(Geometry {
             width: 1,
             height: 1,
         });
+        assert_eq!(grid.width(), 1);
+        assert_eq!(grid.height(), 1);
+        assert!(
+            !grid.row_display(0, &clusters).is_empty(),
+            "1x1 porting frame should paint the outer block"
+        );
     }
 
     #[test]
