@@ -19,7 +19,7 @@ pub use caps::{
     Multiplexer, PROBE_BUDGET, PrivateMode, ProbeEnv, ProbeReply, Protocols, QUERIES,
     RecordedTerminal, TermIdentity, WidthPolicy,
 };
-pub use encode::{ColorMode, Encoder};
+pub use encode::{ColorMode, Encoder, write_cursor_state};
 pub use input::{
     Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
     MouseUnit, Parser, Paste, Scroll, fuzz_input_parser,

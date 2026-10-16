@@ -1,6 +1,16 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+/// Appends DECTCEM show/hide and a CUP move for the terminal cursor after a frame.
+pub fn write_cursor_state(buffer: &mut Vec<u8>, col: u16, row: u16, visible: bool) {
+    if visible {
+        buffer.extend_from_slice(b"\x1b[?25h");
+        write_cup(buffer, col, row);
+    } else {
+        buffer.extend_from_slice(b"\x1b[?25l");
+    }
+}
+
 pub(crate) fn write_cup(buffer: &mut Vec<u8>, col: u16, row: u16) {
     buffer.extend_from_slice(b"\x1b[");
     push_u16(buffer, row + 1);

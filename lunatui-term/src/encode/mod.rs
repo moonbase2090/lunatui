@@ -6,6 +6,7 @@ mod sgr;
 
 use lunatui_core::{CellWidth, ClusterTable, Color, DecodedGlyph, Grid, diff_runs};
 
+pub use cursor::write_cursor_state;
 use cursor::write_cup;
 use sgr::{Pen, write_sgr_delta};
 

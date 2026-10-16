@@ -4,7 +4,7 @@
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Style};
-use lunatui_term::{ColorMode, Encoder};
+use lunatui_term::{ColorMode, Encoder, write_cursor_state};
 use ratatui::backend::{Backend, ClearType, WindowSize};
 use ratatui::buffer::Cell as RCell;
 use ratatui::layout::{Position, Size};
@@ -75,6 +75,7 @@ impl<W: Write> LunatuiBackend<W> {
     fn reset_grid(&mut self) {
         self.clusters = ClusterTable::new();
         self.grid = Grid::new(self.width, self.height);
+        self.previous = Grid::new(self.width, self.height);
     }
 }
 
@@ -178,10 +179,18 @@ impl<W: Write> Backend for LunatuiBackend<W> {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        let bytes =
-            self.encoder
-                .encode_diff(&self.previous, &self.grid, &self.clusters, self.color_mode);
-        self.writer.write_all(bytes)?;
+        let mut bytes = self
+            .encoder
+            .encode_diff(&self.previous, &self.grid, &self.clusters, self.color_mode)
+            .to_vec();
+        write_cursor_state(
+            &mut bytes,
+            self.cursor.x,
+            self.cursor.y,
+            self.cursor_visible,
+        );
+        self.writer.write_all(&bytes)?;
+        self.writer.flush()?;
         self.bytes_flushed += u64::try_from(bytes.len()).unwrap_or(u64::MAX);
         self.previous = self.grid.clone();
         Ok(())

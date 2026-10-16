@@ -603,28 +603,28 @@ fn millis(duration: Duration) -> String {
 fn print_ratatui_bridge_snapshot(geometry: Geometry) -> io::Result<()> {
     use lunatui_bench::scenes::ratatui::dashboard::{self, Model};
     use lunatui_ratatui::LunatuiBackend;
+    use ratatui::backend::Backend;
+    use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
-    use ratatui::{Terminal, TerminalOptions, Viewport};
 
     let width = geometry.width.min(80);
     let height = geometry.height.min(24);
     let area = Rect::new(0, 0, width, height);
+    let mut frame = Buffer::empty(area);
+    dashboard::render(&Model::new(), area, &mut frame);
     let mut bytes = Vec::new();
-    {
-        let backend = LunatuiBackend::new(width, height, &mut bytes);
-        let options = TerminalOptions {
-            viewport: Viewport::Fixed(area),
-        };
-        let mut terminal = Terminal::with_options(backend, options)?;
-        terminal.draw(|frame| {
-            dashboard::render(&Model::new(), frame.area(), frame.buffer_mut());
-        })?;
-        terminal.flush()?;
+    let mut backend = LunatuiBackend::new(width, height, &mut bytes);
+    for y in 0..height {
+        for x in 0..width {
+            let cell = &frame[(x, y)];
+            backend.draw(std::iter::once((x, y, cell)))?;
+        }
     }
-    println!(
-        "ratatui-bridge dashboard {width}x{height} encoded_bytes={}",
-        bytes.len()
-    );
+    backend.flush()?;
+    for row in 0..height {
+        println!("{}", backend.grid().row_display(row, backend.clusters()));
+    }
+    println!("encoded_bytes={}", backend.bytes_flushed());
     Ok(())
 }
 
