@@ -6,6 +6,20 @@ use std::fmt::Write as _;
 use lunatui_core::{CellWidth, ClusterTable, Grid};
 
 /// Serializes `grid` for styled snapshot tests: text plus run-length fg/bg/attr layers.
+///
+/// # Examples
+///
+/// ```
+/// use lunatui_core::{ClusterTable, Color, Grid, Style};
+/// use lunatui_test::styled_snapshot;
+///
+/// let mut grid = Grid::new(4, 1);
+/// let mut clusters = ClusterTable::new();
+/// grid.put_str(0, 0, Style::new().fg(Color::Indexed(2)), "ok", &mut clusters);
+/// let snap = styled_snapshot(&grid, &clusters);
+/// assert!(snap.starts_with("@text\n"));
+/// assert!(snap.contains("ok"));
+/// ```
 #[must_use]
 pub fn styled_snapshot(grid: &Grid, clusters: &ClusterTable) -> String {
     let mut out = String::from("@text\n");

@@ -1,6 +1,6 @@
 # lunatui examples
 
-Each example runs from the repository root with one command (PRD M13). Every feature PR adds or extends an example here.
+Each example runs from the repository root with one command (PRD M13). The **v0.1.0 preview** is demonstrated by `hello_box`, `gallery`, `demo`, and `live_dashboard`; see [Getting started](../docs/getting-started.md).
 
 | Example | Command | Shows | Last changed |
 |---|---|---|---|

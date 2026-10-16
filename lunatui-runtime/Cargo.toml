@@ -12,8 +12,8 @@ default = []
 app = []
 
 [dependencies]
-lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
-lunatui-term = { version = "0.0.0", path = "../lunatui-term" }
+lunatui-core = { version = "0.1.0", path = "../lunatui-core" }
+lunatui-term = { version = "0.1.0", path = "../lunatui-term" }
 
 [dev-dependencies]
 proptest = "1.9"
