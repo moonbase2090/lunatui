@@ -41,6 +41,10 @@ name = "table"
 path = "tests/table.rs"
 
 [[test]]
+name = "chrome"
+path = "tests/chrome.rs"
+
+[[test]]
 name = "status_dot_color_profiles"
 path = "tests/status_dot_color_profiles.rs"
 required-features = ["color-profiles"]
