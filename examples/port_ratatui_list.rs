@@ -4,7 +4,6 @@
 #![doc = include_str!("README.md")]
 
 use std::env;
-use std::io;
 
 use lunatui_core::{ClusterTable, Grid, Rect};
 use lunatui_ratatui::RatatuiStatefulWidget;
@@ -37,17 +36,16 @@ fn render_frame() -> (Grid, ClusterTable) {
     (grid, clusters)
 }
 
-fn main() -> io::Result<()> {
+fn main() {
     let snapshot = env::args().any(|arg| arg == "--snapshot");
     let (grid, clusters) = render_frame();
     if snapshot {
         for row in 0..HEIGHT {
             println!("{}", grid.row_display(row, &clusters));
         }
-        return Ok(());
+        return;
     }
     eprintln!("pipe stdout or pass --snapshot");
-    Ok(())
 }
 
 #[cfg(test)]
