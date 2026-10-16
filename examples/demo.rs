@@ -778,9 +778,7 @@ mod tests {
     use lunatui_term::{Event, KeyCode, KeyEvent};
     use lunatui_widgets::Block;
 
-    use super::{
-        Counter, Geometry, Hello, nearest_i16, parse_geometry, render_porting_snapshot,
-    };
+    use super::{Counter, Geometry, Hello, nearest_i16, parse_geometry, render_porting_snapshot};
 
     #[test]
     fn hello_renders_title_glyph() {
@@ -820,9 +818,10 @@ mod tests {
         });
         assert_eq!(grid.width(), 1);
         assert_eq!(grid.height(), 1);
+        let row = grid.row_display(0, &clusters);
         assert!(
-            !grid.row_display(0, &clusters).is_empty(),
-            "1x1 porting frame should paint the outer block"
+            row.contains('┘') || row.contains('┌') || row.contains('│') || row.contains('─'),
+            "1x1 porting frame should paint block border glyphs, got: {row:?}"
         );
     }
 
