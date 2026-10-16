@@ -3,7 +3,7 @@
 
 use std::io::{self, Write};
 
-use lunatui_core::{ClusterTable, Grid, Style};
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
 use lunatui_term::{ColorMode, Encoder, write_cursor_state};
 use ratatui::backend::{Backend, ClearType, WindowSize};
 use ratatui::buffer::Cell as RCell;
@@ -75,7 +75,9 @@ impl<W: Write> LunatuiBackend<W> {
     fn reset_grid(&mut self) {
         self.clusters = ClusterTable::new();
         self.grid = Grid::new(self.width, self.height);
-        self.previous = Grid::new(self.width, self.height);
+        let blank = Style::new();
+        let area = Rect::new(0, 0, self.width, self.height);
+        self.grid.fill(area, blank, ' ', &mut self.clusters);
     }
 }
 

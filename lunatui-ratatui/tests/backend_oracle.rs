@@ -174,6 +174,35 @@ fn paint_buffer<W: io::Write>(backend: &mut LunatuiBackend<W>, buffer: &Buffer) 
 }
 
 #[test]
+fn clear_then_flush_erases_prior_frame() -> io::Result<()> {
+    let area = Rect::new(0, 0, 8, 2);
+    let mut frame = Buffer::empty(area);
+    frame[(0, 0)].set_symbol("X");
+    let mut bytes = Vec::new();
+    let mut backend = LunatuiBackend::new(area.width, area.height, &mut bytes)
+        .with_color_mode(ColorMode::TrueColor);
+    paint_buffer(&mut backend, &frame)?;
+    backend.flush()?;
+    let after_first = backend.bytes_flushed();
+    assert!(after_first > 10, "expected nonblank frame bytes");
+    backend.clear()?;
+    backend.flush()?;
+    assert!(
+        backend.bytes_flushed() > after_first,
+        "clear+flush must emit terminal updates"
+    );
+    drop(backend);
+    let mut oracle = Oracle::new(area.height, area.width);
+    oracle.process(&bytes);
+    assert_eq!(
+        oracle.contents().trim(),
+        "",
+        "terminal should be blank after clear"
+    );
+    Ok(())
+}
+
+#[test]
 fn terminal_draw_flush_path() -> io::Result<()> {
     set_color_output(ColorOutput::Enabled);
     let mut bytes = Vec::new();
