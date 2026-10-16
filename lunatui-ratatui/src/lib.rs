@@ -5,6 +5,9 @@
 
 mod backend;
 mod convert;
+mod memo;
+mod widget;
 
 pub use backend::LunatuiBackend;
 pub use convert::{buffer_row_text, grid_from_buffer, map_color};
+pub use widget::{RatatuiStatefulWidget, RatatuiWidget};

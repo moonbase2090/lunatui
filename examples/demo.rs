@@ -35,6 +35,7 @@ fn main() -> io::Result<()> {
     let motion = args.iter().any(|arg| arg == "--motion");
     let snapshot = args.iter().any(|arg| arg == "--snapshot");
     let ratatui_bridge = args.iter().any(|arg| arg == "--ratatui-bridge");
+    let ratatui_widget = args.iter().any(|arg| arg == "--ratatui-widget");
     let flag_args: Vec<String> = args
         .iter()
         .filter(|arg| {
@@ -42,12 +43,15 @@ fn main() -> io::Result<()> {
                 && *arg != "--motion"
                 && *arg != "--snapshot"
                 && *arg != "--ratatui-bridge"
+                && *arg != "--ratatui-widget"
         })
         .cloned()
         .collect();
     let geometry = parse_geometry(&flag_args)?;
     if snapshot {
-        if ratatui_bridge {
+        if ratatui_widget {
+            print_ratatui_widget_snapshot(geometry);
+        } else if ratatui_bridge {
             print_ratatui_bridge_snapshot(geometry)?;
         } else {
             print_snapshot(counter, motion, geometry);
@@ -598,6 +602,38 @@ fn bench_summary(width: u16, height: u16, times: FrameTimes, profile: &str, labe
 
 fn millis(duration: Duration) -> String {
     format!("{:.3} ms", duration.as_secs_f64() * 1000.0)
+}
+
+fn print_ratatui_widget_snapshot(geometry: Geometry) {
+    use lunatui_core::{ClusterTable, Grid, Rect};
+    use lunatui_ratatui::RatatuiWidget;
+    use lunatui_theme::{Theme, Variant};
+    use lunatui_widgets::{Block, RenderCx, Widget};
+    use ratatui::style::Color;
+    use ratatui::widgets::{Gauge, Paragraph};
+
+    let width = geometry.width.min(80);
+    let height = geometry.height.min(24);
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(width, height);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Block::bordered()
+        .title("ratatui L2")
+        .render(Rect::new(0, 0, width, height), &mut cx);
+    let inner = Rect::new(2, 1, width.saturating_sub(4), height.saturating_sub(4));
+    RatatuiWidget::new(
+        Gauge::default()
+            .percent(72)
+            .label("72%")
+            .gauge_style(ratatui::style::Style::default().fg(Color::Cyan)),
+    )
+    .render(inner, &mut cx);
+    RatatuiWidget::new(Paragraph::new("L2 widget bridge (RatatuiWidget)"))
+        .render(Rect::new(2, inner.y + 2, inner.width, 1), &mut cx);
+    for row in 0..height {
+        println!("{}", grid.row_display(row, &clusters));
+    }
 }
 
 fn print_ratatui_bridge_snapshot(geometry: Geometry) -> io::Result<()> {
