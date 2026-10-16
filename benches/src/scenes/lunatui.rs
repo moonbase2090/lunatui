@@ -3,3 +3,5 @@
 
 /// Lunatui render paths for PRD §6.1 scenes.
 pub mod log;
+/// Virtualized checks table (ratatui table scene parity).
+pub mod table;

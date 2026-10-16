@@ -879,6 +879,7 @@ dependencies = [
  "criterion",
  "gungraun",
  "lunatui-core",
+ "lunatui-layout",
  "lunatui-text",
  "lunatui-theme",
  "lunatui-widgets",
@@ -972,6 +973,7 @@ name = "lunatui-widgets"
 version = "0.0.0"
 dependencies = [
  "lunatui-core",
+ "lunatui-layout",
  "lunatui-text",
  "lunatui-theme",
  "ratatui",

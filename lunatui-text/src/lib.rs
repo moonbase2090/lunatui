@@ -6,5 +6,9 @@
 
 extern crate alloc;
 
+/// Virtualized row access for lists and tables.
+pub mod source;
 /// Word wrap and [`WrapCache`](wrap::WrapCache).
 pub mod wrap;
+
+pub use source::{RowBuilder, RowSource, SliceSource, VecSource};
