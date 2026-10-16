@@ -2,3 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #![doc = include_str!("../README.md")]
+
+mod backend;
+mod convert;
+
+pub use backend::LunatuiBackend;
+pub use convert::map_color;

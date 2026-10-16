@@ -1,0 +1,2 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760630000, "title": "demo_ratatui_bridge", "command": "cargo run -q --example demo --features app -- --ratatui-bridge --snapshot --width 80 --height 24"}
+[0.0, "o", "ratatui-bridge dashboard 80x24 encoded_bytes=7457"]
