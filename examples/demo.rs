@@ -37,6 +37,7 @@ fn main() -> io::Result<()> {
     let ratatui_bridge = args.iter().any(|arg| arg == "--ratatui-bridge");
     let ratatui_widget = args.iter().any(|arg| arg == "--ratatui-widget");
     let ratatui_style = args.iter().any(|arg| arg == "--ratatui-style");
+    let porting = args.iter().any(|arg| arg == "--porting");
     let flag_args: Vec<String> = args
         .iter()
         .filter(|arg| {
@@ -46,12 +47,15 @@ fn main() -> io::Result<()> {
                 && *arg != "--ratatui-bridge"
                 && *arg != "--ratatui-widget"
                 && *arg != "--ratatui-style"
+                && *arg != "--porting"
         })
         .cloned()
         .collect();
     let geometry = parse_geometry(&flag_args)?;
     if snapshot {
-        if ratatui_style {
+        if porting {
+            print_porting_snapshot(geometry);
+        } else if ratatui_style {
             print_ratatui_style_snapshot(geometry);
         } else if ratatui_widget {
             print_ratatui_widget_snapshot(geometry);
@@ -606,6 +610,45 @@ fn bench_summary(width: u16, height: u16, times: FrameTimes, profile: &str, labe
 
 fn millis(duration: Duration) -> String {
     format!("{:.3} ms", duration.as_secs_f64() * 1000.0)
+}
+
+fn print_porting_snapshot(geometry: Geometry) {
+    use lunatui_core::{ClusterTable, Grid, Rect};
+    use lunatui_ratatui::{RatatuiStatefulWidget, RatatuiWidget};
+    use lunatui_theme::{Theme, Variant};
+    use lunatui_widgets::{Block, RenderCx, Widget};
+    use ratatui::style::{Color, Modifier, Style};
+    use ratatui::text::{Line, Span};
+    use ratatui::widgets::{Block as RatBlock, List, ListItem, ListState, Paragraph};
+
+    let width = geometry.width.min(80);
+    let height = geometry.height.min(24);
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(width, height);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Block::bordered()
+        .title("porting guide L2")
+        .render(Rect::new(0, 0, width, height), &mut cx);
+    let half = width / 2;
+    Block::bordered()
+        .title("native")
+        .render(Rect::new(1, 1, half - 1, 8), &mut cx);
+    RatatuiWidget::new(RatBlock::bordered().title("ratatui"))
+        .render(Rect::new(half, 1, half - 1, 8), &mut cx);
+    let para = Line::from(vec![
+        Span::styled("port ", Style::default().add_modifier(Modifier::BOLD)),
+        Span::styled("text", Style::default().fg(Color::Green)),
+    ]);
+    RatatuiWidget::new(Paragraph::new(para)).render(Rect::new(1, 10, width - 2, 4), &mut cx);
+    let list = RatatuiStatefulWidget::new(
+        List::new(vec![ListItem::new("one"), ListItem::new("two")]).highlight_symbol("> "),
+        ListState::default().with_selected(Some(0)),
+    );
+    list.render(Rect::new(1, 15, width - 2, height.saturating_sub(17)), &mut cx);
+    for row in 0..height {
+        println!("{}", grid.row_display(row, &clusters));
+    }
 }
 
 fn print_ratatui_style_snapshot(geometry: Geometry) {

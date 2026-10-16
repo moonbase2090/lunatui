@@ -89,3 +89,18 @@ required-features = ["app"]
 name = "gallery"
 path = "../examples/gallery.rs"
 test = true
+
+[[example]]
+name = "port_ratatui_block"
+path = "../examples/port_ratatui_block.rs"
+test = true
+
+[[example]]
+name = "port_ratatui_paragraph"
+path = "../examples/port_ratatui_paragraph.rs"
+test = true
+
+[[example]]
+name = "port_ratatui_list"
+path = "../examples/port_ratatui_list.rs"
+test = true
