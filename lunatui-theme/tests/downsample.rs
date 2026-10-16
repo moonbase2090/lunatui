@@ -73,7 +73,7 @@ fn sixteen_color_gradient_snapshot_keeps_the_hue_steps() {
         let column = u16::try_from(offset).unwrap_or(0);
         grid.put_str(column, 0, Style::new().fg(color), "█", &mut clusters);
     }
-    let snap = grid.styled_snapshot(&clusters);
+    let snap = lunatui_test::styled_snapshot(&grid, &clusters);
     assert!(snap.contains("█"));
     for (offset, index) in [9, 11, 10, 14, 4, 13, 9, 15].iter().enumerate() {
         let column = u16::try_from(offset).unwrap_or(0);

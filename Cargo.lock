@@ -892,6 +892,7 @@ dependencies = [
 name = "lunatui-core"
 version = "0.0.0"
 dependencies = [
+ "lunatui-test",
  "proptest",
  "unicode-segmentation",
  "unicode-width",
@@ -922,6 +923,7 @@ version = "0.0.0"
 dependencies = [
  "lunatui-core",
  "lunatui-term",
+ "lunatui-test",
  "proptest",
 ]
 
@@ -963,6 +965,7 @@ name = "lunatui-theme"
 version = "0.0.0"
 dependencies = [
  "lunatui-core",
+ "lunatui-test",
  "serde",
  "serde_json",
  "toml",
@@ -974,6 +977,7 @@ version = "0.0.0"
 dependencies = [
  "lunatui-core",
  "lunatui-layout",
+ "lunatui-test",
  "lunatui-text",
  "lunatui-theme",
  "ratatui",

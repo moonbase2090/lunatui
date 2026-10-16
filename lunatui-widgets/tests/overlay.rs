@@ -4,6 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+use lunatui_test::styled_snapshot;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{Block, FocusTrap, Overlay, RenderCx, Widget, blend_rgb};
 
@@ -42,7 +43,7 @@ fn backdrop_blend_snapshot() -> Result<(), &'static str> {
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
     cx.put_str(0, 0, "hello", Style::new().bg(Color::Rgb(10, 20, 30)));
     cx.blend_backdrop(Rect::new(0, 0, 6, 2), 0.5, Color::Rgb(0, 0, 0));
-    let snap = grid.styled_snapshot(&clusters);
+    let snap = styled_snapshot(&grid, &clusters);
     assert!(snap.contains("hello"));
     let cell = grid.get(0, 0).ok_or("missing cell")?;
     let bg = cell.style().bg;

@@ -250,7 +250,7 @@ fn styled_snapshot_has_text_and_style_layers() {
         "ab",
         &mut clusters,
     );
-    let snap = grid.styled_snapshot(&clusters);
+    let snap = lunatui_test::styled_snapshot(&grid, &clusters);
     assert!(snap.starts_with("@text\n"));
     assert!(snap.contains("ab"));
     assert!(snap.contains("@fg\n"));

@@ -7,8 +7,6 @@ use alloc::borrow::ToOwned;
 use alloc::collections::BTreeSet;
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::fmt::Write as _;
-
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::cell::{Cell, CellWidth, Meta};
@@ -340,23 +338,6 @@ impl Grid {
         out
     }
 
-    /// Serializes the grid for styled snapshot tests: a text layer plus run-length style layers.
-    #[must_use]
-    pub fn styled_snapshot(&self, clusters: &ClusterTable) -> String {
-        let mut out = String::from("@text\n");
-        for row in 0..self.height {
-            out.push_str(&self.row_text(row, clusters));
-            out.push('\n');
-        }
-        out.push_str("@fg\n");
-        self.write_color_runs(&mut out, true);
-        out.push_str("@bg\n");
-        self.write_color_runs(&mut out, false);
-        out.push_str("@attrs\n");
-        self.write_attr_runs(&mut out);
-        out
-    }
-
     fn row_text(&self, row: u16, clusters: &ClusterTable) -> String {
         let mut line = String::new();
         let mut col = 0u16;
@@ -377,48 +358,6 @@ impl Grid {
             }
         }
         line
-    }
-
-    fn write_color_runs(&self, out: &mut String, fg: bool) {
-        for row in 0..self.height {
-            self.write_color_runs_for_row(out, row, fg);
-        }
-    }
-
-    fn write_color_runs_for_row(&self, out: &mut String, row: u16, fg: bool) {
-        let mut col = 0u16;
-        while col < self.width {
-            let Some(cell) = self.get(col, row) else {
-                break;
-            };
-            let span = self.style_span_width(col, row);
-            let style = cell.style();
-            let color = if fg { style.fg } else { style.bg };
-            let _ = writeln!(out, "{row}:{col}:{span} {color:?}");
-            col += span;
-        }
-    }
-
-    fn write_attr_runs(&self, out: &mut String) {
-        for row in 0..self.height {
-            let mut col = 0u16;
-            while col < self.width {
-                let Some(cell) = self.get(col, row) else {
-                    break;
-                };
-                let span = self.style_span_width(col, row);
-                let attrs = cell.style().attrs;
-                let _ = writeln!(out, "{row}:{col}:{span} {attrs:?}");
-                col += span;
-            }
-        }
-    }
-
-    fn style_span_width(&self, col: u16, row: u16) -> u16 {
-        match self.get(col, row).map(|c| c.meta().width) {
-            Some(CellWidth::Two) => 2,
-            _ => 1,
-        }
     }
 
     fn erase_span(&mut self, col: u16, row: u16, span: u16, style: Style) {

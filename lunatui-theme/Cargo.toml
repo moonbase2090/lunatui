@@ -33,6 +33,9 @@ name = "bundled_profiles"
 path = "tests/bundled_profiles.rs"
 required-features = ["color-profiles"]
 
+[dev-dependencies]
+lunatui-test = { version = "0.0.0", path = "../lunatui-test" }
+
 [dependencies]
 lunatui-core = { version = "0.0.0", path = "../lunatui-core" }
 serde = { version = "1.0.228", features = ["derive"] }

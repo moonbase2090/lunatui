@@ -18,6 +18,10 @@ vt100 = "=0.16.2"
 [dev-dependencies]
 proptest = "=1.9.0"
 
+[[test]]
+name = "clock"
+path = "tests/clock.rs"
+
 [[bin]]
 name = "fuzz_encoder"
 path = "../fuzz/fuzz_encoder.rs"

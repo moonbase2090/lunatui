@@ -4,6 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{ClusterTable, Grid, Rect};
+use lunatui_test::styled_snapshot;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{RenderCx, Size, StatusDot, StatusState, Widget};
 
@@ -21,7 +22,7 @@ fn snapshot_at(
     let dot = StatusDot::new(state);
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
     dot.render(Rect::new(x, y, 1, 1), &mut cx);
-    grid.styled_snapshot(&clusters)
+    styled_snapshot(&grid, &clusters)
 }
 
 fn token_for(state: StatusState) -> Token {
