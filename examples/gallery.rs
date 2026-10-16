@@ -10,11 +10,11 @@ use lunatui_core::{ClusterTable, Grid, Rect, Style};
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Block, Constraint, Gauge, List, Paragraph, RenderCx, Scrollbar, Spinner, StatusBar, Table,
-    Tabs, TextInput, TextWrap, VecSource, Widget,
+    Block, Constraint, Gauge, List, Overlay, Paragraph, RenderCx, Scrollbar, Spinner, StatusBar,
+    Table, Tabs, TextInput, TextWrap, VecSource, Widget,
 };
 
-const BLURB: &str = "PR 32: Tabs, Gauge, Scrollbar, Spinner, StatusBar, TextInput.\n";
+const BLURB: &str = "PR 33: Overlay backdrop blend + modal (gallery).\n";
 
 fn main() -> io::Result<()> {
     let snapshot = env::args().any(|arg| arg == "--snapshot");
@@ -87,6 +87,9 @@ fn main() -> io::Result<()> {
         Rect::new(inner.x + inner.width - 2, inner.y + inner.height - 1, 1, 1),
         &mut cx,
     );
+    let modal_area = Rect::new(inner.x + 18, inner.y + 7, 36, 8);
+    let modal = Block::bordered().title("overlay").style(text_style);
+    Overlay::new(modal, modal_area).render(inner, &mut cx);
     if snapshot {
         let mut out = String::new();
         for y in 0..height {
