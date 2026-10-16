@@ -922,6 +922,8 @@ dependencies = [
  "lunatui-core",
  "lunatui-term",
  "lunatui-test",
+ "lunatui-theme",
+ "lunatui-widgets",
  "ratatui",
 ]
 

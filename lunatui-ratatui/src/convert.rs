@@ -1,12 +1,141 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{Attrs, ClusterTable, Color, Grid, Style, UnderlineStyle, width};
+use lunatui_core::{Attrs, ClusterTable, Color, DecodedGlyph, Grid, Rect, Style, UnderlineStyle, width};
+use lunatui_widgets::RenderCx;
 use ratatui::buffer::Buffer;
 use ratatui::buffer::Cell as RCell;
+use ratatui::buffer::CellDiffOption;
 use ratatui::style::Color as RColor;
 use ratatui::style::Modifier;
 use ratatui::style::Style as RStyle;
+
+pub(crate) fn should_skip_cell(cell: &RCell) -> bool {
+    matches!(cell.diff_option, CellDiffOption::Skip)
+        || ({
+            #[allow(deprecated)]
+            {
+                cell.skip
+            }
+        } && matches!(cell.diff_option, CellDiffOption::None))
+}
+
+pub(crate) fn buffer_digest(buffer: &Buffer) -> u64 {
+    let mut hash = 0xcbf29ce4_84222325u64;
+    for cell in buffer.content() {
+        hash = mix_u64(hash, cell.symbol());
+        hash = mix_u64(hash, &format!("{:?}{:?}{:?}", cell.fg, cell.bg, cell.modifier));
+        hash = mix_u64(hash, format!("{:?}", cell.diff_option));
+        #[allow(deprecated)]
+        {
+            hash = mix_u8(hash, u8::from(cell.skip));
+        }
+    }
+    hash ^= u64::from(buffer.area.width);
+    hash ^= u64::from(buffer.area.height) << 32;
+    hash
+}
+
+fn mix_u64(mut hash: u64, text: impl AsRef<str>) -> u64 {
+    for byte in text.as_ref().bytes() {
+        hash = mix_u8(hash, byte);
+    }
+    hash
+}
+
+fn mix_u8(hash: u64, byte: u8) -> u64 {
+    (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+}
+
+pub(crate) fn skip_mask_from_buffer(buffer: &Buffer, mask: &mut [bool]) {
+    let area = buffer.area;
+    let width = usize::from(area.width);
+    for y in 0..area.height {
+        for x in 0..area.width {
+            let idx = usize::from(y) * width + usize::from(x);
+            mask[idx] = should_skip_cell(&buffer[(x, y)]);
+        }
+    }
+}
+
+pub(crate) fn capture_buffer_to_grid(
+    buffer: &Buffer,
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    skip_mask: &mut [bool],
+) {
+    let area = buffer.area;
+    *grid = Grid::new(area.width, area.height);
+    *clusters = ClusterTable::new();
+    skip_mask_from_buffer(buffer, skip_mask);
+    for y in 0..area.height {
+        let mut x = 0;
+        while x < area.width {
+            let cell = &buffer[(x, y)];
+            if should_skip_cell(cell) {
+                x += 1;
+                continue;
+            }
+            apply_cell(grid, clusters, x, y, cell);
+            let span = u16::try_from(width(cell.symbol()).max(1)).unwrap_or(1);
+            x += span;
+        }
+    }
+}
+
+pub(crate) fn blit_grid_to_cx(
+    grid: &Grid,
+    clusters: &ClusterTable,
+    skip_mask: &[bool],
+    dest: Rect,
+    cx: &mut RenderCx<'_>,
+) {
+    let width = usize::from(dest.width);
+    for local_y in 0..dest.height {
+        for local_x in 0..dest.width {
+            let idx = usize::from(local_y) * width + usize::from(local_x);
+            if skip_mask.get(idx).is_some_and(|skip| *skip) {
+                continue;
+            }
+            let Some(cell) = grid.get(local_x, local_y) else {
+                continue;
+            };
+            write_cell_to_cx(
+                cx,
+                dest.x + local_x,
+                dest.y + local_y,
+                cell,
+                clusters,
+            );
+        }
+    }
+}
+
+fn write_cell_to_cx(
+    cx: &mut RenderCx<'_>,
+    x: u16,
+    y: u16,
+    cell: lunatui_core::Cell,
+    clusters: &ClusterTable,
+) {
+    let style = cell.style();
+    match cell.glyph().decode() {
+        DecodedGlyph::Inline(scalar) => {
+            let mut buf = [0u8; 4];
+            let text = scalar.encode_utf8(&mut buf);
+            if text.is_empty() {
+                cx.put_str(x, y, " ", style);
+            } else {
+                cx.put_str(x, y, text, style);
+            }
+        }
+        DecodedGlyph::Cluster(id) => {
+            let text = clusters.cluster_text(id).unwrap_or(" ");
+            cx.put_str(x, y, text, style);
+        }
+        DecodedGlyph::Continuation => cx.put_str(x, y, " ", style),
+    }
+}
 
 pub(crate) fn apply_cell(
     grid: &mut Grid,
