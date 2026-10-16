@@ -93,6 +93,7 @@ pub fn map_color(color: RColor) -> Color {
 }
 
 /// Builds a lunatui grid from a ratatui buffer (same rules as differential tests).
+#[must_use]
 pub fn grid_from_buffer(buffer: &Buffer) -> (Grid, ClusterTable) {
     let area = buffer.area;
     let mut grid = Grid::new(area.width, area.height);

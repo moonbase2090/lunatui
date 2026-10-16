@@ -88,7 +88,13 @@ fn assert_pair(name: &str, previous: &Buffer, next: &Buffer) -> io::Result<()> {
     paint_buffer(&mut backend, next)?;
     backend.flush()?;
 
-    assert_grid_matches_buffer(name, backend.grid(), backend.clusters(), &expected, &expected_clusters);
+    assert_grid_matches_buffer(
+        name,
+        backend.grid(),
+        backend.clusters(),
+        &expected,
+        &expected_clusters,
+    );
     assert_ratatui_oracle_parity(name, previous, next, backend.grid(), backend.clusters())?;
 
     Ok(())
