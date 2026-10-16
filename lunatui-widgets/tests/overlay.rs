@@ -22,7 +22,20 @@ fn blend_rgb_midpoint() {
 }
 
 #[test]
-fn backdrop_blend_snapshot() {
+fn default_background_blends_with_theme_surface() -> Result<(), &'static str> {
+    let theme = Theme::builtin(Variant::Light);
+    let mut grid = Grid::new(3, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 0, "x", Style::new().bg(Color::Default));
+    cx.blend_backdrop(Rect::new(0, 0, 3, 1), 0.5, Color::Rgb(0, 0, 0));
+    let cell = grid.get(0, 0).ok_or("missing cell")?;
+    assert_eq!(cell.style().bg, Color::Rgb(123, 123, 124));
+    Ok(())
+}
+
+#[test]
+fn backdrop_blend_snapshot() -> Result<(), &'static str> {
     let theme = Theme::builtin(Variant::Dark);
     let mut grid = Grid::new(6, 2);
     let mut clusters = ClusterTable::new();
@@ -31,9 +44,10 @@ fn backdrop_blend_snapshot() {
     cx.blend_backdrop(Rect::new(0, 0, 6, 2), 0.5, Color::Rgb(0, 0, 0));
     let snap = grid.styled_snapshot(&clusters);
     assert!(snap.contains("hello"));
-    let cell = grid.get(0, 0).expect("cell");
+    let cell = grid.get(0, 0).ok_or("missing cell")?;
     let bg = cell.style().bg;
     assert_eq!(bg, Color::Rgb(5, 10, 15));
+    Ok(())
 }
 
 #[test]

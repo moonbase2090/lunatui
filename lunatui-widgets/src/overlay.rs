@@ -113,7 +113,9 @@ fn intersect(a: Rect, b: Rect) -> Rect {
     let x1 = a.x.max(b.x);
     let y1 = a.y.max(b.y);
     let x2 = a.x.saturating_add(a.width).min(b.x.saturating_add(b.width));
-    let y2 = a.y.saturating_add(a.height).min(b.y.saturating_add(b.height));
+    let y2 =
+        a.y.saturating_add(a.height)
+            .min(b.y.saturating_add(b.height));
     if x2 <= x1 || y2 <= y1 {
         return Rect::new(0, 0, 0, 0);
     }
@@ -123,15 +125,37 @@ fn intersect(a: Rect, b: Rect) -> Rect {
 /// Linear RGB blend used by [`RenderCx::blend_backdrop`].
 #[must_use]
 pub fn blend_rgb(base: (u8, u8, u8), overlay: (u8, u8, u8), alpha: f32) -> (u8, u8, u8) {
-    let a = alpha.clamp(0.0, 1.0);
+    const DENOM: u16 = 1024;
+    let weight = overlay_weight(alpha.clamp(0.0, 1.0), DENOM);
     let blend = |base_byte: u8, over_byte: u8| -> u8 {
-        let b = f32::from(base_byte);
-        let o = f32::from(over_byte);
-        u8::try_from((b * (1.0 - a) + o * a).round() as u32).unwrap_or(base_byte)
+        let mixed = u32::from(base_byte) * u32::from(DENOM - weight)
+            + u32::from(over_byte) * u32::from(weight);
+        u8::try_from((mixed + u32::from(DENOM) / 2) / u32::from(DENOM)).unwrap_or(base_byte)
     };
     (
         blend(base.0, overlay.0),
         blend(base.1, overlay.1),
         blend(base.2, overlay.2),
     )
+}
+
+fn overlay_weight(alpha: f32, denom: u16) -> u16 {
+    if alpha <= 0.0 {
+        return 0;
+    }
+    if alpha >= 1.0 {
+        return denom;
+    }
+    let mut lo = 0_u16;
+    let mut hi = denom;
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        let frac = f32::from(mid) / f32::from(denom);
+        if frac < alpha {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    lo.min(denom)
 }

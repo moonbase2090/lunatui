@@ -114,7 +114,7 @@ fn resolve_rgb(color: Color, theme: &Theme) -> (u8, u8, u8) {
         Color::Rgb(r, g, b) => (r, g, b),
         Color::Indexed(index) => ansi_rgb(index),
         Color::Token(id) => resolve_rgb(theme.resolve_id(id), theme),
-        Color::Default => (0, 0, 0),
+        Color::Default => resolve_rgb(theme.resolve(Token::Surface0), theme),
     }
 }
 
