@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+
+use crate::overlay::blend_rgb;
 use lunatui_theme::{Theme, Token};
 
 #[cfg(feature = "color-profiles")]
@@ -86,5 +88,70 @@ impl<'a> RenderCx<'a> {
     /// Applies `style` to every cell in `area`, keeping glyphs unchanged.
     pub fn set_style(&mut self, area: Rect, style: Style) {
         self.grid.set_style(area, style);
+    }
+
+    /// Alpha-composites `tint` over each cell background in `area` (glyphs unchanged).
+    pub fn blend_backdrop(&mut self, area: Rect, alpha: f32, tint: Color) {
+        let tint_rgb = resolve_rgb(tint, self.theme);
+        for row in area.y..area.y.saturating_add(area.height) {
+            for col in area.x..area.x.saturating_add(area.width) {
+                let Some(cell) = self.grid.get(col, row) else {
+                    continue;
+                };
+                let style = cell.style();
+                let base_rgb = resolve_rgb(style.bg, self.theme);
+                let blended = blend_rgb(base_rgb, tint_rgb, alpha);
+                let patch = Rect::new(col, row, 1, 1);
+                self.grid
+                    .set_style(patch, style.bg(Color::Rgb(blended.0, blended.1, blended.2)));
+            }
+        }
+    }
+}
+
+fn resolve_rgb(color: Color, theme: &Theme) -> (u8, u8, u8) {
+    match color {
+        Color::Rgb(r, g, b) => (r, g, b),
+        Color::Indexed(index) => ansi_rgb(index),
+        Color::Token(id) => resolve_rgb(theme.resolve_id(id), theme),
+        Color::Default => resolve_rgb(theme.resolve(Token::Surface0), theme),
+    }
+}
+
+fn ansi_rgb(index: u8) -> (u8, u8, u8) {
+    const CUBE: [u8; 6] = [0, 95, 135, 175, 215, 255];
+    match index {
+        0..=15 => {
+            let base = [
+                (0, 0, 0),
+                (128, 0, 0),
+                (0, 128, 0),
+                (128, 128, 0),
+                (0, 0, 128),
+                (128, 0, 128),
+                (0, 128, 128),
+                (192, 192, 192),
+                (128, 128, 128),
+                (255, 0, 0),
+                (0, 255, 0),
+                (255, 255, 0),
+                (0, 0, 255),
+                (255, 0, 255),
+                (0, 255, 255),
+                (255, 255, 255),
+            ];
+            base[usize::from(index)]
+        }
+        16..=231 => {
+            let index = index - 16;
+            let r = CUBE[usize::from(index / 36 % 6)];
+            let g = CUBE[usize::from(index / 6 % 6)];
+            let b = CUBE[usize::from(index % 6)];
+            (r, g, b)
+        }
+        _ => {
+            let gray = 8 + (index - 232) * 10;
+            (gray, gray, gray)
+        }
     }
 }

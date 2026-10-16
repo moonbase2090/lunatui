@@ -45,6 +45,10 @@ name = "chrome"
 path = "tests/chrome.rs"
 
 [[test]]
+name = "overlay"
+path = "tests/overlay.rs"
+
+[[test]]
 name = "status_dot_color_profiles"
 path = "tests/status_dot_color_profiles.rs"
 required-features = ["color-profiles"]
