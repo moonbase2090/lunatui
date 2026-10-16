@@ -79,6 +79,6 @@ impl Widget for Gauge {
         if avail.width == 0 || avail.height == 0 {
             return Size::new(0, 0);
         }
-        Size::new(avail.width.max(4), avail.height.min(3))
+        Size::new(avail.width, avail.height.min(3))
     }
 }

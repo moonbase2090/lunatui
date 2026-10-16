@@ -69,7 +69,10 @@ impl Widget for Scrollbar {
     }
 
     fn measure(&self, avail: Size) -> Size {
-        Size::new(1, avail.height.max(1))
+        if avail.width == 0 || avail.height == 0 {
+            return Size::new(0, 0);
+        }
+        Size::new(1.min(avail.width), avail.height)
     }
 }
 
@@ -79,7 +82,10 @@ fn thumb_size(content: usize, track: usize, viewport: usize) -> u16 {
     }
     let max_thumb = track.max(1);
     let min_thumb = 1usize;
-    let proportional = (track * viewport).div_ceil(content).max(min_thumb);
+    let proportional = track
+        .saturating_mul(viewport)
+        .div_ceil(content)
+        .max(min_thumb);
     u16::try_from(proportional.min(max_thumb)).unwrap_or(1)
 }
 
@@ -92,6 +98,7 @@ fn thumb_position(offset: usize, content: usize, viewport: usize, track: usize, 
     if scrollable == 0 {
         return 0;
     }
-    let y = (offset * max_y) / scrollable;
+    let offset = offset.min(scrollable);
+    let y = offset.saturating_mul(max_y) / scrollable;
     u16::try_from(y).unwrap_or(0)
 }

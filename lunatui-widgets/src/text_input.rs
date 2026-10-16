@@ -65,10 +65,14 @@ impl Widget for TextInput {
             return;
         }
         let y = inner.y + inner.height / 2;
-        let visible = clip_display_prefix(&self.value, inner.width);
-        cx.put_str(inner.x, y, visible, self.style);
         let cursor_col = display_col_at_byte(&self.value, self.cursor);
-        let col = u16::try_from(cursor_col).unwrap_or(0);
+        let start_col = window_start_col(cursor_col, inner.width);
+        let start_byte = byte_at_display_col(&self.value, start_col);
+        let window = self.value.get(start_byte..).unwrap_or("");
+        let visible = clip_display_prefix(window, inner.width);
+        cx.put_str(inner.x, y, visible, self.style);
+        let rel = cursor_col.saturating_sub(start_col);
+        let col = u16::try_from(rel).unwrap_or(0);
         if col < inner.width {
             cx.put_str(inner.x + col, y, "│", self.cursor_style);
         }
@@ -78,11 +82,36 @@ impl Widget for TextInput {
         if avail.width == 0 || avail.height == 0 {
             return Size::new(0, 0);
         }
-        Size::new(avail.width.max(8), avail.height.min(3))
+        Size::new(avail.width, avail.height.min(3))
     }
 }
 
 fn display_col_at_byte(text: &str, byte: usize) -> usize {
     let prefix = text.get(..byte.min(text.len())).unwrap_or("");
     width(prefix)
+}
+
+fn window_start_col(cursor_col: usize, viewport_width: u16) -> usize {
+    let viewport = usize::from(viewport_width);
+    if viewport == 0 || cursor_col < viewport {
+        return 0;
+    }
+    cursor_col.saturating_sub(viewport - 1)
+}
+
+fn byte_at_display_col(text: &str, target_col: usize) -> usize {
+    if target_col == 0 {
+        return 0;
+    }
+    let mut col = 0usize;
+    let mut end = 0usize;
+    for grapheme in unicode_segmentation::UnicodeSegmentation::graphemes(text, true) {
+        let w = lunatui_core::cluster_display_width(grapheme);
+        if col >= target_col {
+            break;
+        }
+        col += w;
+        end += grapheme.len();
+    }
+    end
 }
