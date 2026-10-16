@@ -8,7 +8,7 @@ Testing kit for lunatui: styled snapshots, virtual clock, and vt100 oracle helpe
 
 ## Virtual clock
 
-`Clock` is an injectable monotonic clock for deterministic animation tests (PRD §2.10). `lunatui-runtime` re-exports it for app animation code.
+`Clock` is an injectable monotonic clock for deterministic animation tests (PRD §2.10). The same API exists on `lunatui_runtime::Clock` for app code without pulling this crate into the runtime dependency graph.
 
 ## Oracle
 

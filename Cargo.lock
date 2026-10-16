@@ -923,7 +923,6 @@ version = "0.0.0"
 dependencies = [
  "lunatui-core",
  "lunatui-term",
- "lunatui-test",
  "proptest",
 ]
 
