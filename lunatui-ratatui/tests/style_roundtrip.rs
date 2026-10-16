@@ -7,6 +7,7 @@ use lunatui_ratatui::{
     StyledLine, StyledSpan, StyledText, color_from_ratatui, color_to_ratatui, style_from_ratatui,
     style_to_ratatui,
 };
+use ratatui::layout::Alignment;
 use ratatui::style::{Color as RColor, Modifier, Style as RStyle};
 use ratatui::text::{Line, Span, Text};
 
@@ -56,6 +57,19 @@ fn text_roundtrip_spans() {
     let styled = StyledText::from(&text);
     let restored = Text::from(styled);
     assert_eq!(text, restored);
+}
+
+#[test]
+fn line_and_text_metadata_roundtrip() {
+    let line = Line::from(vec![Span::raw("x")])
+        .style(RStyle::default().fg(RColor::Magenta))
+        .alignment(Alignment::Center);
+    assert_eq!(Line::from(StyledLine::from(&line)), line);
+
+    let text = Text::from(vec![Line::from("a"), Line::from("b")])
+        .style(RStyle::default().add_modifier(Modifier::DIM))
+        .alignment(Alignment::Right);
+    assert_eq!(Text::from(StyledText::from(&text)), text);
 }
 
 #[test]

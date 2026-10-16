@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::Style;
+use ratatui::layout::Alignment;
 use ratatui::text::{Line, Span, Text};
 
 /// One styled text run in lunatui form.
@@ -16,6 +17,10 @@ pub struct StyledSpan {
 /// One logical line built from styled spans.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StyledLine {
+    /// Line-level style (ratatui `Line::style`).
+    pub style: Style,
+    /// Line alignment when set.
+    pub alignment: Option<Alignment>,
     /// Spans in left-to-right order.
     pub spans: Vec<StyledSpan>,
 }
@@ -23,6 +28,10 @@ pub struct StyledLine {
 /// Multi-line styled text.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StyledText {
+    /// Text-level style (ratatui `Text::style`).
+    pub style: Style,
+    /// Text alignment when set.
+    pub alignment: Option<Alignment>,
     /// Lines in order.
     pub lines: Vec<StyledLine>,
 }
@@ -45,6 +54,8 @@ impl From<Span<'_>> for StyledSpan {
 impl From<&Line<'_>> for StyledLine {
     fn from(line: &Line<'_>) -> Self {
         Self {
+            style: crate::style::style_from_ratatui(line.style),
+            alignment: line.alignment,
             spans: line.spans.iter().map(StyledSpan::from).collect(),
         }
     }
@@ -59,6 +70,8 @@ impl From<Line<'_>> for StyledLine {
 impl From<&Text<'_>> for StyledText {
     fn from(text: &Text<'_>) -> Self {
         Self {
+            style: crate::style::style_from_ratatui(text.style),
+            alignment: text.alignment,
             lines: text.lines.iter().map(StyledLine::from).collect(),
         }
     }
@@ -78,12 +91,22 @@ impl From<StyledSpan> for Span<'static> {
 
 impl From<StyledLine> for Line<'static> {
     fn from(line: StyledLine) -> Self {
-        Line::from(line.spans.into_iter().map(Span::from).collect::<Vec<_>>())
+        let mut out = Line::from(line.spans.into_iter().map(Span::from).collect::<Vec<_>>())
+            .style(crate::style::style_to_ratatui(line.style));
+        if let Some(alignment) = line.alignment {
+            out = out.alignment(alignment);
+        }
+        out
     }
 }
 
 impl From<StyledText> for Text<'static> {
     fn from(text: StyledText) -> Self {
-        Text::from(text.lines.into_iter().map(Line::from).collect::<Vec<_>>())
+        let mut out = Text::from(text.lines.into_iter().map(Line::from).collect::<Vec<_>>())
+            .style(crate::style::style_to_ratatui(text.style));
+        if let Some(alignment) = text.alignment {
+            out = out.alignment(alignment);
+        }
+        out
     }
 }
