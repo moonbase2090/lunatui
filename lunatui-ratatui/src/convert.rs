@@ -14,24 +14,17 @@ use ratatui::style::Style as RStyle;
 
 pub(crate) fn should_skip_cell(cell: &RCell) -> bool {
     matches!(cell.diff_option, CellDiffOption::Skip)
-        || ({
-            #[allow(deprecated)]
-            {
-                cell.skip
-            }
-        } && matches!(cell.diff_option, CellDiffOption::None))
 }
 
 pub(crate) fn buffer_digest(buffer: &Buffer) -> u64 {
-    let mut hash = 0xcbf29ce4_84222325u64;
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
     for cell in buffer.content() {
         hash = mix_u64(hash, cell.symbol());
-        hash = mix_u64(hash, &format!("{:?}{:?}{:?}", cell.fg, cell.bg, cell.modifier));
+        hash = mix_u64(
+            hash,
+            format!("{:?}{:?}{:?}", cell.fg, cell.bg, cell.modifier),
+        );
         hash = mix_u64(hash, format!("{:?}", cell.diff_option));
-        #[allow(deprecated)]
-        {
-            hash = mix_u8(hash, u8::from(cell.skip));
-        }
     }
     hash ^= u64::from(buffer.area.width);
     hash ^= u64::from(buffer.area.height) << 32;
@@ -105,13 +98,7 @@ pub(crate) fn blit_grid_to_cx(
             if cell.meta().width == CellWidth::Continuation {
                 continue;
             }
-            write_cell_to_cx(
-                cx,
-                dest.x + local_x,
-                dest.y + local_y,
-                cell,
-                clusters,
-            );
+            write_cell_to_cx(cx, dest.x + local_x, dest.y + local_y, cell, clusters);
         }
     }
 }

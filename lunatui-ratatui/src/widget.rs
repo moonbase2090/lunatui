@@ -76,25 +76,13 @@ where
         memo.clear_if_size(area.width, area.height);
         if memo.digest == digest && digest != 0 {
             memo.hits += 1;
-            blit_grid_to_cx(
-                &memo.grid,
-                &memo.clusters,
-                &memo.skip_mask,
-                area,
-                cx,
-            );
+            blit_grid_to_cx(&memo.grid, &memo.clusters, &memo.skip_mask, area, cx);
             return;
         }
         memo.refresh_from_buffer(&scratch);
         memo.digest = digest;
         memo.conversions += 1;
-        blit_grid_to_cx(
-            &memo.grid,
-            &memo.clusters,
-            &memo.skip_mask,
-            area,
-            cx,
-        );
+        blit_grid_to_cx(&memo.grid, &memo.clusters, &memo.skip_mask, area, cx);
     }
 
     fn measure(&self, avail: Size) -> Size {
@@ -180,25 +168,13 @@ where
         memo.clear_if_size(area.width, area.height);
         if memo.digest == digest && digest != 0 {
             memo.hits += 1;
-            blit_grid_to_cx(
-                &memo.grid,
-                &memo.clusters,
-                &memo.skip_mask,
-                area,
-                cx,
-            );
+            blit_grid_to_cx(&memo.grid, &memo.clusters, &memo.skip_mask, area, cx);
             return;
         }
         memo.refresh_from_buffer(&scratch);
         memo.digest = digest;
         memo.conversions += 1;
-        blit_grid_to_cx(
-            &memo.grid,
-            &memo.clusters,
-            &memo.skip_mask,
-            area,
-            cx,
-        );
+        blit_grid_to_cx(&memo.grid, &memo.clusters, &memo.skip_mask, area, cx);
     }
 
     fn measure(&self, avail: Size) -> Size {

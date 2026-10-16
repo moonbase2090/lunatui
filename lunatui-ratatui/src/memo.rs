@@ -20,7 +20,12 @@ pub(crate) struct WidgetMemo {
 
 impl WidgetMemo {
     pub(crate) fn refresh_from_buffer(&mut self, buffer: &Buffer) {
-        capture_buffer_to_grid(buffer, &mut self.grid, &mut self.clusters, &mut self.skip_mask);
+        capture_buffer_to_grid(
+            buffer,
+            &mut self.grid,
+            &mut self.clusters,
+            &mut self.skip_mask,
+        );
     }
 
     pub(crate) fn clear_if_size(&mut self, width: u16, height: u16) {

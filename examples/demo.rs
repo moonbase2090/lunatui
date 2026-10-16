@@ -50,7 +50,7 @@ fn main() -> io::Result<()> {
     let geometry = parse_geometry(&flag_args)?;
     if snapshot {
         if ratatui_widget {
-            print_ratatui_widget_snapshot(geometry)?;
+            print_ratatui_widget_snapshot(geometry);
         } else if ratatui_bridge {
             print_ratatui_bridge_snapshot(geometry)?;
         } else {
@@ -604,7 +604,7 @@ fn millis(duration: Duration) -> String {
     format!("{:.3} ms", duration.as_secs_f64() * 1000.0)
 }
 
-fn print_ratatui_widget_snapshot(geometry: Geometry) -> io::Result<()> {
+fn print_ratatui_widget_snapshot(geometry: Geometry) {
     use lunatui_core::{ClusterTable, Grid, Rect};
     use lunatui_ratatui::RatatuiWidget;
     use lunatui_theme::{Theme, Variant};
@@ -629,14 +629,11 @@ fn print_ratatui_widget_snapshot(geometry: Geometry) -> io::Result<()> {
             .gauge_style(ratatui::style::Style::default().fg(Color::Cyan)),
     )
     .render(inner, &mut cx);
-    RatatuiWidget::new(Paragraph::new("L2 widget bridge (RatatuiWidget)")).render(
-        Rect::new(2, inner.y + 2, inner.width, 1),
-        &mut cx,
-    );
+    RatatuiWidget::new(Paragraph::new("L2 widget bridge (RatatuiWidget)"))
+        .render(Rect::new(2, inner.y + 2, inner.width, 1), &mut cx);
     for row in 0..height {
         println!("{}", grid.row_display(row, &clusters));
     }
-    Ok(())
 }
 
 fn print_ratatui_bridge_snapshot(geometry: Geometry) -> io::Result<()> {

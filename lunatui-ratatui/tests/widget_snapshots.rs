@@ -14,8 +14,8 @@ use ratatui::layout::Rect as RatRect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{
-    BarChart, Block, BorderType, Gauge, List, ListItem, ListState, Paragraph, Row,
-    Sparkline, Table, Tabs,
+    BarChart, Block, BorderType, Gauge, List, ListItem, ListState, Paragraph, Row, Sparkline,
+    Table, Tabs,
 };
 
 fn bridge_lines<W>(widget: &RatatuiWidget<W>, width: u16, height: u16) -> Vec<String>
@@ -32,7 +32,7 @@ where
         .collect()
 }
 
-fn ratatui_lines<W>(widget: W, width: u16, height: u16) -> Vec<String>
+fn ratatui_lines<W>(widget: &W, width: u16, height: u16) -> Vec<String>
 where
     W: ratatui::widgets::Widget + Clone,
 {
@@ -56,7 +56,7 @@ where
         .collect()
 }
 
-fn assert_parity<W>(name: &str, widget: W, width: u16, height: u16)
+fn assert_parity<W>(name: &str, widget: &W, width: u16, height: u16)
 where
     W: ratatui::widgets::Widget + Clone,
 {
@@ -68,16 +68,16 @@ where
 
 #[test]
 fn wide_grapheme_paragraph_matches_ratatui() {
-    assert_parity("wide_cjk", Paragraph::new("中文"), 6, 1);
-    assert_parity("wide_emoji", Paragraph::new("🌟x"), 6, 1);
+    assert_parity("wide_cjk", &Paragraph::new("中文"), 6, 1);
+    assert_parity("wide_emoji", &Paragraph::new("🌟x"), 6, 1);
 }
 
 #[test]
 fn ten_widgets_match_ratatui() {
-    assert_parity("block", Block::bordered().title("L2"), 14, 6);
+    assert_parity("block", &Block::bordered().title("L2"), 14, 6);
     assert_parity(
         "paragraph",
-        Paragraph::new(Line::from(vec![
+        &Paragraph::new(Line::from(vec![
             Span::styled("hi", Style::default().fg(Color::Green)),
             Span::raw(" there"),
         ])),
@@ -86,20 +86,20 @@ fn ten_widgets_match_ratatui() {
     );
     assert_parity(
         "tabs",
-        Tabs::new(vec!["One", "Two", "Three"]).select(1),
+        &Tabs::new(vec!["One", "Two", "Three"]).select(1),
         18,
         3,
     );
-    assert_parity("gauge", Gauge::default().percent(42).label("42%"), 16, 3);
+    assert_parity("gauge", &Gauge::default().percent(42).label("42%"), 16, 3);
     assert_parity(
         "sparkline",
-        Sparkline::default().data(&[1, 3, 2, 4, 0, 5]),
+        &Sparkline::default().data([1, 3, 2, 4, 0, 5]),
         16,
         3,
     );
     assert_parity(
         "barchart",
-        BarChart::default()
+        &BarChart::default()
             .data(&[("a", 3_u64), ("bb", 5_u64)])
             .bar_width(3)
             .bar_gap(1),
@@ -108,7 +108,7 @@ fn ten_widgets_match_ratatui() {
     );
     assert_parity(
         "table",
-        Table::new(
+        &Table::new(
             vec![
                 Row::new(vec!["a", "b"]),
                 Row::new(vec!["c", "d"]).style(Style::default().add_modifier(Modifier::BOLD)),
@@ -121,7 +121,7 @@ fn ten_widgets_match_ratatui() {
     );
     assert_parity(
         "paragraph_block",
-        Paragraph::new("body").block(
+        &Paragraph::new("body").block(
             Block::bordered()
                 .title("t")
                 .border_type(BorderType::Rounded),
@@ -131,7 +131,7 @@ fn ten_widgets_match_ratatui() {
     );
     assert_parity(
         "block_double_border",
-        Block::bordered()
+        &Block::bordered()
             .border_type(BorderType::Double)
             .title_bottom("b"),
         12,
@@ -139,7 +139,7 @@ fn ten_widgets_match_ratatui() {
     );
     assert_parity(
         "sparkline_max",
-        Sparkline::default().data(&[0, 10, 5]).max(10),
+        &Sparkline::default().data([0, 10, 5]).max(10),
         10,
         2,
     );
