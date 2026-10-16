@@ -10,7 +10,7 @@ lunatui keeps ratatui’s mental model—widgets render into a rectangle on a ce
 | `Rect` | `lunatui_core::Rect` |
 | `Style`, `Color` | `lunatui_core::Style`, `Color`; theme via `lunatui_theme::Token` |
 | `Widget::render(area, buf)` | `Widget::render(area, &mut RenderCx)` |
-| `Layout::split` | `lunatui_layout` stub; closed-form prototype in `layout_prototype` example (ADR 0002) |
+| `Layout::split` | `lunatui_layout::Layout::split` with `Constraint` (closed-form solver; see ADR 0002 and `layout_prototype` example) |
 | `Paragraph`, `Block`, `List`, `Table` | `lunatui_widgets` equivalents (Phase 4) |
 | Event loop / `crossterm::event` | `lunatui_term::Parser`, `lunatui_runtime` scheduler and `run()` (`app` feature) |
 

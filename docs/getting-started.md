@@ -9,7 +9,7 @@ lunatui **v0.1.0** is the first usable preview on the roadmap: core grid and enc
 | `lunatui-core` | 16-byte cells, `Grid`, diff runs, width tables |
 | `lunatui-term` | Encoder, capabilities, session, input parser |
 | `lunatui-theme` | Semantic tokens and optional color profiles |
-| `lunatui-layout` | Layout engine stub until PR 14 |
+| `lunatui-layout` | `Layout::split`, closed-form solver (ADR 0002); kasuari fallback and `Grid`/`Stack` later |
 | `lunatui-text` | Wrapping and row sources for lists and tables |
 | `lunatui-widgets` | `Block`, `Paragraph`, `List`, `Table`, chrome widgets, `Overlay` |
 | `lunatui-runtime` | Scheduler, focus, hit-testing, animation helpers |
