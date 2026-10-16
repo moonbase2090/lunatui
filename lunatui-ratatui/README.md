@@ -12,3 +12,9 @@ ratatui compatibility for lunatui (PRD §4 L1).
 - [`RatatuiWidget`](src/widget.rs): implements lunatui [`Widget`](https://docs.rs/lunatui-widgets/latest/lunatui_widgets/trait.Widget.html) for any ratatui [`Widget`](https://docs.rs/ratatui/latest/ratatui/widgets/trait.Widget.html) (clone per frame). Renders into a scratch buffer, maps cells into the lunatui grid (`CellDiffOption::Skip` preserved), and memoizes conversion when the scratch buffer is unchanged.
 - [`RatatuiStatefulWidget`](src/widget.rs): same for ratatui [`StatefulWidget`](https://docs.rs/ratatui/latest/ratatui/widgets/trait.StatefulWidget.html) with owned state.
 - Demo: `cargo run --example demo --features app -- --ratatui-widget --snapshot --width 80 --height 24` (`captures/demo_ratatui_widget.cast`).
+
+## v0.1.0 / PR 45
+
+- `color_from_ratatui` / `color_to_ratatui` and `style_from_ratatui` / `style_to_ratatui` for the common indexed/RGB subset (theme tokens map to reset on export).
+- `StyledSpan`, `StyledLine`, `StyledText` with `From` in both directions for ratatui `Span` / `Line` / `Text`.
+- Demo: `cargo run --example demo --features app -- --ratatui-style --snapshot --width 80 --height 24` (`captures/demo_ratatui_style.cast`).

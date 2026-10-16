@@ -36,6 +36,7 @@ fn main() -> io::Result<()> {
     let snapshot = args.iter().any(|arg| arg == "--snapshot");
     let ratatui_bridge = args.iter().any(|arg| arg == "--ratatui-bridge");
     let ratatui_widget = args.iter().any(|arg| arg == "--ratatui-widget");
+    let ratatui_style = args.iter().any(|arg| arg == "--ratatui-style");
     let flag_args: Vec<String> = args
         .iter()
         .filter(|arg| {
@@ -44,12 +45,15 @@ fn main() -> io::Result<()> {
                 && *arg != "--snapshot"
                 && *arg != "--ratatui-bridge"
                 && *arg != "--ratatui-widget"
+                && *arg != "--ratatui-style"
         })
         .cloned()
         .collect();
     let geometry = parse_geometry(&flag_args)?;
     if snapshot {
-        if ratatui_widget {
+        if ratatui_style {
+            print_ratatui_style_snapshot(geometry);
+        } else if ratatui_widget {
             print_ratatui_widget_snapshot(geometry);
         } else if ratatui_bridge {
             print_ratatui_bridge_snapshot(geometry)?;
@@ -602,6 +606,41 @@ fn bench_summary(width: u16, height: u16, times: FrameTimes, profile: &str, labe
 
 fn millis(duration: Duration) -> String {
     format!("{:.3} ms", duration.as_secs_f64() * 1000.0)
+}
+
+fn print_ratatui_style_snapshot(geometry: Geometry) {
+    use lunatui_core::{ClusterTable, Grid, Rect};
+    use lunatui_ratatui::{RatatuiWidget, StyledLine};
+    use lunatui_theme::{Theme, Variant};
+    use lunatui_widgets::{Block, RenderCx, Widget};
+    use ratatui::style::{Color, Modifier, Style};
+    use ratatui::text::{Line, Span};
+    use ratatui::widgets::Paragraph;
+
+    let width = geometry.width.min(80);
+    let height = geometry.height.min(24);
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(width, height);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Block::bordered()
+        .title("ratatui style L2")
+        .render(Rect::new(0, 0, width, height), &mut cx);
+    let rat_line = Line::from(vec![
+        Span::styled(
+            "styled ",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("plain"),
+    ]);
+    let _styled: StyledLine = StyledLine::from(&rat_line);
+    let inner = Rect::new(2, 2, width.saturating_sub(4), 3);
+    RatatuiWidget::new(Paragraph::new(rat_line)).render(inner, &mut cx);
+    for row in 0..height {
+        println!("{}", grid.row_display(row, &clusters));
+    }
 }
 
 fn print_ratatui_widget_snapshot(geometry: Geometry) {

@@ -28,3 +28,7 @@ path = "tests/backend_oracle.rs"
 [[test]]
 name = "widget_snapshots"
 path = "tests/widget_snapshots.rs"
+
+[[test]]
+name = "style_roundtrip"
+path = "tests/style_roundtrip.rs"
