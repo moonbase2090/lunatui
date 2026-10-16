@@ -864,6 +864,7 @@ dependencies = [
  "libc",
  "lunatui-bench",
  "lunatui-core",
+ "lunatui-ratatui",
  "lunatui-runtime",
  "lunatui-term",
  "lunatui-test",
@@ -916,6 +917,13 @@ version = "0.1.0"
 [[package]]
 name = "lunatui-ratatui"
 version = "0.1.0"
+dependencies = [
+ "lunatui-bench",
+ "lunatui-core",
+ "lunatui-term",
+ "lunatui-test",
+ "ratatui",
+]
 
 [[package]]
 name = "lunatui-runtime"

@@ -34,14 +34,24 @@ fn main() -> io::Result<()> {
     let counter = args.iter().any(|arg| arg == "--counter");
     let motion = args.iter().any(|arg| arg == "--motion");
     let snapshot = args.iter().any(|arg| arg == "--snapshot");
+    let ratatui_bridge = args.iter().any(|arg| arg == "--ratatui-bridge");
     let flag_args: Vec<String> = args
         .iter()
-        .filter(|arg| *arg != "--counter" && *arg != "--motion" && *arg != "--snapshot")
+        .filter(|arg| {
+            *arg != "--counter"
+                && *arg != "--motion"
+                && *arg != "--snapshot"
+                && *arg != "--ratatui-bridge"
+        })
         .cloned()
         .collect();
     let geometry = parse_geometry(&flag_args)?;
     if snapshot {
-        print_snapshot(counter, motion, geometry);
+        if ratatui_bridge {
+            print_ratatui_bridge_snapshot(geometry)?;
+        } else {
+            print_snapshot(counter, motion, geometry);
+        }
         return Ok(());
     }
     if io::stdout().is_terminal() {
@@ -588,6 +598,34 @@ fn bench_summary(width: u16, height: u16, times: FrameTimes, profile: &str, labe
 
 fn millis(duration: Duration) -> String {
     format!("{:.3} ms", duration.as_secs_f64() * 1000.0)
+}
+
+fn print_ratatui_bridge_snapshot(geometry: Geometry) -> io::Result<()> {
+    use lunatui_bench::scenes::ratatui::dashboard::{self, Model};
+    use lunatui_ratatui::LunatuiBackend;
+    use ratatui::backend::Backend;
+    use ratatui::buffer::Buffer;
+    use ratatui::layout::Rect;
+
+    let width = geometry.width.min(80);
+    let height = geometry.height.min(24);
+    let area = Rect::new(0, 0, width, height);
+    let mut frame = Buffer::empty(area);
+    dashboard::render(&Model::new(), area, &mut frame);
+    let mut bytes = Vec::new();
+    let mut backend = LunatuiBackend::new(width, height, &mut bytes);
+    for y in 0..height {
+        for x in 0..width {
+            let cell = &frame[(x, y)];
+            backend.draw(std::iter::once((x, y, cell)))?;
+        }
+    }
+    backend.flush()?;
+    for row in 0..height {
+        println!("{}", backend.grid().row_display(row, backend.clusters()));
+    }
+    println!("encoded_bytes={}", backend.bytes_flushed());
+    Ok(())
 }
 
 #[cfg(test)]
