@@ -1,7 +1,9 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{Attrs, ClusterTable, Color, DecodedGlyph, Grid, Rect, Style, UnderlineStyle, width};
+use lunatui_core::{
+    Attrs, CellWidth, ClusterTable, Color, DecodedGlyph, Grid, Rect, Style, UnderlineStyle, width,
+};
 use lunatui_widgets::RenderCx;
 use ratatui::buffer::Buffer;
 use ratatui::buffer::Cell as RCell;
@@ -100,6 +102,9 @@ pub(crate) fn blit_grid_to_cx(
             let Some(cell) = grid.get(local_x, local_y) else {
                 continue;
             };
+            if cell.meta().width == CellWidth::Continuation {
+                continue;
+            }
             write_cell_to_cx(
                 cx,
                 dest.x + local_x,
@@ -133,7 +138,7 @@ fn write_cell_to_cx(
             let text = clusters.cluster_text(id).unwrap_or(" ");
             cx.put_str(x, y, text, style);
         }
-        DecodedGlyph::Continuation => cx.put_str(x, y, " ", style),
+        DecodedGlyph::Continuation => {}
     }
 }
 

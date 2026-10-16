@@ -6,7 +6,6 @@ use ratatui::buffer::Buffer;
 
 use crate::convert::capture_buffer_to_grid;
 
-/// Cached conversion from the last ratatui scratch buffer at a fixed size.
 #[derive(Debug)]
 pub(crate) struct WidgetMemo {
     pub width: u16,

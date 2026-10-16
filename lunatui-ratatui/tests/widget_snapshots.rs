@@ -9,7 +9,7 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{RenderCx, Widget};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
-use ratatui::buffer::Buffer;
+use ratatui::buffer::{Buffer, CellWidth as RatCellWidth};
 use ratatui::layout::Rect as RatRect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -43,7 +43,16 @@ where
         .expect("draw");
     let buf: &Buffer = terminal.backend().buffer();
     (0..height)
-        .map(|y| (0..width).map(|x| buf[(x, y)].symbol()).collect::<String>())
+        .map(|y| {
+            let mut line = String::new();
+            let mut col = 0;
+            while col < width {
+                let cell = &buf[(col, y)];
+                line.push_str(cell.symbol());
+                col += cell.cell_width().max(1);
+            }
+            line
+        })
         .collect()
 }
 
@@ -55,6 +64,12 @@ where
     let ours = bridge_lines(&wrapped, width, height);
     let theirs = ratatui_lines(widget, width, height);
     assert_eq!(ours, theirs, "{name}");
+}
+
+#[test]
+fn wide_grapheme_paragraph_matches_ratatui() {
+    assert_parity("wide_cjk", Paragraph::new("中文"), 6, 1);
+    assert_parity("wide_emoji", Paragraph::new("🌟x"), 6, 1);
 }
 
 #[test]
@@ -156,7 +171,16 @@ fn list_stateful_matches_ratatui() {
         .expect("draw");
     let buf: &Buffer = terminal.backend().buffer();
     let theirs: Vec<String> = (0..height)
-        .map(|y| (0..width).map(|x| buf[(x, y)].symbol()).collect())
+        .map(|y| {
+            let mut line = String::new();
+            let mut col = 0;
+            while col < width {
+                let cell = &buf[(col, y)];
+                line.push_str(cell.symbol());
+                col += cell.cell_width().max(1);
+            }
+            line
+        })
         .collect();
 
     let theme = Theme::builtin(Variant::Dark);
