@@ -8,11 +8,19 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-16
+
+First usable preview on the roadmap (PR 35): workspace crates at **0.1.0**, Phase 4 widgets, `lunatui-test` styled snapshots and oracle, docs (`getting-started`, `performance`, `porting-from-ratatui`), and README performance table vs ratatui v0.30.2.
+
 ### Fixed
 
 - The `gradient` example command is `cargo run --example gradient --features color-profiles`. Each profile step is a swatch painted with SGR foreground and background (`38;2` / `48;2` for truecolor, `38;5` / `48;5` for indexed) instead of hex and palette numbers. `examples/captures/gradient.cast` records that output. The `color-profiles` feature stays off by default.
 
 ### Added
+
+- `lunatui_test::styled_snapshot` and `Clock`; widget tests use the public test crate (PR 34).
+- Phase 4 widgets: `Paragraph`, `List`, `Table`, chrome widgets, and `Overlay` (`examples/gallery`).
+- `lunatui::run()` demo with focus, hit-testing, and motion (`examples/demo`, `app` feature).
 
 - `lunatui_runtime::Input` reads terminal input on a worker thread and coalesces event bursts into frames (PR 21, stacked on #32).
 - ADR 0002 (DD-2, `docs/adr/0002-layout-engine.md`): constraint semantics, the closed-form split, the kasuari boundary, ratatui parity, and the plan for memo, `Grid`, `Stack` and `Auto`. The prototype is `layout_prototype` in `lunatui-bench`; `lunatui-layout` stays a stub until PR 14.
