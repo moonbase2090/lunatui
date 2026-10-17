@@ -63,9 +63,9 @@ fn ascii_display_width_sse2_impl(text: &str) -> usize {
 #[cfg(target_arch = "x86_64")]
 fn ascii_display_width_avx2_impl(text: &str) -> usize {
     use core::arch::x86_64::{
+        _mm_and_si128, _mm_cmpgt_epi8, _mm_loadu_si128, _mm_movemask_epi8, _mm_set1_epi8,
         _mm256_and_si256, _mm256_cmpgt_epi8, _mm256_loadu_si256, _mm256_movemask_epi8,
-        _mm256_set1_epi8, _mm_and_si128, _mm_cmpgt_epi8, _mm_loadu_si128, _mm_movemask_epi8,
-        _mm_set1_epi8,
+        _mm256_set1_epi8,
     };
 
     let bytes = text.as_bytes();
@@ -104,9 +104,7 @@ fn ascii_display_width_avx2_impl(text: &str) -> usize {
 
 #[cfg(target_arch = "aarch64")]
 fn ascii_display_width_neon_impl(text: &str) -> usize {
-    use core::arch::aarch64::{
-        vaddlvq_u8, vandq_u8, vcgtq_u8, vdupq_n_u8, vld1q_u8,
-    };
+    use core::arch::aarch64::{vaddlvq_u8, vandq_u8, vcgtq_u8, vdupq_n_u8, vld1q_u8};
 
     let bytes = text.as_bytes();
     let mut index = 0;

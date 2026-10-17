@@ -41,7 +41,7 @@ proptest! {
     fn all_levels_match_scalar_on_ascii(
         bytes in prop::collection::vec(0u8..=127, 0..4096),
     ) {
-        let text = String::from_utf8(bytes).expect("ascii bytes");
+        let text: String = bytes.into_iter().map(char::from).collect();
         let reference = ascii_display_width_scalar(&text);
         prop_assert_eq!(ascii_display_width(&text), reference);
         prop_assert_eq!(text_display_width(&text), reference);
