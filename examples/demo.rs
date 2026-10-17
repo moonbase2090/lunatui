@@ -697,6 +697,25 @@ fn print_simd_snapshot(_geometry: Geometry) {
     }
     let elapsed = start.elapsed();
 
+    let mut prev_grid = lunatui_core::Grid::new(width, height);
+    let mut next_grid = prev_grid.clone();
+    let mut clusters = lunatui_core::ClusterTable::new();
+    let style = lunatui_core::Style::new();
+    prev_grid.put_str(0, 0, style, "seed", &mut clusters);
+    next_grid.put_str(0, 0, style, "seed", &mut clusters);
+    for col in [0_u16, 40, 120, 199] {
+        for row in [0_u16, 12, 30, 59] {
+            next_grid.put_str(col, row, style, "X", &mut clusters);
+        }
+    }
+    prev_grid.clear_dirty();
+    next_grid.clear_dirty();
+    let diff_start = Instant::now();
+    for _ in 0..256 {
+        let _ = lunatui_core::diff_runs(&prev_grid, &next_grid);
+    }
+    let diff_elapsed = diff_start.elapsed();
+
     println!("simd runtime={}", runtime_dispatch_level().as_str());
     println!(
         "simd differential_levels={}",
@@ -711,6 +730,10 @@ fn print_simd_snapshot(_geometry: Geometry) {
     println!(
         "simd bench_first_mismatch_{width}x{height}x256={}",
         millis(elapsed)
+    );
+    println!(
+        "simd bench_diff_runs_{width}x{height}x256={}",
+        millis(diff_elapsed)
     );
 }
 

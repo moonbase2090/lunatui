@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 mod detect;
+mod first_mismatch;
 
 use core::cell::UnsafeCell;
 use core::hint::spin_loop;
@@ -128,15 +129,15 @@ pub fn first_mismatch_levels_agree(a: &[u128], b: &[u128]) -> bool {
 
 #[cfg(target_arch = "x86_64")]
 fn first_mismatch_sse2(a: &[u128], b: &[u128]) -> Option<usize> {
-    first_mismatch_scalar(a, b)
+    first_mismatch::first_mismatch_sse2(a, b)
 }
 
 #[cfg(target_arch = "x86_64")]
 fn first_mismatch_avx2(a: &[u128], b: &[u128]) -> Option<usize> {
-    first_mismatch_scalar(a, b)
+    first_mismatch::first_mismatch_avx2(a, b)
 }
 
 #[cfg(target_arch = "aarch64")]
 fn first_mismatch_neon(a: &[u128], b: &[u128]) -> Option<usize> {
-    first_mismatch_scalar(a, b)
+    first_mismatch::first_mismatch_neon(a, b)
 }
