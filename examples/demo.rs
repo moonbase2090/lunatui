@@ -712,7 +712,17 @@ fn print_simd_snapshot(_geometry: Geometry) {
     next_grid.clear_dirty();
     let diff_start = Instant::now();
     for _ in 0..256 {
-        let _ = lunatui_core::diff_runs(&prev_grid, &next_grid);
+        let mut runs = Vec::new();
+        for row in 0..next_grid.height() {
+            runs.extend(lunatui_core::simd::collect_runs_in_row_simd(
+                &prev_grid,
+                &next_grid,
+                row,
+                0,
+                next_grid.width(),
+            ));
+        }
+        let _ = runs;
     }
     let diff_elapsed = diff_start.elapsed();
 
@@ -732,7 +742,7 @@ fn print_simd_snapshot(_geometry: Geometry) {
         millis(elapsed)
     );
     println!(
-        "simd bench_diff_runs_{width}x{height}x256={}",
+        "simd bench_row_collect_simd_{width}x{height}x256={}",
         millis(diff_elapsed)
     );
 }

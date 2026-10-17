@@ -4,9 +4,10 @@
 #![doc = include_str!("../README.md")]
 
 use std::hint::black_box;
+use std::vec::Vec;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use lunatui_core::{Grid, diff_runs, simd};
+use lunatui_core::{Grid, diff_runs, simd::{self, collect_runs_in_row_simd}};
 
 const WIDTH: u16 = 200;
 const HEIGHT: u16 = 60;
@@ -31,8 +32,23 @@ fn grids_with_sparse_changes() -> (Grid, Grid) {
 fn diff_runs_bench(c: &mut Criterion) {
     let (previous, next) = grids_with_sparse_changes();
     let mut group = c.benchmark_group("core_diff_runs_200x60");
-    group.bench_function("diff_runs", |b| {
+    group.bench_function("diff_runs_scalar", |b| {
         b.iter(|| black_box(diff_runs(&previous, &next)));
+    });
+    group.bench_function("row_collect_simd", |b| {
+        b.iter(|| {
+            let mut runs = Vec::new();
+            for row in 0..next.height() {
+                runs.extend(collect_runs_in_row_simd(
+                    &previous,
+                    &next,
+                    row,
+                    0,
+                    next.width(),
+                ));
+            }
+            black_box(runs);
+        });
     });
     group.finish();
 }

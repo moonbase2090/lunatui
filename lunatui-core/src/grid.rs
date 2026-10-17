@@ -102,6 +102,9 @@ impl Grid {
 
     #[must_use]
     pub(crate) fn row_word_slice(&self, row: u16) -> &[u128] {
+        if row >= self.height {
+            return &[];
+        }
         let width = usize::from(self.width);
         let start = usize::from(row) * width;
         &self.cells[start..start + width]

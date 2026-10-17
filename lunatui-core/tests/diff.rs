@@ -88,6 +88,20 @@ fn separated_changes_are_two_runs() {
 }
 
 #[test]
+fn resize_with_taller_next_grid_matches_naive() {
+    let mut clusters = ClusterTable::new();
+    let style = Style::new();
+    let mut prev = Grid::new(4, 1);
+    prev.put_str(0, 0, style, "ab", &mut clusters);
+    prev.clear_dirty();
+
+    let mut next = Grid::new(4, 2);
+    next.put_str(0, 0, style, "ab", &mut clusters);
+    next.put_str(0, 1, style, "cd", &mut clusters);
+    assert_eq!(diff_runs(&prev, &next), diff_runs_naive(&prev, &next));
+}
+
+#[test]
 fn resize_falls_back_to_full_grid_diff() {
     let mut clusters = ClusterTable::new();
     let style = Style::new();
