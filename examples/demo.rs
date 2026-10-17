@@ -40,6 +40,7 @@ fn main() -> io::Result<()> {
     let porting = args.iter().any(|arg| arg == "--porting");
     let simd = args.iter().any(|arg| arg == "--simd");
     let encode_bench = args.iter().any(|arg| arg == "--encode-bench");
+    let grid_sink = args.iter().any(|arg| arg == "--grid-sink");
     let flag_args: Vec<String> = args
         .iter()
         .filter(|arg| {
@@ -52,6 +53,7 @@ fn main() -> io::Result<()> {
                 && *arg != "--porting"
                 && *arg != "--simd"
                 && *arg != "--encode-bench"
+                && *arg != "--grid-sink"
         })
         .cloned()
         .collect();
@@ -59,6 +61,8 @@ fn main() -> io::Result<()> {
     if snapshot {
         if encode_bench {
             print_encode_bench_snapshot(geometry);
+        } else if grid_sink {
+            print_grid_sink_snapshot(geometry);
         } else if simd {
             print_simd_snapshot(geometry);
         } else if porting {
@@ -675,6 +679,62 @@ fn render_porting_snapshot(geometry: Geometry) -> (lunatui_core::Grid, lunatui_c
         &mut cx,
     );
     (grid, clusters)
+}
+
+fn print_grid_sink_snapshot(geometry: Geometry) {
+    use lunatui_bench::scenes::lunatui::encode::EncodeFrames;
+    use lunatui_prismattyc::{HostRenderer, PrismattycBackend};
+
+    struct NoOpHost;
+
+    impl HostRenderer for NoOpHost {
+        fn present_frame(&mut self, _frame: &lunatui_prismattyc::FrameDiff<'_>) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    let frames = EncodeFrames::new(geometry.width, geometry.height);
+    let mut backend = PrismattycBackend::new(geometry.width, geometry.height, NoOpHost);
+    backend.set_previous(frames.tick.clone());
+    let scroll_stats = match backend.present(&frames.scroll, &frames.clusters) {
+        Ok(stats) => stats,
+        Err(err) => panic!("present scroll: {err}"),
+    };
+    backend.set_previous(Grid::new(geometry.width, geometry.height));
+    let full_stats = match backend.present(&frames.scroll, &frames.clusters) {
+        Ok(stats) => stats,
+        Err(err) => panic!("present full: {err}"),
+    };
+
+    let scroll_start = Instant::now();
+    for _ in 0..256 {
+        backend.set_previous(frames.tick.clone());
+        match backend.present(&frames.scroll, &frames.clusters) {
+            Ok(_stats) => {}
+            Err(err) => panic!("present scroll: {err}"),
+        }
+    }
+    let scroll_elapsed = scroll_start.elapsed();
+
+    println!(
+        "grid_sink_scroll_runs_{}x{}={}",
+        geometry.width, geometry.height, scroll_stats.changed_runs
+    );
+    println!(
+        "grid_sink_scroll_cells_{}x{}={}",
+        geometry.width, geometry.height, scroll_stats.changed_cells
+    );
+    println!(
+        "grid_sink_full_runs_{}x{}={}",
+        geometry.width, geometry.height, full_stats.changed_runs
+    );
+    println!("grid_sink_ansi_bytes=0");
+    println!(
+        "grid_sink_bench_scroll_{}x{}x256={}",
+        geometry.width,
+        geometry.height,
+        millis(scroll_elapsed)
+    );
 }
 
 fn print_encode_bench_snapshot(geometry: Geometry) {
