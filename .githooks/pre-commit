@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+staged_rs="$(git diff --cached --name-only --diff-filter=ACMR | grep '\.rs$' || true)"
+if [ -z "$staged_rs" ]; then
+  exit 0
+fi
+
+set -- $staged_rs
+if ! cargo fmt --check -- "$@"; then
+  printf 'pre-commit: rustfmt check failed; run: cargo fmt --all\n' >&2
+  exit 1
+fi
