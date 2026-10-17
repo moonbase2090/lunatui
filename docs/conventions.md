@@ -3,8 +3,8 @@
 This document defines **one canonical way** for each recurring thing in lunatui. Anything it doesn't cover follows idiomatic Rust and the [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/).
 
 - Code that does the same kind of thing a different way is a review blocker.
-- Every rule is marked **CI** (checked mechanically) or **Review** (checked by Muse). Rules marked **CI (planned)** don't have a mechanical check yet, so Muse checks them by hand until one lands.
-- If a convention blocks real work, change this document in its own PR with MB2090 sign-off. Never route around it.
+- Every rule is marked **CI** (checked mechanically) or **Review** (checked by the reviewer). Rules marked **CI (planned)** don't have a mechanical check yet, so the reviewer checks them by hand until one lands.
+- If a convention blocks real work, change this document in its own PR with the maintainer sign-off. Never route around it.
 
 ## 1. Module and file layout
 
@@ -69,7 +69,7 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 | Fallible tests return `Result` and use `?`. They don't call `unwrap` or `expect`. | Review |
 | A test whose assertions depend on process-wide state (the counting allocator) runs as a `harness = false` integration test. | Review |
 | Property tests are named for the invariant they check (M3). | Review |
-| A test fails when the behavior it names breaks. Muse asks of every test: would it fail if that behavior broke? If not, it is rejected (M17). | Review |
+| A test fails when the behavior it names breaks. the reviewer asks of every test: would it fail if that behavior broke? If not, it is rejected (M17). | Review |
 | No tautological tests (M17). A test never asserts a value against itself or a constant against the same constant, computes the expected value with the code under test or a copy of its logic, asserts what a mock or stub of the unit under test returns, checks only that code ran, was called or didn't panic, compares against a snapshot accepted without review (M6), or still passes when the implementation is deleted or replaced with a stub or default. | Review |
 
 ## 7. Benches
@@ -109,22 +109,22 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 | No comments except the approved forms below (M14). Anything else fails the comment check. | CI: `cargo xtask check` |
 | `///` docs only on `pub` items (not `pub(crate)`), and on the fields, variants and trait items of public types. Never on `impl` blocks, trait-impl items, or items inside function bodies. | CI: `cargo xtask check` |
 | Member manifests use `[lints] workspace = true` and never override workspace lints. | CI: `cargo xtask check` |
-| Dependencies come only from the `deny.toml` allowlist. Adding a crate, or bumping any version in `Cargo.lock`, needs MB2090 sign-off (M16). | CI: `cargo deny` and `cargo xtask signoff` |
-| Lint, CI and dependency configuration (the paths in `.github/CODEOWNERS`) changes only with MB2090 sign-off, in a PR without feature work (M16). | CI: `cargo xtask signoff` (needs the `mb2090-signoff` label) and CODEOWNERS review |
+| Dependencies come only from the `deny.toml` allowlist. Adding a crate, or bumping any version in `Cargo.lock`, needs the maintainer sign-off (M16). | CI: `cargo deny` and `cargo xtask signoff` |
+| Lint, CI and dependency configuration (the paths in `.github/CODEOWNERS`) changes only with the maintainer sign-off, in a PR without feature work (M16). | CI: `cargo xtask signoff` (needs the `mb2090-signoff` label) and CODEOWNERS review |
 | Every `.rs` file starts with exactly this license header, identical everywhere, followed by one blank line. | CI: `cargo xtask check` |
 | Every `unsafe` block and `unsafe impl` is preceded by a `// SAFETY:` comment explaining why its contract holds. | CI: `clippy::undocumented_unsafe_blocks` denied |
 | `unsafe` code exists only in small modules that expose a safe API, and SIMD modules keep a scalar reference implementation alongside (M10). | Review |
 
 ### Approved comment forms (M14)
 
-The default is no comments. These are the only exceptions MB2090 has approved. A new exception needs his explicit approval, in its own small PR or flagged in a PR body. Once approved, it is added here and to the comment check's allowlist.
+The default is no comments. These are the only exceptions the maintainer has approved. A new exception needs his explicit approval, in its own small PR or flagged in a PR body. Once approved, it is added here and to the comment check's allowlist.
 
 | Form | Where | Approved |
 |---|---|---|
 | `///` rustdoc | On public API items only | M14 |
-| `#![doc = include_str!("<path>/README.md")]` | Crate root of every target, for crate-level docs: libraries (`../README.md`), examples (`README.md`), benches, integration tests and `xtask` (`../README.md`) | MB2090, 2026-10-06 |
-| License header (text below) | First two lines of every `.rs` file | MB2090, 2026-10-12 |
-| `// SAFETY: <why the unsafe contract holds>`, optionally continued on the following `//` lines | Immediately before an `unsafe` block or `unsafe impl` | MB2090, 2026-10-06 |
+| `#![doc = include_str!("<path>/README.md")]` | Crate root of every target, for crate-level docs: libraries (`../README.md`), examples (`README.md`), benches, integration tests and `xtask` (`../README.md`) | the maintainer, 2026-10-06 |
+| License header (text below) | First two lines of every `.rs` file | the maintainer, 2026-10-12 |
+| `// SAFETY: <why the unsafe contract holds>`, optionally continued on the following `//` lines | Immediately before an `unsafe` block or `unsafe impl` | the maintainer, 2026-10-06 |
 
 The license header, exactly:
 

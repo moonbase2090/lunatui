@@ -1,6 +1,6 @@
 # lunatui: Product Requirements Document (PRD)
 
-*A hyperspeed Rust TUI library to replace ratatui. Owner: MB2090 (Moonbase 2090 LLC). Status: **Approved** (MB2090, 2026-10-06 5:52 AM MT). Builds on `/workspace/ratatui-breakdown.md` and the measurements in `/workspace/ratatui-perf/results.txt`. Canonical copies: `/workspace/tui-replacement-plan.md` and `/workspace/lunatui-prd.md`, kept identical.*
+*A hyperspeed Rust TUI library to replace ratatui. Owner: the maintainer (Moonbase 2090 LLC). Status: **Approved** (the maintainer, 2026-10-06 5:52 AM MT). Builds on `/workspace/ratatui-breakdown.md` and the measurements in `/workspace/ratatui-perf/results.txt`. Canonical copies: `/workspace/tui-replacement-plan.md` and `/workspace/lunatui-prd.md`, kept identical.*
 
 - **Name: `lunatui`** (recommended in §12; final confirmation is open decision D1). Every crate and snippet uses it, so a rename is one pass.
 - **Binding sections:** §M (Development methodology) and §T (Team model and review protocol) are **binding working rules** for everyone contributing, human or AI. The PR acceptance template (§8.0) enforces them. Every other section is the product plan and may change through the decision process in §11.
@@ -17,13 +17,13 @@ The new core uses a **16-byte packed cell**, **row-level dirty tracking**, a **c
 
 Graphite becomes the flagship look on top of the core. Scorecard is the first real consumer, then SkillSaw. A Prismattyc-native backend gives real translucency and sub-cell rendering inside Prismattyc. A ratatui compatibility crate lets existing ratatui widgets and apps run on it. SIMD, and inline asm only where proven, comes as a late, benchmark-gated phase.
 
-Work happens under binding rules (§M): tests first, benchmarks before optimizations, property, differential and fuzz testing, styled snapshots, design docs before hard-to-undo code, and early dogfooding in Scorecard. A fixed team protocol (§T) governs it: one implementer seat per PR, a blind Muse review that posts `SHIP <sha>`, and Claude Opus checkpoint reviews. The roadmap is **38 PRs to v0.1.0** (35 code PRs plus 3 design-doc PRs) and **45 PRs to Scorecard adoption**.
+Work happens under binding rules (§M): tests first, benchmarks before optimizations, property, differential and fuzz testing, styled snapshots, design docs before hard-to-undo code, and early dogfooding in Scorecard. A fixed team protocol (§T) governs it: one implementer seat per PR, a blind the reviewer review that posts `SHIP <sha>`, and the checkpoint reviewer checkpoint reviews. The roadmap is **38 PRs to v0.1.0** (35 code PRs plus 3 design-doc PRs) and **45 PRs to Scorecard adoption**.
 
 ---
 
 ## M. Development methodology (binding)
 
-These rules are **mandatory for every PR**. A PR that doesn't satisfy them doesn't get a `SHIP`, however good the code is. Exceptions need a written waiver from MB2090 in the PR thread.
+These rules are **mandatory for every PR**. A PR that doesn't satisfy them doesn't get a `SHIP`, however good the code is. Exceptions need a written waiver from the maintainer in the PR thread.
 
 ### M1. Test-driven development: each PR starts with failing tests
 
@@ -56,7 +56,7 @@ Every core module ships `proptest` properties for its invariants. Required invar
 
 - **Same scene, identical terminal end state.** For every scene in `benches/scenes/` (dashboard, log, table, gradient, plus each widget ported in Phase 4), render with pinned ratatui 0.30.x and with lunatui. Feed both byte streams into the vt100 oracle from the same starting screen, and **require identical final screens (text and styles)** after every frame of a scripted sequence (tick, scroll, resize, overlay).
 - **Before widgets exist (Phases 1–2):** the same rule applies at grid level. Identical cell grids are encoded by ratatui's `CrosstermBackend` and by our encoder, and the oracle end states must match.
-- **Intentional differences** (for example, a bug ratatui has that we don't) are listed in `tests/differential/ALLOWED.md`, each with a reason and a review by Muse.
+- **Intentional differences** (for example, a bug ratatui has that we don't) are listed in `tests/differential/ALLOWED.md`, each with a reason and a review by the reviewer.
 
 ### M5. Fuzzing of the input parser and the output encoder
 
@@ -70,7 +70,7 @@ Every core module ships `proptest` properties for its invariants. Required invar
 ### M6. Snapshot tests with styles
 
 - Every widget and every Graphite component has **styled snapshots**: a text layer plus run-length fg/bg/attr/underline/link layers, with token names when available (`lunatui-test` format, `insta`-managed). Each component is snapshotted in all of its states (focused, hovered, disabled, error, empty, overflow), at two sizes, and in truecolor plus 16-color profiles. Animations are snapshotted at fixed virtual-clock times.
-- Snapshot changes require explicit acceptance in the PR (no blanket `cargo insta accept`). Muse reviews snapshot diffs as part of the API and visual check.
+- Snapshot changes require explicit acceptance in the PR (no blanket `cargo insta accept`). the reviewer reviews snapshot diffs as part of the API and visual check.
 
 ### M7. Design docs before code for hard-to-undo pieces
 
@@ -79,7 +79,7 @@ Every core module ships `proptest` properties for its invariants. Required invar
   - **DD-2: layout engine** (before PR 14)
   - **DD-3: public API** (`App`/`Ui`/`Widget`/`RenderCx`, IDs, memo; before PR 23)
 - Each design doc covers: problem, options considered, chosen design, memory layout and invariants, benchmarks and targets, migration and compat impact, open questions, and the tests that will prove it.
-- **Approval:** the Muse seat reviews it, then **Claude Opus does a checkpoint review** (§T4), then MB2090 signs off. Code PRs reference the approved ADR number.
+- **Approval:** the Reviewer seat reviews it, then **the checkpoint reviewer does a checkpoint review** (§T4), then the maintainer signs off. Code PRs reference the approved ADR number.
 - **Changes after approval** need an ADR amendment PR with the same review chain.
 
 ### M8. Dogfooding via Scorecard as early as possible
@@ -90,7 +90,7 @@ Scorecard consumes lunatui from the earliest point each capability exists. These
 |---|---|
 | PR 10 (session + encoder + sync output) | `scorecard --tui-preview` prints a static gate summary through `Grid` + encoder (inline, no input) |
 | PR 19 (layout, text, virtualization) | Preview renders the real findings list from a run, virtualized, with layout |
-| PR 23 (runtime `run()`) | `scorecard tui` dogfood branch: live, keyboard-navigable, run daily by MB2090 |
+| PR 23 (runtime `run()`) | `scorecard tui` dogfood branch: live, keyboard-navigable, run daily by the maintainer |
 | PR 24–26 (hit/focus, animation, themes) | Mouse, focus ring, lightcycle placeholder, theme tokens |
 | PR 40–42 | Graduates to Scorecard `main` and ships (adoption) |
 
@@ -106,9 +106,9 @@ Scorecard consumes lunatui from the earliest point each capability exists. These
 |---|---|---|
 | **Implementer seat A** | An implementer agent or engineer | Builds **one PR at a time**, start to finish, following §M. Never opens a second PR before the current one has `SHIP` or is closed |
 | **Implementer seat B** | Joins **around PR 15** | Second parallel track, also one PR at a time. Suggested split from PR 15: A takes layout and text (14–19 →), B takes input and runtime (20–22 →). They converge for PR 23 (public API) under DD-3 |
-| **Muse seat** | Reviewer agent | **Blind review** of every PR. Posts `SHIP <sha>` or sends it back |
-| **Claude Opus** | Checkpoint reviewer | Deep reviews at fixed checkpoints (§T4) |
-| **MB2090** | Owner | Signs off design docs and milestones, decides §11 items, grants waivers |
+| **Reviewer seat** | Reviewer agent | **Blind review** of every PR. Posts `SHIP <sha>` or sends it back |
+| **the checkpoint reviewer** | Checkpoint reviewer | Deep reviews at fixed checkpoints (§T4) |
+| **the maintainer** | Owner | Signs off design docs and milestones, decides §11 items, grants waivers |
 
 ### T2. What every PR body must contain (implementer)
 
@@ -124,17 +124,17 @@ Scorecard consumes lunatui from the earliest point each capability exists. These
 5. Allocation and byte counts where relevant.
 6. Known limitations and follow-ups.
 
-### T3. Muse blind review
+### T3. Blind reviewer review
 
-- **Blind** means Muse reviews the diff, tests, CI results and benchmark artifacts **as produced by CI**, not the implementer's claims or reasoning. Muse re-runs, or reads the CI output for, the benchmarks itself. The PR body's numbers must match CI. A mismatch is grounds for send-back.
-- **Muse posts `SHIP <sha>` (the exact head commit) only if all three hold:**
+- **Blind** means the reviewer reviews the diff, tests, CI results and benchmark artifacts **as produced by CI**, not the implementer's claims or reasoning. the reviewer re-runs, or reads the CI output for, the benchmarks itself. The PR body's numbers must match CI. A mismatch is grounds for send-back.
+- **the reviewer posts `SHIP <sha>` (the exact head commit) only if all three hold:**
   1. **Tests:** every §M rule satisfied for this PR type; CI green including `tests-first`, property, differential, fuzz and snapshot jobs.
   2. **API shape:** consistent with the approved ADRs and existing conventions; no accidental public surface; docs on every public item.
   3. **Benchmarks:** targets met where stated; **any bench more than 3% slower than `main` → sent back**, even if CI's gate was somehow bypassed.
-- Otherwise Muse posts `CHANGES <sha>` with a numbered list. Any new commit invalidates a previous `SHIP`, so Muse re-reviews the new head.
+- Otherwise the reviewer posts `CHANGES <sha>` with a numbered list. Any new commit invalidates a previous `SHIP`, so the reviewer re-reviews the new head.
 - Merge happens only on a `SHIP` matching the current head SHA (enforced by a merge-queue check).
 
-### T4. Claude Opus checkpoint reviews
+### T4. the checkpoint reviewer checkpoint reviews
 
 | Checkpoint | When | Scope |
 |---|---|---|
@@ -180,7 +180,7 @@ Scenes are the Graphite-like dashboard, log and table from `ratatui-perf` (porte
 
 | Metric | ratatui v0.30.2 (measured) | lunatui target | Stretch |
 |---|---|---|---|
-| **Frame budget (binding, MB2090 Oct 6, 2026): maximum frame time, any frame at any supported size**, end to end incl. encode and write. Measured on every sample of every worst-case bench: full truecolor repaint at 400×120 and at a 4K-class 800×240 grid, solver-fallback layouts, and a wrap-cache miss on a 5,000-line log | not measured as a maximum | **≤ 8 ms maximum (target)**, measured on a dedicated machine and reported in every PR's Proof. **≤ 16 ms maximum (hard gate)** on shared CI runners: CI fails if any sample exceeds it | — |
+| **Frame budget (binding, the maintainer Oct 6, 2026): maximum frame time, any frame at any supported size**, end to end incl. encode and write. Measured on every sample of every worst-case bench: full truecolor repaint at 400×120 and at a 4K-class 800×240 grid, solver-fallback layouts, and a wrap-cache miss on a 5,000-line log | not measured as a maximum | **≤ 8 ms maximum (target)**, measured on a dedicated machine and reported in every PR's Proof. **≤ 16 ms maximum (hard gate)** on shared CI runners: CI fails if any sample exceeds it | — |
 | Frame time, dashboard tick, **200×60** (end to end incl. encode) | 0.48 ms | **≤ 0.10 ms** | 0.05 ms |
 | Frame time, dashboard tick, **400×120** | 1.75 ms | **≤ 0.30 ms** | 0.15 ms |
 | Frame time, scroll every frame, 200×60 / 400×120 | 0.81 / 1.92 ms | ≤ 0.20 / ≤ 0.45 ms | — |
@@ -530,8 +530,8 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 - [ ] M8 Dogfood: Scorecard branch builds against this PR (from PR 10 on), friction logged as `dogfood` issues
 - [ ] M13 Proof: `cargo run --example ____` (documented in examples/README.md); capture attached (GIF/PNG/asciinema); bench numbers where relevant
 - [ ] Docs on all new public items; CHANGELOG entry
-- [ ] T5 Authorship: all commits authored/committed by mb2090 noreply; no Co-authored-by trailers (CI `authorship` green)
-- [ ] T3 Muse: `SHIP <head-sha>` posted for the current head
+- [ ] T5 Authorship: all commits authored/committed by release noreply; no Co-authored-by trailers (CI `authorship` green)
+- [ ] T3 the reviewer: `SHIP <head-sha>` posted for the current head
 - [ ] T4 Opus checkpoint resolved (only for CP-1…CP-4 PRs)
 ```
 
@@ -543,7 +543,7 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 | 02 | Bench harness | `benches/` with criterion + gungraun, counting allocator, byte/write counters | Harness self-test | `xtask bench` runs and prints metrics |
 | 03 | ratatui baseline scenes | Port `ratatui-perf` scenes (dashboard, log, table, gradient) on pinned ratatui | Scenes render | Numbers within ±15% of `results.txt` on the same box |
 | 04 | Unicode width tables | `xtask gen-width` from UCD + emoji data → `lunatui-core/src/width/tables.rs`; `width(&str)` | Corpus + diff vs `unicode-width` (documented deltas) | All differences explained in `docs/width-policy.md` |
-| DD-1 | **Design doc: cell format** | `docs/adr/0001-cell-format.md`: 16-byte cell, grapheme slot, per-frame cluster table + ID seeding, continuation cells, mode 2027 policy, ExtTable, benchmarks | Prototype bench (from `ratatui-perf`) attached | Muse review, **Opus CP-1**, MB2090 sign-off |
+| DD-1 | **Design doc: cell format** | `docs/adr/0001-cell-format.md`: 16-byte cell, grapheme slot, per-frame cluster table + ID seeding, continuation cells, mode 2027 policy, ExtTable, benchmarks | Prototype bench (from `ratatui-perf`) attached | the reviewer review, **Opus CP-1**, the maintainer sign-off |
 | 05 | Grapheme slot + cluster table | `core/src/grapheme.rs`: inline scalar, tagged `ClusterId`, per-frame `ClusterTable` with seeding from the previous frame | Proptest: round-trip; ID stability across frames | Zero allocations for inline glyphs; implements DD-1 |
 
 **Demo (Phase 0, M13):** `hello_box` draws a bordered box with text from PR 01, using the simplest working version (M9) until the grid and encoder land. PR 04 and PR 05 extend it with mixed-width lines (CJK, emoji, a ZWJ sequence) whose right border stays aligned, using the new width tables and grapheme slot. PR 02 and PR 03 show their bench output and the ratatui baseline scenes in their Proof sections.
@@ -569,7 +569,7 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 
 | PR | Title | Scope / files | Tests | Accept |
 |---|---|---|---|---|
-| DD-2 | **Design doc: layout engine** | `docs/adr/0002-layout-engine.md`: constraint semantics, closed-form algorithm, conflict detection, kasuari boundary, ratatui parity, memo, `Grid`/`Stack`/`Auto` | Parity test plan + bench targets | Muse review, **Opus CP-2**, MB2090 sign-off |
+| DD-2 | **Design doc: layout engine** | `docs/adr/0002-layout-engine.md`: constraint semantics, closed-form algorithm, conflict detection, kasuari boundary, ratatui parity, memo, `Grid`/`Stack`/`Auto` | Parity test plan + bench targets | the reviewer review, **Opus CP-2**, the maintainer sign-off |
 | 14 | Closed-form layout | `layout/src/{constraint,flex,solve_fast}.rs` | Unit + proptest invariants | 20 × `Fill` miss ≤ 20 µs |
 | 15 | Solver fallback + equivalence | `layout/src/solve_cassowary.rs` (kasuari), conflict detection | Proptest fast == fallback; parity suite vs ratatui | Documented, intentional differences only |
 | 16 | Layout memo + `Grid`/`Stack` + `Auto` | `layout/src/{memo,grid,stack}.rs` | Unit | Zero allocations on memo hit; **Opus CP-2 follow-up review** |
@@ -586,7 +586,7 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 | 20 | Input parser | `term/src/input/{parser,keys,mouse,paste}.rs`: legacy + kitty keyboard + SGR mouse + paste + focus | Table tests from real captures; `fuzz_input_parser`; `parse(encode(e)) == e` property | Fuzz clean; all captured sequences decode |
 | 21 | Input thread + coalescing | `runtime/src/input.rs` | Unit with fake source | Bursts coalesce to one frame |
 | 22 | Frame scheduler | `runtime/src/sched.rs`: Idle/Dirty/Animating, deadlines, backpressure | Virtual clock tests | 0 wakeups idle (measured with a counter); frame-drop under a slow writer |
-| DD-3 | **Design doc: public API** | `docs/adr/0003-public-api.md`: `App`, `Ui`, `Widget`, `RenderCx`, IDs, memo, `Cx` messaging, threading, error model, semver policy | API mock-up compiled as doc tests; Scorecard dogfood sketch | Muse review, **Opus CP-3**, MB2090 sign-off |
+| DD-3 | **Design doc: public API** | `docs/adr/0003-public-api.md`: `App`, `Ui`, `Widget`, `RenderCx`, IDs, memo, `Cx` messaging, threading, error model, semver policy | API mock-up compiled as doc tests; Scorecard dogfood sketch | the reviewer review, **Opus CP-3**, the maintainer sign-off |
 | 23 | `App`/`Ui`/`run()` | `runtime/src/{app,ui,id,memo}.rs`, facade `run()` | Example app PTY test | Hello-world + counter examples work |
 | 24 | HitMap + FocusManager | `runtime/src/{hit,focus}.rs` | Unit + proptest (topmost wins) | Click/hover/drag/Tab/arrow traversal work in the example |
 | 25 | Animation primitives | `runtime/src/anim/{clock,ease,spring,tween}.rs` | Deterministic snapshots at time t | Frame-rate-independent results |
@@ -619,7 +619,7 @@ Scorecard dogfooding starts at PR 10 and becomes a live branch at PR 23 (M8). Th
 | PR | Title | Scope | Tests | Accept |
 |---|---|---|---|---|
 | 36 | `graphite-core` extraction | Tokens, component models, motion curves (no renderer deps) | Unit | Prismattyc compiles against it (behind a flag) |
-| 37 | `graphite-tui` chrome | Rail, Pane, Chip, Badge, StatusDot, TabStrip as lunatui widgets | Styled snapshots | Visual sign-off by MB2090 |
+| 37 | `graphite-tui` chrome | Rail, Pane, Chip, Badge, StatusDot, TabStrip as lunatui widgets | Styled snapshots | Visual sign-off by the maintainer |
 | 38 | Keymap registry + shortcut overlay + palette | Ctrl+Shift overlay (kitty kbd, legacy fallback), command palette | Snapshots + PTY | Overlay and palette driven by one registry |
 | 39 | Lightcycle + sub-cell raster | Eighth/octant glyph raster, trail gradient | Virtual-clock snapshots | Smooth at 60 fps, ≤ 1% CPU (target) |
 | 40 | Scorecard TUI skeleton | `scorecard tui`: rail of gates, tabs with badges, status bar | termlens flow | Runs in kitty/WezTerm/Prismattyc |
@@ -721,7 +721,7 @@ Use `core::arch::asm!` (stable) **only** where intrinsics measurably fall short.
 
 ---
 
-## 11. Open decisions for MB2090 (with recommendations)
+## 11. Open decisions for the maintainer (with recommendations)
 
 | # | Decision | Options | Recommendation | Status |
 |---|---|---|---|---|
@@ -740,10 +740,10 @@ Use `core::arch::asm!` (stable) **only** where intrinsics measurably fall short.
 | D13 | **Public launch timing** | At v0.1 / at Scorecard adoption | **Preview at v0.1; main launch at PR 42 + 43** | Approved |
 | D14 | **SIMD gate thresholds** | Fixed % per PR | **As in §8 Phase 7** (1.2–1.5× for intrinsics, +10% over intrinsics for asm) | Approved |
 | D15 | **Governance** | Solo / co-maintainers at M2 | **Invite 1–2 co-maintainers at M2**, ADRs from day one | Approved |
-| D16 | **mb2090 noreply ID** | Resolved | `322824348+mb2090@users.noreply.github.com` (used by T5 and the `authorship` CI job) | Resolved |
-| D17 | **Muse tooling** | Muse runs benches itself / reads CI artifacts only | **Read CI artifacts, with re-run allowed on demand.** Keeps "blind" honest without doubling CI cost | Approved |
+| D16 | **release noreply ID** | Resolved | `322824348+mb2090@users.noreply.github.com` (used by T5 and the `authorship` CI job) | Resolved |
+| D17 | **the reviewer tooling** | the reviewer runs benches itself / reads CI artifacts only | **Read CI artifacts, with re-run allowed on demand.** Keeps "blind" honest without doubling CI cost | Approved |
 
-Approved by MB2090 on 2026-10-06: all recommendations accepted.
+Approved by the maintainer on 2026-10-06: all recommendations accepted.
 
 ---
 
@@ -781,70 +781,70 @@ Recommendation: decide the name, then publish a real (if minimal) `0.0.x` from P
   - which terminals support DEC 2026 and 2027: these must be probed and captured during PR 12. I didn't verify terminal support lists for this plan.
 - **Library choices:** `gungraun` being the successor of `iai-callgrind` is my reading of crates.io metadata (both are callgrind-based, and gungraun is the actively updated one). Confirm before adopting.
 
-## M9 Small pieces, incremental growth (binding, MB2090 Oct 5, 2026)
+## M9 Small pieces, incremental growth (binding, the maintainer Oct 5, 2026)
 - Build from small, independently testable units; each PR adds or improves one small piece.
 - No god objects: no type or module that owns unrelated responsibilities. Prefer small focused types and free functions composed together.
-- Soft limits: a source file over ~400 lines or a type with more than ~7 fields or ~10 public methods must be split or justified in the PR body; Muse checks this before SHIP.
+- Soft limits: a source file over ~400 lines or a type with more than ~7 fields or ~10 public methods must be split or justified in the PR body; the reviewer checks this before SHIP.
 - Grow features incrementally: the simplest working version first, behind tests, then optimize in follow-up PRs with benchmarks.
 
-## M10 Code beauty (binding, MB2090 Oct 5, 2026)
+## M10 Code beauty (binding, the maintainer Oct 5, 2026)
 "The codebase should be as pretty as the performance is fast."
 - Readable first: clear names, small functions, one idea per module, no clever tricks. What isn't obvious is explained by a name, a type, a test or public `///` docs, not by a comment (M14).
 - Unsafe code and SIMD are isolated in tiny, documented modules with a safe API and a scalar reference implementation alongside.
 - Every public item has rustdoc with an example; `#![deny(missing_docs)]` on public crates; doc examples are tested.
 - Tooling gates in CI: `cargo fmt --check`, `cargo clippy -- -D warnings` (pedantic where sensible), `cargo doc` with no warnings, `cargo deny`, and typos checks.
 - Consistent error handling (typed errors, no panics in library code except documented invariants).
-- Muse reviews readability and API elegance as a SHIP criterion alongside correctness and benchmarks.
+- the reviewer reviews readability and API elegance as a SHIP criterion alongside correctness and benchmarks.
 
-## M11 No shortcuts (binding, MB2090 Oct 5, 2026)
+## M11 No shortcuts (binding, the maintainer Oct 5, 2026)
 "Readable, highly maintainable code. Do not take shortcuts."
 - No `unimplemented!` or `todo!` merged to main; no TODO or FIXME comments and no commented-out code (M14). Deferred work is a tracked issue.
 - No disabling or skipping tests, lints, or benchmarks to get a PR green; no `#[allow]` at all. The only suppression is `#[expect(lint, reason = "...")]`, listed in `docs/lints.md` (M16).
 - No copy-paste duplication; extract shared logic.
 - No `unwrap`/`expect` in library code outside tests and documented invariants.
-- Fix root causes, not symptoms. No workarounds (M16): if a convention or design blocks real work, change it in its own PR with MB2090 sign-off, tracked by an issue.
-- Muse rejects any PR that cuts a corner, even if tests and benchmarks pass.
+- Fix root causes, not symptoms. No workarounds (M16): if a convention or design blocks real work, change it in its own PR with the maintainer sign-off, tracked by an issue.
+- the reviewer rejects any PR that cuts a corner, even if tests and benchmarks pass.
 
-## M12 Regular housekeeping (binding, MB2090 Oct 5, 2026)
+## M12 Regular housekeeping (binding, the maintainer Oct 5, 2026)
 Optimization and refactoring are a standing, recurring task, not a one-off phase.
 - A housekeeping pass is scheduled regularly (e.g., after every ~5 feature PRs, or weekly): profile hot paths, review the benchmark trend, and refactor anything that grew too large or tangled under M9–M11.
 - Housekeeping PRs follow every rule above (tests first, benchmarks, small scope, proof in the body) and never mix with feature work.
 - Findings that can't be fixed in one pass become tracked issues labeled `housekeeping`.
 
-## M13 Demo every PR (binding, MB2090 Oct 6, 2026)
+## M13 Demo every PR (binding, the maintainer Oct 6, 2026)
 lunatui is demoable early and continuously, so development can be watched in flight instead of arriving as one large feature set.
 - Every feature PR adds or extends a runnable example under `examples/`, run with one `cargo run --example <name>` command and documented in `examples/README.md`.
 - The first code PR (PR 01) already puts something on screen: a bordered box with text (`hello_box`).
 - Every PR body includes a **Proof** section: the demo command, a short capture of it running (GIF, PNG or asciinema), benchmark numbers where relevant (the §T2 table), and the worst-case frame-time maximum against the 8 ms target, measured on a dedicated machine (§1.3). A PR with nothing to run (design doc, docs only) says so in its Proof section, with the reason.
 - Each early phase of §8 ends in a visible demo, named in its **Demo** line.
-- Muse does not post `SHIP` without the Proof section.
+- the reviewer does not post `SHIP` without the Proof section.
 
-## M14 No comments: code is the memory (binding, MB2090 Oct 6, 2026)
+## M14 No comments: code is the memory (binding, the maintainer Oct 6, 2026)
 - **The default is no comments.** Names, types and tests must explain the code. No `//` or `/* */` comments and no `//!` inner docs, in every crate.
 - **Documentation:** `///` rustdoc on public API items, with `missing_docs` on. Crate-level docs use `#![doc = include_str!("../README.md")]`.
-- **Exactly two approved comment exceptions (MB2090 rulings, Oct 6, 2026):**
+- **Exactly two approved comment exceptions (the maintainer rulings, Oct 6, 2026):**
   1. The MIT SPDX license header at the top of every source file. Its text is fixed and identical in every file (`docs/conventions.md` §10).
   2. `// SAFETY:` comments on `unsafe` blocks. `clippy::undocumented_unsafe_blocks` is denied, so every `unsafe` block has one.
-- **New exceptions need MB2090's explicit approval.** Other comment types may be allowed case by case where they make sense. Propose a new exception in its own small PR, or flag it in a PR body as needing MB2090 sign-off. Once approved, it is added to the comment check's allowlist and listed in `docs/conventions.md` §10. Never add an exception on your own or slip a comment past the check.
+- **New exceptions need the maintainer's explicit approval.** Other comment types may be allowed case by case where they make sense. Propose a new exception in its own small PR, or flag it in a PR body as needing the maintainer sign-off. Once approved, it is added to the comment check's allowlist and listed in `docs/conventions.md` §10. Never add an exception on your own or slip a comment past the check.
 - CI enforces this with a check script that allows only the approved forms and fails on any other comment. Plain comments are not visible to clippy or dylint, so the script is the enforcement.
-- Muse checks it on every review.
+- the reviewer checks it on every review.
 
-## M15 Mistakes become lints (binding, MB2090 Oct 6, 2026)
+## M15 Mistakes become lints (binding, the maintainer Oct 6, 2026)
 - Any error or mistake found more than once during development (review findings, CI failures, bugs) becomes a new lint rule (clippy configuration, dylint, or the check script) in the same PR or the next one.
 - Each rule is listed in `docs/lints.md` with the mistake it prevents.
-- Muse checks it on every review.
+- the reviewer checks it on every review.
 
-## M16 Locked down: conventional and standardized (binding, MB2090 Oct 6, 2026)
+## M16 Locked down: conventional and standardized (binding, the maintainer Oct 6, 2026)
 "Locked down" means **highly conventional and standardized, with no workarounds or shortcuts**. lunatui is set up so only the correct patterns compile and pass CI. The items below are how that is enforced.
 - **One canonical way.** `docs/conventions.md` defines one canonical way for each recurring thing: module and file layout, naming, error types and propagation, constructors and builders, widget structure, tests and test names, benches, examples and captures, and feature flags. Everything else follows idiomatic Rust and the Rust API Guidelines unless that doc says otherwise. Code that does the same kind of thing a different way is a review blocker. Where a convention can be checked mechanically, CI checks it.
-- **No workarounds.** If a convention blocks real work, change the convention in its own PR with MB2090 sign-off. Never route around it.
+- **No workarounds.** If a convention blocks real work, change the convention in its own PR with the maintainer sign-off. Never route around it.
 - **Strict lints, no `#[allow]`.** Workspace lints are strict and `#[allow]` is not permitted anywhere, even with a reason. The only suppression is `#[expect(lint, reason = "...")]`, and each one is listed in `docs/lints.md`.
 - **Dependency allowlist.** cargo-deny allows only the crates it lists.
 - **Architecture boundaries and size limits** are checked in CI.
-- **Sign-off.** Changes to lint or CI configuration need MB2090 sign-off (CODEOWNERS on mb2090 plus a PR label) and are never bundled with feature work.
-- Muse checks all of it on every review.
+- **Sign-off.** Changes to lint or CI configuration need the maintainer sign-off (CODEOWNERS on mb2090 plus a PR label) and are never bundled with feature work.
+- the reviewer checks all of it on every review.
 
-## M17 No tautological tests (binding, MB2090 Oct 6, 2026)
+## M17 No tautological tests (binding, the maintainer Oct 6, 2026)
 - **Every test must be able to fail.** A test fails when the behavior it names breaks.
 - Banned:
   - asserting a value against itself, or a constant against the same constant
@@ -854,9 +854,9 @@ lunatui is demoable early and continuously, so development can be watched in fli
   - snapshots or golden files regenerated from current output without review (M6)
   - tests that still pass when the implementation is deleted or replaced with a stub or default
 - The review question for every test: would it fail if the behavior it names broke? If not, it is rejected. `docs/conventions.md` §6 lists the rule.
-- Muse checks it on every review.
+- the reviewer checks it on every review.
 
-## T-update Seat assignments (MB2090 Oct 5, 2026)
-- Implementer: Claude Opus 5.5.
-- Reviewer (every PR, blind, SHIP <sha>): a dedicated Muse seat (muse-spark-1.3-contributor, xhigh), a different model family from the implementer.
-- Checkpoint reviewer (CP-1 to CP-4: cell format, layout engine, public API, pre-v0.1): Codex, replacing Claude Opus since Opus now implements.
+## T-update Seat assignments (the maintainer Oct 5, 2026)
+- Implementer: the checkpoint reviewer 5.5.
+- Reviewer (every PR, blind, SHIP <sha>): a dedicated Reviewer seat (a dedicated reviewer seat), a different model family from the implementer.
+- Checkpoint reviewer (CP-1 to CP-4: cell format, layout engine, public API, pre-v0.1): the checkpoint reviewer, replacing the checkpoint reviewer since Opus now implements.

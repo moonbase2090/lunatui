@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed. Approval chain (PRD M7, §T4): Muse review, then the CP-1 checkpoint review (Codex, per the seat assignments), then MB2090 sign-off |
+| **Status** | Proposed. Approval chain (PRD M7, §T4): the reviewer review, then the CP-1 checkpoint review (the checkpoint reviewer, per the seat assignments), then the maintainer sign-off |
 | **Date** | 2026-10-06 |
 | **Decides** | PRD D4 (cell format), DD-1 |
 | **Implemented by** | PR 05 (grapheme slot and cluster table), PR 06 (`Cell` and style types), PR 07 (`Grid` and dirty rows), PR 08 (diff) |
@@ -162,7 +162,7 @@ Targets for the implementing PRs: PR 06 asserts the size and alignment. PR 07 ha
 | 08 | Property: packed diff equals a naive cell-by-cell diff; benchmark against the 8 µs target; ratatui changed-cell counts on the PR 03 scenes |
 | 09–11 | Diff/apply on the vt100 oracle (invariant 7); encoder fuzzing |
 
-## 9. Open questions for CP-1 and MB2090
+## 9. Open questions for CP-1 and the maintainer
 
 1. **`CONTINUATION` value.** `0x0011_0000` sits just above U+10FFFF and needs no extra flag. The alternative is a width-0 cell with any glyph, which wastes the glyph slot. Recommendation: `0x0011_0000`.
 2. **Cluster table bound.** 65,536 IDs per frame (31 bits are available). A full screen of distinct clusters at 400×120 is 48,000, so 65,536 covers any single frame. Recommendation: 65,536, with the overflow fallback.
