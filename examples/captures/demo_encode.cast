@@ -1,0 +1,2 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760700000, "title": "demo_encode", "command": "--example demo --features app -- --encode-bench --snapshot --width 200 --height 60"}
+[0.0, "o", "encode_bench_scroll_200x60x256=14.632 ms\nencode_bench_full_200x60x256=43.643 ms\n"]
