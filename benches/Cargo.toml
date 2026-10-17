@@ -70,3 +70,7 @@ required-features = ["gungraun"]
 [[test]]
 name = "harness_self_test"
 harness = false
+
+[[bench]]
+name = "criterion_core_diff"
+harness = false
