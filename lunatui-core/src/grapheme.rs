@@ -278,7 +278,9 @@ pub fn cluster_display_width(cluster: &str) -> usize {
 #[must_use]
 pub fn text_display_width(text: &str) -> usize {
     if text.is_ascii() {
-        crate::simd::ascii_display_width_scalar(text)
+        text.bytes()
+            .filter(|byte| (b' '..=b'~').contains(byte))
+            .count()
     } else {
         UnicodeSegmentation::graphemes(text, true)
             .map(cluster_display_width)

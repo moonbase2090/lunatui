@@ -675,7 +675,6 @@ fn render_porting_snapshot(geometry: Geometry) -> (lunatui_core::Grid, lunatui_c
 
 fn print_simd_snapshot(_geometry: Geometry) {
     use lunatui_core::simd::{
-        ascii_display_width, ascii_display_width_levels_agree, ascii_display_width_scalar,
         differential_levels, first_mismatch, first_mismatch_levels_agree, first_mismatch_scalar,
         runtime_dispatch_level,
     };
@@ -698,17 +697,6 @@ fn print_simd_snapshot(_geometry: Geometry) {
     }
     let elapsed = start.elapsed();
 
-    let log_line = "2026-10-16T19:00:00Z INFO  worker completed batch duration=12ms\n";
-    let ascii_log = log_line.repeat(5000);
-    let ascii_probe = ascii_display_width_scalar(&ascii_log);
-    let ascii_agree = ascii_display_width_levels_agree(&ascii_log);
-    let ascii_dispatched = ascii_display_width(&ascii_log);
-    let ascii_start = Instant::now();
-    for _ in 0..256 {
-        let _ = ascii_display_width(&ascii_log);
-    }
-    let ascii_elapsed = ascii_start.elapsed();
-
     println!("simd runtime={}", runtime_dispatch_level().as_str());
     println!(
         "simd differential_levels={}",
@@ -724,9 +712,6 @@ fn print_simd_snapshot(_geometry: Geometry) {
         "simd bench_first_mismatch_{width}x{height}x256={}",
         millis(elapsed)
     );
-    println!("simd ascii_width_probe={ascii_probe} dispatched={ascii_dispatched}");
-    println!("simd ascii_width_levels_agree={ascii_agree}");
-    println!("simd bench_ascii_log_5000x256={}", millis(ascii_elapsed));
 }
 
 fn print_porting_snapshot(geometry: Geometry) {
