@@ -881,6 +881,7 @@ dependencies = [
  "gungraun",
  "lunatui-core",
  "lunatui-layout",
+ "lunatui-term",
  "lunatui-text",
  "lunatui-theme",
  "lunatui-widgets",
