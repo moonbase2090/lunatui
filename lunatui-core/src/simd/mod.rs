@@ -10,7 +10,7 @@ use core::hint::spin_loop;
 use core::sync::atomic::{AtomicU8, Ordering};
 
 pub use detect::{DispatchLevel, active_dispatch_level, differential_levels};
-pub use row_diff::collect_runs_in_row_simd;
+pub use row_diff::{collect_runs_in_row_scalar, collect_runs_in_row_simd};
 
 /// Finds the first index where `a` and `b` differ, including length mismatch past the shared prefix.
 pub type FirstMismatchFn = fn(&[u128], &[u128]) -> Option<usize>;

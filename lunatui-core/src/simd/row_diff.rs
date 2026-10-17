@@ -14,6 +14,20 @@ fn index_to_u16(index: usize) -> u16 {
     u16::try_from(index).unwrap_or(u16::MAX)
 }
 
+/// Scalar row scan (benchmark baseline for `collect_runs_in_row_simd`).
+#[must_use]
+pub fn collect_runs_in_row_scalar(
+    previous: &Grid,
+    next: &Grid,
+    row: u16,
+    start: u16,
+    end: u16,
+) -> Vec<ChangedRun> {
+    let mut runs = Vec::new();
+    collect_runs_in_row_scalar_tail(previous, next, row, start, end, &mut runs);
+    runs
+}
+
 /// SIMD-accelerated row scan (benchmark harness; production `diff_runs` stays scalar until the Phase 7 gate).
 #[must_use]
 pub fn collect_runs_in_row_simd(
@@ -55,16 +69,25 @@ pub fn collect_runs_in_row_simd(
         }
     }
     if col < end_usize {
-        collect_runs_in_row_scalar_tail(
-            previous,
-            next,
-            row,
-            index_to_u16(col),
-            end,
-            &mut runs,
-        );
+        collect_runs_in_row_scalar_tail(previous, next, row, index_to_u16(col), end, &mut runs);
     }
+    coalesce_adjacent_runs(&mut runs);
     runs
+}
+
+fn coalesce_adjacent_runs(runs: &mut Vec<ChangedRun>) {
+    let mut merged: Vec<ChangedRun> = Vec::new();
+    for run in runs.drain(..) {
+        if let Some(last) = merged.last_mut()
+            && last.row == run.row
+            && last.col.saturating_add(last.width) == run.col
+        {
+            last.width = last.width.saturating_add(run.width);
+        } else {
+            merged.push(run);
+        }
+    }
+    *runs = merged;
 }
 
 fn collect_runs_in_row_scalar_tail(

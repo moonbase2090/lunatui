@@ -3,10 +3,31 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{
-    ClusterTable, Grid, Style, diff_runs_naive, simd::collect_runs_in_row_simd,
-};
+use lunatui_core::{ClusterTable, Grid, Style, diff_runs_naive, simd::collect_runs_in_row_simd};
 use proptest::prelude::*;
+
+#[test]
+fn simd_row_collect_matches_naive_on_width_growth() {
+    let mut clusters = ClusterTable::new();
+    let style = Style::new();
+    let mut prev = Grid::new(1, 1);
+    prev.put_str(0, 0, style, "a", &mut clusters);
+    prev.clear_dirty();
+    let mut next = Grid::new(2, 1);
+    next.put_str(0, 0, style, "b", &mut clusters);
+    next.put_str(1, 0, style, "c", &mut clusters);
+    let naive = diff_runs_naive(&prev, &next);
+    let simd = collect_runs_in_row_simd(&prev, &next, 0, 0, next.width());
+    assert_eq!(simd, naive);
+    assert_eq!(
+        simd,
+        vec![lunatui_core::ChangedRun {
+            row: 0,
+            col: 0,
+            width: 2,
+        }]
+    );
+}
 
 #[test]
 fn simd_row_collect_matches_naive_on_height_growth() {

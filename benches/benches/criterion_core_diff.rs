@@ -7,7 +7,10 @@ use std::hint::black_box;
 use std::vec::Vec;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use lunatui_core::{Grid, diff_runs, simd::{self, collect_runs_in_row_simd}};
+use lunatui_core::{
+    Grid,
+    simd::{self, collect_runs_in_row_scalar, collect_runs_in_row_simd},
+};
 
 const WIDTH: u16 = 200;
 const HEIGHT: u16 = 60;
@@ -24,28 +27,28 @@ fn grids_with_sparse_changes() -> (Grid, Grid) {
             next.put_str(col, row, style, "X", &mut clusters);
         }
     }
-    previous.clear_dirty();
-    next.clear_dirty();
     (previous, next)
 }
 
-fn diff_runs_bench(c: &mut Criterion) {
+fn row_collect_bench(c: &mut Criterion) {
     let (previous, next) = grids_with_sparse_changes();
-    let mut group = c.benchmark_group("core_diff_runs_200x60");
-    group.bench_function("diff_runs_scalar", |b| {
-        b.iter(|| black_box(diff_runs(&previous, &next)));
-    });
-    group.bench_function("row_collect_simd", |b| {
+    let height = next.height();
+    let width = next.width();
+    let mut group = c.benchmark_group("core_row_collect_200x60");
+    group.bench_function("scalar", |b| {
         b.iter(|| {
             let mut runs = Vec::new();
-            for row in 0..next.height() {
-                runs.extend(collect_runs_in_row_simd(
-                    &previous,
-                    &next,
-                    row,
-                    0,
-                    next.width(),
-                ));
+            for row in 0..height {
+                runs.extend(collect_runs_in_row_scalar(&previous, &next, row, 0, width));
+            }
+            black_box(runs);
+        });
+    });
+    group.bench_function("dispatched", |b| {
+        b.iter(|| {
+            let mut runs = Vec::new();
+            for row in 0..height {
+                runs.extend(collect_runs_in_row_simd(&previous, &next, row, 0, width));
             }
             black_box(runs);
         });
@@ -87,7 +90,7 @@ fn first_mismatch_bench(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    diff_runs_bench,
+    row_collect_bench,
     row_tail_first_mismatch,
     first_mismatch_bench
 );
