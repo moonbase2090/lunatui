@@ -114,7 +114,9 @@ pub fn first_mismatch_for_level(level: DispatchLevel) -> FirstMismatchFn {
         #[cfg(target_arch = "x86_64")]
         DispatchLevel::Sse2 => first_mismatch_sse2,
         #[cfg(target_arch = "x86_64")]
-        DispatchLevel::Avx2 => first_mismatch_avx2,
+        DispatchLevel::Avx2 if detect::x86_avx2_available() => first_mismatch_avx2,
+        #[cfg(target_arch = "x86_64")]
+        DispatchLevel::Avx2 => first_mismatch_sse2,
         #[cfg(target_arch = "aarch64")]
         DispatchLevel::Neon => first_mismatch_neon,
     }
