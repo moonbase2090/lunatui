@@ -68,6 +68,32 @@ fn present_delivers_damage_without_ansi() -> io::Result<()> {
 }
 
 #[test]
+fn blank_resize_still_notifies_host() -> io::Result<()> {
+    let mut clusters = ClusterTable::new();
+    let mut backend = PrismattycBackend::new(4, 2, RecordingHost::new(6, 2));
+    let mut grid = Grid::new(4, 2);
+    grid.put_str(0, 0, Style::new(), "ab", &mut clusters);
+    backend.present(&grid, &clusters)?;
+
+    let mut larger = Grid::new(6, 2);
+    larger.put_str(0, 0, Style::new(), "ab", &mut clusters);
+    let stats = backend.present(&larger, &clusters)?;
+    assert_eq!(stats.changed_runs, 0);
+    assert_eq!(stats.ansi_bytes, 0);
+    assert_eq!(backend.renderer().frames, 2);
+    assert_eq!(backend.previous_grid().width(), 6);
+    assert_eq!(backend.renderer().display.width(), 6);
+
+    let mut smaller = Grid::new(3, 2);
+    smaller.put_str(0, 0, Style::new(), "ab", &mut clusters);
+    let stats = backend.present(&smaller, &clusters)?;
+    assert_eq!(stats.changed_runs, 0);
+    assert_eq!(backend.renderer().frames, 3);
+    assert_eq!(backend.previous_grid().width(), 3);
+    Ok(())
+}
+
+#[test]
 fn resize_invalidates_previous_grid() -> io::Result<()> {
     let mut clusters = ClusterTable::new();
     let mut backend = PrismattycBackend::new(4, 2, RecordingHost::new(4, 2));

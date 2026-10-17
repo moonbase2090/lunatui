@@ -61,8 +61,10 @@ impl<R: HostRenderer> PrismattycBackend<R> {
     ///
     /// Propagates errors from [`HostRenderer::present_frame`].
     pub fn present(&mut self, next: &Grid, clusters: &ClusterTable) -> io::Result<PresentStats> {
+        let size_changed =
+            self.previous.width() != next.width() || self.previous.height() != next.height();
         let runs = diff_runs(&self.previous, next);
-        if runs.is_empty() {
+        if runs.is_empty() && !size_changed {
             return Ok(PresentStats::skipped());
         }
         let frame = FrameDiff {
