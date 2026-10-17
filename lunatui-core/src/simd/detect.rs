@@ -130,7 +130,7 @@ pub fn differential_levels() -> &'static [DispatchLevel] {
     }
 }
 
-/// Differential levels for an `x86_64` CPU with or without AVX2.
+// Differential levels for an `x86_64` CPU with or without AVX2.
 #[cfg(target_arch = "x86_64")]
 #[must_use]
 pub(crate) fn differential_levels_x86_64(avx2: bool) -> &'static [DispatchLevel] {
