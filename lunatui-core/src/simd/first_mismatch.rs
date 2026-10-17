@@ -28,8 +28,8 @@ unsafe fn first_mismatch_sse2_impl(a: &[u128], b: &[u128]) -> Option<usize> {
         let mask = {
             // SAFETY: `index` is within both slice lengths.
             unsafe {
-                let va = _mm_loadu_si128(a.as_ptr().add(index) as *const __m128i);
-                let vb = _mm_loadu_si128(b.as_ptr().add(index) as *const __m128i);
+                let va = _mm_loadu_si128(a.as_ptr().add(index).cast::<__m128i>());
+                let vb = _mm_loadu_si128(b.as_ptr().add(index).cast::<__m128i>());
                 _mm_movemask_epi8(_mm_cmpeq_epi8(va, vb))
             }
         };
@@ -48,8 +48,8 @@ unsafe fn first_mismatch_sse2_impl(a: &[u128], b: &[u128]) -> Option<usize> {
 #[target_feature(enable = "avx2")]
 unsafe fn first_mismatch_avx2_impl(a: &[u128], b: &[u128]) -> Option<usize> {
     use core::arch::x86_64::{
-        __m128i, __m256i, _mm_cmpeq_epi8, _mm_loadu_si128, _mm_movemask_epi8, _mm256_cmpeq_epi8,
-        _mm256_loadu_si256, _mm256_movemask_epi8,
+        __m128i, _mm_cmpeq_epi8, _mm_loadu_si128, _mm_movemask_epi8, _mm256_cmpeq_epi8,
+        _mm256_movemask_epi8, _mm256_setr_m128i,
     };
     let shared = a.len().min(b.len());
     let mut index = 0usize;
@@ -57,12 +57,20 @@ unsafe fn first_mismatch_avx2_impl(a: &[u128], b: &[u128]) -> Option<usize> {
         let mask = {
             // SAFETY: `index` and `index + 1` are within both slice lengths.
             unsafe {
-                let va = _mm256_loadu_si256(a.as_ptr().add(index) as *const __m256i);
-                let vb = _mm256_loadu_si256(b.as_ptr().add(index) as *const __m256i);
-                _mm256_movemask_epi8(_mm256_cmpeq_epi8(va, vb)) as u32
+                let a_ptr = a.as_ptr().add(index);
+                let b_ptr = b.as_ptr().add(index);
+                let va = _mm256_setr_m128i(
+                    _mm_loadu_si128(a_ptr.cast::<__m128i>()),
+                    _mm_loadu_si128(a_ptr.add(1).cast::<__m128i>()),
+                );
+                let vb = _mm256_setr_m128i(
+                    _mm_loadu_si128(b_ptr.cast::<__m128i>()),
+                    _mm_loadu_si128(b_ptr.add(1).cast::<__m128i>()),
+                );
+                _mm256_movemask_epi8(_mm256_cmpeq_epi8(va, vb))
             }
         };
-        if mask == 0xFFFF_FFFF_u32 {
+        if mask == -1 {
             index += 2;
             continue;
         }
@@ -74,8 +82,8 @@ unsafe fn first_mismatch_avx2_impl(a: &[u128], b: &[u128]) -> Option<usize> {
         let mask = {
             // SAFETY: `index` is within both slice lengths.
             unsafe {
-                let va = _mm_loadu_si128(a.as_ptr().add(index) as *const __m128i);
-                let vb = _mm_loadu_si128(b.as_ptr().add(index) as *const __m128i);
+                let va = _mm_loadu_si128(a.as_ptr().add(index).cast::<__m128i>());
+                let vb = _mm_loadu_si128(b.as_ptr().add(index).cast::<__m128i>());
                 _mm_movemask_epi8(_mm_cmpeq_epi8(va, vb))
             }
         };
