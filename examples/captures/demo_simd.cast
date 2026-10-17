@@ -1,0 +1,2 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760650000, "title": "demo_simd", "command": "--example demo --features app -- --simd --snapshot --width 80 --height 24"}
+[0.0, "o", "simd runtime=neon\nsimd differential_levels=scalar,neon\nsimd first_mismatch_probe=Some(0) dispatched=Some(0)\nsimd levels_agree=true\nsimd bench_first_mismatch_200x60x256=0.034 ms\n"]
