@@ -39,7 +39,6 @@ fn main() -> io::Result<()> {
     let ratatui_style = args.iter().any(|arg| arg == "--ratatui-style");
     let porting = args.iter().any(|arg| arg == "--porting");
     let simd = args.iter().any(|arg| arg == "--simd");
-    let encode_bench = args.iter().any(|arg| arg == "--encode-bench");
     let flag_args: Vec<String> = args
         .iter()
         .filter(|arg| {
@@ -51,15 +50,12 @@ fn main() -> io::Result<()> {
                 && *arg != "--ratatui-style"
                 && *arg != "--porting"
                 && *arg != "--simd"
-                && *arg != "--encode-bench"
         })
         .cloned()
         .collect();
     let geometry = parse_geometry(&flag_args)?;
     if snapshot {
-        if encode_bench {
-            print_encode_bench_snapshot(geometry);
-        } else if simd {
+        if simd {
             print_simd_snapshot(geometry);
         } else if porting {
             print_porting_snapshot(geometry);
@@ -677,48 +673,9 @@ fn render_porting_snapshot(geometry: Geometry) -> (lunatui_core::Grid, lunatui_c
     (grid, clusters)
 }
 
-fn print_encode_bench_snapshot(geometry: Geometry) {
-    use lunatui_bench::scenes::lunatui::encode::EncodeFrames;
-    use lunatui_term::{ColorMode, Encoder};
-
-    let frames = EncodeFrames::new(geometry.width, geometry.height);
-    let mut encoder = Encoder::new();
-    let scroll_start = Instant::now();
-    for _ in 0..256 {
-        let _ = encoder.encode_diff(
-            &frames.tick,
-            &frames.scroll,
-            &frames.clusters,
-            ColorMode::TrueColor,
-        );
-    }
-    let scroll_elapsed = scroll_start.elapsed();
-    let full_start = Instant::now();
-    for _ in 0..256 {
-        let _ = encoder.encode_diff(
-            &frames.empty,
-            &frames.scroll,
-            &frames.clusters,
-            ColorMode::TrueColor,
-        );
-    }
-    let full_elapsed = full_start.elapsed();
-    println!(
-        "encode_bench_scroll_{}x{}x256={}",
-        geometry.width,
-        geometry.height,
-        millis(scroll_elapsed)
-    );
-    println!(
-        "encode_bench_full_{}x{}x256={}",
-        geometry.width,
-        geometry.height,
-        millis(full_elapsed)
-    );
-}
-
 fn print_simd_snapshot(_geometry: Geometry) {
     use lunatui_core::simd::{
+        ascii_display_width, ascii_display_width_levels_agree, ascii_display_width_scalar,
         differential_levels, first_mismatch, first_mismatch_levels_agree, first_mismatch_scalar,
         runtime_dispatch_level,
     };
@@ -741,6 +698,17 @@ fn print_simd_snapshot(_geometry: Geometry) {
     }
     let elapsed = start.elapsed();
 
+    let log_line = "2026-10-16T19:00:00Z INFO  worker completed batch duration=12ms\n";
+    let ascii_log = log_line.repeat(5000);
+    let ascii_probe = ascii_display_width_scalar(&ascii_log);
+    let ascii_agree = ascii_display_width_levels_agree(&ascii_log);
+    let ascii_dispatched = ascii_display_width(&ascii_log);
+    let ascii_start = Instant::now();
+    for _ in 0..256 {
+        let _ = ascii_display_width(&ascii_log);
+    }
+    let ascii_elapsed = ascii_start.elapsed();
+
     println!("simd runtime={}", runtime_dispatch_level().as_str());
     println!(
         "simd differential_levels={}",
@@ -756,6 +724,9 @@ fn print_simd_snapshot(_geometry: Geometry) {
         "simd bench_first_mismatch_{width}x{height}x256={}",
         millis(elapsed)
     );
+    println!("simd ascii_width_probe={ascii_probe} dispatched={ascii_dispatched}");
+    println!("simd ascii_width_levels_agree={ascii_agree}");
+    println!("simd bench_ascii_log_5000x256={}", millis(ascii_elapsed));
 }
 
 fn print_porting_snapshot(geometry: Geometry) {
