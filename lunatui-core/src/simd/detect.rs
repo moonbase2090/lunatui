@@ -36,9 +36,26 @@ impl DispatchLevel {
 
 #[cfg(target_arch = "x86_64")]
 fn cpuid_count(leaf: u32, sub_leaf: u32) -> core::arch::x86_64::CpuidResult {
-    use core::arch::x86_64::__cpuid_count;
-    // SAFETY: `__cpuid_count` is defined on `x86_64` targets.
-    unsafe { __cpuid_count(leaf, sub_leaf) }
+    use core::arch::asm;
+    let mut eax = leaf;
+    let mut ecx = sub_leaf;
+    let ebx;
+    let edx;
+    // SAFETY: CPUID is supported on `x86_64` targets.
+    unsafe {
+        asm!(
+            "push rbx",
+            "cpuid",
+            "mov {ebx_out:e}, ebx",
+            "pop rbx",
+            ebx_out = out(reg) ebx,
+            inout("eax") eax,
+            inout("ecx") ecx,
+            lateout("edx") edx,
+            options(nostack, preserves_flags),
+        );
+    }
+    core::arch::x86_64::CpuidResult { eax, ebx, ecx, edx }
 }
 
 #[cfg(target_arch = "x86_64")]
