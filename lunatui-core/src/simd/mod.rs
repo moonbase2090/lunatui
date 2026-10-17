@@ -1,15 +1,11 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! SIMD dispatch framework: scalar reference kernels and runtime-selected implementations.
-//!
-//! `unsafe` stays in this module (PRD §10). Production behavior is unchanged in roadmap PR 47;
-//! later PRs swap in vectorized bodies behind the same function pointers.
-
 mod detect;
 
 use core::cell::UnsafeCell;
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::hint::spin_loop;
+use core::sync::atomic::{AtomicU8, Ordering};
 
 pub use detect::{DispatchLevel, active_dispatch_level, differential_levels};
 
@@ -29,30 +25,53 @@ impl SyncKernelTable {
     }
 }
 
-// SAFETY: `KERNELS` is written once before `INIT` is set, then read-only.
+// SAFETY: `KERNELS` is published only after `STATE` reaches `STATE_READY`.
 unsafe impl Sync for SyncKernelTable {}
 
-static INIT: AtomicBool = AtomicBool::new(false);
+const STATE_UNINIT: u8 = 0;
+const STATE_INITING: u8 = 1;
+const STATE_READY: u8 = 2;
+
+static STATE: AtomicU8 = AtomicU8::new(STATE_UNINIT);
 static KERNELS: SyncKernelTable = SyncKernelTable::new(KernelTable {
     level: DispatchLevel::Scalar,
     first_mismatch: first_mismatch_scalar,
 });
 
 fn kernel_table() -> &'static KernelTable {
-    if !INIT.load(Ordering::Acquire) {
-        let level = active_dispatch_level();
-        let table = KernelTable {
-            level,
-            first_mismatch: first_mismatch_for_level(level),
-        };
-        // SAFETY: `INIT` is false, so no other thread has published `KERNELS` yet.
-        unsafe {
-            *KERNELS.0.get() = table;
+    loop {
+        if STATE.load(Ordering::Acquire) == STATE_READY {
+            break;
         }
-        INIT.store(true, Ordering::Release);
+        try_publish_kernel_table();
+        spin_loop();
     }
-    // SAFETY: `INIT` is true, so `KERNELS` was written exactly once and is only read afterward.
+    // SAFETY: the loop exits only after `STATE_READY` publishes `KERNELS`.
     unsafe { &*KERNELS.0.get() }
+}
+
+fn try_publish_kernel_table() {
+    if STATE
+        .compare_exchange_weak(
+            STATE_UNINIT,
+            STATE_INITING,
+            Ordering::AcqRel,
+            Ordering::Acquire,
+        )
+        .is_err()
+    {
+        return;
+    }
+    let level = active_dispatch_level();
+    let table = KernelTable {
+        level,
+        first_mismatch: first_mismatch_for_level(level),
+    };
+    // SAFETY: exclusive initializer; readers wait until `STATE_READY`.
+    unsafe {
+        *KERNELS.0.get() = table;
+    }
+    STATE.store(STATE_READY, Ordering::Release);
 }
 
 /// Active runtime dispatch level (initialized once on first kernel use).
@@ -107,7 +126,6 @@ pub fn first_mismatch_levels_agree(a: &[u128], b: &[u128]) -> bool {
 
 #[cfg(target_arch = "x86_64")]
 fn first_mismatch_sse2(a: &[u128], b: &[u128]) -> Option<usize> {
-    // PR 47: vector bodies land in PR 48; SSE2 path is wired for dispatch testing.
     first_mismatch_scalar(a, b)
 }
 

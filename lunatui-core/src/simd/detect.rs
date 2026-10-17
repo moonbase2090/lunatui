@@ -1,8 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Runtime feature detection for SIMD dispatch (PRD §10, roadmap PR 47).
-
 /// SIMD dispatch tier selected at runtime.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[non_exhaustive]
