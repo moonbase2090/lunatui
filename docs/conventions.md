@@ -117,7 +117,7 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 
 ### Approved comment forms (M14)
 
-The default is no comments. These are the only exceptions the maintainer has approved. A new exception needs his explicit approval, in its own small PR or flagged in a PR body. Once approved, it is added here and to the comment check's allowlist.
+The default is no comments. These are the only exceptions the maintainer has approved. A new exception needs the maintainer's explicit approval, in its own small PR or flagged in a PR body. Once approved, it is added here and to the comment check's allowlist.
 
 | Form | Where | Approved |
 |---|---|---|

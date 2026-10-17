@@ -17,7 +17,7 @@ The new core uses a **16-byte packed cell**, **row-level dirty tracking**, a **c
 
 Graphite becomes the flagship look on top of the core. Scorecard is the first real consumer, then SkillSaw. A Prismattyc-native backend gives real translucency and sub-cell rendering inside Prismattyc. A ratatui compatibility crate lets existing ratatui widgets and apps run on it. SIMD, and inline asm only where proven, comes as a late, benchmark-gated phase.
 
-Work happens under binding rules (§M): tests first, benchmarks before optimizations, property, differential and fuzz testing, styled snapshots, design docs before hard-to-undo code, and early dogfooding in Scorecard. A fixed team protocol (§T) governs it: one implementer seat per PR, a blind the reviewer review that posts `SHIP <sha>`, and the checkpoint reviewer checkpoint reviews. The roadmap is **38 PRs to v0.1.0** (35 code PRs plus 3 design-doc PRs) and **45 PRs to Scorecard adoption**.
+Work happens under binding rules (§M): tests first, benchmarks before optimizations, property, differential and fuzz testing, styled snapshots, design docs before hard-to-undo code, and early dogfooding in Scorecard. A fixed team protocol (§T) governs it: one implementer seat per PR, a blind reviewer review that posts `SHIP <sha>`, and checkpoint reviews at fixed milestones. The roadmap is **38 PRs to v0.1.0** (35 code PRs plus 3 design-doc PRs) and **45 PRs to Scorecard adoption**.
 
 ---
 
@@ -70,7 +70,7 @@ Every core module ships `proptest` properties for its invariants. Required invar
 ### M6. Snapshot tests with styles
 
 - Every widget and every Graphite component has **styled snapshots**: a text layer plus run-length fg/bg/attr/underline/link layers, with token names when available (`lunatui-test` format, `insta`-managed). Each component is snapshotted in all of its states (focused, hovered, disabled, error, empty, overflow), at two sizes, and in truecolor plus 16-color profiles. Animations are snapshotted at fixed virtual-clock times.
-- Snapshot changes require explicit acceptance in the PR (no blanket `cargo insta accept`). the reviewer reviews snapshot diffs as part of the API and visual check.
+- Snapshot changes require explicit acceptance in the PR (no blanket `cargo insta accept`). The reviewer reviews snapshot diffs as part of the API and visual check.
 
 ### M7. Design docs before code for hard-to-undo pieces
 
@@ -126,15 +126,15 @@ Scorecard consumes lunatui from the earliest point each capability exists. These
 
 ### T3. Blind reviewer review
 
-- **Blind** means the reviewer reviews the diff, tests, CI results and benchmark artifacts **as produced by CI**, not the implementer's claims or reasoning. the reviewer re-runs, or reads the CI output for, the benchmarks itself. The PR body's numbers must match CI. A mismatch is grounds for send-back.
-- **the reviewer posts `SHIP <sha>` (the exact head commit) only if all three hold:**
+- **Blind** means the reviewer reviews the diff, tests, CI results and benchmark artifacts **as produced by CI**, not the implementer's claims or reasoning. The reviewer re-runs, or reads the CI output for, the benchmarks itself. The PR body's numbers must match CI. A mismatch is grounds for send-back.
+- **The reviewer posts `SHIP <sha>` (the exact head commit) only if all three hold:**
   1. **Tests:** every §M rule satisfied for this PR type; CI green including `tests-first`, property, differential, fuzz and snapshot jobs.
   2. **API shape:** consistent with the approved ADRs and existing conventions; no accidental public surface; docs on every public item.
   3. **Benchmarks:** targets met where stated; **any bench more than 3% slower than `main` → sent back**, even if CI's gate was somehow bypassed.
 - Otherwise the reviewer posts `CHANGES <sha>` with a numbered list. Any new commit invalidates a previous `SHIP`, so the reviewer re-reviews the new head.
 - Merge happens only on a `SHIP` matching the current head SHA (enforced by a merge-queue check).
 
-### T4. the checkpoint reviewer checkpoint reviews
+### T4. Checkpoint reviews
 
 | Checkpoint | When | Scope |
 |---|---|---|
@@ -143,7 +143,7 @@ Scorecard consumes lunatui from the earliest point each capability exists. These
 | **CP-3: Public API** | DD-3 before PR 23, and again after PR 28 | Ergonomics, naming, extensibility, semver risk, async/threading story |
 | **CP-4: Pre-v0.1** | Before tagging v0.1.0 (PR 38) | Whole-crate API audit, docs, perf report against §1.3, security and `unsafe` review, release checklist |
 
-The Opus review output is posted as a comment and must be resolved (fixed or answered) before the checkpoint passes.
+The checkpoint review output is posted as a comment and must be resolved (fixed or answered) before the checkpoint passes.
 
 ### T5. Commit authorship
 
@@ -530,9 +530,9 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 - [ ] M8 Dogfood: Scorecard branch builds against this PR (from PR 10 on), friction logged as `dogfood` issues
 - [ ] M13 Proof: `cargo run --example ____` (documented in examples/README.md); capture attached (GIF/PNG/asciinema); bench numbers where relevant
 - [ ] Docs on all new public items; CHANGELOG entry
-- [ ] T5 Authorship: all commits authored/committed by release noreply; no Co-authored-by trailers (CI `authorship` green)
+- [ ] T5 Authorship: all commits authored/committed by the project noreply identity; no Co-authored-by trailers (CI `authorship` green)
 - [ ] T3 the reviewer: `SHIP <head-sha>` posted for the current head
-- [ ] T4 Opus checkpoint resolved (only for CP-1…CP-4 PRs)
+- [ ] T4 checkpoint resolved (only for CP-1…CP-4 PRs)
 ```
 
 ### Phase 0: Foundations
@@ -543,7 +543,7 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 | 02 | Bench harness | `benches/` with criterion + gungraun, counting allocator, byte/write counters | Harness self-test | `xtask bench` runs and prints metrics |
 | 03 | ratatui baseline scenes | Port `ratatui-perf` scenes (dashboard, log, table, gradient) on pinned ratatui | Scenes render | Numbers within ±15% of `results.txt` on the same box |
 | 04 | Unicode width tables | `xtask gen-width` from UCD + emoji data → `lunatui-core/src/width/tables.rs`; `width(&str)` | Corpus + diff vs `unicode-width` (documented deltas) | All differences explained in `docs/width-policy.md` |
-| DD-1 | **Design doc: cell format** | `docs/adr/0001-cell-format.md`: 16-byte cell, grapheme slot, per-frame cluster table + ID seeding, continuation cells, mode 2027 policy, ExtTable, benchmarks | Prototype bench (from `ratatui-perf`) attached | the reviewer review, **Opus CP-1**, the maintainer sign-off |
+| DD-1 | **Design doc: cell format** | `docs/adr/0001-cell-format.md`: 16-byte cell, grapheme slot, per-frame cluster table + ID seeding, continuation cells, mode 2027 policy, ExtTable, benchmarks | Prototype bench (from `ratatui-perf`) attached | reviewer approval, **checkpoint CP-1**, the maintainer sign-off |
 | 05 | Grapheme slot + cluster table | `core/src/grapheme.rs`: inline scalar, tagged `ClusterId`, per-frame `ClusterTable` with seeding from the previous frame | Proptest: round-trip; ID stability across frames | Zero allocations for inline glyphs; implements DD-1 |
 
 **Demo (Phase 0, M13):** `hello_box` draws a bordered box with text from PR 01, using the simplest working version (M9) until the grid and encoder land. PR 04 and PR 05 extend it with mixed-width lines (CJK, emoji, a ZWJ sequence) whose right border stays aligned, using the new width tables and grapheme slot. PR 02 and PR 03 show their bench output and the ratatui baseline scenes in their Proof sections.
@@ -554,7 +554,7 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 |---|---|---|---|---|
 | 06 | Packed `Cell` + style types | `core/src/{cell,color,attr,style}.rs`, 16 B static assert | Unit + size asserts | `size_of::<Cell>() == 16` |
 | 07 | `Grid` + write APIs + dirty rows | `core/src/grid.rs`: `put_str`, `fill`, `set_style`, row dirty spans, continuation-cell rules; internal styled-snapshot serializer | Unit + proptest (writes never break lead/continuation pairs) | Writes O(len), dirty spans exact |
-| 08 | Scalar diff → runs | `core/src/diff.rs` | Proptest vs naive diff | Unchanged 200×60 ≤ 8 µs (gungraun baseline recorded); **Opus CP-1 follow-up review** |
+| 08 | Scalar diff → runs | `core/src/diff.rs` | Proptest vs naive diff | Unchanged 200×60 ≤ 8 µs (gungraun baseline recorded); **checkpoint CP-1 follow-up review** |
 | 09 | Encoder v1 | `term/src/encode/{sgr,cursor,mod}.rs`: pen-state delta, combined CSI, cursor cost model, single buffer | Transcript snapshots; grid-level differential vs ratatui `CrosstermBackend` (M4) | Bytes ≤ ratatui on all scenes; identical oracle end state |
 | 10 | Session + sync output (Unix) | `term/src/session.rs`: raw mode, alt screen, restore on drop/panic, 2026 wrapping, one `write_all` per frame | PTY test (termlens) | 1 write per frame; restore after panic |
 | 11 | vt100 oracle + diff-apply property + encoder fuzz | `test/src/oracle.rs`, `fuzz/fuzz_encoder.rs`, `tests/differential/` harness | Proptest (old + encode(diff) == new) + fuzz | 10M fuzz execs clean; oracle on all snapshots |
@@ -569,10 +569,10 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 
 | PR | Title | Scope / files | Tests | Accept |
 |---|---|---|---|---|
-| DD-2 | **Design doc: layout engine** | `docs/adr/0002-layout-engine.md`: constraint semantics, closed-form algorithm, conflict detection, kasuari boundary, ratatui parity, memo, `Grid`/`Stack`/`Auto` | Parity test plan + bench targets | the reviewer review, **Opus CP-2**, the maintainer sign-off |
+| DD-2 | **Design doc: layout engine** | `docs/adr/0002-layout-engine.md`: constraint semantics, closed-form algorithm, conflict detection, kasuari boundary, ratatui parity, memo, `Grid`/`Stack`/`Auto` | Parity test plan + bench targets | reviewer approval, **checkpoint CP-2**, the maintainer sign-off |
 | 14 | Closed-form layout | `layout/src/{constraint,flex,solve_fast}.rs` | Unit + proptest invariants | 20 × `Fill` miss ≤ 20 µs |
 | 15 | Solver fallback + equivalence | `layout/src/solve_cassowary.rs` (kasuari), conflict detection | Proptest fast == fallback; parity suite vs ratatui | Documented, intentional differences only |
-| 16 | Layout memo + `Grid`/`Stack` + `Auto` | `layout/src/{memo,grid,stack}.rs` | Unit | Zero allocations on memo hit; **Opus CP-2 follow-up review** |
+| 16 | Layout memo + `Grid`/`Stack` + `Auto` | `layout/src/{memo,grid,stack}.rs` | Unit | Zero allocations on memo hit; **checkpoint CP-2 follow-up review** |
 | 17 | Borrowed text + frame arena | `text/src/{span,line,text,arena}.rs` | Unit + alloc counter | Dashboard text building: 0 heap allocations |
 | 18 | WrapCache | `text/src/wrap/{mod,cache,index}.rs` | Proptest cached == fresh | 5k-line wrapped scroll ≤ 0.5 ms at 400×120 |
 | 19 | `RowSource` virtualization | `text/src/source.rs` | Unit | 1M-row table renders visible rows only (constant time vs length) |
@@ -586,7 +586,7 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 | 20 | Input parser | `term/src/input/{parser,keys,mouse,paste}.rs`: legacy + kitty keyboard + SGR mouse + paste + focus | Table tests from real captures; `fuzz_input_parser`; `parse(encode(e)) == e` property | Fuzz clean; all captured sequences decode |
 | 21 | Input thread + coalescing | `runtime/src/input.rs` | Unit with fake source | Bursts coalesce to one frame |
 | 22 | Frame scheduler | `runtime/src/sched.rs`: Idle/Dirty/Animating, deadlines, backpressure | Virtual clock tests | 0 wakeups idle (measured with a counter); frame-drop under a slow writer |
-| DD-3 | **Design doc: public API** | `docs/adr/0003-public-api.md`: `App`, `Ui`, `Widget`, `RenderCx`, IDs, memo, `Cx` messaging, threading, error model, semver policy | API mock-up compiled as doc tests; Scorecard dogfood sketch | the reviewer review, **Opus CP-3**, the maintainer sign-off |
+| DD-3 | **Design doc: public API** | `docs/adr/0003-public-api.md`: `App`, `Ui`, `Widget`, `RenderCx`, IDs, memo, `Cx` messaging, threading, error model, semver policy | API mock-up compiled as doc tests; Scorecard dogfood sketch | reviewer approval, **checkpoint CP-3**, the maintainer sign-off |
 | 23 | `App`/`Ui`/`run()` | `runtime/src/{app,ui,id,memo}.rs`, facade `run()` | Example app PTY test | Hello-world + counter examples work |
 | 24 | HitMap + FocusManager | `runtime/src/{hit,focus}.rs` | Unit + proptest (topmost wins) | Click/hover/drag/Tab/arrow traversal work in the example |
 | 25 | Animation primitives | `runtime/src/anim/{clock,ease,spring,tween}.rs` | Deterministic snapshots at time t | Frame-rate-independent results |
@@ -599,14 +599,14 @@ Conventions: every PR is small (target ≤ ~600 changed lines excluding generate
 
 | PR | Title | Scope / files | Tests | Accept |
 |---|---|---|---|---|
-| 28 | `Widget` trait + `RenderCx` | `widgets/src/lib.rs` (`render(&self, Rect, &mut RenderCx)`, `measure`) | Unit | Trait documented; matches DD-3; **Opus CP-3 follow-up review** |
+| 28 | `Widget` trait + `RenderCx` | `widgets/src/lib.rs` (`render(&self, Rect, &mut RenderCx)`, `measure`) | Unit | Trait documented; matches DD-3; **checkpoint CP-3 follow-up review** |
 | 29 | Block, borders, titles, symbols | `widgets/src/block.rs`, `core/src/symbols/` | Styled snapshots; differential vs ratatui `Block` | Identical end state to ratatui Block |
 | 30 | Paragraph/TextView | `widgets/src/paragraph.rs` on WrapCache | Snapshots + bench | Log scene meets the §1.3 target |
 | 31 | List + Table (virtualized) | `widgets/src/{list,table}.rs` on RowSource | Snapshots + bench | Table scene meets target; selection via focus |
 | 32 | Tabs, Gauge, Scrollbar, Spinner, StatusBar, TextInput | `widgets/src/*` | Snapshots | Dashboard scene fully on lunatui |
 | 33 | Overlay/backdrop + blend | `widgets/src/overlay.rs` (focus trap, translucency by blending) | Snapshots | Modal traps focus; blend snapshot |
 | 34 | Publish `lunatui-test` crate | Extract the internal styled-snapshot serializer (PR 07), oracle (PR 11), virtual clock (PR 25) into a public crate | Self-tests | Used by all widget tests and by Scorecard |
-| 35 | Docs, examples, release **v0.1.0** | `docs/`, `examples/`, README perf table vs ratatui, porting notes | Doc tests | **Opus CP-4 pre-v0.1 review resolved**; **first usable release** |
+| 35 | Docs, examples, release **v0.1.0** | `docs/`, `examples/`, README perf table vs ratatui, porting notes | Doc tests | **checkpoint CP-4 pre-v0.1 review resolved**; **first usable release** |
 
 **First usable release = PR 35 in code-PR numbering, which is the 38th PR overall (35 code PRs + DD-1, DD-2, DD-3) → v0.1.0.**
 
@@ -740,7 +740,7 @@ Use `core::arch::asm!` (stable) **only** where intrinsics measurably fall short.
 | D13 | **Public launch timing** | At v0.1 / at Scorecard adoption | **Preview at v0.1; main launch at PR 42 + 43** | Approved |
 | D14 | **SIMD gate thresholds** | Fixed % per PR | **As in §8 Phase 7** (1.2–1.5× for intrinsics, +10% over intrinsics for asm) | Approved |
 | D15 | **Governance** | Solo / co-maintainers at M2 | **Invite 1–2 co-maintainers at M2**, ADRs from day one | Approved |
-| D16 | **release noreply ID** | Resolved | `322824348+mb2090@users.noreply.github.com` (used by T5 and the `authorship` CI job) | Resolved |
+| D16 | **Project noreply ID** | Resolved | `322824348+mb2090@users.noreply.github.com` (used by T5 and the `authorship` CI job) | Resolved |
 | D17 | **the reviewer tooling** | the reviewer runs benches itself / reads CI artifacts only | **Read CI artifacts, with re-run allowed on demand.** Keeps "blind" honest without doubling CI cost | Approved |
 
 Approved by the maintainer on 2026-10-06: all recommendations accepted.
@@ -784,7 +784,7 @@ Recommendation: decide the name, then publish a real (if minimal) `0.0.x` from P
 ## M9 Small pieces, incremental growth (binding, the maintainer Oct 5, 2026)
 - Build from small, independently testable units; each PR adds or improves one small piece.
 - No god objects: no type or module that owns unrelated responsibilities. Prefer small focused types and free functions composed together.
-- Soft limits: a source file over ~400 lines or a type with more than ~7 fields or ~10 public methods must be split or justified in the PR body; the reviewer checks this before SHIP.
+- Soft limits: a source file over ~400 lines or a type with more than ~7 fields or ~10 public methods must be split or justified in the PR body; The reviewer checks this before SHIP.
 - Grow features incrementally: the simplest working version first, behind tests, then optimize in follow-up PRs with benchmarks.
 
 ## M10 Code beauty (binding, the maintainer Oct 5, 2026)
@@ -794,7 +794,7 @@ Recommendation: decide the name, then publish a real (if minimal) `0.0.x` from P
 - Every public item has rustdoc with an example; `#![deny(missing_docs)]` on public crates; doc examples are tested.
 - Tooling gates in CI: `cargo fmt --check`, `cargo clippy -- -D warnings` (pedantic where sensible), `cargo doc` with no warnings, `cargo deny`, and typos checks.
 - Consistent error handling (typed errors, no panics in library code except documented invariants).
-- the reviewer reviews readability and API elegance as a SHIP criterion alongside correctness and benchmarks.
+- The reviewer reviews readability and API elegance as a SHIP criterion alongside correctness and benchmarks.
 
 ## M11 No shortcuts (binding, the maintainer Oct 5, 2026)
 "Readable, highly maintainable code. Do not take shortcuts."
@@ -803,7 +803,7 @@ Recommendation: decide the name, then publish a real (if minimal) `0.0.x` from P
 - No copy-paste duplication; extract shared logic.
 - No `unwrap`/`expect` in library code outside tests and documented invariants.
 - Fix root causes, not symptoms. No workarounds (M16): if a convention or design blocks real work, change it in its own PR with the maintainer sign-off, tracked by an issue.
-- the reviewer rejects any PR that cuts a corner, even if tests and benchmarks pass.
+- The reviewer rejects any PR that cuts a corner, even if tests and benchmarks pass.
 
 ## M12 Regular housekeeping (binding, the maintainer Oct 5, 2026)
 Optimization and refactoring are a standing, recurring task, not a one-off phase.
@@ -817,7 +817,7 @@ lunatui is demoable early and continuously, so development can be watched in fli
 - The first code PR (PR 01) already puts something on screen: a bordered box with text (`hello_box`).
 - Every PR body includes a **Proof** section: the demo command, a short capture of it running (GIF, PNG or asciinema), benchmark numbers where relevant (the §T2 table), and the worst-case frame-time maximum against the 8 ms target, measured on a dedicated machine (§1.3). A PR with nothing to run (design doc, docs only) says so in its Proof section, with the reason.
 - Each early phase of §8 ends in a visible demo, named in its **Demo** line.
-- the reviewer does not post `SHIP` without the Proof section.
+- The reviewer does not post `SHIP` without the Proof section.
 
 ## M14 No comments: code is the memory (binding, the maintainer Oct 6, 2026)
 - **The default is no comments.** Names, types and tests must explain the code. No `//` or `/* */` comments and no `//!` inner docs, in every crate.
@@ -827,12 +827,12 @@ lunatui is demoable early and continuously, so development can be watched in fli
   2. `// SAFETY:` comments on `unsafe` blocks. `clippy::undocumented_unsafe_blocks` is denied, so every `unsafe` block has one.
 - **New exceptions need the maintainer's explicit approval.** Other comment types may be allowed case by case where they make sense. Propose a new exception in its own small PR, or flag it in a PR body as needing the maintainer sign-off. Once approved, it is added to the comment check's allowlist and listed in `docs/conventions.md` §10. Never add an exception on your own or slip a comment past the check.
 - CI enforces this with a check script that allows only the approved forms and fails on any other comment. Plain comments are not visible to clippy or dylint, so the script is the enforcement.
-- the reviewer checks it on every review.
+- The reviewer checks it on every review.
 
 ## M15 Mistakes become lints (binding, the maintainer Oct 6, 2026)
 - Any error or mistake found more than once during development (review findings, CI failures, bugs) becomes a new lint rule (clippy configuration, dylint, or the check script) in the same PR or the next one.
 - Each rule is listed in `docs/lints.md` with the mistake it prevents.
-- the reviewer checks it on every review.
+- The reviewer checks it on every review.
 
 ## M16 Locked down: conventional and standardized (binding, the maintainer Oct 6, 2026)
 "Locked down" means **highly conventional and standardized, with no workarounds or shortcuts**. lunatui is set up so only the correct patterns compile and pass CI. The items below are how that is enforced.
@@ -842,7 +842,7 @@ lunatui is demoable early and continuously, so development can be watched in fli
 - **Dependency allowlist.** cargo-deny allows only the crates it lists.
 - **Architecture boundaries and size limits** are checked in CI.
 - **Sign-off.** Changes to lint or CI configuration need the maintainer sign-off (CODEOWNERS on mb2090 plus a PR label) and are never bundled with feature work.
-- the reviewer checks all of it on every review.
+- The reviewer checks all of it on every review.
 
 ## M17 No tautological tests (binding, the maintainer Oct 6, 2026)
 - **Every test must be able to fail.** A test fails when the behavior it names breaks.
@@ -854,9 +854,9 @@ lunatui is demoable early and continuously, so development can be watched in fli
   - snapshots or golden files regenerated from current output without review (M6)
   - tests that still pass when the implementation is deleted or replaced with a stub or default
 - The review question for every test: would it fail if the behavior it names broke? If not, it is rejected. `docs/conventions.md` §6 lists the rule.
-- the reviewer checks it on every review.
+- The reviewer checks it on every review.
 
 ## T-update Seat assignments (the maintainer Oct 5, 2026)
-- Implementer: the checkpoint reviewer 5.5.
-- Reviewer (every PR, blind, SHIP <sha>): a dedicated Reviewer seat (a dedicated reviewer seat), a different model family from the implementer.
-- Checkpoint reviewer (CP-1 to CP-4: cell format, layout engine, public API, pre-v0.1): the checkpoint reviewer, replacing the checkpoint reviewer since Opus now implements.
+- Implementer: an implementer agent.
+- Reviewer (every PR, blind, SHIP <sha>): a dedicated Reviewer seat, from a different model family than the implementer.
+- Checkpoint reviewer (CP-1 to CP-4: cell format, layout engine, public API, pre-v0.1): a separate checkpoint reviewer, from a different model family than the implementer.
