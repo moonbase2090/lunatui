@@ -9,7 +9,7 @@ use core::sync::atomic::{AtomicU8, Ordering};
 
 pub use detect::{DispatchLevel, active_dispatch_level, differential_levels};
 
-/// Finds the first index where `a` and `b` differ; `None` when lengths match and all cells are equal.
+/// Finds the first index where `a` and `b` differ, including length mismatch past the shared prefix.
 pub type FirstMismatchFn = fn(&[u128], &[u128]) -> Option<usize>;
 
 struct KernelTable {
@@ -80,18 +80,20 @@ pub fn runtime_dispatch_level() -> DispatchLevel {
     kernel_table().level
 }
 
-/// Scalar reference: first unequal `u128` cell index, or `None` when equal.
+/// Scalar reference: first unequal `u128` cell index, or `None` when the slices are equal.
 #[must_use]
 pub fn first_mismatch_scalar(a: &[u128], b: &[u128]) -> Option<usize> {
-    if a.len() != b.len() {
-        return None;
-    }
-    for (index, (left, right)) in a.iter().zip(b.iter()).enumerate() {
-        if left != right {
+    let shared = a.len().min(b.len());
+    for index in 0..shared {
+        if a[index] != b[index] {
             return Some(index);
         }
     }
-    None
+    if a.len() == b.len() {
+        None
+    } else {
+        Some(shared)
+    }
 }
 
 /// Dispatched kernel using the cached runtime level.

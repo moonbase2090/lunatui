@@ -24,6 +24,17 @@ fn dispatched_matches_scalar_on_empty() {
 }
 
 #[test]
+fn unequal_length_reports_first_extra_index() {
+    let a = [1_u128];
+    let b = [1_u128, 2];
+    assert_eq!(first_mismatch_scalar(&a, &b), Some(1));
+    assert_eq!(first_mismatch(&a, &b), Some(1));
+    for &level in differential_levels() {
+        assert_eq!(first_mismatch_for_level(level)(&a, &b), Some(1));
+    }
+}
+
+#[test]
 fn dispatched_matches_scalar_on_mismatch() {
     let a = [1_u128, 2, 3];
     let b = [1_u128, 9, 3];
@@ -40,15 +51,10 @@ proptest! {
         a in prop::collection::vec(any::<u128>(), 0..512),
         b in prop::collection::vec(any::<u128>(), 0..512),
     ) {
-        let len = a.len().max(b.len());
-        let mut left = a;
-        let mut right = b;
-        left.resize(len, 0);
-        right.resize(len, 0);
-        let reference = first_mismatch_scalar(&left, &right);
-        prop_assert_eq!(first_mismatch(&left, &right), reference);
+        let reference = first_mismatch_scalar(&a, &b);
+        prop_assert_eq!(first_mismatch(&a, &b), reference);
         for &level in differential_levels() {
-            prop_assert_eq!(first_mismatch_for_level(level)(&left, &right), reference);
+            prop_assert_eq!(first_mismatch_for_level(level)(&a, &b), reference);
         }
     }
 }
