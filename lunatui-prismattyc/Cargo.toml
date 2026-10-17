@@ -9,3 +9,13 @@ repository.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+lunatui-core = { version = "0.1.0", path = "../lunatui-core" }
+
+[dev-dependencies]
+lunatui-bench = { path = "../benches" }
+
+[[test]]
+name = "in_process_sink"
+path = "tests/in_process_sink.rs"
