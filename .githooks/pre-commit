@@ -3,13 +3,23 @@ set -eu
 
 cd "$(git rev-parse --show-toplevel)"
 
-staged_rs="$(git diff --cached --name-only --diff-filter=ACMR | grep '\.rs$' || true)"
+staged_rs="$(git diff --cached --name-only -z --diff-filter=ACMR |
+  awk 'BEGIN { RS = "\0" } /\.rs$/ { print }')"
+
 if [ -z "$staged_rs" ]; then
   exit 0
 fi
 
-set -- $staged_rs
-if ! cargo fmt --check -- "$@"; then
-  printf 'pre-commit: rustfmt check failed; run: cargo fmt --all\n' >&2
-  exit 1
-fi
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  if ! git diff --quiet -- "$path"; then
+    printf 'pre-commit: %s has unstaged changes; stage the full file or restore\n' "$path" >&2
+    exit 1
+  fi
+  if ! cargo fmt --check -- "$path"; then
+    printf 'pre-commit: rustfmt check failed; run: cargo fmt --all\n' >&2
+    exit 1
+  fi
+done <<EOF
+$staged_rs
+EOF
