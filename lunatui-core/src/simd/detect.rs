@@ -52,7 +52,7 @@ fn cpuid_count(leaf: u32, sub_leaf: u32) -> core::arch::x86_64::CpuidResult {
             inout("eax") eax,
             inout("ecx") ecx,
             lateout("edx") edx,
-            options(nostack, preserves_flags),
+            options(preserves_flags),
         );
     }
     core::arch::x86_64::CpuidResult {
