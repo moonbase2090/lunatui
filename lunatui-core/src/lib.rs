@@ -10,6 +10,8 @@ mod color;
 mod diff;
 mod grapheme;
 mod grid;
+/// Runtime SIMD dispatch and scalar reference kernels (roadmap PR 47+).
+pub mod simd;
 mod size;
 mod style;
 /// Border, corner, and line glyphs for drawing widgets.

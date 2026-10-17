@@ -38,6 +38,7 @@ fn main() -> io::Result<()> {
     let ratatui_widget = args.iter().any(|arg| arg == "--ratatui-widget");
     let ratatui_style = args.iter().any(|arg| arg == "--ratatui-style");
     let porting = args.iter().any(|arg| arg == "--porting");
+    let simd = args.iter().any(|arg| arg == "--simd");
     let flag_args: Vec<String> = args
         .iter()
         .filter(|arg| {
@@ -48,12 +49,15 @@ fn main() -> io::Result<()> {
                 && *arg != "--ratatui-widget"
                 && *arg != "--ratatui-style"
                 && *arg != "--porting"
+                && *arg != "--simd"
         })
         .cloned()
         .collect();
     let geometry = parse_geometry(&flag_args)?;
     if snapshot {
-        if porting {
+        if simd {
+            print_simd_snapshot(geometry);
+        } else if porting {
             print_porting_snapshot(geometry);
         } else if ratatui_style {
             print_ratatui_style_snapshot(geometry);
@@ -667,6 +671,47 @@ fn render_porting_snapshot(geometry: Geometry) -> (lunatui_core::Grid, lunatui_c
         &mut cx,
     );
     (grid, clusters)
+}
+
+fn print_simd_snapshot(_geometry: Geometry) {
+    use lunatui_core::simd::{
+        differential_levels, first_mismatch, first_mismatch_levels_agree, first_mismatch_scalar,
+        runtime_dispatch_level,
+    };
+
+    let width = 200_u16;
+    let height = 60_u16;
+    let len = usize::from(width) * usize::from(height);
+    let previous = vec![0_u128; len];
+    let mut next = previous.clone();
+    for index in (0..len).step_by(97) {
+        next[index] = index as u128 + 1;
+    }
+    let probe = first_mismatch_scalar(&previous, &next);
+    let agree = first_mismatch_levels_agree(&previous, &next);
+    let dispatched = first_mismatch(&previous, &next);
+
+    let start = Instant::now();
+    for _ in 0..256 {
+        let _ = first_mismatch(&previous, &next);
+    }
+    let elapsed = start.elapsed();
+
+    println!("simd runtime={}", runtime_dispatch_level().as_str());
+    println!(
+        "simd differential_levels={}",
+        differential_levels()
+            .iter()
+            .map(|level| level.as_str())
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    println!("simd first_mismatch_probe={probe:?} dispatched={dispatched:?}");
+    println!("simd levels_agree={agree}");
+    println!(
+        "simd bench_first_mismatch_{width}x{height}x256={}",
+        millis(elapsed)
+    );
 }
 
 fn print_porting_snapshot(geometry: Geometry) {
