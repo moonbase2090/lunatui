@@ -34,12 +34,30 @@ impl DispatchLevel {
     }
 }
 
+#[cfg(target_arch = "x86_64")]
+fn x86_avx2_available() -> bool {
+    use core::arch::x86_64::__cpuid_count;
+    let max = __cpuid_count(0, 0);
+    let max_leaf = max.eax;
+    let leaf1_ecx = __cpuid_count(1, 0).ecx;
+    let leaf7_ebx = __cpuid_count(7, 0).ebx;
+    if max_leaf < 7 {
+        return false;
+    }
+    let osxsave = leaf1_ecx & (1 << 27) != 0;
+    let avx = leaf1_ecx & (1 << 28) != 0;
+    if !(osxsave && avx) {
+        return false;
+    }
+    leaf7_ebx & (1 << 5) != 0
+}
+
 /// Highest SIMD tier this process should use (cached selection happens in `simd` kernels).
 #[must_use]
 pub fn active_dispatch_level() -> DispatchLevel {
     #[cfg(target_arch = "x86_64")]
     {
-        if core::arch::is_x86_feature_detected!("avx2") {
+        if x86_avx2_available() {
             return DispatchLevel::Avx2;
         }
         return DispatchLevel::Sse2;
