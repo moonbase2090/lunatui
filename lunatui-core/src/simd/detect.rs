@@ -7,10 +7,10 @@
 pub enum DispatchLevel {
     /// Portable scalar reference (all targets).
     Scalar,
-    /// x86_64 SSE2 baseline (always assumed available on x86_64).
+    /// `x86_64` SSE2 baseline (always assumed available on `x86_64`).
     #[cfg(target_arch = "x86_64")]
     Sse2,
-    /// x86_64 AVX2 when the CPU reports AVX2.
+    /// `x86_64` AVX2 when the CPU reports AVX2.
     #[cfg(target_arch = "x86_64")]
     Avx2,
     /// aarch64 NEON baseline.
@@ -35,20 +35,27 @@ impl DispatchLevel {
 }
 
 #[cfg(target_arch = "x86_64")]
+fn cpuid_count(leaf: u32, sub_leaf: u32) -> core::arch::x86_64::CpuidResult {
+    use core::arch::x86_64::__cpuid_count;
+    // SAFETY: `__cpuid_count` is defined on `x86_64` targets.
+    unsafe { __cpuid_count(leaf, sub_leaf) }
+}
+
+#[cfg(target_arch = "x86_64")]
 fn x86_avx2_available() -> bool {
-    use core::arch::x86_64::{__cpuid_count, _xgetbv};
-    let max_leaf = __cpuid_count(0, 0).eax;
+    use core::arch::x86_64::_xgetbv;
+    let max_leaf = cpuid_count(0, 0).eax;
     if max_leaf < 7 {
         return false;
     }
-    let leaf1_ecx = __cpuid_count(1, 0).ecx;
-    let osxsave = leaf1_ecx & (1 << 27) != 0;
-    let avx = leaf1_ecx & (1 << 28) != 0;
+    let basic_ecx = cpuid_count(1, 0).ecx;
+    let osxsave = basic_ecx & (1 << 27) != 0;
+    let avx = basic_ecx & (1 << 28) != 0;
     if !(osxsave && avx) {
         return false;
     }
-    let leaf7_ebx = __cpuid_count(7, 0).ebx;
-    if leaf7_ebx & (1 << 5) == 0 {
+    let has_avx2 = cpuid_count(7, 0).ebx & (1 << 5) != 0;
+    if !has_avx2 {
         return false;
     }
     let xcr0 = {
@@ -64,9 +71,10 @@ pub fn active_dispatch_level() -> DispatchLevel {
     #[cfg(target_arch = "x86_64")]
     {
         if x86_avx2_available() {
-            return DispatchLevel::Avx2;
+            DispatchLevel::Avx2
+        } else {
+            DispatchLevel::Sse2
         }
-        return DispatchLevel::Sse2;
     }
     #[cfg(target_arch = "aarch64")]
     {
