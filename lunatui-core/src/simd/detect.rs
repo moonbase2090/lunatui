@@ -39,23 +39,28 @@ fn cpuid_count(leaf: u32, sub_leaf: u32) -> core::arch::x86_64::CpuidResult {
     use core::arch::asm;
     let mut eax = leaf;
     let mut ecx = sub_leaf;
-    let ebx;
+    let ebx_value;
     let edx;
     // SAFETY: CPUID is supported on `x86_64` targets.
     unsafe {
         asm!(
             "push rbx",
             "cpuid",
-            "mov {ebx_out:e}, ebx",
+            "mov r10d, ebx",
             "pop rbx",
-            ebx_out = out(reg) ebx,
+            out("r10") ebx_value,
             inout("eax") eax,
             inout("ecx") ecx,
             lateout("edx") edx,
             options(nostack, preserves_flags),
         );
     }
-    core::arch::x86_64::CpuidResult { eax, ebx, ecx, edx }
+    core::arch::x86_64::CpuidResult {
+        eax,
+        ebx: ebx_value,
+        ecx,
+        edx,
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
