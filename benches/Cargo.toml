@@ -22,6 +22,7 @@ lunatui-layout = { version = "0.1.0", path = "../lunatui-layout" }
 lunatui-text = { version = "0.1.0", path = "../lunatui-text" }
 lunatui-theme = { version = "0.1.0", path = "../lunatui-theme" }
 lunatui-widgets = { version = "0.1.0", path = "../lunatui-widgets" }
+lunatui-term = { version = "0.1.0", path = "../lunatui-term" }
 num-bigint = "0.4"
 num-traits = "0.2"
 ratatui = "=0.30.2"
@@ -55,6 +56,10 @@ harness = false
 
 [[bench]]
 name = "criterion_core_text_width"
+harness = false
+
+[[bench]]
+name = "criterion_lunatui_encode"
 harness = false
 
 [[bench]]
