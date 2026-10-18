@@ -64,7 +64,7 @@ fn cpuid_count(leaf: u32, sub_leaf: u32) -> core::arch::x86_64::CpuidResult {
 }
 
 #[cfg(target_arch = "x86_64")]
-fn x86_avx2_available() -> bool {
+pub(crate) fn x86_avx2_available() -> bool {
     use core::arch::x86_64::_xgetbv;
     let max_leaf = cpuid_count(0, 0).eax;
     if max_leaf < 7 {
@@ -108,17 +108,15 @@ pub fn active_dispatch_level() -> DispatchLevel {
     }
 }
 
-/// Every dispatch level compiled on this target (for differential tests).
+/// Every dispatch level compiled on this target that this CPU can run (for differential tests).
+///
+/// On `x86_64` AVX2 is listed only when the CPU and OS report it, so forcing a level never
+/// executes an unsupported instruction.
 #[must_use]
 pub fn differential_levels() -> &'static [DispatchLevel] {
     #[cfg(target_arch = "x86_64")]
     {
-        const LEVELS: [DispatchLevel; 3] = [
-            DispatchLevel::Scalar,
-            DispatchLevel::Sse2,
-            DispatchLevel::Avx2,
-        ];
-        &LEVELS
+        differential_levels_x86_64(x86_avx2_available())
     }
     #[cfg(target_arch = "aarch64")]
     {
@@ -129,5 +127,36 @@ pub fn differential_levels() -> &'static [DispatchLevel] {
     {
         const LEVELS: [DispatchLevel; 1] = [DispatchLevel::Scalar];
         &LEVELS
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[must_use]
+pub(crate) fn differential_levels_x86_64(avx2: bool) -> &'static [DispatchLevel] {
+    const WITH_AVX2: [DispatchLevel; 3] = [
+        DispatchLevel::Scalar,
+        DispatchLevel::Sse2,
+        DispatchLevel::Avx2,
+    ];
+    const WITHOUT_AVX2: [DispatchLevel; 2] = [DispatchLevel::Scalar, DispatchLevel::Sse2];
+    if avx2 { &WITH_AVX2 } else { &WITHOUT_AVX2 }
+}
+
+#[cfg(all(test, target_arch = "x86_64"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn differential_levels_omit_avx2_without_cpu_support() {
+        let levels = differential_levels_x86_64(false);
+        assert_eq!(levels, [DispatchLevel::Scalar, DispatchLevel::Sse2]);
+    }
+
+    #[test]
+    fn differential_levels_match_cpu_support() {
+        assert_eq!(
+            differential_levels().contains(&DispatchLevel::Avx2),
+            x86_avx2_available()
+        );
     }
 }

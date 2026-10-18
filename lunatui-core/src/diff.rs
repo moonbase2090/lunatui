@@ -6,6 +6,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use crate::grid::Grid;
+use crate::simd;
 
 /// A contiguous run of changed cells on one row (PRD §2.3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -33,7 +34,13 @@ pub fn diff_runs(previous: &Grid, next: &Grid) -> Vec<ChangedRun> {
         if !dirty.dirty {
             continue;
         }
-        collect_runs_in_row(previous, next, row, dirty.min_x, dirty.max_x, &mut runs);
+        runs.extend(simd::collect_runs_in_row_simd(
+            previous,
+            next,
+            row,
+            dirty.min_x,
+            dirty.max_x,
+        ));
     }
     runs
 }
@@ -46,7 +53,13 @@ pub fn diff_runs_naive(previous: &Grid, next: &Grid) -> Vec<ChangedRun> {
     }
     let mut runs = Vec::new();
     for row in 0..next.height() {
-        collect_runs_in_row(previous, next, row, 0, next.width(), &mut runs);
+        runs.extend(simd::collect_runs_in_row_scalar(
+            previous,
+            next,
+            row,
+            0,
+            next.width(),
+        ));
     }
     runs
 }
@@ -54,36 +67,13 @@ pub fn diff_runs_naive(previous: &Grid, next: &Grid) -> Vec<ChangedRun> {
 fn diff_runs_different_size(previous: &Grid, next: &Grid) -> Vec<ChangedRun> {
     let mut runs = Vec::new();
     for row in 0..next.height() {
-        collect_runs_in_row(previous, next, row, 0, next.width(), &mut runs);
+        runs.extend(simd::collect_runs_in_row_scalar(
+            previous,
+            next,
+            row,
+            0,
+            next.width(),
+        ));
     }
     runs
-}
-
-fn collect_runs_in_row(
-    previous: &Grid,
-    next: &Grid,
-    row: u16,
-    start: u16,
-    end: u16,
-    runs: &mut Vec<ChangedRun>,
-) {
-    let mut col = start;
-    while col < end {
-        let prev_bits = previous.cell_bits(col, row);
-        let next_bits = next.cell_bits(col, row);
-        if prev_bits == next_bits {
-            col += 1;
-            continue;
-        }
-        let run_start = col;
-        col += 1;
-        while col < end && previous.cell_bits(col, row) != next.cell_bits(col, row) {
-            col += 1;
-        }
-        runs.push(ChangedRun {
-            row,
-            col: run_start,
-            width: col - run_start,
-        });
-    }
 }

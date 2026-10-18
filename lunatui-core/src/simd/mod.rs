@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 mod detect;
+mod first_mismatch;
+mod row_diff;
 
 use core::cell::UnsafeCell;
 use core::hint::spin_loop;
 use core::sync::atomic::{AtomicU8, Ordering};
 
 pub use detect::{DispatchLevel, active_dispatch_level, differential_levels};
+pub use row_diff::{collect_runs_in_row_scalar, collect_runs_in_row_simd};
 
 /// Finds the first index where `a` and `b` differ, including length mismatch past the shared prefix.
 pub type FirstMismatchFn = fn(&[u128], &[u128]) -> Option<usize>;
@@ -111,7 +114,9 @@ pub fn first_mismatch_for_level(level: DispatchLevel) -> FirstMismatchFn {
         #[cfg(target_arch = "x86_64")]
         DispatchLevel::Sse2 => first_mismatch_sse2,
         #[cfg(target_arch = "x86_64")]
-        DispatchLevel::Avx2 => first_mismatch_avx2,
+        DispatchLevel::Avx2 if detect::x86_avx2_available() => first_mismatch_avx2,
+        #[cfg(target_arch = "x86_64")]
+        DispatchLevel::Avx2 => first_mismatch_sse2,
         #[cfg(target_arch = "aarch64")]
         DispatchLevel::Neon => first_mismatch_neon,
     }
@@ -128,15 +133,15 @@ pub fn first_mismatch_levels_agree(a: &[u128], b: &[u128]) -> bool {
 
 #[cfg(target_arch = "x86_64")]
 fn first_mismatch_sse2(a: &[u128], b: &[u128]) -> Option<usize> {
-    first_mismatch_scalar(a, b)
+    first_mismatch::first_mismatch_sse2(a, b)
 }
 
 #[cfg(target_arch = "x86_64")]
 fn first_mismatch_avx2(a: &[u128], b: &[u128]) -> Option<usize> {
-    first_mismatch_scalar(a, b)
+    first_mismatch::first_mismatch_avx2(a, b)
 }
 
 #[cfg(target_arch = "aarch64")]
 fn first_mismatch_neon(a: &[u128], b: &[u128]) -> Option<usize> {
-    first_mismatch_scalar(a, b)
+    first_mismatch::first_mismatch_neon(a, b)
 }
