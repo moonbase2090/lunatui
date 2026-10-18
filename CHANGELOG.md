@@ -19,7 +19,7 @@ Every PR adds its entry under **Unreleased**.
 - **Benchmark baselines** for ASCII text width (#68) and encoder throughput (#70).
 - **Pre-commit `rustfmt`** hook and install scripts (#69).
 
-### Note
+### Changed
 
 - Vectorized row-diff and ASCII-width kernels (roadmap PRs 48–49) and encoder fast paths (PR 50) remain deferred pending multi-machine performance gates.
 
