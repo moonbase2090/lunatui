@@ -752,6 +752,34 @@ fn print_simd_snapshot(_geometry: Geometry) {
         let _ = ascii_display_width(&ascii_log);
     }
     let ascii_elapsed = ascii_start.elapsed();
+    let mut prev_grid = lunatui_core::Grid::new(width, height);
+    let mut next_grid = prev_grid.clone();
+    let mut clusters = lunatui_core::ClusterTable::new();
+    let style = lunatui_core::Style::new();
+    prev_grid.put_str(0, 0, style, "seed", &mut clusters);
+    next_grid.put_str(0, 0, style, "seed", &mut clusters);
+    for col in [0_u16, 40, 120, 199] {
+        for row in [0_u16, 12, 30, 59] {
+            next_grid.put_str(col, row, style, "X", &mut clusters);
+        }
+    }
+    prev_grid.clear_dirty();
+    next_grid.clear_dirty();
+    let diff_start = Instant::now();
+    for _ in 0..256 {
+        let mut runs = Vec::new();
+        for row in 0..next_grid.height() {
+            runs.extend(lunatui_core::simd::collect_runs_in_row_simd(
+                &prev_grid,
+                &next_grid,
+                row,
+                0,
+                next_grid.width(),
+            ));
+        }
+        let _ = runs;
+    }
+    let diff_elapsed = diff_start.elapsed();
 
     println!("simd runtime={}", runtime_dispatch_level().as_str());
     println!(
@@ -771,6 +799,10 @@ fn print_simd_snapshot(_geometry: Geometry) {
     println!("simd ascii_width_probe={ascii_probe} dispatched={ascii_dispatched}");
     println!("simd ascii_width_levels_agree={ascii_agree}");
     println!("simd bench_ascii_log_5000x256={}", millis(ascii_elapsed));
+    println!(
+        "simd bench_row_collect_simd_{width}x{height}x256={}",
+        millis(diff_elapsed)
+    );
 }
 
 fn print_porting_snapshot(geometry: Geometry) {

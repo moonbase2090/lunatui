@@ -8,6 +8,21 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-17
+
+### Added
+
+- **Ratatui compatibility layer:** `lunatui-ratatui` backend bridge (#62), `RatatuiWidget` / `RatatuiStatefulWidget` bridges (#63), and style/text conversions (#64).
+- **Porting guide** rewrite with runnable `port_ratatui_block`, `port_ratatui_paragraph`, and `port_ratatui_list` examples (#65).
+- **SIMD dispatch groundwork** with scalar reference kernels; no behavior change in production paths (#66).
+- **Diff height-growth** regression test (#67).
+- **Benchmark baselines** for ASCII text width (#68) and encoder throughput (#70).
+- **Pre-commit `rustfmt`** hook and install scripts (#69).
+
+### Changed
+
+- Vectorized row-diff and ASCII-width kernels (roadmap PRs 48–49) and encoder fast paths (PR 50) remain deferred pending multi-machine performance gates.
+
 ## [0.1.0] - 2026-10-16
 
 First usable preview on the roadmap (PR 35): workspace crates at **0.1.0**, Phase 4 widgets, `lunatui-test` styled snapshots and oracle, docs (`getting-started`, `performance`, `porting-from-ratatui`), and README performance table vs ratatui v0.30.2.

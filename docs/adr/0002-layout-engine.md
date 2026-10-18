@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Proposed. Approval chain (PRD M7, §T4): Muse review, then the CP-2 checkpoint review (Codex, per the seat assignments), then MB2090 sign-off |
+| **Status** | Proposed. Approval chain (PRD M7, §T4): the reviewer review, then the CP-2 checkpoint review (the checkpoint reviewer, per the seat assignments), then the maintainer sign-off |
 | **Date** | 2026-10-10 |
 | **Decides** | PRD §2.4 (layout engine), DD-2 |
 | **Implemented by** | PR 14 (closed-form split), PR 15 (kasuari fallback and the parity suite), PR 16 (memo, `Grid`, `Stack`, `Auto`) |
@@ -184,7 +184,7 @@ The 11.3 ms case is twenty fill variables with pairwise ratio constraints inside
 | 15 | When `needs_solver` is clear, fast path equals kasuari. When it is set, kasuari's rectangles replace the fast path. Parity suite vs ratatui, with the §4.5 rows as the allowed deltas |
 | 16 | Memo hit allocates nothing. `Grid` intersections, `Stack` z-order, `Auto` measured as `Length` |
 
-## 9. Open questions for CP-2 and MB2090
+## 9. Open questions for CP-2 and the maintainer
 
 1. **Tail clip vs equalize.** When three `Length(20)` do not fit, this ADR clips from the last segment. ratatui equalizes. Recommendation: clip. It is stable, it is O(n), and a sidebar keeps its width while the last pane absorbs the loss. PR 15 does not silently switch the fast path to equalize.
 2. **`Fill(0)` beside a positive weight.** Recommendation: the zero takes nothing. A lone `Fill(0)` still absorbs the leftover, matching the ratatui diagram.

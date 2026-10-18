@@ -100,6 +100,16 @@ impl Grid {
         self.get(x, y).map_or(Cell::BLANK.to_bits(), Cell::to_bits)
     }
 
+    #[must_use]
+    pub(crate) fn row_word_slice(&self, row: u16) -> &[u128] {
+        if row >= self.height {
+            return &[];
+        }
+        let width = usize::from(self.width);
+        let start = usize::from(row) * width;
+        &self.cells[start..start + width]
+    }
+
     /// Clears all row dirty flags and spans.
     pub fn clear_dirty(&mut self) {
         for row in &mut self.rows {

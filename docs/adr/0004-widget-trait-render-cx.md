@@ -6,7 +6,7 @@ Accepted (2026-10-14). Implements PRD §3.2 / roadmap PR 28; follow-up to ADR 00
 
 ## Context
 
-PR 28 adds `lunatui-widgets` with `Widget`, `RenderCx`, and `StatusDot`. Opus CP-3 reviewed the public API at `9254e4d` and required several decisions before Block, Paragraph, and List land.
+PR 28 adds `lunatui-widgets` with `Widget`, `RenderCx`, and `StatusDot`. checkpoint CP-3 reviewed the public API at `9254e4d` and required several decisions before Block, Paragraph, and List land.
 
 ## Decision
 
