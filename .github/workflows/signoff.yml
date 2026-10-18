@@ -1,8 +1,20 @@
 name: Sign-off
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: Base commit SHA for the change
+        required: true
+        type: string
+      head_sha:
+        description: Head commit SHA for the change
+        required: true
+        type: string
+      signoff_label:
+        description: Whether the pull request has the mb2090-signoff label
+        required: true
+        type: boolean
 
 permissions:
   contents: read
@@ -20,6 +32,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo xtask signoff "$BASE" "$HEAD" "$LABELED"
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
-          LABELED: ${{ contains(github.event.pull_request.labels.*.name, 'mb2090-signoff') }}
+          BASE: ${{ inputs.base_sha }}
+          HEAD: ${{ inputs.head_sha }}
+          LABELED: ${{ inputs.signoff_label }}

@@ -86,6 +86,56 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - run: cargo check --workspace --all-targets --all-features
 
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs -o "$RUNNER_TEMP/rustup-init.sh"
+          sh "$RUNNER_TEMP/rustup-init.sh" -y --default-toolchain stable --profile minimal --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Install cargo-deny 0.20.2
+        env:
+          RUSTFLAGS: ""
+        run: cargo install cargo-deny --version 0.20.2 --locked
+      - run: cargo deny --log-level warn --manifest-path ./Cargo.toml --all-features check
+
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install typos 1.50.3
+        run: |
+          set -eu
+          case "$(uname -m)" in
+            x86_64) arch=x86_64 ;;
+            aarch64|arm64) arch=aarch64 ;;
+            *) echo "unsupported architecture $(uname -m)" >&2; exit 1 ;;
+          esac
+          archive="typos-v1.50.3-${arch}-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/crate-ci/typos/releases/download/v1.50.3/$archive"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" ./typos
+          chmod 755 "$RUNNER_TEMP/typos"
+      - run: |
+          "$RUNNER_TEMP/typos" .
+
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs -o "$RUNNER_TEMP/rustup-init.sh"
+          sh "$RUNNER_TEMP/rustup-init.sh" -y --default-toolchain stable --profile minimal --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - run: sudo apt-get update && sudo apt-get install --yes valgrind
+      - name: Install gungraun-runner
+        run: cargo install gungraun-runner --version 0.20.0 --locked
+        env:
+          RUSTFLAGS: ""
+      - run: cargo xtask bench
+
   scorecard:
     runs-on: ubuntu-latest
     steps:
