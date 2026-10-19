@@ -17,4 +17,4 @@ Ratatui numbers are the measured **v0.30.2** baselines in [PRD §1.3](docs/PRD.m
 | `write()` calls, ~68 KiB frame | 67 | **1** |
 | Dashboard render 200×60 (CPU) | ~0.48 ms E2E baseline | **~215 µs** render-only on dev hardware |
 
-Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). Examples: [examples/README.md](examples/README.md).
+Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI and manual sign-off: [docs/ci.md](docs/ci.md). Examples: [examples/README.md](examples/README.md).
