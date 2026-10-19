@@ -46,8 +46,8 @@ fn live_dashboard_bench_prints_percentiles() -> Result<(), Box<dyn std::error::E
 }
 
 #[test]
-fn live_dashboard_bench_compares_both_runtimes_at_the_requested_size(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn live_dashboard_bench_compares_both_runtimes_at_the_requested_size()
+-> Result<(), Box<dyn std::error::Error>> {
     let output = Command::new(env!("CARGO"))
         .current_dir(workspace_root())
         .args([
