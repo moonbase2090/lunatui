@@ -146,11 +146,7 @@ mod tests {
     #[test]
     fn docs_only_markdown_skips_signoff() {
         assert_eq!(
-            protected(&[
-                "docs/adr/0001.md",
-                "REVIEW_POLICY.md",
-                "examples/README.md",
-            ]),
+            protected(&["docs/adr/0001.md", "REVIEW_POLICY.md", "examples/README.md",]),
             Vec::<String>::new()
         );
     }
