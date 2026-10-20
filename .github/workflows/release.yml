@@ -1,34 +1,60 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Release tag (for dry-run checks), e.g. v0.1.0
-        required: true
-        type: string
-      release_title:
-        description: Planned GitHub release title
-        required: true
-        type: string
-      release_body:
-        description: Planned GitHub release body
-        required: false
-        type: string
-        default: ''
+  push:
+    tags: ['v*']
 
 permissions:
   contents: read
 
-concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
-  cancel-in-progress: false
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
 
 jobs:
-  check-release-text:
-    name: Release text gate
+  verify:
+    name: Verify tag
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Check the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          if ! grep -qx "version = \"${VERSION}\"" Cargo.toml; then
+            echo "Cargo.toml workspace version does not match ${TAG}" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "${TAG} does not point at a commit on main" >&2
+            exit 1
+          fi
+          # Presence check only: the owner signs tags, and this confirms the tag
+          # carries a signature block. It does not verify the signer.
+          if ! git cat-file tag "$TAG" | grep -q 'BEGIN SSH SIGNATURE\|BEGIN PGP SIGNATURE'; then
+            echo "${TAG} is not a signed tag" >&2
+            exit 1
+          fi
+
+      - name: Run tests
+        run: cargo test --workspace --locked
+
+  publish:
+    name: Publish GitHub release
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
       RELEASE_DENYLIST: ${{ secrets.RELEASE_DENYLIST }}
     steps:
       - uses: actions/checkout@v5
@@ -37,65 +63,36 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Resolve tag message
-        id: meta
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DISPATCH_TAG: ${{ inputs.tag }}
-          DISPATCH_TITLE: ${{ inputs.release_title }}
-          DISPATCH_BODY: ${{ inputs.release_body }}
-        run: |
-          set -euo pipefail
-          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
-            TAG="${GITHUB_REF_NAME}"
-          else
-            TAG="${DISPATCH_TAG}"
-          fi
-          TAG_MESSAGE="$(git tag -l --format='%(contents)' "$TAG" 2>/dev/null || true)"
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            TITLE="${DISPATCH_TITLE}"
-            BODY="${DISPATCH_BODY}"
-          elif gh release view "$TAG" >/dev/null 2>&1; then
-            TITLE="$(gh release view "$TAG" --json name -q .name)"
-            BODY="$(gh release view "$TAG" --json body -q .body)"
-          else
-            TITLE=""
-            BODY=""
-          fi
-          {
-            echo "tag=$TAG"
-            printf 'tag_message=%s\n' "$(printf '%s' "$TAG_MESSAGE" | base64 -w0)"
-            printf 'release_title=%s\n' "$(printf '%s' "$TITLE" | base64 -w0)"
-            printf 'release_body=%s\n' "$(printf '%s' "$BODY" | base64 -w0)"
-          } >>"$GITHUB_OUTPUT"
-
-      - name: Build release binaries for strings scan
+      - name: Build release binaries
         run: |
           set -euo pipefail
           export RUSTFLAGS="-D warnings --remap-path-prefix=${GITHUB_WORKSPACE}=. --remap-path-prefix=${HOME}=~"
           cargo build --release --locked --example hello_box
 
       - name: Scan release text and artifacts
-        env:
-          TAG_MESSAGE_B64: ${{ steps.meta.outputs.tag_message }}
-          RELEASE_TITLE_B64: ${{ steps.meta.outputs.release_title }}
-          RELEASE_BODY_B64: ${{ steps.meta.outputs.release_body }}
         run: |
           set -euo pipefail
-          TAG_MESSAGE="$(printf '%s' "$TAG_MESSAGE_B64" | base64 -d)"
-          RELEASE_TITLE="$(printf '%s' "$RELEASE_TITLE_B64" | base64 -d)"
-          RELEASE_BODY="$(printf '%s' "$RELEASE_BODY_B64" | base64 -d)"
           chmod +x scripts/check-release-text.sh
           ./scripts/check-release-text.sh \
-            --tag-message "$TAG_MESSAGE" \
-            --release-title "$RELEASE_TITLE" \
-            --release-body "$RELEASE_BODY" \
+            --tag-message "$(git tag -l --format='%(contents)' "$TAG")" \
+            --release-title "$(git tag -l --format='%(subject)' "$TAG")" \
+            --release-body "$(git tag -l --format='%(body)' "$TAG")" \
             --artifact-dir target/release/examples
 
-  publish:
-    name: Publish (placeholder)
-    needs: check-release-text
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Release publish steps will run here after packaging is defined."
+      - name: Package assets
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          git archive --format=tar.gz --prefix="lunatui-${TAG#v}/" \
+            -o "dist/lunatui-${TAG}-source.tar.gz" "$GITHUB_SHA"
+          tar -czf "dist/hello_box-${TAG}-linux-x86_64.tar.gz" \
+            -C target/release/examples hello_box
+          (cd dist && sha256sum ./*.tar.gz > SHA256SUMS)
+
+      - name: Create GitHub release
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" dist/* \
+            --verify-tag \
+            --title "$(git tag -l --format='%(subject)' "$TAG")" \
+            --notes "$(git tag -l --format='%(body)' "$TAG")"
