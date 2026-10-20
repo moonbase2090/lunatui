@@ -44,3 +44,47 @@ fn live_dashboard_bench_prints_percentiles() -> Result<(), Box<dyn std::error::E
     assert!(stdout.contains("ratatui_dashboard"));
     Ok(())
 }
+
+#[test]
+fn live_dashboard_bench_compares_both_runtimes_at_the_requested_size()
+-> Result<(), Box<dyn std::error::Error>> {
+    let output = Command::new(env!("CARGO"))
+        .current_dir(workspace_root())
+        .args([
+            "run",
+            "--quiet",
+            "-p",
+            "lunatui",
+            "--example",
+            "live_dashboard",
+            "--",
+            "--bench",
+            "--width",
+            "80",
+            "--height",
+            "24",
+            "--frames",
+            "4",
+        ])
+        .output()?;
+    assert!(
+        output.status.success(),
+        "live_dashboard comparison failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let lunatui = stdout
+        .lines()
+        .find(|line| line.contains("lunatui live_dashboard"))
+        .ok_or("lunatui benchmark summary missing")?;
+    let ratatui = stdout
+        .lines()
+        .find(|line| line.contains("ratatui 0.30.2 live_dashboard"))
+        .ok_or("ratatui benchmark summary missing")?;
+    for line in [lunatui, ratatui] {
+        assert!(line.contains("80x24, 4 frames"), "{line}");
+        assert!(line.contains("p50 "), "{line}");
+        assert!(line.contains("p99 "), "{line}");
+    }
+    Ok(())
+}
