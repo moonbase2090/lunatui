@@ -4,7 +4,7 @@
 mod cursor;
 mod sgr;
 
-use lunatui_core::{CellWidth, ClusterTable, Color, DecodedGlyph, Grid, diff_runs};
+use lunatui_core::{Cell, CellWidth, ClusterTable, Color, DecodedGlyph, Grid, diff_runs};
 
 use cursor::write_cup;
 pub use cursor::write_cursor_state;
@@ -60,10 +60,30 @@ impl Encoder {
         self.cursor_row = 0;
         self.cursor_placed = false;
         let color = colors == ColorMode::TrueColor;
+        let mut one_wide_key: Option<u128> = None;
         for run in diff_runs(previous, next) {
             let mut col = run.col;
+            let words = next.row_bits(run.row);
             while col < run.col + run.width {
-                let Some(cell) = next.get(col, run.row) else {
+                let Some(&bits) = words.get(usize::from(col)) else {
+                    col += 1;
+                    continue;
+                };
+                let key = bits >> 32;
+                let ascii = u8::try_from(bits & u128::from(u32::MAX))
+                    .ok()
+                    .filter(u8::is_ascii);
+                if let Some(byte) = ascii
+                    && Some(key) == one_wide_key
+                    && col == self.cursor_col
+                    && run.row == self.cursor_row
+                {
+                    self.buffer.push(byte);
+                    self.cursor_col += 1;
+                    col += 1;
+                    continue;
+                }
+                let Some(cell) = Cell::from_bits(bits) else {
                     col += 1;
                     continue;
                 };
@@ -92,6 +112,7 @@ impl Encoder {
                 };
                 self.cursor_col += advance;
                 col += advance;
+                one_wide_key = (advance == 1).then_some(key);
             }
         }
         self.buffer.extend_from_slice(b"\x1b[m\x1b[m\x1b[m\x1b[0m");

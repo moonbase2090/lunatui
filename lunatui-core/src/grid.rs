@@ -100,6 +100,12 @@ impl Grid {
         self.get(x, y).map_or(Cell::BLANK.to_bits(), Cell::to_bits)
     }
 
+    /// Packed cell words of `row` (see [`Cell::to_bits`]); empty when `row` is out of bounds.
+    #[must_use]
+    pub fn row_bits(&self, row: u16) -> &[u128] {
+        self.row_word_slice(row)
+    }
+
     #[must_use]
     pub(crate) fn row_word_slice(&self, row: u16) -> &[u128] {
         if row >= self.height {

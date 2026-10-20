@@ -34,3 +34,21 @@ fn style_change_emits_sgr_before_glyph() {
     assert!(bytes.starts_with(b"\x1b["));
     assert!(bytes.ends_with(b"X\x1b[m\x1b[m\x1b[m\x1b[0m"));
 }
+
+#[test]
+fn ascii_run_with_style_changes_and_wide_cell_matches_transcript() {
+    let mut clusters = ClusterTable::new();
+    let prev = Grid::new(8, 1);
+    let mut next = Grid::new(8, 1);
+    let red = Style::new().fg(lunatui_core::Color::Indexed(1));
+    next.put_str(0, 0, Style::new(), "ab", &mut clusters);
+    next.put_str(2, 0, red, "cd", &mut clusters);
+    next.put_str(4, 0, red, "\u{65e5}", &mut clusters);
+    next.put_str(6, 0, red, "ef", &mut clusters);
+    let mut encoder = Encoder::new();
+    let bytes = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
+    assert_eq!(
+        bytes,
+        "\x1b[1;1Hab\x1b[0;38;5;1;49mcd\u{65e5}ef\x1b[m\x1b[m\x1b[m\x1b[0m".as_bytes()
+    );
+}
