@@ -511,8 +511,10 @@ mod tests {
 
     use lunatui_bench::ceiling::FrameTimes;
     use lunatui_core::{Cell, ClusterTable, Grid};
+    use ratatui::buffer::Buffer as RatatuiBuffer;
+    use ratatui::layout::Rect as RatatuiRect;
 
-    use super::{Model, Options, parse_args, render_frame, summary};
+    use super::{Model, Options, parse_args, render_frame, render_ratatui_frame, summary};
 
     #[test]
     fn summary_reports_size_percentiles_and_target() {
@@ -568,5 +570,21 @@ mod tests {
             (status_bits, space),
             (Some(bits), Some(space_glyph)) if bits != space_glyph.bits()
         ));
+    }
+
+    #[test]
+    fn ratatui_frame_clears_log_tails_after_the_log_wraps() {
+        let area = RatatuiRect::new(0, 0, 80, 24);
+        let mut reused = RatatuiBuffer::empty(area);
+        let mut model = Model::new();
+
+        model.advance(796);
+        render_ratatui_frame(&model, area, &mut reused);
+        model.advance(800);
+        render_ratatui_frame(&model, area, &mut reused);
+
+        let mut fresh = RatatuiBuffer::empty(area);
+        render_ratatui_frame(&model, area, &mut fresh);
+        assert_eq!(reused, fresh);
     }
 }
