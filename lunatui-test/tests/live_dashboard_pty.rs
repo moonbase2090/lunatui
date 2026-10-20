@@ -13,7 +13,7 @@ fn workspace_root() -> PathBuf {
 
 #[test]
 fn live_dashboard_renders_in_a_pty_screen() -> Result<(), Box<dyn std::error::Error>> {
-    let pty_runner = r#"
+    let pty_runner = r"
 import os, pty, sys
 pid, fd = pty.fork()
 if pid == 0:
@@ -29,7 +29,7 @@ while True:
     sys.stdout.buffer.flush()
 _, status = os.waitpid(pid, 0)
 sys.exit(os.waitstatus_to_exitcode(status))
-"#;
+";
     let output = Command::new("python3")
         .current_dir(workspace_root())
         .args([

@@ -9,9 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_bench::ceiling::{FRAME_TARGET, FrameTimes, Verdict};
-use lunatui_core::{
-    Attrs, ClusterTable, Color, Grid, Rect, Style, diff_runs, width as display_width,
-};
+use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, width as display_width};
 use lunatui_runtime::{SchedulePoll, Scheduler};
 use lunatui_term::{ColorMode, Encoder};
 #[cfg(unix)]
@@ -89,7 +87,7 @@ fn main() -> io::Result<()> {
             options.height,
             times,
             build_profile(),
-            "lunatui live_dashboard (Grid + diff_runs + Encoder + write)",
+            "lunatui live_dashboard (Grid + Encoder::encode_diff (diff + encode) + write)",
         )
     );
     let ratatui_times = run_ratatui_bench(&options)?
@@ -189,15 +187,8 @@ fn run_bench(options: &Options) -> io::Result<Option<FrameTimes>> {
             options.width,
             options.height,
         );
-        let runs = diff_runs(&prev, &next);
         let payload = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
-        if payload.is_empty() && tick > 0 {
-            return Err(io::Error::other("encode_diff returned an empty payload"));
-        }
-        if runs.is_empty() && tick > 0 {
-            return Err(io::Error::other("expected diff runs after the first frame"));
-        }
-        output.write_all(&payload)?;
+        output.write_all(payload)?;
         samples.push(start.elapsed());
         prev = next;
         next = Grid::new(options.width, options.height);
@@ -391,16 +382,14 @@ fn render_ratatui_frame(model: &Model, area: RatatuiRect, buffer: &mut RatatuiBu
             RatatuiStyle::default().fg(accent).bg(bg),
         );
         let visible = usize::from(log_bottom - log_top);
+        let blank = " ".repeat(usize::from(area.width.saturating_sub(1)));
+        let log_style = RatatuiStyle::default().fg(RatatuiColor::Reset).bg(bg);
         for row in 0..visible {
             let line_index = (model.scroll + row) % model.log.len();
             let line = &model.log[line_index];
             let y = log_top + u16::try_from(row).unwrap_or(0);
-            buffer.set_string(
-                1,
-                y,
-                line,
-                RatatuiStyle::default().fg(RatatuiColor::Reset).bg(bg),
-            );
+            buffer.set_string(1, y, &blank, log_style);
+            buffer.set_string(1, y, line, log_style);
         }
     }
 
