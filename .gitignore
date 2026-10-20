@@ -1,5 +1,5 @@
 target/
-.cursor/skills/verify-lunatui/artifacts/*
-!.cursor/skills/verify-lunatui/artifacts/.gitkeep
-!.cursor/skills/verify-lunatui/artifacts/verify-seed/
-!.cursor/skills/verify-lunatui/artifacts/verify-seed/**
+
+# Local editor and tooling state
+.cursor/
+.sc/

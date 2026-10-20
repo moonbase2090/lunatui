@@ -57,9 +57,6 @@ fn is_docs_only_path(path: &str) -> bool {
     if is_machine_policy_doc(path) {
         return false;
     }
-    if path.starts_with(".cursor/skills/") {
-        return is_markdown_path(path);
-    }
     if path.starts_with("docs/") {
         return is_markdown_path(path);
     }
@@ -149,11 +146,7 @@ mod tests {
     #[test]
     fn docs_only_markdown_skips_signoff() {
         assert_eq!(
-            protected(&[
-                "docs/adr/0001.md",
-                "REVIEW_POLICY.md",
-                ".cursor/skills/verify-lunatui/SKILL.md",
-            ]),
+            protected(&["docs/adr/0001.md", "REVIEW_POLICY.md", "examples/README.md",]),
             Vec::<String>::new()
         );
     }
@@ -162,21 +155,6 @@ mod tests {
     fn machine_policy_docs_still_need_signoff() {
         assert_eq!(protected(&["docs/lints.md"]), ["docs/lints.md"]);
         assert_eq!(protected(&["docs/conventions.md"]), ["docs/conventions.md"]);
-    }
-
-    #[test]
-    fn skill_scripts_are_not_docs_only_exemptions() {
-        assert_eq!(
-            protected(&[".cursor/skills/verify-lunatui/scripts/doctor.sh"]),
-            Vec::<String>::new()
-        );
-        assert_eq!(
-            protected(&[
-                ".cursor/skills/verify-lunatui/SKILL.md",
-                ".cursor/skills/verify-lunatui/scripts/doctor.sh",
-            ]),
-            Vec::<String>::new()
-        );
     }
 
     #[test]
