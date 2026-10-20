@@ -8,6 +8,21 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-20
+
+### Added
+
+- **Paired live dashboard benchmarks:** the `live_dashboard` example gets a paired benchmark for side-by-side comparison, with a PTY test that covers the live dashboard and its comparison (#80).
+
+### Changed
+
+- **SIMD row diff:** `first_mismatch` is vectorized and drives the row-diff path, with scalar fallback and differential tests against the scalar kernel (#73).
+- **SIMD printable-ASCII width:** a vectorized fast path for printable-ASCII width, selected at runtime and checked against the scalar kernel with property tests (#72).
+
+### Fixed
+
+- Dashboard benchmark and baseline rendering are corrected, so the paired numbers compare like with like (#80).
+
 ## [0.1.1] - 2026-10-17
 
 ### Added

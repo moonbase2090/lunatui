@@ -14,6 +14,6 @@ workspace = true
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.1", path = "../lunatui-test" }
+lunatui-test = { version = "0.1.2", path = "../lunatui-test" }
 proptest = "=1.9.0"
 unicode-width = "=0.2.2"
