@@ -4,6 +4,16 @@ lunatui is a hyperspeed Rust TUI library being built from scratch to replace rat
 
 **Status: v0.1.2 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
 
+## Quick start
+
+```sh
+git clone https://github.com/moonbase2090/lunatui
+cd lunatui
+cargo run --example live_dashboard
+```
+
+The dashboard draws 240 frames (about four seconds) and exits. Add `-- --bench` for a headless lunatui vs ratatui timing run. More examples are listed in [examples/README.md](examples/README.md).
+
 See the [review policy](REVIEW_POLICY.md) for PR classification, proof and merge requirements.
 
 ## Performance vs ratatui (preview)
