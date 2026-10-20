@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  verify:
+    name: Verify tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Check the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          if ! grep -qx "version = \"${VERSION}\"" Cargo.toml; then
+            echo "Cargo.toml workspace version does not match ${TAG}" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "${TAG} does not point at a commit on main" >&2
+            exit 1
+          fi
+          # Presence check only: the owner signs tags, and this confirms the tag
+          # carries a signature block. It does not verify the signer.
+          if ! git cat-file tag "$TAG" | grep -q 'BEGIN SSH SIGNATURE\|BEGIN PGP SIGNATURE'; then
+            echo "${TAG} is not a signed tag" >&2
+            exit 1
+          fi
+
+      - name: Run tests
+        run: cargo test --workspace --locked
+
+  publish:
+    name: Publish GitHub release
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_DENYLIST: ${{ secrets.RELEASE_DENYLIST }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build release binaries
+        run: |
+          set -euo pipefail
+          export RUSTFLAGS="-D warnings --remap-path-prefix=${GITHUB_WORKSPACE}=. --remap-path-prefix=${HOME}=~"
+          cargo build --release --locked --example hello_box
+
+      - name: Scan release text and artifacts
+        run: |
+          set -euo pipefail
+          chmod +x scripts/check-release-text.sh
+          ./scripts/check-release-text.sh \
+            --tag-message "$(git tag -l --format='%(contents)' "$TAG")" \
+            --release-title "$(git tag -l --format='%(subject)' "$TAG")" \
+            --release-body "$(git tag -l --format='%(body)' "$TAG")" \
+            --artifact-dir target/release/examples
+
+      - name: Package assets
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          git archive --format=tar.gz --prefix="lunatui-${TAG#v}/" \
+            -o "dist/lunatui-${TAG}-source.tar.gz" "$GITHUB_SHA"
+          tar -czf "dist/hello_box-${TAG}-linux-x86_64.tar.gz" \
+            -C target/release/examples hello_box
+          (cd dist && sha256sum ./*.tar.gz > SHA256SUMS)
+
+      - name: Create GitHub release
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" dist/* \
+            --verify-tag \
+            --title "$(git tag -l --format='%(subject)' "$TAG")" \
+            --notes "$(git tag -l --format='%(body)' "$TAG")"

@@ -4,7 +4,7 @@ Pull request checks run through the repository runner workflow. The GitHub Actio
 
 ## Release
 
-The `release` job in the repository runner workflow publishes a GitHub release when a `v*` tag is pushed. It runs only after every check passes on the tagged commit. It refuses a tag that is unsigned, that does not point at a commit on `main`, or whose tag does not match the workspace version in `Cargo.toml`.
+The Release workflow (`release.yml`) publishes a GitHub release when a `v*` tag is pushed. It runs on hosted runners. The `verify` job refuses a tag that is unsigned, that does not point at a commit on `main`, or whose tag does not match the workspace version in `Cargo.toml`, then runs the test suite. The `publish` job runs only after `verify` passes.
 
 The tag message supplies the release title (its first line) and notes (the rest). The release-text gate scans them and the built example binary before anything is published. Assets are a source archive, a Linux x86_64 `hello_box` archive, and `SHA256SUMS`.
 
