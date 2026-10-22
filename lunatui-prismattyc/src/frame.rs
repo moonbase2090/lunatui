@@ -16,7 +16,7 @@ pub struct FrameDiff<'a> {
     pub runs: &'a [ChangedRun],
 }
 
-/// Accounting returned from [`PrismattycBackend::present`].
+/// Accounting returned from [`crate::PrismattycBackend::present`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PresentStats {
     /// Number of [`ChangedRun`] entries applied.

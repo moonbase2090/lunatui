@@ -62,7 +62,7 @@ fn main() -> io::Result<()> {
         if encode_bench {
             print_encode_bench_snapshot(geometry);
         } else if grid_sink {
-            print_grid_sink_snapshot(geometry);
+            print_grid_sink_snapshot(geometry)?;
         } else if simd {
             print_simd_snapshot(geometry);
         } else if porting {
@@ -681,7 +681,7 @@ fn render_porting_snapshot(geometry: Geometry) -> (lunatui_core::Grid, lunatui_c
     (grid, clusters)
 }
 
-fn print_grid_sink_snapshot(geometry: Geometry) {
+fn print_grid_sink_snapshot(geometry: Geometry) -> io::Result<()> {
     use lunatui_bench::scenes::lunatui::encode::EncodeFrames;
     use lunatui_prismattyc::{HostRenderer, PrismattycBackend};
 
@@ -696,23 +696,14 @@ fn print_grid_sink_snapshot(geometry: Geometry) {
     let frames = EncodeFrames::new(geometry.width, geometry.height);
     let mut backend = PrismattycBackend::new(geometry.width, geometry.height, NoOpHost);
     backend.set_previous(frames.tick.clone());
-    let scroll_stats = match backend.present(&frames.scroll, &frames.clusters) {
-        Ok(stats) => stats,
-        Err(err) => panic!("present scroll: {err}"),
-    };
+    let scroll_stats = backend.present(&frames.scroll, &frames.clusters)?;
     backend.set_previous(Grid::new(geometry.width, geometry.height));
-    let full_stats = match backend.present(&frames.scroll, &frames.clusters) {
-        Ok(stats) => stats,
-        Err(err) => panic!("present full: {err}"),
-    };
+    let full_stats = backend.present(&frames.scroll, &frames.clusters)?;
 
     let scroll_start = Instant::now();
     for _ in 0..256 {
         backend.set_previous(frames.tick.clone());
-        match backend.present(&frames.scroll, &frames.clusters) {
-            Ok(_stats) => {}
-            Err(err) => panic!("present scroll: {err}"),
-        }
+        let _ = backend.present(&frames.scroll, &frames.clusters)?;
     }
     let scroll_elapsed = scroll_start.elapsed();
 
@@ -735,6 +726,7 @@ fn print_grid_sink_snapshot(geometry: Geometry) {
         geometry.height,
         millis(scroll_elapsed)
     );
+    Ok(())
 }
 
 fn print_encode_bench_snapshot(geometry: Geometry) {
