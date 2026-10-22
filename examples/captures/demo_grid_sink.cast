@@ -1,0 +1,2 @@
+{"version": 2, "width": 80, "height": 24, "timestamp": 1760710000, "title": "demo_grid_sink", "command": "--example demo --features app -- --grid-sink --snapshot --width 200 --height 60"}
+[0.0, "o", "grid_sink_scroll_runs_200x60=239\ngrid_sink_scroll_cells_200x60=551\ngrid_sink_full_runs_200x60=60\ngrid_sink_ansi_bytes=0\ngrid_sink_bench_scroll_200x60x256=14.176 ms\n"]

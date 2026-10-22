@@ -2,3 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #![doc = include_str!("../README.md")]
+
+mod frame;
+mod sink;
+
+pub use frame::{FrameDiff, PresentStats};
+pub use sink::{HostRenderer, PrismattycBackend};
