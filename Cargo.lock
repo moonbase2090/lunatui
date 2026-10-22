@@ -864,6 +864,7 @@ dependencies = [
  "libc",
  "lunatui-bench",
  "lunatui-core",
+ "lunatui-prismattyc",
  "lunatui-ratatui",
  "lunatui-runtime",
  "lunatui-term",
@@ -881,6 +882,7 @@ dependencies = [
  "gungraun",
  "lunatui-core",
  "lunatui-layout",
+ "lunatui-prismattyc",
  "lunatui-term",
  "lunatui-text",
  "lunatui-theme",
@@ -914,6 +916,9 @@ dependencies = [
 [[package]]
 name = "lunatui-prismattyc"
 version = "0.1.2"
+dependencies = [
+ "lunatui-core",
+]
 
 [[package]]
 name = "lunatui-ratatui"
