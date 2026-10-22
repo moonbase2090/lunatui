@@ -6,6 +6,7 @@
 mod block;
 mod borders;
 mod gauge;
+mod lightcycle;
 mod list;
 mod overlay;
 mod padding;
@@ -23,6 +24,7 @@ mod widget;
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 pub use gauge::Gauge;
+pub use lightcycle::Lightcycle;
 pub use list::List;
 pub use lunatui_core::Size;
 pub use lunatui_layout::Constraint;

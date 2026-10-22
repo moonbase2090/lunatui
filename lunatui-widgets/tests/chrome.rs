@@ -54,3 +54,94 @@ fn text_input_renders_cursor() {
     TextInput::new("hi", 2).render(Rect::new(0, 0, 10, 1), &mut cx);
     assert!(grid.row_display(0, &clusters).contains('│'));
 }
+
+#[test]
+fn lightcycle_raster_advances_with_virtual_time_and_wraps() {
+    use lunatui_test::Clock;
+    use lunatui_widgets::Lightcycle;
+    use std::time::Duration;
+
+    fn render(elapsed: Duration) -> (String, lunatui_core::Grid) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut grid = lunatui_core::Grid::new(8, 4);
+        let mut clusters = lunatui_core::ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        Lightcycle::new(elapsed)
+            .period(Duration::from_secs(4))
+            .render(Rect::new(0, 0, 8, 4), &mut cx);
+        (grid.row_display(0, &clusters), grid)
+    }
+
+    let start = Clock::new();
+    let (_, start_grid) = render(start.now());
+    let mut midpoint = start;
+    midpoint.advance(Duration::from_millis(500));
+    let (_, midpoint_grid) = render(midpoint.now());
+    assert_ne!(start_grid, midpoint_grid);
+
+    let mut wrapped = Clock::new();
+    wrapped.advance(Duration::from_secs(4));
+    let (_, wrapped_grid) = render(wrapped.now());
+    assert_eq!(start_grid, wrapped_grid);
+}
+
+#[test]
+fn lightcycle_raster_changes_at_sixty_hertz_virtual_time() {
+    use lunatui_test::Clock;
+    use std::time::Duration;
+
+    fn render(elapsed: Duration) -> lunatui_core::Grid {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut grid = lunatui_core::Grid::new(8, 4);
+        let mut clusters = lunatui_core::ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        lunatui_widgets::Lightcycle::new(elapsed).render(Rect::new(0, 0, 8, 4), &mut cx);
+        grid
+    }
+
+    let start = render(Clock::new().now());
+    let next_frame = render(Clock::at(Duration::from_nanos(16_666_667)).now());
+    assert_ne!(start, next_frame);
+}
+
+#[test]
+fn lightcycle_raster_colors_the_trail_and_handles_empty_areas() {
+    use lunatui_core::{Color, Style};
+    use lunatui_widgets::Lightcycle;
+    use std::time::Duration;
+
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = lunatui_core::Grid::new(8, 4);
+    let mut clusters = lunatui_core::ClusterTable::new();
+    {
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        Lightcycle::new(Duration::from_millis(250))
+            .trail(
+                Style::new().fg(Color::Rgb(255, 0, 0)),
+                Style::new().fg(Color::Rgb(0, 0, 255)),
+            )
+            .render(Rect::new(0, 0, 8, 4), &mut cx);
+    }
+    assert!(
+        grid.row_display(0, &clusters)
+            .chars()
+            .any(|ch| ('\u{2800}'..='\u{28ff}').contains(&ch))
+    );
+    let mut colors = std::collections::HashSet::new();
+    for y in 0..grid.height() {
+        for x in 0..grid.width() {
+            if let Some(cell) = grid.get(x, y)
+                && (0x2800..=0x28ff).contains(&cell.glyph().bits())
+            {
+                colors.insert(cell.style().fg);
+            }
+        }
+    }
+    assert!(
+        colors.len() > 1,
+        "trail should contain interpolated cell colors"
+    );
+
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Lightcycle::new(Duration::ZERO).render(Rect::new(0, 0, 0, 0), &mut cx);
+}
