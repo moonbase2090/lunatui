@@ -130,10 +130,10 @@ fn lightcycle_raster_colors_the_trail_and_handles_empty_areas() {
     let mut colors = std::collections::HashSet::new();
     for y in 0..grid.height() {
         for x in 0..grid.width() {
-            if let Some(cell) = grid.get(x, y) {
-                if (0x2800..=0x28ff).contains(&cell.glyph().bits()) {
-                    colors.insert(cell.style().fg);
-                }
+            if let Some(cell) = grid.get(x, y)
+                && (0x2800..=0x28ff).contains(&cell.glyph().bits())
+            {
+                colors.insert(cell.style().fg);
             }
         }
     }
