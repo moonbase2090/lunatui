@@ -11,7 +11,6 @@ const OVERLAY: &str = "overlay.toggle";
 const PALETTE: &str = "palette.open";
 const QUIT: &str = "app.quit";
 
-/// Ctrl+Shift+/ on kitty keyboard protocol; F1 on legacy terminals where Ctrl+Shift is not distinguishable.
 const OVERLAY_CHORDS: &[KeyChord] = &[
     KeyChord::new(KeyCode::Char('/'), Modifiers::new().control().shift()),
     KeyChord::new(KeyCode::F(1), Modifiers::new()),
@@ -102,9 +101,6 @@ fn empty_palette_query_lists_every_command_in_registration_order() {
 
 #[test]
 fn palette_entries_dispatch_to_their_own_id() {
-    // One registry drives both surfaces: whatever the palette offers, the matching chord
-    // runs the same command. Palette entries without a chord would break this, so every
-    // registered command must have at least one chord.
     let keymap = registry();
     for command in keymap.commands() {
         let chord = command.chords()[0];
