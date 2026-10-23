@@ -6,11 +6,33 @@ Pull request checks run through the repository runner workflow. The GitHub Actio
 
 The Release workflow (`release.yml`) publishes a GitHub release when a `v*` tag is pushed. It runs on hosted runners. The `verify` job refuses a tag that is unsigned, that does not point at a commit on `main`, or whose tag does not match the workspace version in `Cargo.toml`, then runs the test suite. The `publish` job runs only after `verify` passes.
 
-Both release jobs pass the full tag ref explicitly to checkout. This preserves the annotated tag object for signature-block checks and release metadata. With the default event inputs, checkout can replace its local annotated tag ref with the peeled commit when it fetches full history.
+Both release jobs pass the selected full tag ref explicitly to checkout. This preserves the annotated tag object for signature-block checks and release metadata. With the default event inputs, checkout can replace its local annotated tag ref with the peeled commit when it fetches full history.
 
 Before changing release checkout, exercise both the default and explicit-ref configurations in isolated checkouts of an existing signed tag. Confirm that the explicit-ref checkout retains an object of type `tag`, resolves to the expected commit, and preserves the tag subject, body, and signature block. Do not create or move a published tag for this check. This check runs locally and does not publish a release.
 
 The tag message supplies the release title (its first line) and notes (the rest). The release-text gate scans them and the built example binary before anything is published. Assets are a source archive, a Linux x86_64 `hello_box` archive, and `SHA256SUMS`.
+
+## Recover publication for an existing tag
+
+A failed run uses its original event ref and commit when rerun. Merging a workflow correction does not update that run. For example, the failed v0.1.3 run cannot acquire the annotated-tag checkout fix through a rerun. See [GitHub rerun behavior](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs).
+
+After the recovery workflow is merged to main and the owner approves publication, the owner can start the corrected workflow against the existing signed tag:
+
+```sh
+gh workflow run release.yml --ref main -f tag=v0.1.3
+```
+
+The input must name an existing tag in `vMAJOR.MINOR.PATCH` form. Recovery dispatches from branches other than main fail before checkout. Verification requires an annotated tag with a signature block, a matching workspace version, and a tag commit on main. The signature-block check does not authenticate the signer.
+
+The publish job checks out the same verified tag object and commit. Source archives use that commit, even when the recovery workflow runs from a newer main. Runs for the same tag are serialized. An existing release is left unchanged, including drafts or incomplete releases, and API failures stop publication. A partial existing release requires owner assessment rather than automatic replacement.
+
+Verify recovery logic locally without dispatching or publishing:
+
+```sh
+ruby scripts/check-release-workflow-selftest.rb
+```
+
+The self-test executes the workflow shell steps in disposable repositories. Signature-block fixtures are synthetic. It tests malformed inputs, non-main dispatches, missing or lightweight tags, unsigned annotated tags, version and commit mismatches, off-main commits, publication checkout changes, API failures, and repeat publication probes. GitHub API and release creation calls use a local fixture executable.
 
 ## Run sign-off for a pull request
 
