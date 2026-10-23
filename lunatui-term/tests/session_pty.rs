@@ -13,6 +13,27 @@ use std::thread;
 use std::time::Duration;
 
 #[test]
+fn present_frame_propagates_flush_failure() {
+    let output = run_probe_in_pty("flush-error");
+    assert!(
+        output.windows(20).any(|w| w == b"flush-error-observed"),
+        "present_frame must return its writer's flush error"
+    );
+}
+
+#[test]
+fn present_frame_delivers_buffered_bytes_before_writer_drop() {
+    let output = run_probe_in_pty("buffered");
+    assert!(
+        output
+            .windows(b"buffered-frame".len())
+            .any(|w| w == b"buffered-frame"),
+        "present_frame must flush its buffered writer before returning"
+    );
+    assert!(output.windows(8).any(|w| w == b"\x1b[?2026l"));
+}
+
+#[test]
 fn session_enters_alt_screen_and_restores_on_drop() {
     let output = run_probe_in_pty("normal");
     assert!(

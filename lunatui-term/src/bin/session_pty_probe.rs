@@ -17,6 +17,9 @@ fn main() {
         "normal" => run_normal(),
         "panic" => run_panic(),
         "mouse" => run_mouse(),
+        "buffered" => run_buffered(),
+        #[cfg(unix)]
+        "flush-error" => run_flush_error(),
         _ => 1,
     };
     process::exit(code);
@@ -65,4 +68,39 @@ fn run_panic() -> i32 {
     {
         panic!("session probe panic");
     }
+}
+
+fn run_buffered() -> i32 {
+    let stdout = io::BufWriter::new(io::stdout());
+    let Ok(mut session) = Session::enter_with_options(stdout, SessionOptions::default()) else {
+        return 2;
+    };
+    if session.present_frame(b"buffered-frame").is_err() {
+        return 3;
+    }
+    process::exit(0);
+}
+
+#[cfg(unix)]
+fn run_flush_error() -> i32 {
+    use std::io::Write;
+    struct FailFlush;
+    impl Write for FailFlush {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "flush failed"))
+        }
+    }
+    let Ok(mut session) = Session::enter_with_options(FailFlush, SessionOptions::default()) else {
+        return 2;
+    };
+    if let Err(lunatui_term::SessionError::Io(error)) = session.present_frame(b"probe")
+        && error.kind() == io::ErrorKind::BrokenPipe
+    {
+        println!("flush-error-observed");
+        return 0;
+    }
+    3
 }
