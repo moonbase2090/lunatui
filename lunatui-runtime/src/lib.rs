@@ -11,6 +11,7 @@ mod focus;
 #[cfg(feature = "app")]
 mod hit;
 mod input;
+/// Command registry for keyboard shortcuts. The shortcut overlay and command palette render from it.
 #[cfg(feature = "keymap")]
 pub mod keymap;
 #[cfg(feature = "app")]
