@@ -17,6 +17,7 @@ fn main() {
         "normal" => run_normal(),
         "panic" => run_panic(),
         "mouse" => run_mouse(),
+        "buffered" => run_buffered(),
         _ => 1,
     };
     process::exit(code);
@@ -65,4 +66,17 @@ fn run_panic() -> i32 {
     {
         panic!("session probe panic");
     }
+}
+
+// Exit without dropping the writer so the test observes present_frame's delivery,
+// rather than BufWriter's best-effort flush on drop.
+fn run_buffered() -> i32 {
+    let stdout = io::BufWriter::new(io::stdout());
+    let Ok(mut session) = Session::enter_with_options(stdout, SessionOptions::default()) else {
+        return 2;
+    };
+    if session.present_frame(b"buffered-frame").is_err() {
+        return 3;
+    }
+    process::exit(0);
 }
