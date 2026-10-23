@@ -22,6 +22,10 @@ Every PR adds its entry under **Unreleased**.
 - **Review policy:** behavior-changing PRs must include proof of a build and run in a clean local VM (#86).
 - **Public-readiness cleanup:** `REVIEW_POLICY.md` is rewritten as a generic policy, committed local tooling state is removed and git-ignored, and the README quick start uses the `live_dashboard` example (#83).
 
+### Fixed
+
+- Terminal sessions flush each presented frame before returning and propagate flush failures, so buffered output reaches the screen without waiting for another write or writer drop (#88).
+
 ## [0.1.2] - 2026-10-20
 
 ### Added
