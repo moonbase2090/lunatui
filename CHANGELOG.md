@@ -11,6 +11,7 @@ Every PR adds its entry under **Unreleased**.
 ### Fixed
 
 - Release checkout preserves signed annotated tag objects for signature-block checks and release metadata.
+- Release publication can recover an existing signed tag through a manual main-branch workflow, with verified source pinning and existing-release protection.
 
 ## [0.1.3] - 2026-10-23
 

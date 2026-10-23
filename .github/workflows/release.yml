@@ -3,6 +3,16 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing signed release tag
+        type: string
+        required: true
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -15,34 +25,67 @@ jobs:
   verify:
     name: Verify tag
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      commit: ${{ steps.check.outputs.commit }}
+      tag_object: ${{ steps.check.outputs.tag_object }}
     steps:
+      - name: Select release tag
+        id: tag
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a release tag in vMAJOR.MINOR.PATCH form" >&2
+            exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$GITHUB_REF" != refs/heads/main ]]; then
+            echo "Release recovery must use the workflow on main" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.ref }}
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
           fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Check the tag
+        id: check
         env:
-          TAG: ${{ github.ref_name }}
+          EXPECTED_COMMIT: ${{ github.event_name == 'push' && github.sha || '' }}
         run: |
           set -euo pipefail
+          TAG_REF="refs/tags/$TAG"
+          if [[ "$(git cat-file -t "$TAG_REF")" != tag ]]; then
+            echo "Release requires an annotated tag object" >&2
+            exit 1
+          fi
+          TAG_OBJECT="$(git rev-parse "$TAG_REF")"
+          COMMIT="$(git rev-parse "$TAG_REF^{commit}")"
+          if [[ "$COMMIT" != "$(git rev-parse HEAD)" || ( -n "$EXPECTED_COMMIT" && "$COMMIT" != "$EXPECTED_COMMIT" ) ]]; then
+            echo "Release checkout does not match the selected tag commit" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$COMMIT" origin/main; then
+            echo "Selected tag does not point at a commit on main" >&2
+            exit 1
+          fi
           VERSION="${TAG#v}"
-          if ! grep -qx "version = \"${VERSION}\"" Cargo.toml; then
-            echo "Cargo.toml workspace version does not match ${TAG}" >&2
+          if ! grep -Fxq "version = \"${VERSION}\"" Cargo.toml; then
+            echo "Workspace version does not match the selected tag" >&2
             exit 1
           fi
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "${TAG} does not point at a commit on main" >&2
+          TAG_CONTENTS="$(git cat-file tag "$TAG_REF")"
+          if ! grep -q 'BEGIN SSH SIGNATURE\|BEGIN PGP SIGNATURE' <<< "$TAG_CONTENTS"; then
+            echo "Annotated release tag has no signature block" >&2
             exit 1
           fi
-          # Presence check only: the owner signs tags, and this confirms the tag
-          # carries a signature block. It does not verify the signer.
-          if ! git cat-file tag "$TAG" | grep -q 'BEGIN SSH SIGNATURE\|BEGIN PGP SIGNATURE'; then
-            echo "${TAG} is not a signed tag" >&2
-            exit 1
-          fi
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
+          echo "tag_object=$TAG_OBJECT" >> "$GITHUB_OUTPUT"
 
       - name: Run tests
         run: cargo test --workspace --locked
@@ -54,24 +97,54 @@ jobs:
     permissions:
       contents: write
     env:
-      TAG: ${{ github.ref_name }}
+      TAG: ${{ needs.verify.outputs.tag }}
+      RELEASE_COMMIT: ${{ needs.verify.outputs.commit }}
+      TAG_OBJECT: ${{ needs.verify.outputs.tag_object }}
       GH_TOKEN: ${{ github.token }}
       RELEASE_DENYLIST: ${{ secrets.RELEASE_DENYLIST }}
     steps:
-      - uses: actions/checkout@v5
+      - name: Check for existing release
+        id: existing
+        run: |
+          set -euo pipefail
+          RELEASE_ID="$(gh api graphql \
+            -f query='query($owner: String!, $name: String!, $tag: String!) { repository(owner: $owner, name: $name) { release(tagName: $tag) { id } } }' \
+            -f owner="${GITHUB_REPOSITORY%/*}" \
+            -f name="${GITHUB_REPOSITORY#*/}" \
+            -f tag="$TAG" \
+            --jq '.data.repository.release.id // empty')"
+          if [[ -n "$RELEASE_ID" ]]; then
+            echo "Release already exists; leaving it unchanged"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.existing.outputs.exists != 'true'
+        uses: actions/checkout@v5
         with:
-          ref: ${{ github.ref }}
+          ref: refs/tags/${{ needs.verify.outputs.tag }}
           fetch-depth: 0
 
-      - uses: dtolnay/rust-toolchain@stable
+      - if: steps.existing.outputs.exists != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check publication checkout
+        if: steps.existing.outputs.exists != 'true'
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          test "$(git rev-parse "refs/tags/$TAG")" = "$TAG_OBJECT"
 
       - name: Build release binaries
+        if: steps.existing.outputs.exists != 'true'
         run: |
           set -euo pipefail
           export RUSTFLAGS="-D warnings --remap-path-prefix=${GITHUB_WORKSPACE}=. --remap-path-prefix=${HOME}=~"
           cargo build --release --locked --example hello_box
 
       - name: Scan release text and artifacts
+        if: steps.existing.outputs.exists != 'true'
         run: |
           set -euo pipefail
           chmod +x scripts/check-release-text.sh
@@ -82,16 +155,18 @@ jobs:
             --artifact-dir target/release/examples
 
       - name: Package assets
+        if: steps.existing.outputs.exists != 'true'
         run: |
           set -euo pipefail
           mkdir -p dist
           git archive --format=tar.gz --prefix="lunatui-${TAG#v}/" \
-            -o "dist/lunatui-${TAG}-source.tar.gz" "$GITHUB_SHA"
+            -o "dist/lunatui-${TAG}-source.tar.gz" "$RELEASE_COMMIT"
           tar -czf "dist/hello_box-${TAG}-linux-x86_64.tar.gz" \
             -C target/release/examples hello_box
           (cd dist && sha256sum ./*.tar.gz > SHA256SUMS)
 
       - name: Create GitHub release
+        if: steps.existing.outputs.exists != 'true'
         run: |
           set -euo pipefail
           gh release create "$TAG" dist/* \
