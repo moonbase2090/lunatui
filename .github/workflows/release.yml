@@ -18,6 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
@@ -59,6 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@stable
