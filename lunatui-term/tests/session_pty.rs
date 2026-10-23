@@ -16,7 +16,9 @@ use std::time::Duration;
 fn present_frame_delivers_buffered_bytes_before_writer_drop() {
     let output = run_probe_in_pty("buffered");
     assert!(
-        output.windows(13).any(|w| w == b"buffered-frame"),
+        output
+            .windows(b"buffered-frame".len())
+            .any(|w| w == b"buffered-frame"),
         "present_frame must flush its buffered writer before returning"
     );
     assert!(output.windows(8).any(|w| w == b"\x1b[?2026l"));
