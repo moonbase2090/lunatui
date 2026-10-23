@@ -11,6 +11,8 @@ mod focus;
 #[cfg(feature = "app")]
 mod hit;
 mod input;
+#[cfg(feature = "keymap")]
+pub mod keymap;
 #[cfg(feature = "app")]
 mod options;
 #[cfg(feature = "app")]
