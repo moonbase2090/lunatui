@@ -1,8 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Command registry for keyboard shortcuts, with the shortcut overlay and command palette rendered from it.
-
 use std::fmt;
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
@@ -186,7 +184,6 @@ pub fn render_palette(
     }
 }
 
-/// Grid row for the `index`-th list entry, one line below the header row of `area`.
 fn list_row(area: Rect, index: usize) -> u16 {
     let offset = u16::try_from(index + 1).unwrap_or(u16::MAX);
     area.y.saturating_add(offset)
