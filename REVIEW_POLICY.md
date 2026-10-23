@@ -47,3 +47,11 @@ Every test must fail if the behavior it names broke. Reject tests that assert a 
 - No admin overrides and no force-pushes to `main`.
 - Commits carry no private details: no personal names, paths, hostnames or addresses.
 - Releases and tags need owner approval.
+
+## Local verification
+
+Every behavior-changing PR must include proof that the change was built and exercised in a clean local VM (a Tart macOS VM, or a clean VM of the relevant OS) and shown working: the commands run plus their output, or a screenshot.
+
+- Reviewers must not give SHIP without that proof.
+- Docs-only and CI-only PRs are exempt.
+- Only an explicit owner override waives this requirement.
