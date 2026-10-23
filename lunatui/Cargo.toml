@@ -15,6 +15,7 @@ workspace = true
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
+keymap = ["app", "lunatui-runtime/keymap"]
 
 [dependencies]
 lunatui-runtime = { version = "0.1.3", path = "../lunatui-runtime", optional = true }
@@ -79,6 +80,17 @@ test = true
 name = "live_dashboard"
 path = "../examples/live_dashboard.rs"
 test = true
+
+[[example]]
+name = "keymap"
+path = "../examples/keymap.rs"
+test = true
+required-features = ["keymap"]
+
+[[test]]
+name = "keymap_pty"
+path = "tests/keymap_pty.rs"
+required-features = ["keymap"]
 
 [[example]]
 name = "demo"
