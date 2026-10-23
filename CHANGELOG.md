@@ -8,6 +8,20 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-23
+
+### Added
+
+- **In-process grid sink:** `lunatui-prismattyc` gets a public in-process backend that sends packed grids and damage runs to a host renderer without ANSI encoding. Dimension-only changes notify the host even when the cell diff is empty (#84).
+- **Lightcycle widget:** `lunatui-widgets` gets a stateless `Lightcycle` widget that draws an eight-way trail through Braille's 2×4 sub-cells, sampled by caller-supplied elapsed time with a configurable cycle period (#85).
+
+### Changed
+
+- **Encoder fast path:** same-style printable ASCII runs skip the per-cell decode. The emitted bytes are unchanged; `Grid::row_bits` is added for the fast path (#76).
+- **Release workflow:** a `v*` tag now publishes a GitHub release from hosted runners after the tag is verified and the release text is scanned (#82).
+- **Review policy:** behavior-changing PRs must include proof of a build and run in a clean local VM (#86).
+- **Public-readiness cleanup:** `REVIEW_POLICY.md` is rewritten as a generic policy, committed local tooling state is removed and git-ignored, and the README quick start uses the `live_dashboard` example (#83).
+
 ## [0.1.2] - 2026-10-20
 
 ### Added
