@@ -70,8 +70,6 @@ fn run_panic() -> i32 {
     }
 }
 
-// Exit without dropping the writer so the test observes present_frame's delivery,
-// rather than BufWriter's best-effort flush on drop.
 fn run_buffered() -> i32 {
     let stdout = io::BufWriter::new(io::stdout());
     let Ok(mut session) = Session::enter_with_options(stdout, SessionOptions::default()) else {
