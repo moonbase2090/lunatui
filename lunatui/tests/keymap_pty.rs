@@ -21,10 +21,6 @@ const F1_LEGACY: &[u8] = b"\x1bOP";
 const CTRL_SHIFT_P_KITTY: &[u8] = b"\x1b[112;6u";
 const TIMEOUT: Duration = Duration::from_secs(5);
 
-/// Visible text of a terminal byte stream: each escape sequence becomes one space, then runs of spaces collapse.
-///
-/// The encoder positions words with cursor moves instead of writing gap spaces, so the raw bytes never contain
-/// "Press F1 for shortcuts" as one run.
 fn visible_text(bytes: &[u8]) -> String {
     let mut out = Vec::with_capacity(bytes.len());
     let mut index = 0;
@@ -89,15 +85,17 @@ impl Pty {
     fn spawn() -> io::Result<Self> {
         let mut master = 0;
         let mut slave = 0;
-        // SAFETY: `openpty` writes valid fds to `master` and `slave` when it returns zero.
-        let open = unsafe {
-            libc::openpty(
-                &raw mut master,
-                &raw mut slave,
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-            )
+        let open = {
+            // SAFETY: `openpty` writes valid fds to `master` and `slave` when it returns zero.
+            unsafe {
+                libc::openpty(
+                    &raw mut master,
+                    &raw mut slave,
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                )
+            }
         };
         if open != 0 {
             return Err(io::Error::last_os_error());
@@ -130,8 +128,10 @@ impl Pty {
             }
         };
 
-        // SAFETY: `master` is an open fd returned by `openpty`, owned by this function.
-        let master_file = unsafe { File::from_raw_fd(master) };
+        let master_file = {
+            // SAFETY: `master` is an open fd returned by `openpty`, owned by this function.
+            unsafe { File::from_raw_fd(master) }
+        };
         let mut reader = master_file.try_clone()?;
         let output = Arc::new(Mutex::new(Vec::new()));
         let sink = Arc::clone(&output);
