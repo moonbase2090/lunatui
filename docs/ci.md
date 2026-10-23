@@ -6,6 +6,10 @@ Pull request checks run through the repository runner workflow. The GitHub Actio
 
 The Release workflow (`release.yml`) publishes a GitHub release when a `v*` tag is pushed. It runs on hosted runners. The `verify` job refuses a tag that is unsigned, that does not point at a commit on `main`, or whose tag does not match the workspace version in `Cargo.toml`, then runs the test suite. The `publish` job runs only after `verify` passes.
 
+Both release jobs pass the full tag ref explicitly to checkout. This preserves the annotated tag object for signature-block checks and release metadata. With the default event inputs, checkout can replace its local annotated tag ref with the peeled commit when it fetches full history.
+
+Before changing release checkout, exercise both the default and explicit-ref configurations in isolated checkouts of an existing signed tag. Confirm that the explicit-ref checkout retains an object of type `tag`, resolves to the expected commit, and preserves the tag subject, body, and signature block. Do not create or move a published tag for this check. This check runs locally and does not publish a release.
+
 The tag message supplies the release title (its first line) and notes (the rest). The release-text gate scans them and the built example binary before anything is published. Assets are a source archive, a Linux x86_64 `hello_box` archive, and `SHA256SUMS`.
 
 ## Run sign-off for a pull request

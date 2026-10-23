@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Fixed
+
+- Release checkout preserves signed annotated tag objects for signature-block checks and release metadata.
+
 ## [0.1.3] - 2026-10-23
 
 ### Added
