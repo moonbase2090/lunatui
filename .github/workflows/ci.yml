@@ -44,7 +44,7 @@ jobs:
       # `app` is off by default. Select the packages that define it so
       # Windows and macOS build and test that feature, including the demo.
       - run: cargo build -p lunatui -p lunatui-runtime --features app
-      - run: cargo test -p lunatui -p lunatui-runtime --features app
+      - run: cargo test -p lunatui -p lunatui-runtime --features app,keymap
       - run: cargo run --example hello_box
       - run: cargo run --example hello_box -- --metrics
 
