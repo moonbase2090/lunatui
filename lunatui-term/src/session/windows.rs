@@ -143,15 +143,16 @@ impl<W: Write> Session<W> {
         })
     }
 
-    /// Writes one frame with optional sync wrapping in a single `write_all`.
+    /// Writes one frame with optional sync wrapping, then flushes the writer.
     ///
     /// # Errors
     ///
-    /// Returns [`SessionError::Io`] when the frame write fails.
+    /// Returns [`SessionError::Io`] when the frame write or flush fails.
     pub fn present_frame(&mut self, payload: &[u8]) -> Result<(), SessionError> {
         compose_frame(&mut self.frame_buf, payload, self.sync_output);
         self.writer
             .write_all(&self.frame_buf)
+            .and_then(|()| self.writer.flush())
             .map_err(SessionError::Io)
     }
 }

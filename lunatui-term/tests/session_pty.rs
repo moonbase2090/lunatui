@@ -13,6 +13,15 @@ use std::thread;
 use std::time::Duration;
 
 #[test]
+fn present_frame_propagates_flush_failure() {
+    let output = run_probe_in_pty("flush-error");
+    assert!(
+        output.windows(20).any(|w| w == b"flush-error-observed"),
+        "present_frame must return its writer's flush error"
+    );
+}
+
+#[test]
 fn present_frame_delivers_buffered_bytes_before_writer_drop() {
     let output = run_probe_in_pty("buffered");
     assert!(
