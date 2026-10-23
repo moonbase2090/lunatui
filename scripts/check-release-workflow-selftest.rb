@@ -137,7 +137,7 @@ Dir.mktmpdir('release-workflow-selftest-') do |dir|
   archive_env = env.merge('RELEASE_COMMIT' => commit, 'GITHUB_SHA' => git(dir, 'rev-parse', 'HEAD'))
   run_step(step(publish, 'Package assets'), dir, archive_env, true)
   source, stderr, status = Open3.capture3('tar', '-xOf', File.join(dir, 'dist', 'lunatui-v0.1.3-source.tar.gz'),
-                                       'lunatui-0.1.3/Cargo.toml')
+                                       "lunatui-#{env.fetch('TAG').delete_prefix('v')}/Cargo.toml")
   check(status.success?, stderr)
   check(source == "[workspace.package]\nversion = \"0.1.3\"\n", 'source archive used the workflow revision instead of the tag')
 end
