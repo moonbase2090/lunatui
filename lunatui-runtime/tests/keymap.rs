@@ -140,3 +140,46 @@ fn palette_renders_filtered_titles_and_marks_selection() {
     assert!(text.contains("> Open command palette"), "{text}");
     assert!(!text.contains("Quit"), "{text}");
 }
+
+fn rows(grid: &Grid, clusters: &ClusterTable, count: u16) -> Vec<String> {
+    (0..count)
+        .map(|row| grid.row_display(row, clusters).trim_end().to_string())
+        .collect()
+}
+
+#[test]
+fn overlay_snapshot_matches_expected_rows() {
+    let keymap = registry();
+    let mut grid = Grid::new(60, 6);
+    let mut clusters = ClusterTable::new();
+    render_overlay(&keymap, &mut grid, Rect::new(0, 0, 60, 6), &mut clusters);
+    assert_eq!(
+        rows(&grid, &clusters, 5),
+        vec![
+            "Shortcuts",
+            "  Ctrl+Shift+/, F1        Show shortcuts",
+            "  Ctrl+Shift+P            Open command palette",
+            "  Q                       Quit",
+            "",
+        ]
+    );
+}
+
+#[test]
+fn palette_snapshot_matches_expected_rows_with_empty_query() {
+    let keymap = registry();
+    let mut grid = Grid::new(40, 5);
+    let mut clusters = ClusterTable::new();
+    render_palette(
+        &keymap,
+        "",
+        0,
+        &mut grid,
+        Rect::new(0, 0, 40, 5),
+        &mut clusters,
+    );
+    assert_eq!(
+        rows(&grid, &clusters, 4),
+        vec![">", "> Show shortcuts", "  Open command palette", "  Quit",]
+    );
+}
