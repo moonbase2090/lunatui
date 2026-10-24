@@ -10,7 +10,7 @@ Both release jobs pass the selected full tag ref explicitly to checkout. This pr
 
 Before changing release checkout, exercise both the default and explicit-ref configurations in isolated checkouts of an existing signed tag. Confirm that the explicit-ref checkout retains an object of type `tag`, resolves to the expected commit, and preserves the tag subject, body, and signature block. Do not create or move a published tag for this check. This check runs locally and does not publish a release.
 
-The tag message supplies the release title (its first line) and notes (the rest). The release-text gate scans them and the built example binary before anything is published. Assets are a source archive, a Linux x86_64 `hello_box` archive, and `SHA256SUMS`.
+The tag subject supplies the release title. Notes use Git `%(contents:body)`, which excludes the signature block. If the annotation has no prose body, the workflow reads the matching bracketed version section from the selected tag's `CHANGELOG.md`. Missing or empty notes stop the job before binary compilation. The release-text gate reads the prepared notes file, and publication uses the same file through `--notes-file`. The gate also scans the title, complete tag message, and built example binary before anything is published. Assets are a source archive, a Linux x86_64 `hello_box` archive, and `SHA256SUMS`.
 
 ## Recover publication for an existing tag
 
@@ -32,7 +32,7 @@ Verify recovery logic locally without dispatching or publishing:
 ruby scripts/check-release-workflow-selftest.rb
 ```
 
-The self-test executes the workflow shell steps in disposable repositories. Signature-block fixtures are synthetic. It tests malformed inputs, non-main dispatches, missing or lightweight tags, unsigned annotated tags, version and commit mismatches, off-main commits, publication checkout changes, API failures, and repeat publication probes. GitHub API and release creation calls use a local fixture executable.
+The self-test executes the workflow shell steps in disposable repositories. Tag-check fixtures use synthetic signature blocks. Metadata tests generate a disposable SSH key and real signed empty-body and prose tags, verify those signatures locally, and check literal expected notes. No owner signing key or published ref is used. PGP formatting is not exercised. It tests malformed inputs, non-main dispatches, missing or lightweight tags, unsigned annotated tags, version and commit mismatches, off-main commits, publication checkout changes, API failures, and repeat publication probes. It also rejects missing or empty changelog sections, ignores a dirty worktree changelog in favor of the tagged source, and checks that scanned and published prose match. GitHub API, release-text scanning, and release creation calls use local fixture executables in the wiring tests. Run the real release-text gate separately over the final metadata and artifacts.
 
 ## Run sign-off for a pull request
 
