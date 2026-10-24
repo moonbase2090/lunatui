@@ -136,6 +136,50 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
           test "$(git rev-parse "refs/tags/$TAG")" = "$TAG_OBJECT"
 
+      - name: Prepare release metadata
+        if: steps.existing.outputs.exists != 'true'
+        run: |
+          set -euo pipefail
+          python3 - <<'PYTHON'
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+
+          def git(*args):
+              result = subprocess.run(["git", *args], capture_output=True, text=True)
+              if result.returncode:
+                  raise SystemExit("Could not read the selected release tag metadata")
+              return result.stdout
+
+
+          tag = os.environ["TAG"]
+          if not re.fullmatch(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", tag):
+              raise SystemExit("Expected vMAJOR.MINOR.PATCH release tag")
+          ref = "refs/tags/" + tag
+          git("rev-parse", "--verify", ref + "^{tag}")
+          title = git("for-each-ref", "--format=%(contents:subject)", ref).strip()
+          notes = git("for-each-ref", "--format=%(contents:body)", ref).strip()
+          source = "tag body"
+          if not notes:
+              changelog = git("show", ref + ":CHANGELOG.md")
+              pattern = r"^## \[" + re.escape(tag[1:]) + r"\][^\n]*\n(.*?)(?=^## \[|\Z)"
+              section = re.search(pattern, changelog, re.MULTILINE | re.DOTALL)
+              if not section:
+                  raise SystemExit("Empty tag body and no matching changelog section")
+              notes = section.group(1).strip()
+              source = "tagged changelog"
+          if not title or not notes:
+              raise SystemExit("Release title and notes must contain prose")
+          if re.search(r"-----BEGIN (?:SSH|PGP) SIGNATURE-----", title + "\n" + notes):
+              raise SystemExit("Signature block found in release title or notes")
+          output = Path(os.environ["RUNNER_TEMP"])
+          (output / "release-title.txt").write_text(title + "\n")
+          (output / "release-notes.txt").write_text(notes + "\n")
+          print("Prepared release metadata from " + source)
+          PYTHON
+
       - name: Build release binaries
         if: steps.existing.outputs.exists != 'true'
         run: |
@@ -150,8 +194,8 @@ jobs:
           chmod +x scripts/check-release-text.sh
           ./scripts/check-release-text.sh \
             --tag-message "$(git tag -l --format='%(contents)' "$TAG")" \
-            --release-title "$(git tag -l --format='%(subject)' "$TAG")" \
-            --release-body "$(git tag -l --format='%(body)' "$TAG")" \
+            --release-title "$(cat "$RUNNER_TEMP/release-title.txt")" \
+            --release-body "$(cat "$RUNNER_TEMP/release-notes.txt")" \
             --artifact-dir target/release/examples
 
       - name: Package assets
@@ -171,5 +215,5 @@ jobs:
           set -euo pipefail
           gh release create "$TAG" dist/* \
             --verify-tag \
-            --title "$(git tag -l --format='%(subject)' "$TAG")" \
-            --notes "$(git tag -l --format='%(body)' "$TAG")"
+            --title "$(cat "$RUNNER_TEMP/release-title.txt")" \
+            --notes-file "$RUNNER_TEMP/release-notes.txt"

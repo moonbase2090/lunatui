@@ -121,6 +121,9 @@ Dir.mktmpdir('release-workflow-selftest-') do |dir|
   state = File.join(dir, 'release-state')
   calls = File.join(dir, 'release-calls')
   retry_env = api_env.merge('FIXTURE_STATE' => state, 'FIXTURE_CALLS' => calls)
+  File.write(File.join(dir, 'release-title.txt'), "Fixture\n")
+  File.write(File.join(dir, 'release-notes.txt'), "Fixture release notes.\n")
+  retry_env['RUNNER_TEMP'] = dir
   run_step(existing, dir, retry_env, true, 'exists' => 'false')
   FileUtils.mkdir_p(File.join(dir, 'dist'))
   File.write(File.join(dir, 'dist', 'asset.tar.gz'), 'fixture')
@@ -142,9 +145,111 @@ Dir.mktmpdir('release-workflow-selftest-') do |dir|
   check(source == "[workspace.package]\nversion = \"0.1.3\"\n", 'source archive used the workflow revision instead of the tag')
 end
 
+Dir.mktmpdir('release-metadata-selftest-') do |dir|
+  git(dir, 'init', '-q')
+  git(dir, 'config', 'user.name', 'release-fixture')
+  git(dir, 'config', 'user.email', '322824348+mb2090@users.noreply.github.com')
+  git(dir, 'config', 'commit.gpgsign', 'false')
+  File.write(File.join(dir, 'CHANGELOG.md'), <<~'TEXT')
+    # Changelog
+
+    ## [Unreleased]
+
+    - Unreleased entry must not appear.
+
+    ## [0.1.3] - 2026-10-23
+
+    ### Fixed
+
+    - Tagged release notes.
+
+    ## [0.1.6] - 2026-10-23
+
+    ## [0.1.2] - 2026-10-20
+
+    - Older entry must not appear.
+  TEXT
+  git(dir, 'add', 'CHANGELOG.md')
+  git(dir, 'commit', '-qm', 'Tagged changelog fixture')
+  key = File.join(dir, 'signing-key')
+  stdout, stderr, status = Open3.capture3('ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-C', 'release-fixture', '-f', key)
+  check(status.success?, "fixture SSH key generation failed: #{stdout}#{stderr}")
+  git(dir, 'config', 'gpg.format', 'ssh')
+  git(dir, 'config', 'user.signingkey', key)
+  signers = File.join(dir, 'allowed-signers')
+  File.write(signers, "322824348+mb2090@users.noreply.github.com #{File.read(key + '.pub')}")
+  git(dir, 'config', 'gpg.ssh.allowedSignersFile', signers)
+  git(dir, 'tag', '-s', 'v0.1.3', '-m', 'Fixture release')
+  git(dir, 'tag', '-s', 'v0.1.4', '-m', 'Prose release', '-m', "First paragraph.\n\nSecond paragraph.")
+  git(dir, 'tag', '-s', 'v0.1.5', '-m', 'Missing changelog section')
+  git(dir, 'tag', '-s', 'v0.1.6', '-m', 'Empty changelog section')
+  %w[v0.1.3 v0.1.4].each { |tag| git(dir, 'verify-tag', tag) }
+  check(git(dir, 'for-each-ref', '--format=%(body)', 'refs/tags/v0.1.3').include?('BEGIN SSH SIGNATURE'),
+        'fixture does not reproduce signed empty-body formatting')
+
+  File.write(File.join(dir, 'CHANGELOG.md'), 'Dirty worktree changelog must not be read.')
+  metadata = step(publish, 'Prepare release metadata')
+  outputs = {}
+  {
+    'v0.1.3' => ["Fixture release\n", "### Fixed\n\n- Tagged release notes.\n"],
+    'v0.1.4' => ["Prose release\n", "First paragraph.\n\nSecond paragraph.\n"],
+    'v0.1.5' => nil,
+    'v0.1.6' => nil
+  }.each do |tag, expected|
+    output = Dir.mktmpdir('notes-', dir)
+    env = { 'TAG' => tag, 'RUNNER_TEMP' => output }
+    run_step(metadata, dir, env, !expected.nil?)
+    if expected
+      check(File.read(File.join(output, 'release-title.txt')) == expected[0], 'release title differs')
+      check(File.read(File.join(output, 'release-notes.txt')) == expected[1], 'release prose differs')
+      outputs[tag] = output
+    else
+      check(!File.exist?(File.join(output, 'release-notes.txt')), 'empty release prose was written')
+    end
+  end
+
+  bin = File.join(dir, 'bin')
+  FileUtils.mkdir_p(bin)
+  FileUtils.mkdir_p(File.join(dir, 'scripts'))
+  File.write(File.join(dir, 'scripts', 'check-release-text.sh'), <<~'SH')
+    #!/usr/bin/env bash
+    set -euo pipefail
+    while [[ $# -gt 0 ]]; do
+      if [[ $1 == --release-body ]]; then
+        printf '%s\n' "$2" > "$RUNNER_TEMP/scanned-notes.txt"
+      fi
+      shift 2
+    done
+  SH
+  File.write(File.join(bin, 'gh'), <<~'SH')
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [[ $1 == release && $2 == create && $3 == v0.1.4 ]]
+    shift 3
+    while [[ $# -gt 0 ]]; do
+      if [[ $1 == --notes-file ]]; then
+        cp "$2" "$RUNNER_TEMP/published-notes.txt"
+        exit 0
+      fi
+      shift
+    done
+    exit 1
+  SH
+  FileUtils.chmod(0o700, File.join(bin, 'gh'))
+  env = { 'TAG' => 'v0.1.4', 'RUNNER_TEMP' => outputs.fetch('v0.1.4'), 'PATH' => "#{bin}:#{ENV.fetch('PATH')}" }
+  run_step(step(publish, 'Scan release text and artifacts'), dir, env, true)
+  run_step(step(publish, 'Create GitHub release'), dir, env, true)
+  %w[scanned-notes.txt published-notes.txt].each do |file|
+    check(File.read(File.join(env.fetch('RUNNER_TEMP'), file)) == "First paragraph.\n\nSecond paragraph.\n",
+          'scanned or published release notes differ from prepared prose')
+  end
+end
+
 publish.drop(1).each do |entry|
   check(entry['if'] == "steps.existing.outputs.exists != 'true'", 'publication step does not skip existing release')
 end
 check(workflow.fetch('concurrency').fetch('cancel-in-progress') == false, 'release concurrency cancels active publication')
 check(step(publish, 'Package assets').include?('"$RELEASE_COMMIT"'), 'source archive is not pinned to verified commit')
+check(publish.index { |entry| entry['name'] == 'Prepare release metadata' } <
+      publish.index { |entry| entry['name'] == 'Build release binaries' }, 'release notes do not fail before build')
 puts 'check-release-workflow-selftest: ok'

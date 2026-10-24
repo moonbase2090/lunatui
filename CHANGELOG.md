@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
+- Release notes exclude tag signature blocks, fall back to the selected tagged changelog when the annotation body is empty, and fail before build if no prose is available.
 - Release checkout preserves signed annotated tag objects for signature-block checks and release metadata.
 - Release publication can recover an existing signed tag through a manual main-branch workflow, with verified source pinning and existing-release protection.
 
