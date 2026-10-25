@@ -160,13 +160,23 @@ fn parse_options(args: &[String]) -> io::Result<Options> {
     })
 }
 
-fn parse_num<T: std::str::FromStr>(value: Option<&String>, flag: &str) -> io::Result<T> {
-    value
+fn parse_num<T: std::str::FromStr + Default + PartialEq>(
+    value: Option<&String>,
+    flag: &str,
+) -> io::Result<T> {
+    let parsed: T = value
         .ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, format!("{flag} needs a value"))
         })?
         .parse()
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, format!("invalid {flag}")))
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, format!("invalid {flag}")))?;
+    if parsed == T::default() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{flag} must be greater than zero"),
+        ));
+    }
+    Ok(parsed)
 }
 
 fn micros(d: Duration) -> String {
