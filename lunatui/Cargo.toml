@@ -62,6 +62,26 @@ path = "../examples/ratatui_dashboard.rs"
 test = true
 
 [[example]]
+name = "lunatui_dashboard"
+path = "../examples/lunatui_dashboard.rs"
+test = true
+
+[[example]]
+name = "dashboard_fair_lunatui"
+path = "../examples/dashboard_fair_lunatui.rs"
+test = false
+
+[[example]]
+name = "dashboard_fair_ratatui"
+path = "../examples/dashboard_fair_ratatui.rs"
+test = false
+
+[[example]]
+name = "dashboard_fair_report"
+path = "../examples/dashboard_fair_report.rs"
+test = false
+
+[[example]]
 name = "cell_prototype"
 path = "../examples/cell_prototype.rs"
 test = true

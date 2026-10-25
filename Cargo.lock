@@ -880,6 +880,7 @@ version = "0.1.3"
 dependencies = [
  "criterion",
  "gungraun",
+ "libc",
  "lunatui-core",
  "lunatui-layout",
  "lunatui-prismattyc",
