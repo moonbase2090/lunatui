@@ -18,8 +18,10 @@ pub struct Model {
     pub tick: u32,
     /// Rows scrolled off the top of the table and the log.
     pub scroll: usize,
-    rows: Vec<[String; 4]>,
-    log: String,
+    /// Check table rows: name, state (`pass`/`FAIL`), time, file.
+    pub rows: Vec<[String; 4]>,
+    /// Multi-line lint log body (newline-separated).
+    pub log: String,
 }
 
 impl Model {

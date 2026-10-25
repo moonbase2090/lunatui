@@ -18,13 +18,15 @@ See the [review policy](REVIEW_POLICY.md) for PR classification, proof and merge
 
 ## Performance vs ratatui (preview)
 
-Ratatui numbers are the measured **v0.30.2** baselines in [PRD §1.3](docs/PRD.md). Lunatui numbers are from this repo’s bench harness (release, October 2026). Full context and reproduction commands: [docs/performance.md](docs/performance.md).
+Same-machine, same-scope numbers (this Mac, October 2026). Full context and reproduction: [docs/performance.md](docs/performance.md). Do not mix older Xeon ratatui-perf figures with Mac lunatui times.
 
-| Metric | ratatui v0.30.2 | lunatui v0.1.2 |
+| Metric | ratatui v0.30.2 | lunatui |
 |---|---|---|
 | Cell size | 48 B | **16 B** |
-| Diff, unchanged 200×60 | 122 µs | **~4.6 µs** (packed prototype) |
+| Diff, unchanged 200×60 | ~63 µs | **~3.8 µs** (packed `[u128]`, ADR 0001) |
 | `write()` calls, ~68 KiB frame | 67 | **1** |
-| Dashboard render 200×60 (CPU) | ~0.48 ms E2E baseline | **~215 µs** render-only on dev hardware |
+| Dashboard E2E 80×24 (median) | ~75 µs | ~93 µs (`dashboard_parity_bench`) |
+| Dashboard E2E 200×60 (median) | ~287 µs | ~464 µs (same bench; lunatui currently slower on this path) |
+| Allocs / dashboard frame 80×24 | ~508 | ~2210 |
 
 Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI and manual sign-off: [docs/ci.md](docs/ci.md). Examples: [examples/README.md](examples/README.md).

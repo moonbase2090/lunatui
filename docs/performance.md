@@ -1,30 +1,45 @@
-# Performance vs ratatui (v0.1.0 preview)
+# Performance vs ratatui (v0.1.x preview)
 
-This page publishes comparison numbers for the **v0.1.0 preview**. Ratatui baselines in the first column come from the measured **ratatui v0.30.2** runs in [PRD §1.3](PRD.md). Lunatui numbers in the second column were reproduced on the bench harness in this repository (release profile, October 2026). Targets in the PRD are goals, not promises for every row.
+Numbers below are **same-machine, same-scope** where possible. Do not mix
+ratatui-perf Xeon baselines with Mac lunatui prototype times.
 
-Reproduce locally:
+Reproduce:
 
 ```sh
-cargo bench -p lunatui-bench --bench criterion_cell_prototype -- 'cell_diff/200x60/words_identical'
-cargo bench -p lunatui-bench --bench criterion_ratatui -- 'dashboard/200x60/no_color/render'
-cargo bench -p lunatui-bench --bench metrics
+# Packed-cell identical-grid diff (ADR 0001 microbench)
+cargo bench -p lunatui-bench --bench criterion_cell_prototype -- cell_diff
+
+# Fair E2E dashboard (render + encode/write sink, identical Model)
+./scripts/bench_dashboard_parity.sh
+# or:
+cargo run --release -p lunatui --example dashboard_parity_bench -- --width 80 --height 24 --frames 240 --runs 5
+cargo run --release -p lunatui --example dashboard_parity_bench -- --width 200 --height 60 --frames 240 --runs 5
+
 cargo run --release --example hello_box -- --metrics
 ```
 
-## Summary table
+## Summary table (this Mac, October 2026)
 
-| Metric | ratatui v0.30.2 (baseline) | lunatui v0.1.0 (measured) | Notes |
+| Metric | ratatui v0.30.2 | lunatui | Scope |
 |---|---|---|---|
 | Bytes per cell | 48 B | **16 B** | ADR 0001 packed cell |
-| Two grids 200×60 (steady state) | ~1.1 MiB | **~375 KiB** | From cell size ratio |
-| Diff, unchanged 200×60 grid | **122 µs** | **~4.6 µs** | `criterion_cell_prototype`, `words_identical`; production uses `diff_runs` on dirty rows |
-| `write()` calls, ~68 KiB frame | **67** | **1** | Encoder batches one buffer (`hello_box --metrics`, PRD §1.3) |
-| Dashboard render 200×60 (CPU only) | **~0.48 ms** E2E baseline | **~215 µs** render | `criterion_ratatui` `dashboard/200x60/no_color/render` on dev hardware; not full encode |
-| Allocations per dashboard frame 200×60 | **~980** | *not yet parity-benched* | Ratatui: `metrics` bench ≈883 allocs/frame over 100 frames |
+| Diff, unchanged 200×60 grid | **~63 µs** | **~3.8 µs** (`[u128]` rows) | ADR 0001 same-Mac table (not the older Xeon 122 µs figure) |
+| `write()` calls, ~68 KiB frame | **67** | **1** | Encoder batches one buffer (`hello_box --metrics`) |
+| Dashboard E2E 80×24 (median frame) | **~75 µs** | **~93 µs** | `dashboard_parity_bench` (render + encode + sink) |
+| Dashboard E2E 200×60 (median frame) | **~287 µs** | **~464 µs** | same bench |
+| Allocations per dashboard frame 80×24 | **~508** | **~2210** | CountingAllocator over the E2E loop |
+| Allocations per dashboard frame 200×60 | **~876** | **~9537** | same |
 | Frame budget (worst-case benches) | not gated | **≤16 ms** CI hard gate | **8 ms** target on dedicated hardware (PRD §1.3) |
+
+Raw E2E logs: [`examples/captures/parity/`](../examples/captures/parity/).
 
 ## How to read this
 
-- **Preview, not parity:** v0.1.0 ships the comparison harness and core wins (cell size, diff prototype, single `write()`), not every PRD target row.
-- **Fair scenes:** Dashboard, log, table, and gradient scenes are ported 1:1 in `lunatui-bench` (PR 03) with fidelity tests against ratatui output.
-- **Next steps:** Wall-clock gates on instruction counts (`gungraun`) and published terminal latency (PRD §6.3) land in later roadmap PRs.
+- **Diff microbench ≠ E2E dashboard.** The packed `[u128]` diff is much faster
+  than ratatui’s cell compare. The full dashboard path (widgets, fill, encode)
+  is currently slower than ratatui on this machine; see the parity README for
+  hotspots.
+- **Preview, not parity:** v0.1.x ships the comparison harness and core wins
+  (cell size, single `write()`), not every PRD target row.
+- **Fair scenes:** Dashboard model data is shared via
+  `lunatui_bench::scenes::ratatui::dashboard::Model`.

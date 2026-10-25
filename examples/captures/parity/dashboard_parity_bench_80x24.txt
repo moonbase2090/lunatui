@@ -1,0 +1,16 @@
+dashboard_parity_bench 80x24 frames=240 runs=5 (release)
+scope: render + diff/encode + write-to-memory sink; identical Model tick/scroll schedule
+run 1: lunatui median=101.9 µs p95=119.3 µs wall_ms=25.0 rss_kib=3280 bytes/frame≈671 allocs/frame≈2209.8
+run 1: ratatui median=73.1 µs p95=87.0 µs wall_ms=17.9 rss_kib=4208 bytes/frame≈493 allocs/frame≈512.8
+run 2: lunatui median=92.5 µs p95=101.5 µs wall_ms=22.7 rss_kib=4304 bytes/frame≈671 allocs/frame≈2209.8
+run 2: ratatui median=77.0 µs p95=90.6 µs wall_ms=18.5 rss_kib=4336 bytes/frame≈493 allocs/frame≈506.4
+run 3: lunatui median=93.4 µs p95=105.3 µs wall_ms=23.3 rss_kib=4368 bytes/frame≈671 allocs/frame≈2209.8
+run 3: ratatui median=74.9 µs p95=86.8 µs wall_ms=18.1 rss_kib=4368 bytes/frame≈493 allocs/frame≈506.4
+run 4: lunatui median=92.3 µs p95=99.9 µs wall_ms=22.5 rss_kib=4416 bytes/frame≈671 allocs/frame≈2209.8
+run 4: ratatui median=74.9 µs p95=89.5 µs wall_ms=18.2 rss_kib=4432 bytes/frame≈493 allocs/frame≈506.4
+run 5: lunatui median=94.6 µs p95=105.0 µs wall_ms=23.1 rss_kib=4480 bytes/frame≈671 allocs/frame≈2209.8
+run 5: ratatui median=73.1 µs p95=88.9 µs wall_ms=17.9 rss_kib=4480 bytes/frame≈493 allocs/frame≈506.4
+--- aggregate ---
+lunatui: across 5 runs median-of-medians=93.4 µs median-of-p95=105.0 µs avg_bytes/frame≈671 avg_allocs/frame≈2209.8 max_rss_kib=4480
+ratatui: across 5 runs median-of-medians=74.9 µs median-of-p95=88.9 µs avg_bytes/frame≈493 avg_allocs/frame≈507.7 max_rss_kib=4480
+note: if lunatui loses, hotspots in this path are full-grid fill + widget rebuild + Paragraph/TextView wrap work + per-row table cell writes; ratatui reuses Terminal buffer.

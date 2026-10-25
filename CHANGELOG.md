@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- **Dashboard demo parity:** `lunatui_dashboard` example matches the ratatui dashboard `Model` scene; `--demo` recordings (~25 s) and `dashboard_parity_bench` give same-machine E2E timings. Animated `demo --ratatui-widget` cast; README/`docs/performance.md` use fair same-scope numbers.
 - **Native protocol discovery:** `lunatui-prismattyc` parses capability 0.4 `native.grid.v1` advertisements behind an off-by-default `NativePolicy::DirectLocal` opt-in. Discovery never activates native ownership; ANSI remains the renderer, with a documented fallback repaint prefix.
 
 ### Fixed

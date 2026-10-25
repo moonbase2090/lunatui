@@ -15,6 +15,8 @@ use lunatui_runtime::{
     Scheduler, Spring, Tween, is_quit, render_once, run,
 };
 use lunatui_term::{ColorMode, Encoder, Event, KeyCode, KeyEvent, MouseButton, MouseKind};
+#[cfg(unix)]
+use lunatui_term::{Session, SessionOptions, SyncOutput};
 use lunatui_theme::{Theme, Token, Variant, load_bundled};
 use lunatui_widgets::{Block, RenderCx, StatusDot, StatusState, Widget};
 
@@ -79,6 +81,9 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
     if io::stdout().is_terminal() {
+        if ratatui_widget {
+            return run_ratatui_widget_live(geometry);
+        }
         let options = RunOptions::new(geometry.width, geometry.height);
         if counter {
             run(Counter::new(motion), options)?;
@@ -86,6 +91,9 @@ fn main() -> io::Result<()> {
             run(Hello, options)?;
         }
         return Ok(());
+    }
+    if ratatui_widget {
+        return run_ratatui_widget_live(geometry);
     }
     let times = run_bench(counter, geometry)?;
     let label = if counter {
@@ -901,15 +909,21 @@ fn print_ratatui_style_snapshot(geometry: Geometry) {
 }
 
 fn print_ratatui_widget_snapshot(geometry: Geometry) {
-    use lunatui_core::{ClusterTable, Grid, Rect};
+    let width = geometry.width.min(80);
+    let height = geometry.height.min(24);
+    let (grid, clusters) = render_ratatui_widget_frame(width, height, 72);
+    for row in 0..height {
+        println!("{}", grid.row_display(row, &clusters));
+    }
+}
+
+fn render_ratatui_widget_frame(width: u16, height: u16, percent: u16) -> (Grid, ClusterTable) {
     use lunatui_ratatui::RatatuiWidget;
     use lunatui_theme::{Theme, Variant};
     use lunatui_widgets::{Block, RenderCx, Widget};
     use ratatui::style::Color;
     use ratatui::widgets::{Gauge, Paragraph};
 
-    let width = geometry.width.min(80);
-    let height = geometry.height.min(24);
     let theme = Theme::builtin(Variant::Dark);
     let mut grid = Grid::new(width, height);
     let mut clusters = ClusterTable::new();
@@ -918,17 +932,53 @@ fn print_ratatui_widget_snapshot(geometry: Geometry) {
         .title("ratatui L2")
         .render(Rect::new(0, 0, width, height), &mut cx);
     let inner = Rect::new(2, 1, width.saturating_sub(4), height.saturating_sub(4));
+    let label = format!("{percent}%");
     RatatuiWidget::new(
         Gauge::default()
-            .percent(72)
-            .label("72%")
+            .percent(percent)
+            .label(label)
             .gauge_style(ratatui::style::Style::default().fg(Color::Cyan)),
     )
     .render(inner, &mut cx);
     RatatuiWidget::new(Paragraph::new("L2 widget bridge (RatatuiWidget)"))
         .render(Rect::new(2, inner.y + 2, inner.width, 1), &mut cx);
-    for row in 0..height {
-        println!("{}", grid.row_display(row, &clusters));
+    (grid, clusters)
+}
+
+fn run_ratatui_widget_live(geometry: Geometry) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        const FRAMES: u32 = 1_200;
+        const INTERVAL: Duration = Duration::from_micros(16_667);
+        let width = geometry.width.min(80);
+        let height = geometry.height.min(24);
+        let mut prev = Grid::new(width, height);
+        let mut encoder = Encoder::new();
+        let mut session = Session::enter_with_options(
+            io::stdout().lock(),
+            SessionOptions {
+                sync_output: SyncOutput::Enabled,
+                mouse_tracking: lunatui_term::MouseTracking::Disabled,
+            },
+        )?;
+        for tick in 0..FRAMES {
+            let percent = u16::try_from(tick % 100).unwrap_or(0);
+            let start = Instant::now();
+            let (next, clusters) = render_ratatui_widget_frame(width, height, percent);
+            let payload = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
+            session.present_frame(payload)?;
+            prev = next;
+            thread::sleep(INTERVAL.saturating_sub(start.elapsed()));
+        }
+        Ok(())
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = geometry;
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "demo --ratatui-widget live mode requires Unix",
+        ))
     }
 }
 
