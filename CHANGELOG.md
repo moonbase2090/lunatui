@@ -14,10 +14,12 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- Fair Lunatui vs stock Ratatui dashboard comparison: separate release binaries with the same model and scripted ticks, a report runner (frame time, CPU, RSS, bytes, writes and allocations per frame), and a test that keeps the two scenes identical cell for cell. Run it with `scripts/run-dashboard-fair.sh`.
 - **Native protocol discovery:** `lunatui-prismattyc` parses capability 0.4 `native.grid.v1` advertisements behind an off-by-default `NativePolicy::DirectLocal` opt-in. Discovery never activates native ownership; ANSI remains the renderer, with a documented fallback repaint prefix.
 
 ### Fixed
 
+- Wrapping with `trim` no longer starts an empty row when a line's trailing whitespace overflows the margin, which shifted every following row by one and showed up as stray fragments in wrapped logs.
 - Paint path performance: grapheme width no longer allocates per character, wrapping scans only the rows a `Paragraph` shows and no longer rescans lines per row, ASCII skips Unicode segmentation, and `Grid::set_style` no longer builds a per-row set. Output is unchanged; the dashboard frame is about 15x faster at 80x24.
 - Release notes exclude tag signature blocks, fall back to the selected tagged changelog when the annotation body is empty, and fail before build if no prose is available.
 - Release checkout preserves signed annotated tag objects for signature-block checks and release metadata.

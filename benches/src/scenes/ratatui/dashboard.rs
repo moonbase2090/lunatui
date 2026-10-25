@@ -61,6 +61,26 @@ impl Default for Model {
     }
 }
 
+/// Deterministic tick/scroll advance shared by fair lunatui vs ratatui benches.
+pub fn advance_scripted(model: &mut Model, tick: u32) {
+    model.tick = tick;
+    model.scroll = usize::try_from(tick / 4 % 300).unwrap_or(0);
+}
+
+impl Model {
+    /// Check rows for the virtualized table (lunatui dashboard painter).
+    #[must_use]
+    pub fn check_rows(&self) -> &[[String; 4]] {
+        &self.rows
+    }
+
+    /// Wrapped log body (lunatui dashboard painter).
+    #[must_use]
+    pub fn log_text(&self) -> &str {
+        &self.log
+    }
+}
+
 /// Renders the dashboard for `model` into `area` of `buf`.
 pub fn render(model: &Model, area: Rect, buf: &mut Buffer) {
     let accent = Color::Rgb(0x7a, 0xa2, 0xf7);

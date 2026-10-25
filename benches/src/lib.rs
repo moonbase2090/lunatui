@@ -12,6 +12,8 @@ pub mod calibration;
 /// every sample of every worst-case benchmark, and an 8 ms target reported on a
 /// dedicated machine.
 pub mod ceiling;
+/// Fair lunatui vs stock ratatui dashboard end-to-end helpers.
+pub mod dashboard_fair;
 /// A closed-form layout proposed by ADR 0002 (DD-2). Evidence for the design, not `lunatui-layout`.
 pub mod layout_prototype;
 /// A prototype of the 16-byte cell proposed by ADR 0001 (DD-1), packed from ratatui buffers
