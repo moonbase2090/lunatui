@@ -14,6 +14,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
+- Paint path performance: grapheme width no longer allocates per character, wrapping scans only the rows a `Paragraph` shows and no longer rescans lines per row, ASCII skips Unicode segmentation, and `Grid::set_style` no longer builds a per-row set. Output is unchanged; the dashboard frame is about 15x faster at 80x24.
 - Release notes exclude tag signature blocks, fall back to the selected tagged changelog when the annotation body is empty, and fail before build if no prose is available.
 - Release checkout preserves signed annotated tag objects for signature-block checks and release metadata.
 - Release publication can recover an existing signed tag through a manual main-branch workflow, with verified source pinning and existing-release protection.

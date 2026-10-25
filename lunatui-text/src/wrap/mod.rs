@@ -24,6 +24,15 @@ pub struct Wrap {
 /// Builds a [`RowIndex`] by wrapping `text` to `line_width` columns.
 #[must_use]
 pub fn wrap_rows(text: &str, line_width: u16, wrap: Wrap) -> RowIndex {
+    wrap_rows_limited(text, line_width, wrap, usize::MAX)
+}
+
+/// Like [`wrap_rows`], but may stop once more than `max_starts` row starts exist.
+///
+/// Rows before the last recorded start are identical to the full wrap, so a caller painting rows
+/// `0..n` passes `n + 1` to get a correct end offset for row `n - 1`.
+#[must_use]
+pub fn wrap_rows_limited(text: &str, line_width: u16, wrap: Wrap, max_starts: usize) -> RowIndex {
     if line_width == 0 {
         return RowIndex::default();
     }
@@ -45,6 +54,9 @@ pub fn wrap_rows(text: &str, line_width: u16, wrap: Wrap) -> RowIndex {
             .map_or(text.len(), |index| offset + index);
         let line = text.get(offset..line_end).unwrap_or("");
         wrap_logical_line(line, line_width, wrap.trim, offset, &mut row_starts);
+        if row_starts.len() > max_starts {
+            break;
+        }
         if line_end >= text.len() {
             break;
         }
@@ -68,7 +80,7 @@ fn wrap_logical_line(
         row_starts.push(base_offset);
         return;
     }
-    let graphemes: Vec<(usize, &str)> = grapheme_offsets(line).collect();
+    let graphemes = grapheme_vec(line);
     if graphemes.is_empty() {
         row_starts.push(base_offset);
         return;
@@ -172,12 +184,10 @@ fn push_row_start(
 ) {
     let mut at = byte_in_line.min(line.len());
     if trim {
-        for (byte, grapheme) in grapheme_offsets(line) {
-            if byte < byte_in_line {
-                continue;
-            }
+        let tail = line.get(byte_in_line..).unwrap_or("");
+        for (byte, grapheme) in grapheme_offsets(tail) {
             if grapheme.chars().all(char::is_whitespace) {
-                at = byte + grapheme.len();
+                at = byte_in_line + byte + grapheme.len();
             } else {
                 break;
             }
@@ -197,8 +207,56 @@ fn grapheme_offsets(line: &str) -> impl Iterator<Item = (usize, &str)> {
     })
 }
 
+fn grapheme_vec(line: &str) -> Vec<(usize, &str)> {
+    let bytes = line.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut start = 0;
+    for i in 1..=bytes.len() {
+        if i < bytes.len() && !(bytes[i - 1].is_ascii() && bytes[i].is_ascii()) {
+            continue;
+        }
+        let chunk = &line[start..i];
+        if chunk.len() == 1 {
+            out.push((start, chunk));
+        } else {
+            out.extend(grapheme_offsets(chunk).map(|(at, g)| (start + at, g)));
+        }
+        start = i;
+    }
+    out
+}
+
 /// Re-wraps `text` without caching (for tests and cache validation).
 #[must_use]
 pub fn wrap_rows_fresh(text: &str, line_width: u16, wrap: Wrap) -> RowIndex {
     wrap_rows(text, line_width, wrap)
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::vec::Vec;
+
+    use super::{grapheme_offsets, grapheme_vec};
+
+    #[test]
+    fn grapheme_vec_matches_segmenter() {
+        let cases = [
+            "",
+            "plain ascii line",
+            "a\u{301}b",
+            "e\u{301}",
+            "x \u{600}abc",
+            "ab\u{200D}cd",
+            "👨\u{200D}👩\u{200D}👧 family a",
+            "🇺🇸🇯🇵 flags",
+            "日本語 mixed ascii — dash end",
+            "tab\tand\rcr",
+            "a—b—c",
+            "—",
+        ];
+        for case in cases {
+            let want: Vec<(usize, &str)> = grapheme_offsets(case).collect();
+            assert_eq!(grapheme_vec(case), want, "{case:?}");
+        }
+    }
 }
