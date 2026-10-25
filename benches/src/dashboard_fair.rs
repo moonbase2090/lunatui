@@ -276,17 +276,29 @@ fn process_cpu_time() -> Duration {
     Duration::ZERO
 }
 
+#[cfg(unix)]
 fn rss_kib() -> usize {
-    let pid = std::process::id();
-    std::process::Command::new("ps")
-        .args(["-o", "rss=", "-p", &pid.to_string()])
-        .output()
-        .ok()
-        .and_then(|o| {
-            String::from_utf8_lossy(&o.stdout)
-                .trim()
-                .parse::<usize>()
-                .ok()
-        })
-        .unwrap_or(0)
+    use std::mem::MaybeUninit;
+
+    let mut usage = MaybeUninit::uninit();
+    let usage = {
+        // SAFETY: `getrusage` fully initializes `usage` when it returns zero.
+        unsafe {
+            if libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) != 0 {
+                return 0;
+            }
+            usage.assume_init()
+        }
+    };
+    let max_rss = usize::try_from(usage.ru_maxrss).unwrap_or(0);
+    if cfg!(target_os = "macos") {
+        max_rss / 1024
+    } else {
+        max_rss
+    }
+}
+
+#[cfg(not(unix))]
+fn rss_kib() -> usize {
+    0
 }
