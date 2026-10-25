@@ -41,18 +41,18 @@ pub(crate) fn write_sgr_delta(
         return;
     }
     let mut params = String::new();
-    if effective.attrs != current.attrs
-        || (colors && (effective.fg != current.fg || effective.bg != current.bg))
-    {
+    if drops_attrs(current.attrs, effective.attrs) {
         params.push('0');
-        current.attrs = Attrs::new();
-        current.fg = Color::Default;
-        current.bg = Color::Default;
+        *current = Pen::default();
     }
-    append_attr_params(&mut params, effective.attrs);
+    append_attr_params(&mut params, effective.attrs, current.attrs);
     if colors {
-        append_color_params(&mut params, true, effective.fg);
-        append_color_params(&mut params, false, effective.bg);
+        if effective.fg != current.fg {
+            append_color_params(&mut params, true, effective.fg);
+        }
+        if effective.bg != current.bg {
+            append_color_params(&mut params, false, effective.bg);
+        }
     }
     if params.is_empty() {
         return;
@@ -67,37 +67,51 @@ pub(crate) fn write_sgr_delta(
     }
 }
 
-fn append_attr_params(params: &mut String, attrs: Attrs) {
-    if attrs.bold() {
+fn drops_attrs(have: Attrs, want: Attrs) -> bool {
+    (have.bold() && !want.bold())
+        || (have.dim() && !want.dim())
+        || (have.italic() && !want.italic())
+        || (have.blink() && !want.blink())
+        || (have.reverse() && !want.reverse())
+        || (have.hidden() && !want.hidden())
+        || (have.strikethrough() && !want.strikethrough())
+        || (have.overline() && !want.overline())
+        || (have.underline() != UnderlineStyle::None && have.underline() != want.underline())
+}
+
+fn append_attr_params(params: &mut String, attrs: Attrs, have: Attrs) {
+    if attrs.bold() && !have.bold() {
         push_param(params, "1");
     }
-    if attrs.dim() {
+    if attrs.dim() && !have.dim() {
         push_param(params, "2");
     }
-    if attrs.italic() {
+    if attrs.italic() && !have.italic() {
         push_param(params, "3");
     }
-    match attrs.underline() {
-        UnderlineStyle::None => {}
-        UnderlineStyle::Single => push_param(params, "4"),
-        UnderlineStyle::Double => push_param(params, "21"),
-        UnderlineStyle::Curly => push_param(params, "4:3"),
-        UnderlineStyle::Dotted => push_param(params, "4:4"),
-        UnderlineStyle::Dashed => push_param(params, "4:5"),
+    if have.underline() == UnderlineStyle::None {
+        match attrs.underline() {
+            UnderlineStyle::None => {}
+            UnderlineStyle::Single => push_param(params, "4"),
+            UnderlineStyle::Double => push_param(params, "21"),
+            UnderlineStyle::Curly => push_param(params, "4:3"),
+            UnderlineStyle::Dotted => push_param(params, "4:4"),
+            UnderlineStyle::Dashed => push_param(params, "4:5"),
+        }
     }
-    if attrs.blink() {
+    if attrs.blink() && !have.blink() {
         push_param(params, "5");
     }
-    if attrs.reverse() {
+    if attrs.reverse() && !have.reverse() {
         push_param(params, "7");
     }
-    if attrs.hidden() {
+    if attrs.hidden() && !have.hidden() {
         push_param(params, "8");
     }
-    if attrs.strikethrough() {
+    if attrs.strikethrough() && !have.strikethrough() {
         push_param(params, "9");
     }
-    if attrs.overline() {
+    if attrs.overline() && !have.overline() {
         push_param(params, "53");
     }
 }
