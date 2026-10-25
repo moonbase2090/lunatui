@@ -347,3 +347,19 @@ fn put_str_lone_combining_mark_takes_no_column() {
     grid.put_str(0, 0, Style::new(), "\u{301}Z", &mut clusters);
     assert_eq!(grid.row_display(0, &clusters), "Z   ");
 }
+
+#[test]
+fn set_style_restyles_wide_glyph_cut_by_either_edge() {
+    let paint = Style::new().fg(Color::Indexed(1));
+    for (x, width) in [(3, 2), (0, 3)] {
+        let mut clusters = ClusterTable::new();
+        let mut grid = Grid::new(8, 1);
+        grid.put_str(2, 0, Style::default(), "日", &mut clusters);
+        grid.set_style(Rect::new(x, 0, width, 1), paint);
+        let painted = |col| grid.get(col, 0).map(|cell| cell.style() == paint);
+        assert_eq!(painted(2), Some(true), "x={x} width={width}");
+        assert_eq!(painted(3), Some(true), "x={x} width={width}");
+        assert_eq!(painted(1), Some(x == 0));
+        assert_eq!(painted(4), Some(x == 3));
+    }
+}

@@ -4,7 +4,6 @@
 extern crate alloc;
 
 use alloc::borrow::ToOwned;
-use alloc::collections::BTreeSet;
 use alloc::string::String;
 use alloc::vec::Vec;
 use unicode_segmentation::UnicodeSegmentation;
@@ -305,25 +304,30 @@ impl Grid {
 
     /// Sets foreground, background and attributes in `area`, keeping each cell's glyph and width.
     pub fn set_style(&mut self, area: Rect, style: Style) {
-        let end_x = area.x.saturating_add(area.width);
+        let end_x = area.x.saturating_add(area.width).min(self.width);
         let end_y = area.y.saturating_add(area.height);
+        if area.x >= end_x {
+            return;
+        }
         for row in area.y..end_y.min(self.height) {
-            let mut columns = BTreeSet::new();
-            for col in area.x..end_x.min(self.width) {
-                columns.insert(col);
-                if let Some(cell) = self.get(col, row) {
-                    match cell.meta().width {
-                        CellWidth::Two if col + 1 < self.width => {
-                            columns.insert(col + 1);
-                        }
-                        CellWidth::Continuation if col > 0 => {
-                            columns.insert(col - 1);
-                        }
-                        _ => {}
-                    }
-                }
+            // A wide glyph cut by an edge of `area` is restyled whole: extend by its other half.
+            let mut start = area.x;
+            if start > 0
+                && self
+                    .get(start, row)
+                    .is_some_and(|cell| cell.meta().width == CellWidth::Continuation)
+            {
+                start -= 1;
             }
-            for col in columns {
+            let mut end = end_x;
+            if end < self.width
+                && self
+                    .get(end - 1, row)
+                    .is_some_and(|cell| cell.meta().width == CellWidth::Two)
+            {
+                end += 1;
+            }
+            for col in start..end {
                 if let Some(cell) = self.get(col, row) {
                     let meta = Meta {
                         attrs: style.attrs,

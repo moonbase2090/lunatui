@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Rect, Size, Style, clip_display_prefix};
-use lunatui_text::wrap::{RowIndex, Wrap, WrapCache, wrap_rows};
+use lunatui_text::wrap::{RowIndex, Wrap, WrapCache, wrap_rows, wrap_rows_limited};
 
 use crate::{RenderCx, Widget};
 
@@ -74,7 +74,12 @@ impl Widget for Paragraph {
         if area.width == 0 || area.height == 0 {
             return;
         }
-        let index = self.row_index(area.width);
+        let index = if let Some(wrap) = self.wrap {
+            let visible = usize::from(self.scroll.0) + usize::from(area.height);
+            wrap_rows_limited(&self.text, area.width, wrap, visible)
+        } else {
+            unwrap_rows(&self.text)
+        };
         paint_rows(
             &index,
             &self.text,

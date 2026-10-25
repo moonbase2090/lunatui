@@ -3,7 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_text::wrap::{Wrap, wrap_rows, wrap_rows_fresh};
+use lunatui_text::wrap::{Wrap, wrap_rows, wrap_rows_fresh, wrap_rows_limited};
 
 #[test]
 fn fresh_matches_cached_builder() {
@@ -42,4 +42,17 @@ fn exact_width_word_without_trim_does_not_add_empty_row() {
         .map(|row| index.row_text("abcd e", row).unwrap_or(""))
         .collect();
     assert!(!rows.iter().any(|row| row.is_empty()));
+}
+
+#[test]
+fn limited_rows_match_full_wrap_prefix() {
+    let text = "the quick brown fox\njumps over the lazy dog — again and again\n\nlast line here";
+    let wrap = Wrap { trim: true };
+    let full = wrap_rows(text, 7, wrap);
+    for visible in 0..full.len() {
+        let limited = wrap_rows_limited(text, 7, wrap, visible);
+        for row in 0..visible {
+            assert_eq!(limited.row_text(text, row), full.row_text(text, row));
+        }
+    }
 }

@@ -27,7 +27,9 @@ pub const UNICODE_VERSION: (u8, u8, u8) = tables::UNICODE_VERSION;
 #[must_use]
 pub fn char_width(c: char) -> usize {
     let code_point = u32::from(c);
-    if contains(&ZERO_WIDTH, code_point) {
+    if (0x20..0x7F).contains(&code_point) {
+        1
+    } else if contains(&ZERO_WIDTH, code_point) {
         0
     } else if contains(&WIDE, code_point) {
         2

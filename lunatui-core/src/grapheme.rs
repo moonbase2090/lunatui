@@ -6,7 +6,6 @@ extern crate alloc;
 use alloc::borrow::ToOwned;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
-use alloc::vec::Vec;
 use core::fmt;
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -260,18 +259,24 @@ fn classify_cluster(text: &str) -> ClusterKind {
 /// Display width of one extended grapheme cluster (`docs/width-policy.md`).
 #[must_use]
 pub fn cluster_display_width(cluster: &str) -> usize {
-    let chars: Vec<char> = cluster.chars().collect();
-    if chars.len() == 2 && regional_indicator(chars[0]) && regional_indicator(chars[1]) {
+    let mut chars = cluster.chars();
+    let Some(first) = chars.next() else {
+        return 0;
+    };
+    let Some(second) = chars.next() else {
+        return char_width(first);
+    };
+    if chars.as_str().is_empty() && regional_indicator(first) && regional_indicator(second) {
         return 2;
     }
+    let widths = cluster.chars().map(char_width);
     if cluster.contains('\u{FE0F}') {
-        let widest = chars.iter().map(|&c| char_width(c)).max().unwrap_or(0);
-        return 2.max(widest);
+        return 2.max(widths.max().unwrap_or(0));
     }
     if cluster.contains('\u{200D}') {
-        return chars.iter().map(|&c| char_width(c)).max().unwrap_or(0);
+        return widths.max().unwrap_or(0);
     }
-    chars.iter().map(|&c| char_width(c)).sum()
+    widths.sum()
 }
 
 /// Sums [`cluster_display_width`] over the extended grapheme clusters of `text`.
