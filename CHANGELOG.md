@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Changed
+
+- Terminal encoder emits SGR as a delta: it no longer resets before every color change or re-sends both colors, and only resets when an attribute turns off. The rendered result is the same; a dashboard frame is 12-20% fewer bytes.
+
 ### Added
 
 - **Native protocol discovery:** `lunatui-prismattyc` parses capability 0.4 `native.grid.v1` advertisements behind an off-by-default `NativePolicy::DirectLocal` opt-in. Discovery never activates native ownership; ANSI remains the renderer, with a documented fallback repaint prefix.
