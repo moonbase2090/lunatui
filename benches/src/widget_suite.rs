@@ -622,13 +622,13 @@ pub fn gate_failures(
     let mut failures = Vec::new();
     if frame_ratio
         .partial_cmp(&limit)
-        .is_none_or(|order| order.is_gt())
+        .is_none_or(std::cmp::Ordering::is_gt)
     {
         failures.push(format!("{label} frame ratio {frame_ratio:.2} > {limit:.2}"));
     }
     if lunatui_allocs
         .partial_cmp(&ratatui_allocs)
-        .is_none_or(|order| order.is_gt())
+        .is_none_or(std::cmp::Ordering::is_gt)
     {
         failures.push(format!(
             "{label} allocations {lunatui_allocs:.1} > {ratatui_allocs:.1}"

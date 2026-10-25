@@ -53,7 +53,10 @@ fn more_allocations_than_ratatui_fail() {
 
 #[test]
 fn a_case_at_the_limit_with_equal_allocations_passes() {
-    assert!(gate_failures("x", 1.05, 1.05, 10.0, 10.0).is_empty());
+    assert_eq!(
+        gate_failures("x", 1.05, 1.05, 10.0, 10.0),
+        Vec::<String>::new()
+    );
 }
 
 #[test]
