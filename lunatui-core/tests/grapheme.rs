@@ -4,7 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{
-    CLUSTER_TAG, CONTINUATION_GLYPH, ClusterId, ClusterTable, DecodedGlyph, GlyphSlot,
+    CLUSTER_TAG, CONTINUATION_GLYPH, ClusterId, ClusterTable, DecodedGlyph, GlyphSlot, char_width,
     cluster_display_width, width,
 };
 use proptest::prelude::*;
@@ -100,5 +100,67 @@ proptest! {
         let mut frame1 = ClusterTable::begin_frame(Some(&frame0), &used);
         let id1 = frame1.intern(&cluster);
         prop_assert_eq!(id0, id1);
+    }
+}
+
+/// The pre-optimization implementation, kept as the behavioral reference.
+fn reference_cluster_width(cluster: &str) -> usize {
+    let regional = |c: char| matches!(c, '\u{1F1E6}'..='\u{1F1FF}');
+    let chars: Vec<char> = cluster.chars().collect();
+    if chars.len() == 2 && regional(chars[0]) && regional(chars[1]) {
+        return 2;
+    }
+    if cluster.contains('\u{FE0F}') {
+        let widest = chars.iter().map(|&c| char_width(c)).max().unwrap_or(0);
+        return 2.max(widest);
+    }
+    if cluster.contains('\u{200D}') {
+        return chars.iter().map(|&c| char_width(c)).max().unwrap_or(0);
+    }
+    chars.iter().map(|&c| char_width(c)).sum()
+}
+
+#[test]
+fn cluster_width_matches_reference_for_every_char_and_special_combinations() {
+    let mut buf = [0u8; 4];
+    for c in '\0'..=char::MAX {
+        let s = c.encode_utf8(&mut buf);
+        assert_eq!(
+            cluster_display_width(s),
+            reference_cluster_width(s),
+            "{c:?}"
+        );
+    }
+    let special = [
+        'a',
+        ' ',
+        '\u{FE0F}',
+        '\u{200D}',
+        '\u{301}',
+        '\u{1F1FA}',
+        '\u{1F1F8}',
+        '日',
+        '👩',
+        '❤',
+        '\t',
+        '\u{600}',
+    ];
+    for &a in &special {
+        for &b in &special {
+            let pair: String = [a, b].iter().collect();
+            assert_eq!(
+                cluster_display_width(&pair),
+                reference_cluster_width(&pair),
+                "{pair:?}"
+            );
+            for &c in &special {
+                let triple: String = [a, b, c].iter().collect();
+                assert_eq!(
+                    cluster_display_width(&triple),
+                    reference_cluster_width(&triple),
+                    "{triple:?}"
+                );
+            }
+        }
     }
 }
