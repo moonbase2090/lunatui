@@ -4,7 +4,9 @@
 mod cursor;
 mod sgr;
 
-use lunatui_core::{Cell, CellWidth, ClusterTable, Color, DecodedGlyph, Grid, diff_runs};
+use lunatui_core::{
+    Cell, CellWidth, ChangedRun, ClusterTable, Color, DecodedGlyph, Grid, diff_runs_into,
+};
 
 use cursor::write_cup;
 pub use cursor::write_cursor_state;
@@ -23,6 +25,7 @@ pub enum ColorMode {
 #[derive(Clone, Debug, Default)]
 pub struct Encoder {
     buffer: Vec<u8>,
+    runs: Vec<ChangedRun>,
     pen: Pen,
     cursor_col: u16,
     cursor_row: u16,
@@ -61,7 +64,9 @@ impl Encoder {
         self.cursor_placed = false;
         let color = colors == ColorMode::TrueColor;
         let mut one_wide_key: Option<u128> = None;
-        for run in diff_runs(previous, next) {
+        diff_runs_into(previous, next, &mut self.runs);
+        let runs = std::mem::take(&mut self.runs);
+        for run in &runs {
             let mut col = run.col;
             let words = next.row_bits(run.row);
             while col < run.col + run.width {
@@ -115,6 +120,7 @@ impl Encoder {
                 one_wide_key = (advance == 1).then_some(key);
             }
         }
+        self.runs = runs;
         self.buffer.extend_from_slice(b"\x1b[m\x1b[m\x1b[m\x1b[0m");
         &self.buffer
     }
