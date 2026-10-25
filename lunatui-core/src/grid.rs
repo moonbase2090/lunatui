@@ -60,7 +60,6 @@ pub struct Grid {
     rows: Vec<RowDirty>,
 }
 
-/// Bits of a packed cell that `set_style` replaces: both colors and the attribute flags.
 const STYLE_BITS: u128 = (0xFFFF_FFFF_u128 << 32) | (0xFFFF_FFFF_u128 << 64) | (0xFFF_u128 << 96);
 
 impl Grid {
