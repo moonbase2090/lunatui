@@ -76,16 +76,13 @@ fn replay(output: &[u8], screen: &mut [Vec<char>]) -> Result<(), String> {
     Ok(())
 }
 
-fn encode_checked(
-    encoder: &mut Encoder,
+fn check_output(
+    output: &[u8],
     previous: &Grid,
     next: &Grid,
     clusters: &ClusterTable,
     expect_changes: bool,
 ) -> Result<(), String> {
-    let output = encoder
-        .encode_diff(previous, next, clusters, ColorMode::TrueColor)
-        .to_vec();
     if !output.ends_with(TRAILER) {
         return Err("output lacks the reset trailer".to_owned());
     }
@@ -96,25 +93,37 @@ fn encode_checked(
         return Err("an unchanged frame produced more than the trailer".to_owned());
     }
     let mut screen = screen_of(previous, clusters);
-    replay(&output, &mut screen)?;
+    replay(output, &mut screen)?;
     if screen != screen_of(next, clusters) {
         return Err("replaying the output does not reproduce the frame".to_owned());
     }
     Ok(())
 }
 
-fn measured_allocations(
+fn encode_unmeasured(
     encoder: &mut Encoder,
     previous: &Grid,
     next: &Grid,
     clusters: &ClusterTable,
-) -> usize {
-    let (_, stats) = ALLOC.measure(|| {
-        encoder
-            .encode_diff(previous, next, clusters, ColorMode::TrueColor)
-            .len()
+    expect_changes: bool,
+) -> Result<(), String> {
+    let output = encoder.encode_diff(previous, next, clusters, ColorMode::TrueColor);
+    check_output(output, previous, next, clusters, expect_changes)
+}
+
+fn encode_measured(
+    encoder: &mut Encoder,
+    previous: &Grid,
+    next: &Grid,
+    clusters: &ClusterTable,
+    expect_changes: bool,
+    allocations: &mut usize,
+) -> Result<(), String> {
+    let (output, stats) = ALLOC.measure(move || {
+        Encoder::encode_diff(encoder, previous, next, clusters, ColorMode::TrueColor)
     });
-    stats.allocations
+    *allocations += stats.allocations;
+    check_output(output, previous, next, clusters, expect_changes)
 }
 
 #[test]
@@ -125,20 +134,32 @@ fn steady_state_encoding_allocates_nothing_and_still_draws() -> Result<(), Strin
     let mut encoder = Encoder::new();
     for phase in 0..40 {
         paint(&mut next, &mut clusters, phase);
-        encode_checked(&mut encoder, &previous, &next, &clusters, true)?;
+        encode_unmeasured(&mut encoder, &previous, &next, &clusters, true)?;
         std::mem::swap(&mut previous, &mut next);
     }
     let mut allocations = 0;
     for phase in 40..80 {
         paint(&mut next, &mut clusters, phase);
-        allocations += measured_allocations(&mut encoder, &previous, &next, &clusters);
-        encode_checked(&mut encoder, &previous, &next, &clusters, true)?;
+        encode_measured(
+            &mut encoder,
+            &previous,
+            &next,
+            &clusters,
+            true,
+            &mut allocations,
+        )?;
         std::mem::swap(&mut previous, &mut next);
     }
     for _ in 0..5 {
         paint(&mut next, &mut clusters, 79);
-        allocations += measured_allocations(&mut encoder, &previous, &next, &clusters);
-        encode_checked(&mut encoder, &previous, &next, &clusters, false)?;
+        encode_measured(
+            &mut encoder,
+            &previous,
+            &next,
+            &clusters,
+            false,
+            &mut allocations,
+        )?;
         std::mem::swap(&mut previous, &mut next);
     }
     if allocations == 0 {
