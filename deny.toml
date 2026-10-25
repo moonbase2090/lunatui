@@ -97,6 +97,7 @@ allow = [
     "itoa",
     "kasuari",
     "libc",
+    "libm",
     "line-clipping",
     "linux-raw-sys",
     "litrs",
