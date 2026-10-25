@@ -447,16 +447,16 @@ fn set_style_replaces_colors_and_attributes_but_keeps_glyphs() {
 }
 
 #[test]
-fn set_style_marks_the_range_dirty() {
+fn set_style_marks_exactly_the_styled_range_dirty() {
     let mut clusters = ClusterTable::new();
     let mut grid = Grid::new(6, 1);
     grid.put_str(0, 0, Style::new(), "abcdef", &mut clusters);
-    let mut clean = Grid::new(6, 1);
-    clean.put_str(0, 0, Style::new(), "abcdef", &mut clusters);
+    grid.clear_dirty();
+    assert_eq!(grid.row_dirty(0).map(|d| d.dirty), Some(false));
     grid.set_style(Rect::new(2, 0, 2, 1), Style::new().fg(Color::Indexed(1)));
     let dirty = grid.row_dirty(0);
     assert_eq!(
-        dirty.map(|d| (d.dirty, d.min_x <= 2, d.max_x >= 4)),
-        Some((true, true, true))
+        dirty.map(|d| (d.dirty, d.min_x, d.max_x)),
+        Some((true, 2, 4))
     );
 }
