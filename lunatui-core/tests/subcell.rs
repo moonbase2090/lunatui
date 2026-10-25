@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Literal subcell glyph and fallback reference tests.
+#![doc = include_str!("../README.md")]
 
 use lunatui_core::subcell::{GlyphCapabilities, GlyphSet, horizontal_eighths, vertical_eighths};
 
