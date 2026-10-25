@@ -4,6 +4,8 @@
 #![doc = include_str!("../README.md")]
 
 mod bundled;
+#[cfg(feature = "graphite-tokens")]
+mod graphite;
 #[cfg(feature = "color-profiles")]
 mod profile;
 mod serde;

@@ -180,5 +180,13 @@ pub fn load_bundled(id: &str) -> Result<Theme, ThemeLoadError> {
         .iter()
         .find(|(entry_id, _, _)| *entry_id == id)
         .ok_or_else(|| ThemeLoadError::new(format!("unknown bundled theme id: {id}")))?;
+    #[cfg(feature = "graphite-tokens")]
+    if matches!(id, "prismattyc" | "prismattyc-dark" | "prismattyc-light") {
+        return Ok(Theme::builtin(if id == "prismattyc-light" {
+            crate::Variant::Light
+        } else {
+            crate::Variant::Dark
+        }));
+    }
     theme_from_toml_strict(raw)
 }
