@@ -139,7 +139,8 @@ impl Transition {
     /// Whether the value is still changing at `now`, so the app keeps scheduling frames.
     #[must_use]
     pub fn is_running(&self, now: Duration) -> bool {
-        now.saturating_sub(self.start) < self.duration
+        self.from.partial_cmp(&self.to) != Some(std::cmp::Ordering::Equal)
+            && now.saturating_sub(self.start) < self.duration
     }
 }
 
@@ -252,11 +253,11 @@ impl DampedSpring {
                 (slope - omega * (offset + slope * secs)) * decay,
             )
         } else {
-            let root = (zeta * zeta - 1.0).sqrt();
-            let slow = -omega * (zeta - root);
+            let root = ((zeta - 1.0) * (zeta + 1.0)).sqrt();
             let fast = -omega * (zeta + root);
+            let slow = -omega / (zeta + root);
             let slow_gain = (speed - fast * offset) / (slow - fast);
-            let fast_gain = offset - slow_gain;
+            let fast_gain = (slow * offset - speed) / (slow - fast);
             let slow_decay = (slow * secs).exp();
             let fast_decay = (fast * secs).exp();
             (

@@ -280,3 +280,62 @@ fn the_scheduler_follows_a_changed_frame_period() {
         SchedulePoll::SleepUntil(ms(49))
     );
 }
+
+#[test]
+fn retargeting_to_the_current_value_is_not_running() {
+    let mut transition = Transition::at_rest(3.0);
+    transition.retarget(ms(0), 3.0, STANDARD, Ease::OutCubic);
+    assert_eq!(transition.value(ms(50)), 3.0);
+    assert!(!transition.is_running(ms(0)));
+    assert!(!transition.is_running(ms(50)));
+}
+
+#[test]
+fn a_transition_stops_running_once_it_reaches_a_changed_target() {
+    let mut transition = Transition::at_rest(1.0);
+    transition.retarget(ms(0), 2.0, STANDARD, Ease::OutCubic);
+    assert!(transition.is_running(ms(159)));
+    assert!(!transition.is_running(ms(160)));
+}
+
+#[test]
+fn a_very_overdamped_spring_creeps_along_its_slow_root() {
+    let mut spring = DampedSpring::new(0.0, 1.0, 10_000.0, 1.0);
+    spring.set_target(1.0);
+    spring.advance(Duration::from_secs(10_000));
+    assert!(
+        (spring.value() - 0.632_120_56).abs() < 1e-3,
+        "{}",
+        spring.value()
+    );
+}
+
+#[test]
+fn a_very_overdamped_spring_agrees_across_step_sizes() {
+    let mut one = DampedSpring::new(0.0, 1.0, 10_000.0, 1.0);
+    one.set_target(1.0);
+    one.advance(Duration::from_secs(4_000));
+    let mut many = DampedSpring::new(0.0, 1.0, 10_000.0, 1.0);
+    many.set_target(1.0);
+    for _ in 0..40 {
+        many.advance(Duration::from_secs(100));
+    }
+    assert!((one.value() - many.value()).abs() < 1e-3);
+    assert!((one.value() - (1.0 - (-0.4_f32).exp())).abs() < 1e-3);
+}
+
+#[test]
+fn a_moderately_overdamped_spring_matches_the_closed_form() {
+    let mut spring = DampedSpring::new(0.0, 100.0, 50.0, 1.0);
+    spring.set_target(1.0);
+    spring.advance(ms(500));
+    let root = (2.5_f32 * 2.5 - 1.0).sqrt();
+    let slow = -10.0 * (2.5 - root);
+    let fast = -10.0 * (2.5 + root);
+    let expected = 1.0 - (fast * (slow * 0.5).exp() - slow * (fast * 0.5).exp()) / (fast - slow);
+    assert!(
+        (spring.value() - expected).abs() < 1e-4,
+        "{} vs {expected}",
+        spring.value()
+    );
+}
