@@ -67,8 +67,6 @@ pub(crate) fn write_sgr_delta(
     }
 }
 
-/// Whether moving from `have` to `want` needs an SGR reset (an attribute turns off or the
-/// underline style changes from one non-none style to another).
 fn drops_attrs(have: Attrs, want: Attrs) -> bool {
     (have.bold() && !want.bold())
         || (have.dim() && !want.dim())
@@ -81,7 +79,6 @@ fn drops_attrs(have: Attrs, want: Attrs) -> bool {
         || (have.underline() != UnderlineStyle::None && have.underline() != want.underline())
 }
 
-/// Appends the attributes in `attrs` that `have` does not already set.
 fn append_attr_params(params: &mut String, attrs: Attrs, have: Attrs) {
     if attrs.bold() && !have.bold() {
         push_param(params, "1");

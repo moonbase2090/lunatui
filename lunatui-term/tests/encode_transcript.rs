@@ -122,7 +122,6 @@ struct Sim {
     attrs: u8,
 }
 
-/// Applies the SGR params to `sim`; supports the codes the encoder emits for this test's styles.
 fn apply_sgr(sim: &mut Sim, params: &str) -> bool {
     let mut parts = params.split(';').peekable();
     while let Some(part) = parts.next() {
@@ -234,7 +233,6 @@ fn random_style_runs_decode_to_the_requested_styles() {
                 rest = &rest[ch.len_utf8()..];
             }
         }
-        // The trailing resets come after the last glyph, so `printed` holds one state per cell.
         let want: Vec<Sim> = cells.iter().map(|s| sim_for(*s)).collect();
         assert_eq!(printed, want);
     }
