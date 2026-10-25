@@ -611,9 +611,10 @@ fn bench_summary(width: u16, height: u16, times: FrameTimes, profile: &str, labe
         Verdict::OverTarget | Verdict::OverCeiling => "over",
     };
     format!(
-        "{label}, {width}x{height}, {} frames, {profile}: p50 {}, p99 {}, max {} ({verdict} the {} target)",
+        "{label}, {width}x{height}, {} frames, {profile}: p50 {}, p95 {}, p99 {}, max {} ({verdict} the {} target)",
         times.samples,
         millis(times.p50),
+        millis(times.p95),
         millis(times.p99),
         millis(times.max),
         millis(FRAME_TARGET),

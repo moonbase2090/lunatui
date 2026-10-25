@@ -57,9 +57,10 @@ fn summary(width: u16, height: u16, times: FrameTimes, profile: &str) -> String 
         Verdict::OverTarget | Verdict::OverCeiling => "over",
     };
     format!(
-        "ratatui 0.30.2 dashboard, {width}x{height}, {} frames, {profile}: p50 {}, p99 {}, max {} ({verdict} the {} target)",
+        "ratatui 0.30.2 dashboard, {width}x{height}, {} frames, {profile}: p50 {}, p95 {}, p99 {}, max {} ({verdict} the {} target)",
         times.samples,
         millis(times.p50),
+        millis(times.p95),
         millis(times.p99),
         millis(times.max),
         millis(FRAME_TARGET),
@@ -83,12 +84,13 @@ mod tests {
         let times = FrameTimes {
             samples: 240,
             p50: Duration::from_micros(500),
+            p95: Duration::from_micros(1_000),
             p99: Duration::from_micros(1_250),
             max: Duration::from_millis(2),
         };
         assert_eq!(
             summary(200, 60, times, "release build"),
-            "ratatui 0.30.2 dashboard, 200x60, 240 frames, release build: p50 0.500 ms, p99 1.250 ms, max 2.000 ms (within the 8.000 ms target)"
+            "ratatui 0.30.2 dashboard, 200x60, 240 frames, release build: p50 0.500 ms, p95 1.000 ms, p99 1.250 ms, max 2.000 ms (within the 8.000 ms target)"
         );
     }
 
@@ -97,6 +99,7 @@ mod tests {
         let times = FrameTimes {
             samples: 1,
             p50: Duration::from_millis(9),
+            p95: Duration::from_millis(9),
             p99: Duration::from_millis(9),
             max: Duration::from_millis(9),
         };

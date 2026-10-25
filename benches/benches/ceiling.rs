@@ -20,10 +20,11 @@ const WORST_CASES: [(&str, usize, usize); 2] = [
 
 fn main() -> io::Result<ExitCode> {
     println!(
-        "{:<45}{:>8}{:>11}{:>11}{:>11}  target {}, ceiling {}",
+        "{:<45}{:>8}{:>11}{:>11}{:>11}{:>11}  target {}, ceiling {}",
         "worst case",
         "samples",
         "p50",
+        "p95",
         "p99",
         "max",
         millis(FRAME_TARGET),
@@ -35,9 +36,10 @@ fn main() -> io::Result<ExitCode> {
         let verdict = times.verdict();
         over_ceiling |= verdict == Verdict::OverCeiling;
         println!(
-            "{name:<45}{:>8}{:>11}{:>11}{:>11}  {}",
+            "{name:<45}{:>8}{:>11}{:>11}{:>11}{:>11}  {}",
             times.samples,
             millis(times.p50),
+            millis(times.p95),
             millis(times.p99),
             millis(times.max),
             verdict_label(verdict)
