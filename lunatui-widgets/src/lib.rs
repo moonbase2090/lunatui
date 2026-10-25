@@ -14,6 +14,8 @@ mod paragraph;
 mod render_cx;
 mod scrollbar;
 mod spinner;
+#[cfg(feature = "widget-state")]
+mod state;
 mod status_bar;
 mod status_dot;
 mod table;
@@ -35,6 +37,8 @@ pub use paragraph::{Paragraph, TextView, TextWrap};
 pub use render_cx::RenderCx;
 pub use scrollbar::Scrollbar;
 pub use spinner::Spinner;
+#[cfg(feature = "widget-state")]
+pub use state::WidgetState;
 pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
 pub use table::Table;

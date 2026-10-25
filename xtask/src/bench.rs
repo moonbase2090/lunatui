@@ -9,6 +9,7 @@ use std::process::{Command, ExitCode};
 struct BenchStep {
     target: &'static str,
     feature: Option<&'static str>,
+    after: &'static [&'static str],
 }
 
 impl BenchStep {
@@ -18,6 +19,10 @@ impl BenchStep {
             args.extend(["--features", feature]);
         }
         args.extend(["--bench", self.target]);
+        if !self.after.is_empty() {
+            args.push("--");
+            args.extend(self.after);
+        }
         args
     }
 }
@@ -44,20 +49,29 @@ fn bench_plan(valgrind: bool) -> Vec<BenchStep> {
         BenchStep {
             target: "metrics",
             feature: None,
+            after: &[],
         },
         BenchStep {
             target: "ceiling",
             feature: None,
+            after: &[],
         },
         BenchStep {
             target: "criterion_calibration",
             feature: None,
+            after: &[],
+        },
+        BenchStep {
+            target: "widget_suite",
+            feature: None,
+            after: &["--gate"],
         },
     ];
     if valgrind {
         plan.push(BenchStep {
             target: "gungraun_calibration",
             feature: Some("gungraun"),
+            after: &[],
         });
     }
     plan
@@ -89,28 +103,56 @@ mod tests {
     const METRICS: BenchStep = BenchStep {
         target: "metrics",
         feature: None,
+        after: &[],
     };
     const CEILING: BenchStep = BenchStep {
         target: "ceiling",
         feature: None,
+        after: &[],
     };
     const CRITERION: BenchStep = BenchStep {
         target: "criterion_calibration",
         feature: None,
+        after: &[],
+    };
+    const WIDGETS: BenchStep = BenchStep {
+        target: "widget_suite",
+        feature: None,
+        after: &["--gate"],
     };
     const GUNGRAUN: BenchStep = BenchStep {
         target: "gungraun_calibration",
         feature: Some("gungraun"),
+        after: &[],
     };
 
     #[test]
     fn plan_without_valgrind_skips_gungraun() {
-        assert_eq!(bench_plan(false), [METRICS, CEILING, CRITERION]);
+        assert_eq!(bench_plan(false), [METRICS, CEILING, CRITERION, WIDGETS]);
     }
 
     #[test]
     fn plan_with_valgrind_ends_with_gungraun() {
-        assert_eq!(bench_plan(true), [METRICS, CEILING, CRITERION, GUNGRAUN]);
+        assert_eq!(
+            bench_plan(true),
+            [METRICS, CEILING, CRITERION, WIDGETS, GUNGRAUN]
+        );
+    }
+
+    #[test]
+    fn widget_suite_step_passes_the_gate_flag() {
+        assert_eq!(
+            WIDGETS.cargo_args(),
+            [
+                "bench",
+                "--package",
+                "lunatui-bench",
+                "--bench",
+                "widget_suite",
+                "--",
+                "--gate",
+            ]
+        );
     }
 
     #[test]

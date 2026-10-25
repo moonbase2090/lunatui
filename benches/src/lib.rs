@@ -23,6 +23,9 @@ pub mod prototype;
 pub mod report;
 /// The ratatui baseline scenes (PRD §6.1), ported 1:1 from the measured ratatui-perf runs.
 pub mod scenes;
+/// Per-widget comparison of lunatui and ratatui on identical data: shared cases, frame runners and
+/// the counters the parity test, the criterion bench and the report use.
+pub mod widget_suite;
 mod write;
 
 pub use alloc::{AllocStats, CountingAllocator};
