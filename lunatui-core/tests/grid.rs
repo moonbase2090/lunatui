@@ -3,7 +3,9 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{CellWidth, ClusterTable, Color, GlyphSlot, Grid, Rect, RowDirty, Style};
+use lunatui_core::{
+    Attrs, Cell, CellWidth, ClusterTable, Color, GlyphSlot, Grid, Rect, RowDirty, Style,
+};
 use proptest::prelude::*;
 
 fn assert_wide_invariants(grid: &Grid) {
@@ -362,4 +364,99 @@ fn set_style_restyles_wide_glyph_cut_by_either_edge() {
         assert_eq!(painted(1), Some(x == 0));
         assert_eq!(painted(4), Some(x == 3));
     }
+}
+
+fn display(grid: &Grid, clusters: &ClusterTable) -> String {
+    grid.row_display(0, clusters)
+}
+
+#[test]
+fn fill_covers_the_area_and_marks_each_row_dirty_once() {
+    let mut clusters = ClusterTable::new();
+    let mut grid = Grid::new(6, 2);
+    let style = Style::new().fg(Color::Rgb(1, 2, 3));
+    grid.fill(Rect::new(1, 0, 3, 2), style, 'x', &mut clusters);
+    assert_eq!(grid.row_display(0, &clusters), " xxx  ");
+    assert_eq!(grid.row_display(1, &clusters), " xxx  ");
+    for row in 0..2 {
+        let dirty = grid.row_dirty(row);
+        assert_eq!(
+            dirty.map(|d| (d.dirty, d.min_x, d.max_x)),
+            Some((true, 1, 4))
+        );
+    }
+    assert_eq!(grid.get(2, 0).map(Cell::style), Some(style));
+}
+
+#[test]
+fn fill_clips_to_the_grid() {
+    let mut clusters = ClusterTable::new();
+    let mut grid = Grid::new(4, 1);
+    grid.fill(Rect::new(2, 0, 10, 5), Style::new(), '#', &mut clusters);
+    assert_eq!(display(&grid, &clusters), "  ##");
+}
+
+#[test]
+fn fill_starting_inside_a_wide_glyph_blanks_its_other_half() {
+    let mut clusters = ClusterTable::new();
+    let mut grid = Grid::new(8, 1);
+    grid.put_str(2, 0, Style::new(), "日", &mut clusters);
+    grid.fill(Rect::new(3, 0, 3, 1), Style::new(), '·', &mut clusters);
+    assert_eq!(display(&grid, &clusters), "   ···  ");
+}
+
+#[test]
+fn fill_ending_inside_a_wide_glyph_blanks_its_other_half() {
+    let mut clusters = ClusterTable::new();
+    let mut grid = Grid::new(8, 1);
+    grid.put_str(3, 0, Style::new(), "日", &mut clusters);
+    grid.fill(Rect::new(0, 0, 4, 1), Style::new(), 'x', &mut clusters);
+    assert_eq!(display(&grid, &clusters), "xxxx    ");
+}
+
+#[test]
+fn fill_over_a_whole_wide_glyph_replaces_it() {
+    let mut clusters = ClusterTable::new();
+    let mut grid = Grid::new(8, 1);
+    grid.put_str(2, 0, Style::new(), "日", &mut clusters);
+    grid.fill(Rect::new(1, 0, 4, 1), Style::new(), 'y', &mut clusters);
+    assert_eq!(display(&grid, &clusters), " yyyy   ");
+}
+
+#[test]
+fn set_style_replaces_colors_and_attributes_but_keeps_glyphs() {
+    let mut clusters = ClusterTable::new();
+    let mut grid = Grid::new(5, 1);
+    grid.put_str(0, 0, Style::new(), "abcde", &mut clusters);
+    let bold = Style::new()
+        .fg(Color::Indexed(4))
+        .with_attrs(Attrs::default().set_bold(true));
+    grid.set_style(Rect::new(1, 0, 3, 1), bold);
+    assert_eq!(display(&grid, &clusters), "abcde");
+    assert_eq!(grid.get(2, 0).map(Cell::style), Some(bold));
+    assert_eq!(
+        grid.get(0, 0).map(|cell| cell.style().attrs.bold()),
+        Some(false)
+    );
+    grid.set_style(Rect::new(1, 0, 3, 1), Style::new());
+    assert_eq!(grid.get(2, 0).map(Cell::style), Some(Style::new()));
+    assert_eq!(
+        grid.get(2, 0).map(|cell| cell.style().attrs.bold()),
+        Some(false)
+    );
+}
+
+#[test]
+fn set_style_marks_the_range_dirty() {
+    let mut clusters = ClusterTable::new();
+    let mut grid = Grid::new(6, 1);
+    grid.put_str(0, 0, Style::new(), "abcdef", &mut clusters);
+    let mut clean = Grid::new(6, 1);
+    clean.put_str(0, 0, Style::new(), "abcdef", &mut clusters);
+    grid.set_style(Rect::new(2, 0, 2, 1), Style::new().fg(Color::Indexed(1)));
+    let dirty = grid.row_dirty(0);
+    assert_eq!(
+        dirty.map(|d| (d.dirty, d.min_x <= 2, d.max_x >= 4)),
+        Some((true, true, true))
+    );
 }

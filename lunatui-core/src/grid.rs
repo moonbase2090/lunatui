@@ -60,6 +60,9 @@ pub struct Grid {
     rows: Vec<RowDirty>,
 }
 
+/// Bits of a packed cell that `set_style` replaces: both colors and the attribute flags.
+const STYLE_BITS: u128 = (0xFFFF_FFFF_u128 << 32) | (0xFFFF_FFFF_u128 << 64) | (0xFFF_u128 << 96);
+
 impl Grid {
     /// A grid of `width`×`height` cells, filled with [`Cell::BLANK`].
     #[must_use]
@@ -287,61 +290,98 @@ impl Grid {
     /// Fills `area` with `ch` and `style`.
     pub fn fill(&mut self, area: Rect, style: Style, ch: char, clusters: &mut ClusterTable) {
         let end_x = area.x.saturating_add(area.width);
-        let end_y = area.y.saturating_add(area.height);
+        let end_y = area.y.saturating_add(area.height).min(self.height);
+        let row_end = end_x.min(self.width);
+        if area.x >= row_end || area.y >= end_y {
+            return;
+        }
         let display = char_width(ch);
-        for row in area.y..end_y.min(self.height) {
-            let mut col = area.x;
-            let row_end = end_x.min(self.width);
-            while col < row_end {
-                if display == 2 && col + 1 < row_end {
-                    let glyph = glyph_for_char(ch, clusters);
-                    self.erase_span(col, row, 2, style);
-                    self.place(
-                        col,
-                        row,
-                        Cell::from_parts(
-                            glyph,
-                            style,
-                            Meta {
-                                width: CellWidth::Two,
-                                ..Meta::default()
-                            },
-                        ),
-                    );
-                    self.place(
-                        col + 1,
-                        row,
-                        Cell::from_parts(
-                            GlyphSlot::continuation(),
-                            style,
-                            Meta {
-                                width: CellWidth::Continuation,
-                                ..Meta::default()
-                            },
-                        ),
-                    );
-                    col += 2;
-                } else if display == 2 {
-                    self.erase_span(col, row, 1, style);
-                    self.place_blank(col, row, style);
-                    col += 1;
-                } else {
-                    let glyph = glyph_for_char(ch, clusters);
-                    self.erase_span(col, row, 1, style);
-                    self.place(
-                        col,
-                        row,
-                        Cell::from_parts(
-                            glyph,
-                            style,
-                            Meta {
-                                width: CellWidth::One,
-                                ..Meta::default()
-                            },
-                        ),
-                    );
-                    col += 1;
-                }
+        let word = (display == 1).then(|| {
+            let meta = Meta {
+                width: CellWidth::One,
+                ..Meta::default()
+            };
+            Cell::from_parts(glyph_for_char(ch, clusters), style, meta).to_bits()
+        });
+        for row in area.y..end_y {
+            if let Some(word) = word
+                && !self.cuts_wide_glyph(area.x, row_end, row)
+            {
+                let base = usize::from(row) * usize::from(self.width);
+                self.cells[base + usize::from(area.x)..base + usize::from(row_end)].fill(word);
+                self.mark_dirty(row, area.x, row_end);
+                continue;
+            }
+            let span = Rect::new(area.x, row, row_end - area.x, 1);
+            self.fill_row_cells(span, style, ch, clusters);
+        }
+    }
+
+    fn cuts_wide_glyph(&self, start: u16, end: u16, row: u16) -> bool {
+        let continuation_at_start = start > 0
+            && self
+                .get(start, row)
+                .is_some_and(|cell| cell.meta().width == CellWidth::Continuation);
+        let lead_at_end = self
+            .get(end - 1, row)
+            .is_some_and(|cell| cell.meta().width == CellWidth::Two);
+        continuation_at_start || lead_at_end
+    }
+
+    fn fill_row_cells(&mut self, span: Rect, style: Style, ch: char, clusters: &mut ClusterTable) {
+        let (row, start) = (span.y, span.x);
+        let row_end = span.x + span.width;
+        let display = char_width(ch);
+        let mut col = start;
+        while col < row_end {
+            if display == 2 && col + 1 < row_end {
+                let glyph = glyph_for_char(ch, clusters);
+                self.erase_span(col, row, 2, style);
+                self.place(
+                    col,
+                    row,
+                    Cell::from_parts(
+                        glyph,
+                        style,
+                        Meta {
+                            width: CellWidth::Two,
+                            ..Meta::default()
+                        },
+                    ),
+                );
+                self.place(
+                    col + 1,
+                    row,
+                    Cell::from_parts(
+                        GlyphSlot::continuation(),
+                        style,
+                        Meta {
+                            width: CellWidth::Continuation,
+                            ..Meta::default()
+                        },
+                    ),
+                );
+                col += 2;
+            } else if display == 2 {
+                self.erase_span(col, row, 1, style);
+                self.place_blank(col, row, style);
+                col += 1;
+            } else {
+                let glyph = glyph_for_char(ch, clusters);
+                self.erase_span(col, row, 1, style);
+                self.place(
+                    col,
+                    row,
+                    Cell::from_parts(
+                        glyph,
+                        style,
+                        Meta {
+                            width: CellWidth::One,
+                            ..Meta::default()
+                        },
+                    ),
+                );
+                col += 1;
             }
         }
     }
@@ -353,6 +393,12 @@ impl Grid {
         if area.x >= end_x {
             return;
         }
+        let meta = Meta {
+            attrs: style.attrs,
+            ..Meta::default()
+        };
+        let restyle =
+            Cell::from_parts(GlyphSlot::continuation(), style, meta).to_bits() & STYLE_BITS;
         for row in area.y..end_y.min(self.height) {
             let mut start = area.x;
             if start > 0
@@ -370,17 +416,11 @@ impl Grid {
             {
                 end += 1;
             }
-            for col in start..end {
-                if let Some(cell) = self.get(col, row) {
-                    let meta = Meta {
-                        attrs: style.attrs,
-                        width: cell.meta().width,
-                        flags: cell.meta().flags,
-                        ext: cell.meta().ext,
-                    };
-                    self.place(col, row, Cell::from_parts(cell.glyph(), style, meta));
-                }
+            let base = usize::from(row) * usize::from(self.width);
+            for word in &mut self.cells[base + usize::from(start)..base + usize::from(end)] {
+                *word = (*word & !STYLE_BITS) | restyle;
             }
+            self.mark_dirty(row, start, end);
         }
     }
 
@@ -537,3 +577,138 @@ fn glyph_text(glyph: GlyphSlot, clusters: &ClusterTable) -> String {
 
 #[cfg(test)]
 mod put_str_tests;
+
+#[cfg(test)]
+mod tests {
+    use super::{CellWidth, ClusterTable, Grid, Rect, Style};
+    use crate::{Attrs, Color};
+
+    impl Grid {
+        fn fill_reference(
+            &mut self,
+            area: Rect,
+            style: Style,
+            ch: char,
+            clusters: &mut ClusterTable,
+        ) {
+            let end_x = area.x.saturating_add(area.width);
+            let end_y = area.y.saturating_add(area.height);
+            for row in area.y..end_y.min(self.height) {
+                let row_end = end_x.min(self.width);
+                let span = Rect::new(area.x, row, row_end.saturating_sub(area.x), 1);
+                self.fill_row_cells(span, style, ch, clusters);
+            }
+        }
+
+        fn set_style_reference(&mut self, area: Rect, style: Style) {
+            let end_x = area.x.saturating_add(area.width).min(self.width);
+            let end_y = area.y.saturating_add(area.height);
+            if area.x >= end_x {
+                return;
+            }
+            for row in area.y..end_y.min(self.height) {
+                let mut start = area.x;
+                if start > 0
+                    && self
+                        .get(start, row)
+                        .is_some_and(|cell| cell.meta().width == CellWidth::Continuation)
+                {
+                    start -= 1;
+                }
+                let mut end = end_x;
+                if end < self.width
+                    && self
+                        .get(end - 1, row)
+                        .is_some_and(|cell| cell.meta().width == CellWidth::Two)
+                {
+                    end += 1;
+                }
+                for col in start..end {
+                    if let Some(cell) = self.get(col, row) {
+                        let meta = super::Meta {
+                            attrs: style.attrs,
+                            width: cell.meta().width,
+                            flags: cell.meta().flags,
+                            ext: cell.meta().ext,
+                        };
+                        let updated = super::Cell::from_parts(cell.glyph(), style, meta);
+                        self.place(col, row, updated);
+                    }
+                }
+            }
+        }
+    }
+
+    struct Rng(u64);
+
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+
+        fn below(&mut self, bound: u64) -> u64 {
+            self.next() % bound
+        }
+
+        fn small(&mut self, bound: u64) -> u16 {
+            u16::try_from(self.below(bound)).unwrap_or(0)
+        }
+    }
+
+    fn style(rng: &mut Rng) -> Style {
+        let colors = [
+            Color::Default,
+            Color::Indexed(3),
+            Color::Rgb(9, 8, 7),
+            Color::Rgb(200, 100, 50),
+        ];
+        let pick = |index: u64| colors[usize::try_from(index % 4).unwrap_or(0)];
+        let bits = rng.next();
+        let attrs = Attrs::default()
+            .set_bold(bits & 1 != 0)
+            .set_dim(bits & 2 != 0);
+        Style::new()
+            .fg(pick(bits >> 8))
+            .bg(pick(bits >> 16))
+            .with_attrs(attrs)
+    }
+
+    fn area(rng: &mut Rng) -> Rect {
+        Rect::new(rng.small(14), rng.small(5), rng.small(9), rng.small(4))
+    }
+
+    #[test]
+    fn fill_and_set_style_match_the_per_cell_reference() {
+        const TEXTS: [&str; 7] = ["a", "日", "é", "日本", "x", "│", "ab"];
+        const CHARS: [char; 7] = ['x', '日', ' ', '·', '\u{301}', '🙂', '│'];
+        let mut rng = Rng(0x2545_f491_4f6c_dd1d);
+        for _ in 0..400 {
+            let mut fast = Grid::new(12, 4);
+            let mut fast_clusters = ClusterTable::new();
+            let mut slow = fast.clone();
+            let mut slow_clusters = ClusterTable::new();
+            for _ in 0..12 {
+                let text = TEXTS[usize::try_from(rng.below(7)).unwrap_or(0)];
+                let (x, y, painted) = (rng.small(12), rng.small(4), style(&mut rng));
+                fast.put_str(x, y, painted, text, &mut fast_clusters);
+                slow.put_str(x, y, painted, text, &mut slow_clusters);
+            }
+            for _ in 0..10 {
+                let rect = area(&mut rng);
+                let painted = style(&mut rng);
+                if rng.below(2) == 0 {
+                    let ch = CHARS[usize::try_from(rng.below(7)).unwrap_or(0)];
+                    fast.fill(rect, painted, ch, &mut fast_clusters);
+                    slow.fill_reference(rect, painted, ch, &mut slow_clusters);
+                } else {
+                    fast.set_style(rect, painted);
+                    slow.set_style_reference(rect, painted);
+                }
+                assert_eq!(fast, slow);
+            }
+        }
+    }
+}
