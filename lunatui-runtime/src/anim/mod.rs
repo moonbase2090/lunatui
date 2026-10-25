@@ -10,3 +10,11 @@ pub use clock::Clock;
 pub use ease::Ease;
 pub use spring::Spring;
 pub use tween::Tween;
+
+#[cfg(feature = "motion")]
+mod motion;
+
+#[cfg(feature = "motion")]
+pub use motion::{
+    DampedSpring, EMPHASIS, FramePacer, MAX_DURATION, MICRO, MotionPolicy, STANDARD, Transition,
+};

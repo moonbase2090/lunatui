@@ -21,6 +21,10 @@ mod run;
 mod sched;
 
 pub use anim::{Clock, Ease, Spring, Tween};
+#[cfg(feature = "motion")]
+pub use anim::{
+    DampedSpring, EMPHASIS, FramePacer, MAX_DURATION, MICRO, MotionPolicy, STANDARD, Transition,
+};
 #[cfg(feature = "app")]
 pub use app::{App, ControlFlow};
 #[cfg(feature = "app")]

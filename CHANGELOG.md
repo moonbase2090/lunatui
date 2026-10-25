@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - README and `docs/performance.md` compare lunatui and ratatui on the same machine with the same dashboard scene and scope (frame time, bytes, writes, allocations, RSS), replacing figures measured on different machines and over different scopes.
 
+### Added
+
+- Motion core in `lunatui-runtime`, behind the off-by-default `motion` feature: the design standard's `Ease::OutCubic` and `Ease::InCubic` curves, the 80/160/240 ms durations with a 300 ms cap, `DampedSpring` (stiffness, damping and mass; `standard` is 300/30/1 and settles within an eighth of a cell), interruptible `Transition`, `FramePacer` (60 to 30 fps after two slow frames), `MotionPolicy` for the `LUNATUI_REDUCED_MOTION` flag, and `Scheduler::set_frame_period`.
+
 ## [0.1.4] - 2026-10-25
 
 ### Changed
