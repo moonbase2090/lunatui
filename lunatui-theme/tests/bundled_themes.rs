@@ -4,9 +4,9 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::Color;
-use lunatui_theme::{
-    BUNDLED_COUNT, ThemeLoadError, Token, bundled_catalog, load_bundled, theme_from_json_strict,
-};
+#[cfg(not(feature = "graphite-tokens"))]
+use lunatui_theme::theme_from_json_strict;
+use lunatui_theme::{BUNDLED_COUNT, ThemeLoadError, Token, bundled_catalog, load_bundled};
 
 #[test]
 fn bundled_catalog_matches_prismattyc_host_count() {
@@ -31,6 +31,7 @@ fn every_bundled_theme_parses_and_resolves_all_tokens() -> Result<(), ThemeLoadE
     Ok(())
 }
 
+#[cfg(not(feature = "graphite-tokens"))]
 #[test]
 fn bundled_prismattyc_dark_loads_from_json_strict() -> Result<(), ThemeLoadError> {
     let toml = load_bundled("prismattyc-dark")?;

@@ -59,7 +59,7 @@ pub fn theme_from_toml(source: &str) -> Result<Theme, ThemeLoadError> {
     build_theme(file, false)
 }
 
-/// Loads a theme from TOML and requires every semantic token to be present.
+/// Loads a theme from TOML and requires the eight base file tokens to be present.
 ///
 /// # Errors
 ///
@@ -70,7 +70,7 @@ pub fn theme_from_toml_strict(source: &str) -> Result<Theme, ThemeLoadError> {
     build_theme(file, true)
 }
 
-/// Loads a theme from JSON and requires every semantic token to be present.
+/// Loads a theme from JSON and requires the eight base file tokens to be present.
 ///
 /// # Errors
 ///
@@ -84,7 +84,7 @@ pub fn theme_from_json_strict(source: &str) -> Result<Theme, ThemeLoadError> {
 fn build_theme(file: ThemeFile, require_all_tokens: bool) -> Result<Theme, ThemeLoadError> {
     let variant = parse_variant(&file.variant)?;
     if require_all_tokens {
-        for token in Token::all() {
+        for token in Token::file_required() {
             let name = token.name();
             if !file.tokens.contains_key(name) {
                 return Err(ThemeLoadError::new(format!("missing token: {name}")));

@@ -14,6 +14,7 @@ workspace = true
 [features]
 default = []
 color-profiles = []
+graphite-tokens = []
 
 [[test]]
 name = "downsample"
@@ -41,3 +42,8 @@ lunatui-core = { version = "0.1.10", path = "../lunatui-core" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 toml = "0.8.23"
+
+[[test]]
+name = "graphite_tokens"
+path = "tests/graphite_tokens.rs"
+required-features = ["graphite-tokens", "color-profiles"]

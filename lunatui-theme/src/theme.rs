@@ -27,6 +27,9 @@ impl Theme {
     /// Built-in palette for `variant`.
     #[must_use]
     pub fn builtin(variant: Variant) -> Self {
+        #[cfg(feature = "graphite-tokens")]
+        let colors = crate::graphite::colors(variant);
+        #[cfg(not(feature = "graphite-tokens"))]
         let colors = match variant {
             Variant::Light => [
                 Color::Rgb(0xf5, 0xf5, 0xf7),
@@ -89,6 +92,10 @@ impl Theme {
     #[cfg(feature = "color-profiles")]
     #[must_use]
     pub fn palette_for(&self, profile: Profile) -> Vec<Color> {
+        #[cfg(feature = "graphite-tokens")]
+        if profile == Profile::Ansi16 {
+            return crate::graphite::ansi16(self.variant).to_vec();
+        }
         self.colors
             .iter()
             .map(|&color| profile.downsample(color))
