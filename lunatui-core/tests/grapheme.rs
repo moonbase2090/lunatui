@@ -103,7 +103,6 @@ proptest! {
     }
 }
 
-/// The pre-optimization implementation, kept as the behavioral reference.
 fn reference_cluster_width(cluster: &str) -> usize {
     let regional = |c: char| matches!(c, '\u{1F1E6}'..='\u{1F1FF}');
     let chars: Vec<char> = cluster.chars().collect();

@@ -310,7 +310,6 @@ impl Grid {
             return;
         }
         for row in area.y..end_y.min(self.height) {
-            // A wide glyph cut by an edge of `area` is restyled whole: extend by its other half.
             let mut start = area.x;
             if start > 0
                 && self

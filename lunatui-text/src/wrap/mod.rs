@@ -184,7 +184,6 @@ fn push_row_start(
 ) {
     let mut at = byte_in_line.min(line.len());
     if trim {
-        // `byte_in_line` is a grapheme start, so scanning from it matches a scan from the line start.
         let tail = line.get(byte_in_line..).unwrap_or("");
         for (byte, grapheme) in grapheme_offsets(tail) {
             if grapheme.chars().all(char::is_whitespace) {
@@ -208,10 +207,6 @@ fn grapheme_offsets(line: &str) -> impl Iterator<Item = (usize, &str)> {
     })
 }
 
-/// Grapheme starts of `line`.
-///
-/// Two adjacent ASCII bytes never share a grapheme (UAX #29 joins only CR LF, and `line` holds no
-/// newline), so only the stretches touching non-ASCII text go through the segmenter.
 fn grapheme_vec(line: &str) -> Vec<(usize, &str)> {
     let bytes = line.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());

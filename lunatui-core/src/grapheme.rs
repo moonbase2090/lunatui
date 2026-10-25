@@ -264,7 +264,6 @@ pub fn cluster_display_width(cluster: &str) -> usize {
         return 0;
     };
     let Some(second) = chars.next() else {
-        // A lone VS16 still takes the emoji-presentation floor of 2 columns.
         return if first == '\u{FE0F}' {
             2
         } else {
