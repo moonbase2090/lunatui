@@ -9,6 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_bench::ceiling::{FRAME_TARGET, FrameTimes, Verdict};
+use lunatui_bench::{AllocStats, CountingAllocator, CountingWriter, WriteStats};
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, width as display_width};
 use lunatui_runtime::{SchedulePoll, Scheduler};
 use lunatui_term::{ColorMode, Encoder};
@@ -74,6 +75,10 @@ fn main() -> io::Result<()> {
         print_snapshot(&options);
         return Ok(());
     }
+    if options.parity_report {
+        print_parity_report(&options)?;
+        return Ok(());
+    }
     let times = if !options.bench && io::stdout().is_terminal() {
         run_live(&options)?
     } else {
@@ -111,6 +116,7 @@ struct Options {
     height: u16,
     frames: u32,
     bench: bool,
+    parity_report: bool,
 }
 
 fn parse_args(args: &[String]) -> io::Result<Options> {
@@ -118,6 +124,7 @@ fn parse_args(args: &[String]) -> io::Result<Options> {
     let mut height = None;
     let mut frames = FRAMES;
     let mut bench = false;
+    let mut parity_report = false;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -134,6 +141,7 @@ fn parse_args(args: &[String]) -> io::Result<Options> {
                 frames = parse_u16(args.get(index), "--frames")?.into();
             }
             "--bench" => bench = true,
+            "--parity-report" => parity_report = true,
             flag => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -158,7 +166,149 @@ fn parse_args(args: &[String]) -> io::Result<Options> {
         height,
         frames,
         bench,
+        parity_report,
     })
+}
+
+static ALLOC: CountingAllocator = CountingAllocator::system();
+
+struct ParityRow {
+    runtime: &'static str,
+    times: FrameTimes,
+    alloc: AllocStats,
+    write: WriteStats,
+    bytes_per_frame: u64,
+}
+
+fn print_parity_report(options: &Options) -> io::Result<()> {
+    let lunatui = measure_lunatui_parity(options)?;
+    let ratatui = measure_ratatui_parity(options)?;
+    let rss_kb = max_rss_kb();
+    println!(
+        "dashboard parity {}x{}, {} scripted frames, {}",
+        options.width,
+        options.height,
+        options.frames,
+        build_profile()
+    );
+    if let Some(rss) = rss_kb {
+        println!("process max RSS (approx): {rss} KiB");
+    }
+    for row in [lunatui, ratatui] {
+        println!(
+            "{}\tframe_ms_p50={}\tframe_ms_p95={}\tframe_ms_p99={}\tframe_ms_max={}\tallocs_per_frame={:.1}\tbytes_per_frame={}\twrite_calls_per_frame={:.1}",
+            row.runtime,
+            millis(row.times.p50),
+            millis(row.times.p95),
+            millis(row.times.p99),
+            millis(row.times.max),
+            row.alloc.allocations as f64 / options.frames as f64,
+            row.bytes_per_frame,
+            row.write.writes as f64 / options.frames as f64,
+        );
+    }
+    Ok(())
+}
+
+fn measure_lunatui_parity(options: &Options) -> io::Result<ParityRow> {
+    let mut model = Model::new();
+    let mut prev = Grid::new(options.width, options.height);
+    let mut next = Grid::new(options.width, options.height);
+    let mut clusters = ClusterTable::new();
+    let mut encoder = Encoder::new();
+    let mut samples = Vec::new();
+    let mut bytes = 0_u64;
+    let (((), write), alloc) = ALLOC.measure(|| {
+        let mut output = CountingWriter::new(io::sink());
+        for tick in 0..options.frames {
+            model.advance(tick);
+            let start = Instant::now();
+            render_frame(
+                &model,
+                &mut next,
+                &mut clusters,
+                options.width,
+                options.height,
+            );
+            let payload = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
+            output.write_all(payload).expect("sink write");
+            bytes += u64::try_from(payload.len()).unwrap_or(0);
+            samples.push(start.elapsed());
+            prev = next;
+            next = Grid::new(options.width, options.height);
+        }
+        ((), output.stats())
+    });
+    let times = FrameTimes::from_samples(&samples).ok_or_else(|| io::Error::other("no samples"))?;
+    Ok(ParityRow {
+        runtime: "lunatui",
+        times,
+        alloc,
+        write,
+        bytes_per_frame: bytes / u64::from(options.frames.max(1)),
+    })
+}
+
+fn measure_ratatui_parity(options: &Options) -> io::Result<ParityRow> {
+    let area = RatatuiRect::new(0, 0, options.width, options.height);
+    let mut samples = Vec::new();
+    let mut bytes = 0_u64;
+    let mut out = CountingWriter::new(io::sink());
+    let ((), alloc) = ALLOC.measure(|| {
+        let backend = CrosstermBackend::new(&mut out);
+        let mut terminal = Terminal::with_options(
+            backend,
+            TerminalOptions {
+                viewport: Viewport::Fixed(area),
+            },
+        )
+        .expect("ratatui terminal");
+        let mut model = Model::new();
+        for tick in 0..options.frames {
+            model.advance(tick);
+            let start = Instant::now();
+            terminal
+                .draw(|frame| render_ratatui_frame(&model, frame.area(), frame.buffer_mut()))
+                .expect("ratatui draw");
+            bytes += u64::from(area.width) * u64::from(area.height) * 4;
+            samples.push(start.elapsed());
+        }
+    });
+    let write = out.stats();
+    let times =
+        FrameTimes::from_samples(&samples).ok_or_else(|| io::Error::other("no ratatui samples"))?;
+    Ok(ParityRow {
+        runtime: "ratatui_0.30.2",
+        times,
+        alloc,
+        write,
+        bytes_per_frame: bytes / u64::from(options.frames.max(1)),
+    })
+}
+
+#[cfg(unix)]
+fn max_rss_kb() -> Option<u64> {
+    use std::mem::MaybeUninit;
+
+    let mut usage = MaybeUninit::uninit();
+    // SAFETY: getrusage writes a full rusage struct on success.
+    if unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) } != 0 {
+        return None;
+    }
+    let usage = unsafe { usage.assume_init() };
+    #[cfg(target_os = "macos")]
+    {
+        Some(u64::try_from(usage.ru_maxrss).unwrap_or(0) / 1024)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Some(u64::try_from(usage.ru_maxrss).unwrap_or(0))
+    }
+}
+
+#[cfg(not(unix))]
+fn max_rss_kb() -> Option<u64> {
+    None
 }
 
 fn parse_u16(value: Option<&String>, flag: &str) -> io::Result<u16> {
@@ -455,9 +605,10 @@ fn summary(width: u16, height: u16, times: FrameTimes, profile: &str, label: &st
         Verdict::OverTarget | Verdict::OverCeiling => "over",
     };
     format!(
-        "{label}, {width}x{height}, {} frames, {profile}: p50 {}, p99 {}, max {} ({verdict} the {} target)",
+        "{label}, {width}x{height}, {} frames, {profile}: p50 {}, p95 {}, p99 {}, max {} ({verdict} the {} target)",
         times.samples,
         millis(times.p50),
+        millis(times.p95),
         millis(times.p99),
         millis(times.max),
         millis(FRAME_TARGET),
@@ -510,11 +661,13 @@ mod tests {
         let times = FrameTimes {
             samples: 240,
             p50: Duration::from_micros(500),
+            p95: Duration::from_micros(1_000),
             p99: Duration::from_micros(1_250),
             max: Duration::from_millis(2),
         };
         let text = summary(200, 60, times, "release build", "lunatui live_dashboard");
         assert!(text.contains("p50 0.500 ms"));
+        assert!(text.contains("p95 1.000 ms"));
         assert!(text.contains("p99 1.250 ms"));
         assert!(text.contains("max 2.000 ms"));
         assert!(text.contains("within the 8.000 ms target"));
@@ -537,6 +690,7 @@ mod tests {
                 height: 24,
                 frames: 3,
                 bench: false,
+                parity_report: false,
             })
         );
     }

@@ -27,6 +27,8 @@ pub struct FrameTimes {
     pub samples: usize,
     /// Median frame time (nearest rank).
     pub p50: Duration,
+    /// 95th-percentile frame time (nearest rank).
+    pub p95: Duration,
     /// 99th-percentile frame time (nearest rank), reported for context only.
     pub p99: Duration,
     /// Slowest frame. The ceiling gates on this.
@@ -42,6 +44,7 @@ impl FrameTimes {
         Some(Self {
             samples: sorted.len(),
             p50: nearest_rank(&sorted, 50)?,
+            p95: nearest_rank(&sorted, 95)?,
             p99: nearest_rank(&sorted, 99)?,
             max: *sorted.last()?,
         })
@@ -104,6 +107,7 @@ mod tests {
         FrameTimes {
             samples: 1,
             p50: max,
+            p95: max,
             p99: max,
             max,
         }
@@ -114,6 +118,7 @@ mod tests {
         let expected = FrameTimes {
             samples: 100,
             p50: Duration::from_millis(50),
+            p95: Duration::from_millis(95),
             p99: Duration::from_millis(99),
             max: Duration::from_millis(100),
         };
