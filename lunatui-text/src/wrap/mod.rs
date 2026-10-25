@@ -100,6 +100,15 @@ fn wrap_logical_line(
                 index += 1;
                 continue;
             }
+            if col > 0
+                && col + width > max
+                && trim
+                && graphemes[index..]
+                    .iter()
+                    .all(|(_, g)| g.chars().all(char::is_whitespace))
+            {
+                break;
+            }
             if col > 0 && col + width > max {
                 push_row_start(line, byte, trim, base_offset, row_starts);
                 col = 0;

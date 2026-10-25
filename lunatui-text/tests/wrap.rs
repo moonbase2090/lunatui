@@ -56,3 +56,21 @@ fn limited_rows_match_full_wrap_prefix() {
         }
     }
 }
+
+#[test]
+fn trailing_space_past_the_margin_does_not_start_an_empty_row() {
+    let text = "abcd efgh \nij";
+    let index = wrap_rows(text, 9, Wrap { trim: true });
+    let rows: Vec<_> = (0..index.len())
+        .map(|row| index.row_text(text, row).unwrap_or(""))
+        .collect();
+    assert_eq!(rows, ["abcd efgh \n", "ij"]);
+}
+
+#[test]
+fn trailing_space_inside_the_margin_stays_on_its_row() {
+    let text = "abc \nij";
+    let index = wrap_rows(text, 9, Wrap { trim: true });
+    assert_eq!(index.row_text(text, 0), Some("abc \n"));
+    assert_eq!(index.len(), 2);
+}
