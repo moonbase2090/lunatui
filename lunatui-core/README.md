@@ -44,7 +44,8 @@ their owning layers.
 ## Subcell glyphs
 
 The off-default `subcell` feature maps a row-major 2×4 coverage mask to one
-character. Probe font support in the application at startup, then retain the
+character. Bit 0 is top-left, bit 1 is top-right, then successive rows continue
+left to right through bit 7 at bottom-right. Probe font support in the application at startup, then retain the
 selected `GlyphSet`. The preference order is octants, braille, quarter blocks,
 and ASCII. Octants and braille preserve all eight positions. Quarter blocks
 retain completely covered quadrants; ASCII uses `#` for any coverage.

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Print coverage masks for each startup glyph tier and smooth bar heads.
+#![doc = include_str!("README.md")]
 
 use lunatui_core::subcell::{GlyphSet, horizontal_eighths, vertical_eighths};
 use std::io::{self, Write};

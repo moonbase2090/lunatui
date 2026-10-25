@@ -1,12 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Allocation-free glyph lookup for a canonical 2×4 cell mask.
-//!
-//! Bit 0 is the top-left pixel, bit 1 the top-right, then subsequent rows
-//! continue left to right through bit 7 at the bottom-right. The application
-//! probes font support at startup and retains the selected [`GlyphSet`].
-
 #[path = "subcell_octants.rs"]
 mod octants;
 
@@ -67,7 +61,6 @@ impl GlyphSet {
                     | (mask & 0x20)
                     | (mask & 0x40)
                     | (mask & 0x80);
-                // Every 8-bit dot mask is a valid scalar in U+2800..U+28FF.
                 char::from_u32(0x2800 + u32::from(dots)).unwrap_or(' ')
             }
             Self::Blocks => {

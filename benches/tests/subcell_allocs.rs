@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Allocation checks for actual subcell glyph lookups.
+#![doc = include_str!("../README.md")]
 
 use lunatui_bench::CountingAllocator;
 use lunatui_core::subcell::GlyphSet;
