@@ -211,12 +211,13 @@ fn run_live(options: Options) -> io::Result<FrameTimes> {
 fn live_summary(options: Options, times: FrameTimes) -> String {
     let mode = if options.demo { "demo" } else { "live" };
     format!(
-        "lunatui_dashboard {mode}, {}x{}, {} frames, {}: p50 {}, p99 {}, max {} ({})",
+        "lunatui_dashboard {mode}, {}x{}, {} frames, {}: p50 {}, p95 {}, p99 {}, max {} ({})",
         options.width,
         options.height,
         times.samples,
         build_profile(),
         millis(times.p50),
+        millis(times.p95),
         millis(times.p99),
         millis(times.max),
         target_phrase(times),
@@ -226,12 +227,13 @@ fn live_summary(options: Options, times: FrameTimes) -> String {
 fn bench_summary(options: Options, times: FrameTimes, bytes: usize) -> String {
     let per_frame = bytes.checked_div(times.samples).unwrap_or(0);
     format!(
-        "lunatui_dashboard bench, {}x{}, {} frames, {}: p50 {}, p99 {}, max {}, bytes_total={}, bytes_per_frame≈{} ({})",
+        "lunatui_dashboard bench, {}x{}, {} frames, {}: p50 {}, p95 {}, p99 {}, max {}, bytes_total={}, bytes_per_frame≈{} ({})",
         options.width,
         options.height,
         times.samples,
         build_profile(),
         millis(times.p50),
+        millis(times.p95),
         millis(times.p99),
         millis(times.max),
         bytes,
