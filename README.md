@@ -4,6 +4,21 @@ lunatui is a hyperspeed Rust TUI library being built from scratch to replace rat
 
 **Status: v0.1.4 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
 
+## Lunatui vs ratatui
+
+![Lunatui v0.1.4 and ratatui 0.30 rendering the same dashboard side by side](docs/media/lunatui-vs-ratatui.gif)
+
+Same dashboard scene, 1500 frames at 80×24, recorded from the v0.1.4 release (GIF at 2× speed; [full-speed MP4](docs/media/lunatui-vs-ratatui.mp4)).
+
+Fair dashboard benchmark (`scripts/run-dashboard-fair.sh`, 240 frames, median of 5 runs):
+
+| Size | Median frame time (Lunatui / ratatui) | Allocs per frame (Lunatui / ratatui) | Bytes per frame (Lunatui / ratatui) |
+|---|---|---|---|
+| 80×24 | **69.6 µs** / 89.2 µs | **≈81** / ≈513 | 603 / **493** |
+| 200×60 | **266.0 µs** / 296.4 µs | **≈163** / ≈881 | 2868 / **2636** |
+
+Methodology: separate release binaries (`dashboard_fair_lunatui`, `dashboard_fair_ratatui`) render the same scene from identical model ticks on the same machine. Lunatui still writes more bytes per frame than ratatui in this scene.
+
 ## Quick start
 
 ```sh
