@@ -8,22 +8,25 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-25
+
 ### Changed
 
-- Terminal encoder emits SGR as a delta: it no longer resets before every color change or re-sends both colors, and only resets when an attribute turns off. The rendered result is the same; a dashboard frame is 12-20% fewer bytes.
+- Terminal encoder emits SGR as a delta: it no longer resets before every color change or re-sends both colors, and only resets when an attribute turns off. The rendered result is the same; a dashboard frame is 12-20% fewer bytes (#100).
 
 ### Added
 
-- Fair Lunatui vs stock Ratatui dashboard comparison: separate release binaries with the same model and scripted ticks, a report runner (frame time, CPU, RSS, bytes, writes and allocations per frame), and a test that keeps the two scenes identical cell for cell. Run it with `scripts/run-dashboard-fair.sh`.
-- **Native protocol discovery:** `lunatui-prismattyc` parses capability 0.4 `native.grid.v1` advertisements behind an off-by-default `NativePolicy::DirectLocal` opt-in. Discovery never activates native ownership; ANSI remains the renderer, with a documented fallback repaint prefix.
+- **Keymap registry:** a keymap registry with shortcut overlay and command palette renderers behind the `keymap` feature, with an example and PTY tests (#90).
+- Fair Lunatui vs stock Ratatui dashboard comparison: separate release binaries with the same model and scripted ticks, a report runner (frame time, CPU, RSS, bytes, writes and allocations per frame), and a test that keeps the two scenes identical cell for cell. Run it with `scripts/run-dashboard-fair.sh` (#101).
+- **Native protocol discovery:** `lunatui-prismattyc` parses capability 0.4 `native.grid.v1` advertisements behind an off-by-default `NativePolicy::DirectLocal` opt-in. Discovery never activates native ownership; ANSI remains the renderer, with a documented fallback repaint prefix (#94, #96).
 
 ### Fixed
 
-- Wrapping with `trim` no longer starts an empty row when a line's trailing whitespace overflows the margin, which shifted every following row by one and showed up as stray fragments in wrapped logs.
-- Paint path performance: grapheme width no longer allocates per character, wrapping scans only the rows a `Paragraph` shows and no longer rescans lines per row, ASCII skips Unicode segmentation, and `Grid::set_style` no longer builds a per-row set. Output is unchanged; the dashboard frame is about 15x faster at 80x24.
-- Release notes exclude tag signature blocks, fall back to the selected tagged changelog when the annotation body is empty, and fail before build if no prose is available.
-- Release checkout preserves signed annotated tag objects for signature-block checks and release metadata.
-- Release publication can recover an existing signed tag through a manual main-branch workflow, with verified source pinning and existing-release protection.
+- Wrapping with `trim` no longer starts an empty row when a line's trailing whitespace overflows the margin, which shifted every following row by one and showed up as stray fragments in wrapped logs (#101).
+- Paint path performance: grapheme width no longer allocates per character, wrapping scans only the rows a `Paragraph` shows and no longer rescans lines per row, ASCII skips Unicode segmentation, and `Grid::set_style` no longer builds a per-row set. Output is unchanged; the dashboard frame is about 15x faster at 80x24 (#99).
+- Release notes exclude tag signature blocks, fall back to the selected tagged changelog when the annotation body is empty, and fail before build if no prose is available (#95).
+- Release checkout preserves signed annotated tag objects for signature-block checks and release metadata (#92).
+- Release publication can recover an existing signed tag through a manual main-branch workflow, with verified source pinning and existing-release protection (#93).
 
 ## [0.1.3] - 2026-10-23
 
