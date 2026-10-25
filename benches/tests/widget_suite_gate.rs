@@ -83,7 +83,7 @@ impl Write for Capture {
 }
 
 #[test]
-fn colors_are_written_in_this_process() {
+fn colors_are_written_in_this_process() -> Result<(), String> {
     pin_color_output();
     let capture = Capture::default();
     let area = Rect::new(0, 0, 8, 3);
@@ -93,24 +93,21 @@ fn colors_are_written_in_this_process() {
             viewport: Viewport::Fixed(area),
         },
     )
-    .map_err(|error| error.to_string());
-    let Ok(terminal) = terminal.as_mut() else {
-        return;
-    };
+    .map_err(|error| format!("terminal setup failed: {error}"))?;
     let style = Style::new().fg(Color::Rgb(1, 2, 3)).bg(Color::Rgb(4, 5, 6));
-    let drawn = terminal.draw(|frame| {
-        frame.render_widget(Block::bordered().border_style(style).style(style), area);
-    });
-    assert!(drawn.is_ok());
+    terminal
+        .draw(|frame| {
+            frame.render_widget(Block::bordered().border_style(style).style(style), area);
+        })
+        .map_err(|error| format!("draw failed: {error}"))?;
     let text = String::from_utf8_lossy(&capture.0.borrow()).into_owned();
-    assert!(
-        text.contains("38;2;1;2;3"),
-        "no truecolor foreground in {text:?}"
-    );
-    assert!(
-        text.contains("48;2;4;5;6"),
-        "no truecolor background in {text:?}"
-    );
+    if !text.contains("38;2;1;2;3") {
+        return Err(format!("no truecolor foreground in {text:?}"));
+    }
+    if !text.contains("48;2;4;5;6") {
+        return Err(format!("no truecolor background in {text:?}"));
+    }
+    Ok(())
 }
 
 fn run_child(no_color: bool) -> bool {
