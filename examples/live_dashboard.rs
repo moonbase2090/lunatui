@@ -202,9 +202,11 @@ fn print_parity_report(options: &Options) -> io::Result<()> {
             millis(row.times.p95),
             millis(row.times.p99),
             millis(row.times.max),
-            row.alloc.allocations as f64 / options.frames as f64,
+            f64::from(u32::try_from(row.alloc.allocations).unwrap_or(u32::MAX))
+                / f64::from(options.frames),
             row.bytes_per_frame,
-            row.write.writes as f64 / options.frames as f64,
+            f64::from(u32::try_from(row.write.writes).unwrap_or(u32::MAX))
+                / f64::from(options.frames),
         );
     }
     Ok(())
@@ -217,8 +219,7 @@ fn measure_lunatui_parity(options: &Options) -> io::Result<ParityRow> {
     let mut clusters = ClusterTable::new();
     let mut encoder = Encoder::new();
     let mut samples = Vec::new();
-    let mut bytes = 0_u64;
-    let (((), write), alloc) = ALLOC.measure(|| {
+    let (inner, alloc) = ALLOC.measure(|| -> io::Result<((), WriteStats)> {
         let mut output = CountingWriter::new(io::sink());
         for tick in 0..options.frames {
             model.advance(tick);
@@ -231,49 +232,47 @@ fn measure_lunatui_parity(options: &Options) -> io::Result<ParityRow> {
                 options.height,
             );
             let payload = encoder.encode_diff(&prev, &next, &clusters, ColorMode::TrueColor);
-            output.write_all(payload).expect("sink write");
-            bytes += u64::try_from(payload.len()).unwrap_or(0);
+            output.write_all(payload)?;
             samples.push(start.elapsed());
             prev = next;
             next = Grid::new(options.width, options.height);
         }
-        ((), output.stats())
+        Ok(((), output.stats()))
     });
+    let ((), write) = inner?;
     let times = FrameTimes::from_samples(&samples).ok_or_else(|| io::Error::other("no samples"))?;
     Ok(ParityRow {
         runtime: "lunatui",
         times,
         alloc,
         write,
-        bytes_per_frame: bytes / u64::from(options.frames.max(1)),
+        bytes_per_frame: u64::try_from(write.bytes).unwrap_or(0) / u64::from(options.frames.max(1)),
     })
 }
 
 fn measure_ratatui_parity(options: &Options) -> io::Result<ParityRow> {
     let area = RatatuiRect::new(0, 0, options.width, options.height);
     let mut samples = Vec::new();
-    let mut bytes = 0_u64;
     let mut out = CountingWriter::new(io::sink());
-    let ((), alloc) = ALLOC.measure(|| {
+    let (inner, alloc) = ALLOC.measure(|| -> io::Result<()> {
         let backend = CrosstermBackend::new(&mut out);
         let mut terminal = Terminal::with_options(
             backend,
             TerminalOptions {
                 viewport: Viewport::Fixed(area),
             },
-        )
-        .expect("ratatui terminal");
+        )?;
         let mut model = Model::new();
         for tick in 0..options.frames {
             model.advance(tick);
             let start = Instant::now();
             terminal
-                .draw(|frame| render_ratatui_frame(&model, frame.area(), frame.buffer_mut()))
-                .expect("ratatui draw");
-            bytes += u64::from(area.width) * u64::from(area.height) * 4;
+                .draw(|frame| render_ratatui_frame(&model, frame.area(), frame.buffer_mut()))?;
             samples.push(start.elapsed());
         }
+        Ok(())
     });
+    inner?;
     let write = out.stats();
     let times =
         FrameTimes::from_samples(&samples).ok_or_else(|| io::Error::other("no ratatui samples"))?;
@@ -282,7 +281,7 @@ fn measure_ratatui_parity(options: &Options) -> io::Result<ParityRow> {
         times,
         alloc,
         write,
-        bytes_per_frame: bytes / u64::from(options.frames.max(1)),
+        bytes_per_frame: u64::try_from(write.bytes).unwrap_or(0) / u64::from(options.frames.max(1)),
     })
 }
 
@@ -291,11 +290,15 @@ fn max_rss_kb() -> Option<u64> {
     use std::mem::MaybeUninit;
 
     let mut usage = MaybeUninit::uninit();
-    // SAFETY: getrusage writes a full rusage struct on success.
-    if unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) } != 0 {
-        return None;
-    }
-    let usage = unsafe { usage.assume_init() };
+    let usage = {
+        // SAFETY: `getrusage` fully initializes `usage` when it returns zero.
+        unsafe {
+            if libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) != 0 {
+                return None;
+            }
+            usage.assume_init()
+        }
+    };
     #[cfg(target_os = "macos")]
     {
         Some(u64::try_from(usage.ru_maxrss).unwrap_or(0) / 1024)
