@@ -7,7 +7,10 @@ use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
 use lunatui_bench::CountingAllocator;
-use lunatui_bench::widget_suite::{CASES, Case, LunatuiRun, Parity, RatatuiRun, SIZES};
+use lunatui_bench::widget_suite::{
+    CASES, Case, LunatuiRun, Parity, RatatuiRun, SIZES, gate_failures, parse_max_ratio,
+    pin_color_output,
+};
 
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
@@ -16,7 +19,6 @@ const WARMUP: u32 = 200;
 const SAMPLES: usize = 41;
 const BATCH: u32 = 50;
 const ALLOC_FRAMES: u32 = 100;
-const DEFAULT_MAX_RATIO: f64 = 1.05;
 
 struct Side {
     render: Duration,
@@ -113,25 +115,26 @@ fn micros(duration: Duration) -> f64 {
     duration.as_secs_f64() * 1_000_000.0
 }
 
-fn max_ratio(args: &[String]) -> f64 {
-    args.windows(2)
-        .find(|pair| pair[0] == "--max-ratio")
-        .and_then(|pair| pair[1].parse().ok())
-        .unwrap_or(DEFAULT_MAX_RATIO)
-}
-
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let gate = args.iter().any(|arg| arg == "--gate");
-    let limit = max_ratio(&args);
+    let gate_all = args.iter().any(|arg| arg == "--gate-all");
+    let limit = match parse_max_ratio(&args) {
+        Ok(limit) => limit,
+        Err(message) => {
+            eprintln!("widget_suite: {message}");
+            return ExitCode::FAILURE;
+        }
+    };
+    pin_color_output();
     println!(
         "widget_suite: median of {SAMPLES} samples of {BATCH} iterations, release, per case and size"
     );
     println!(
-        "{:<10} {:>7} {:>6} {:>10} {:>10} {:>6} {:>10} {:>10} {:>6} {:>8} {:>8} {:>6} {:>6}",
+        "{:<10} {:>7} {:>6} {:>10} {:>10} {:>6} {:>10} {:>10} {:>6} {:>8} {:>8} {:>6} {:>6} {:>7} {:>7}",
         "case",
         "size",
-        "parity",
+        "bar",
         "render lu",
         "render rt",
         "ratio",
@@ -141,7 +144,9 @@ fn main() -> ExitCode {
         "alloc lu",
         "alloc rt",
         "wr lu",
-        "wr rt"
+        "wr rt",
+        "B lu",
+        "B rt"
     );
     let mut failures = Vec::new();
     for case in CASES {
@@ -157,9 +162,9 @@ fn main() -> ExitCode {
             let render_ratio = micros(lunatui.render) / micros(ratatui.render);
             let frame_ratio = micros(lunatui.frame) / micros(ratatui.frame);
             let exact = case.parity == Parity::Exact;
-            let gated = exact && case.gated;
+            let gated = exact && (case.gated || gate_all);
             println!(
-                "{:<10} {:>7} {:>6} {:>8.1}us {:>8.1}us {:>6.2} {:>8.1}us {:>8.1}us {:>6.2} {:>8.1} {:>8.1} {:>6} {:>6}",
+                "{:<10} {:>7} {:>6} {:>8.1}us {:>8.1}us {:>6.2} {:>8.1}us {:>8.1}us {:>6.2} {:>8.1} {:>8.1} {:>6} {:>6} {:>7} {:>7}",
                 case.name,
                 format!("{width}x{height}"),
                 if !exact {
@@ -179,21 +184,17 @@ fn main() -> ExitCode {
                 ratatui.allocs_per_frame,
                 lunatui.writes_per_frame,
                 ratatui.writes_per_frame,
+                lunatui.bytes_per_frame,
+                ratatui.bytes_per_frame,
             );
-            let _ = (lunatui.bytes_per_frame, ratatui.bytes_per_frame);
             if gated {
-                if frame_ratio > limit {
-                    failures.push(format!(
-                        "{} {width}x{height} frame ratio {frame_ratio:.2} > {limit:.2}",
-                        case.name
-                    ));
-                }
-                if lunatui.allocs_per_frame > ratatui.allocs_per_frame {
-                    failures.push(format!(
-                        "{} {width}x{height} allocations {:.1} > {:.1}",
-                        case.name, lunatui.allocs_per_frame, ratatui.allocs_per_frame
-                    ));
-                }
+                failures.extend(gate_failures(
+                    &format!("{} {width}x{height}", case.name),
+                    frame_ratio,
+                    limit,
+                    lunatui.allocs_per_frame,
+                    ratatui.allocs_per_frame,
+                ));
             }
         }
     }

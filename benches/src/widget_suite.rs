@@ -6,6 +6,7 @@ use std::io::{self, LineWriter, Write};
 use std::rc::Rc;
 use std::sync::OnceLock;
 
+use crate::scenes::ratatui::{ColorOutput, set_color_output};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_layout::Constraint;
 use lunatui_term::{ColorMode, Encoder};
@@ -577,4 +578,61 @@ pub fn render_both(
     buffer.set_style(rat_area, rat_base());
     (case.ratatui)(&mut buffer, rat_area, tick);
     (grid, clusters, buffer)
+}
+
+/// Frame-ratio limit the gate uses when `--max-ratio` is not given.
+pub const DEFAULT_MAX_RATIO: f64 = 1.05;
+
+/// Makes ratatui's crossterm backend write colors whatever `NO_COLOR` says, so both sides encode
+/// truecolor and the byte counts do not depend on the environment.
+pub fn pin_color_output() {
+    set_color_output(ColorOutput::Enabled);
+}
+
+/// Reads `--max-ratio N` from `args`; absent means [`DEFAULT_MAX_RATIO`].
+///
+/// # Errors
+///
+/// Returns a message when the flag has no value or the value is not a finite number above zero.
+pub fn parse_max_ratio(args: &[String]) -> Result<f64, String> {
+    let Some(position) = args.iter().position(|arg| arg == "--max-ratio") else {
+        return Ok(DEFAULT_MAX_RATIO);
+    };
+    let value = args
+        .get(position + 1)
+        .ok_or_else(|| "--max-ratio needs a value".to_owned())?;
+    match value.parse::<f64>() {
+        Ok(ratio) if ratio.is_finite() && ratio > 0.0 => Ok(ratio),
+        _ => Err(format!(
+            "--max-ratio must be a finite number above zero, got {value}"
+        )),
+    }
+}
+
+/// Reasons a gated case is over the bar; empty when it passes. A ratio that is not a number
+/// counts as over the bar.
+#[must_use]
+pub fn gate_failures(
+    label: &str,
+    frame_ratio: f64,
+    limit: f64,
+    lunatui_allocs: f64,
+    ratatui_allocs: f64,
+) -> Vec<String> {
+    let mut failures = Vec::new();
+    if frame_ratio
+        .partial_cmp(&limit)
+        .is_none_or(|order| order.is_gt())
+    {
+        failures.push(format!("{label} frame ratio {frame_ratio:.2} > {limit:.2}"));
+    }
+    if lunatui_allocs
+        .partial_cmp(&ratatui_allocs)
+        .is_none_or(|order| order.is_gt())
+    {
+        failures.push(format!(
+            "{label} allocations {lunatui_allocs:.1} > {ratatui_allocs:.1}"
+        ));
+    }
+    failures
 }

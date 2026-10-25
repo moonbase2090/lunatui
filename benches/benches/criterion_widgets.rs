@@ -4,9 +4,10 @@
 #![doc = include_str!("../README.md")]
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use lunatui_bench::widget_suite::{CASES, LunatuiRun, RatatuiRun, SIZES};
+use lunatui_bench::widget_suite::{CASES, LunatuiRun, RatatuiRun, SIZES, pin_color_output};
 
 fn widgets(c: &mut Criterion) {
+    pin_color_output();
     for case in CASES {
         for (width, height) in SIZES {
             let mut group = c.benchmark_group(format!("widget_{}_{width}x{height}", case.name));

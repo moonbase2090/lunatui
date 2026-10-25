@@ -25,5 +25,8 @@ The bench targets live in `benches/` and the tests in `tests/`. Run everything w
 - **Same machine, release builds.** Both sides run in one process, one after the other, and each is the median of 41 samples of 50 iterations after a warm-up. Allocations per frame come from `CountingAllocator` over 100 frames; bytes and `write()` calls per frame come from the sink.
 - **The gate.** A gated case fails `cargo xtask bench` when its frame ratio (lunatui over ratatui) is above 1.05 or it allocates more per frame than ratatui. The render-only scope is reported, not gated. Widgets that predate the gate are *tracked*: reported, not failing. A new widget is added with `gated: true`.
 
+- **Color policy.** Both entrypoints pin color output on (`pin_color_output`), so ratatui's crossterm backend writes colors whatever `NO_COLOR` says and both sides encode truecolor. Byte counts do not depend on the environment.
+- **Arguments.** `--max-ratio N` must be a finite number above zero; anything else (including `NaN`) is an error, not a disabled gate. `--gate-all` also gates the tracked cases, to see how far they are from the bar.
+
 Run it with `cargo bench -p lunatui-bench --bench widget_suite` (add `-- --gate` to enforce, `--max-ratio N` to change the limit) and, for statistics per widget, `cargo bench -p lunatui-bench --bench criterion_widgets`.
 
