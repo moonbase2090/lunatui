@@ -3,10 +3,19 @@
 
 #![doc = include_str!("../README.md")]
 
+use std::cell::RefCell;
+use std::io::{self, Write};
+use std::process::Command;
+use std::rc::Rc;
+
 use lunatui_bench::widget_suite::{
     DEFAULT_MAX_RATIO, gate_failures, parse_max_ratio, pin_color_output,
 };
-use ratatui::crossterm::style::Colored;
+use ratatui::backend::CrosstermBackend;
+use ratatui::layout::Rect;
+use ratatui::style::{Color, Style};
+use ratatui::widgets::Block;
+use ratatui::{Terminal, TerminalOptions, Viewport};
 
 fn args(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_owned()).collect()
@@ -59,9 +68,75 @@ fn a_case_at_the_limit_with_equal_allocations_passes() {
     );
 }
 
+#[derive(Clone, Default)]
+struct Capture(Rc<RefCell<Vec<u8>>>);
+
+impl Write for Capture {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.borrow_mut().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 #[test]
-fn pinning_color_output_overrides_no_color() {
-    Colored::set_ansi_color_disabled(true);
+fn colors_are_written_in_this_process() {
     pin_color_output();
-    assert!(!Colored::ansi_color_disabled());
+    let capture = Capture::default();
+    let area = Rect::new(0, 0, 8, 3);
+    let mut terminal = Terminal::with_options(
+        CrosstermBackend::new(capture.clone()),
+        TerminalOptions {
+            viewport: Viewport::Fixed(area),
+        },
+    )
+    .map_err(|error| error.to_string());
+    let Ok(terminal) = terminal.as_mut() else {
+        return;
+    };
+    let style = Style::new().fg(Color::Rgb(1, 2, 3)).bg(Color::Rgb(4, 5, 6));
+    let drawn = terminal.draw(|frame| {
+        frame.render_widget(Block::bordered().border_style(style).style(style), area);
+    });
+    assert!(drawn.is_ok());
+    let text = String::from_utf8_lossy(&capture.0.borrow()).into_owned();
+    assert!(
+        text.contains("38;2;1;2;3"),
+        "no truecolor foreground in {text:?}"
+    );
+    assert!(
+        text.contains("48;2;4;5;6"),
+        "no truecolor background in {text:?}"
+    );
+}
+
+fn run_child(no_color: bool) -> bool {
+    let Ok(exe) = std::env::current_exe() else {
+        return false;
+    };
+    let mut command = Command::new(exe);
+    command.args([
+        "--exact",
+        "colors_are_written_in_this_process",
+        "--nocapture",
+    ]);
+    if no_color {
+        command.env("NO_COLOR", "1");
+    } else {
+        command.env_remove("NO_COLOR");
+    }
+    let Ok(output) = command.output() else {
+        return false;
+    };
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    output.status.success() && stdout.contains("1 passed")
+}
+
+#[test]
+fn colors_are_written_with_and_without_no_color() {
+    assert!(run_child(false), "child without NO_COLOR failed");
+    assert!(run_child(true), "child with NO_COLOR=1 failed");
 }
