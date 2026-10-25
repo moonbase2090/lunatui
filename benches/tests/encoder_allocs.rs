@@ -29,30 +29,123 @@ fn paint(grid: &mut Grid, clusters: &mut ClusterTable, phase: u16) {
     grid.put_str(1, 11, base.fg(Color::Default), "│", clusters);
 }
 
+const TRAILER: &[u8] = b"\x1b[m\x1b[m\x1b[m\x1b[0m";
+
+fn screen_of(grid: &Grid, clusters: &ClusterTable) -> Vec<Vec<char>> {
+    (0..grid.height())
+        .map(|row| grid.row_display(row, clusters).chars().collect())
+        .collect()
+}
+
+fn replay(output: &[u8], screen: &mut [Vec<char>]) -> Result<(), String> {
+    let text = std::str::from_utf8(output).map_err(|error| error.to_string())?;
+    let (mut row, mut col) = (0_usize, 0_usize);
+    let mut chars = text.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch != '\u{1b}' {
+            let cell = screen
+                .get_mut(row)
+                .and_then(|line| line.get_mut(col))
+                .ok_or_else(|| format!("write outside the screen at {row},{col}"))?;
+            *cell = ch;
+            col += 1;
+            continue;
+        }
+        if chars.next() != Some('[') {
+            return Err("escape without CSI".to_owned());
+        }
+        let mut params = String::new();
+        let mut last = ' ';
+        for next in chars.by_ref() {
+            if next.is_ascii_alphabetic() {
+                last = next;
+                break;
+            }
+            params.push(next);
+        }
+        if last == 'H' {
+            let mut parts = params
+                .split(';')
+                .map(|part| part.parse::<usize>().unwrap_or(1));
+            row = parts.next().unwrap_or(1).saturating_sub(1);
+            col = parts.next().unwrap_or(1).saturating_sub(1);
+        } else if last != 'm' {
+            return Err(format!("unexpected sequence {params}{last}"));
+        }
+    }
+    Ok(())
+}
+
+fn encode_checked(
+    encoder: &mut Encoder,
+    previous: &Grid,
+    next: &Grid,
+    clusters: &ClusterTable,
+    expect_changes: bool,
+) -> Result<(), String> {
+    let output = encoder
+        .encode_diff(previous, next, clusters, ColorMode::TrueColor)
+        .to_vec();
+    if !output.ends_with(TRAILER) {
+        return Err("output lacks the reset trailer".to_owned());
+    }
+    if expect_changes && output.len() <= TRAILER.len() {
+        return Err("a changed frame produced only the trailer".to_owned());
+    }
+    if !expect_changes && output.len() != TRAILER.len() {
+        return Err("an unchanged frame produced more than the trailer".to_owned());
+    }
+    let mut screen = screen_of(previous, clusters);
+    replay(&output, &mut screen)?;
+    if screen != screen_of(next, clusters) {
+        return Err("replaying the output does not reproduce the frame".to_owned());
+    }
+    Ok(())
+}
+
+fn measured_allocations(
+    encoder: &mut Encoder,
+    previous: &Grid,
+    next: &Grid,
+    clusters: &ClusterTable,
+) -> usize {
+    let (_, stats) = ALLOC.measure(|| {
+        encoder
+            .encode_diff(previous, next, clusters, ColorMode::TrueColor)
+            .len()
+    });
+    stats.allocations
+}
+
 #[test]
-fn steady_state_encoding_allocates_nothing() {
+fn steady_state_encoding_allocates_nothing_and_still_draws() -> Result<(), String> {
     let mut clusters = ClusterTable::new();
     let mut previous = Grid::new(60, 12);
     let mut next = Grid::new(60, 12);
     let mut encoder = Encoder::new();
     for phase in 0..40 {
         paint(&mut next, &mut clusters, phase);
-        let _ = encoder.encode_diff(&previous, &next, &clusters, ColorMode::TrueColor);
+        encode_checked(&mut encoder, &previous, &next, &clusters, true)?;
         std::mem::swap(&mut previous, &mut next);
     }
     let mut allocations = 0;
-    let mut bytes = 0;
     for phase in 40..80 {
         paint(&mut next, &mut clusters, phase);
-        let (len, stats) = ALLOC.measure(|| {
-            encoder
-                .encode_diff(&previous, &next, &clusters, ColorMode::TrueColor)
-                .len()
-        });
-        allocations += stats.allocations;
-        bytes += len;
+        allocations += measured_allocations(&mut encoder, &previous, &next, &clusters);
+        encode_checked(&mut encoder, &previous, &next, &clusters, true)?;
         std::mem::swap(&mut previous, &mut next);
     }
-    assert!(bytes > 0, "the frames produced no output");
-    assert_eq!(allocations, 0, "encode_diff allocated in steady state");
+    for _ in 0..5 {
+        paint(&mut next, &mut clusters, 79);
+        allocations += measured_allocations(&mut encoder, &previous, &next, &clusters);
+        encode_checked(&mut encoder, &previous, &next, &clusters, false)?;
+        std::mem::swap(&mut previous, &mut next);
+    }
+    if allocations == 0 {
+        Ok(())
+    } else {
+        Err(format!(
+            "encode_diff allocated {allocations} times in steady state"
+        ))
+    }
 }
