@@ -164,3 +164,15 @@ fn cluster_width_matches_reference_for_every_char_and_special_combinations() {
         }
     }
 }
+
+#[test]
+fn cluster_width_literal_cases() {
+    assert_eq!(cluster_display_width(""), 0);
+    assert_eq!(cluster_display_width("a"), 1);
+    assert_eq!(cluster_display_width(" "), 1);
+    assert_eq!(cluster_display_width("日"), 2);
+    assert_eq!(cluster_display_width("\u{FE0F}"), 2);
+    assert_eq!(cluster_display_width("e\u{301}"), 1);
+    assert_eq!(cluster_display_width("👩\u{200D}💻"), 2);
+    assert_eq!(cluster_display_width("🇺🇸"), 2);
+}
