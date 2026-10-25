@@ -33,13 +33,17 @@ See the [review policy](REVIEW_POLICY.md) for PR classification, proof and merge
 
 ## Performance vs ratatui (preview)
 
-Ratatui numbers are the measured **v0.30.2** baselines in [PRD §1.3](docs/PRD.md). Lunatui numbers are from this repo’s bench harness (release, October 2026). Full context and reproduction commands: [docs/performance.md](docs/performance.md).
+Same machine, same dashboard scene, same scripted frames, release builds, each side in its own process (median of five runs; Apple M5 Max). A test keeps the two scenes identical cell for cell. Full method, limits and reproduction: [docs/performance.md](docs/performance.md).
 
-| Metric | ratatui v0.30.2 | lunatui v0.1.2 |
+| Dashboard frame | ratatui 0.30.2 | lunatui |
 |---|---|---|
+| 80×24, median / p95 | 84 / 101 µs | **67 / 76 µs** |
+| 200×60, median / p95 | 291 / 377 µs | **251 / 303 µs** |
+| 200×60 bytes written | 3199 | **2868** |
+| 200×60 `write()` calls | 3 | **1** |
+| 200×60 allocations | 881 | **163** |
 | Cell size | 48 B | **16 B** |
-| Diff, unchanged 200×60 | 122 µs | **~4.6 µs** (packed prototype) |
-| `write()` calls, ~68 KiB frame | 67 | **1** |
-| Dashboard render 200×60 (CPU) | ~0.48 ms E2E baseline | **~215 µs** render-only on dev hardware |
+
+Frames are timed headless into a counting sink, so terminal latency is not measured, and the 200×60 lead is modest.
 
 Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI and manual sign-off: [docs/ci.md](docs/ci.md). Examples: [examples/README.md](examples/README.md).

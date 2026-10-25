@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Changed
+
+- README and `docs/performance.md` compare lunatui and ratatui on the same machine with the same dashboard scene and scope (frame time, bytes, writes, allocations, RSS), replacing figures measured on different machines and over different scopes.
+
 ## [0.1.4] - 2026-10-25
 
 ### Changed
