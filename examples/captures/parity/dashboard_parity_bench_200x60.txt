@@ -1,16 +1,16 @@
 dashboard_parity_bench 200x60 frames=240 runs=5 (release)
-scope: render + diff/encode + write-to-memory sink; identical Model tick/scroll schedule
-run 1: lunatui median=469.5 µs p95=504.5 µs wall_ms=114.1 rss_kib=4240 bytes/frame≈1891 allocs/frame≈9537.3
-run 1: ratatui median=289.5 µs p95=352.9 µs wall_ms=71.9 rss_kib=5440 bytes/frame≈2636 allocs/frame≈880.9
-run 2: lunatui median=469.5 µs p95=510.7 µs wall_ms=113.8 rss_kib=5552 bytes/frame≈1891 allocs/frame≈9537.3
-run 2: ratatui median=289.1 µs p95=345.0 µs wall_ms=71.2 rss_kib=5568 bytes/frame≈2636 allocs/frame≈874.5
-run 3: lunatui median=463.6 µs p95=496.5 µs wall_ms=112.3 rss_kib=5584 bytes/frame≈1891 allocs/frame≈9537.3
-run 3: ratatui median=285.0 µs p95=339.5 µs wall_ms=69.9 rss_kib=5584 bytes/frame≈2636 allocs/frame≈874.5
-run 4: lunatui median=463.0 µs p95=500.0 µs wall_ms=112.0 rss_kib=5616 bytes/frame≈1891 allocs/frame≈9537.3
-run 4: ratatui median=286.8 µs p95=339.8 µs wall_ms=69.6 rss_kib=5632 bytes/frame≈2636 allocs/frame≈874.5
-run 5: lunatui median=461.3 µs p95=485.1 µs wall_ms=111.1 rss_kib=5680 bytes/frame≈1891 allocs/frame≈9537.3
-run 5: ratatui median=279.9 µs p95=331.2 µs wall_ms=68.4 rss_kib=5680 bytes/frame≈2636 allocs/frame≈874.5
+scope: lunatui scenes::lunatui::dashboard::render + encode + sink vs ratatui dashboard::render + Crossterm sink; RSS measured in separate child processes
+run 1: lunatui median=1635.6 µs p95=1834.9 µs wall_ms=387.0 rss_kib=4784 bytes/frame≈3363 allocs/frame≈27872.2
+run 1: ratatui median=392.1 µs p95=492.5 µs wall_ms=96.0 rss_kib=4848 bytes/frame≈2636 allocs/frame≈880.8
+run 2: lunatui median=1623.5 µs p95=1821.4 µs wall_ms=384.6 rss_kib=4752 bytes/frame≈3363 allocs/frame≈27872.2
+run 2: ratatui median=399.6 µs p95=476.7 µs wall_ms=97.9 rss_kib=4864 bytes/frame≈2636 allocs/frame≈880.9
+run 3: lunatui median=1615.5 µs p95=1866.4 µs wall_ms=382.9 rss_kib=4736 bytes/frame≈3363 allocs/frame≈27872.2
+run 3: ratatui median=401.1 µs p95=473.3 µs wall_ms=98.4 rss_kib=4768 bytes/frame≈2636 allocs/frame≈880.8
+run 4: lunatui median=1661.4 µs p95=1943.2 µs wall_ms=394.7 rss_kib=4768 bytes/frame≈3363 allocs/frame≈27872.2
+run 4: ratatui median=421.4 µs p95=491.5 µs wall_ms=102.1 rss_kib=4896 bytes/frame≈2636 allocs/frame≈880.8
+run 5: lunatui median=1612.2 µs p95=1937.1 µs wall_ms=391.0 rss_kib=4752 bytes/frame≈3363 allocs/frame≈27872.2
+run 5: ratatui median=405.8 µs p95=507.8 µs wall_ms=98.4 rss_kib=4832 bytes/frame≈2636 allocs/frame≈880.8
 --- aggregate ---
-lunatui: across 5 runs median-of-medians=463.6 µs median-of-p95=500.0 µs avg_bytes/frame≈1891 avg_allocs/frame≈9537.3 max_rss_kib=5680
-ratatui: across 5 runs median-of-medians=286.8 µs median-of-p95=339.8 µs avg_bytes/frame≈2636 avg_allocs/frame≈875.8 max_rss_kib=5680
-note: if lunatui loses, hotspots in this path are full-grid fill + widget rebuild + Paragraph/TextView wrap work + per-row table cell writes; ratatui reuses Terminal buffer.
+lunatui: across 5 runs median-of-medians=1623.5 µs median-of-p95=1866.4 µs avg_bytes/frame≈3363 avg_allocs/frame≈27872.2 max_rss_kib=4784
+ratatui: across 5 runs median-of-medians=401.1 µs median-of-p95=491.5 µs avg_bytes/frame≈2636 avg_allocs/frame≈880.8 max_rss_kib=4896
+note: lunatui times scenes::lunatui::dashboard (same painter as examples/lunatui_dashboard); ratatui times scenes::ratatui::dashboard::render. RSS is peak resident set of each child process alone.

@@ -25,8 +25,8 @@ Same-machine, same-scope numbers (this Mac, October 2026). Full context and repr
 | Cell size | 48 B | **16 B** |
 | Diff, unchanged 200×60 | ~63 µs | **~3.8 µs** (packed `[u128]`, ADR 0001) |
 | `write()` calls, ~68 KiB frame | 67 | **1** |
-| Dashboard E2E 80×24 (median) | ~75 µs | ~93 µs (`dashboard_parity_bench`) |
-| Dashboard E2E 200×60 (median) | ~287 µs | ~464 µs (same bench; lunatui currently slower on this path) |
-| Allocs / dashboard frame 80×24 | ~508 | ~2210 |
+| Dashboard E2E 80×24 (median) | ~104 µs | ~1338 µs (`dashboard_parity_bench`; real painters) |
+| Dashboard E2E 200×60 (median) | ~401 µs | ~1624 µs (same; lunatui slower — Paragraph log clone) |
+| Allocs / dashboard frame 80×24 | ~513 | ~20376 |
 
 Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI and manual sign-off: [docs/ci.md](docs/ci.md). Examples: [examples/README.md](examples/README.md).

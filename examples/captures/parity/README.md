@@ -1,7 +1,11 @@
 # Dashboard parity bench results
 
-Fair side-by-side E2E: identical `lunatui_bench::scenes::ratatui::dashboard::Model`,
-frame count, terminal size, release builds, same machine.
+Fair side-by-side E2E: identical `Model`, frame count, terminal size, release
+builds, same machine. Lunatui times
+`lunatui_bench::scenes::lunatui::dashboard::render` (the same painter
+`examples/lunatui_dashboard` uses) plus encode+sink. Ratatui times
+`scenes::ratatui::dashboard::render` plus Crossterm sink. Each side runs in its
+**own child process** so peak RSS is isolated.
 
 Reproduce:
 
@@ -17,23 +21,23 @@ cargo run --release -p lunatui --example dashboard_parity_bench -- --width 80 --
 
 | | median-of-medians | median-of-p95 | avg bytes/frame | avg allocs/frame | max RSS KiB |
 |---|---|---|---|---|---|
-| lunatui widgets + encode + sink | **93.4 µs** | 105.0 µs | 671 | 2209.8 | 4480 |
-| ratatui 0.30.2 Terminal + Crossterm sink | **74.9 µs** | 88.9 µs | 493 | 507.7 | 4480 |
+| lunatui dashboard render + encode + sink | **1337.9 µs** | 1514.0 µs | 815 | 20376.1 | 3824 |
+| ratatui dashboard::render + Crossterm sink | **104.1 µs** | 126.5 µs | 493 | 512.7 | 3824 |
 
 ### 200×60, 240 frames, 5 runs
 
 | | median-of-medians | median-of-p95 | avg bytes/frame | avg allocs/frame | max RSS KiB |
 |---|---|---|---|---|---|
-| lunatui | **463.6 µs** | 500.0 µs | 1891 | 9537.3 | 5680 |
-| ratatui | **286.8 µs** | 339.8 µs | 2636 | 875.8 | 5680 |
+| lunatui | **1623.5 µs** | 1866.4 µs | 3363 | 27872.2 | 4784 |
+| ratatui | **401.1 µs** | 491.5 µs | 2636 | 880.8 | 4896 |
 
 ## Honesty
 
-On this E2E dashboard path **lunatui is slower than ratatui** (~1.2× at 80×24,
-~1.6× at 200×60). Hotspots: full-grid fill every frame, widget rebuild, per-line
-log clipping `String`s, and higher allocation traffic versus ratatui’s reused
-`Terminal` buffer. Diff/cell packing still wins on the packed-grid microbench
-(ADR 0001 same-Mac: ratatui ~63 µs vs lunatui `[u128]` ~3.8 µs for identical
-200×60).
+On this E2E dashboard path **lunatui is slower than ratatui** (~13× at 80×24,
+~4× at 200×60) and allocates far more per frame. Dominant cost: `Paragraph::new`
+owns a fresh `String` of the full log body every frame; table header rebuild and
+full-grid fill add more. Diff/cell packing still wins on the packed-grid
+microbench (ADR 0001 same-Mac: ratatui ~63 µs vs lunatui `[u128]` ~3.8 µs for
+identical 200×60).
 
 Raw logs: `dashboard_parity_bench_80x24.txt`, `dashboard_parity_bench_200x60.txt`.
