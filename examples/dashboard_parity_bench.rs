@@ -3,9 +3,6 @@
 
 #![doc = include_str!("README.md")]
 
-//! Side-by-side E2E dashboard bench: same `Model`, size, and frame count for
-//! lunatui widgets+encode and ratatui Buffer+CrosstermBackend.
-
 use std::env;
 use std::io::{self, Write};
 use std::sync::Arc;
@@ -58,25 +55,25 @@ fn main() -> io::Result<()> {
     let mut luna_runs = Vec::new();
     let mut rat_runs = Vec::new();
     for run in 1..=options.runs {
-        let luna = bench_lunatui(options)?;
+        let luna = bench_lunatui(options);
         let rat = bench_ratatui(options)?;
         println!(
-            "run {run}: lunatui median={} p95={} wall_ms={:.1} rss_kib={} bytes/frame≈{} allocs/frame≈{:.1}",
+            "run {run}: lunatui median={} p95={} wall_ms={:.1} rss_kib={} bytes/frame≈{} allocs/frame≈{}",
             micros(luna.median),
             micros(luna.p95),
             luna.wall.as_secs_f64() * 1000.0,
             luna.rss_kib,
             luna.bytes_per_frame,
-            luna.allocs_per_frame,
+            tenths(luna.allocs_tenths),
         );
         println!(
-            "run {run}: ratatui median={} p95={} wall_ms={:.1} rss_kib={} bytes/frame≈{} allocs/frame≈{:.1}",
+            "run {run}: ratatui median={} p95={} wall_ms={:.1} rss_kib={} bytes/frame≈{} allocs/frame≈{}",
             micros(rat.median),
             micros(rat.p95),
             rat.wall.as_secs_f64() * 1000.0,
             rat.rss_kib,
             rat.bytes_per_frame,
-            rat.allocs_per_frame,
+            tenths(rat.allocs_tenths),
         );
         luna_runs.push(luna);
         rat_runs.push(rat);
@@ -146,11 +143,11 @@ struct RunStats {
     p95: Duration,
     wall: Duration,
     bytes_per_frame: usize,
-    allocs_per_frame: f64,
+    allocs_tenths: u64,
     rss_kib: usize,
 }
 
-fn bench_lunatui(options: Options) -> io::Result<RunStats> {
+fn bench_lunatui(options: Options) -> RunStats {
     let mut model = Model::new();
     let theme = Theme::builtin(Variant::Dark);
     let mut prev = Grid::new(options.width, options.height);
@@ -161,7 +158,7 @@ fn bench_lunatui(options: Options) -> io::Result<RunStats> {
     let mut output = Vec::new();
     let mut bytes = 0_usize;
     let wall_start = Instant::now();
-    let (_, alloc) = ALLOC.measure(|| {
+    let ((), alloc) = ALLOC.measure(|| {
         for tick in 0..options.frames {
             model.tick = tick;
             model.scroll = usize::try_from(tick / 4 % 300).unwrap_or(0);
@@ -181,15 +178,14 @@ fn bench_lunatui(options: Options) -> io::Result<RunStats> {
             std::mem::swap(&mut prev, &mut next);
         }
     });
-    let wall = wall_start.elapsed();
-    Ok(summarize(
+    summarize(
         &samples,
-        wall,
+        wall_start.elapsed(),
         bytes,
         alloc,
         options.frames,
         rss_kib(),
-    ))
+    )
 }
 
 fn bench_ratatui(options: Options) -> io::Result<RunStats> {
@@ -205,7 +201,7 @@ fn bench_ratatui(options: Options) -> io::Result<RunStats> {
     )?;
     let mut samples = Vec::new();
     let wall_start = Instant::now();
-    let (_, alloc) = ALLOC.measure(|| {
+    let ((), alloc) = ALLOC.measure(|| {
         for tick in 0..options.frames {
             model.tick = tick;
             model.scroll = usize::try_from(tick / 4 % 300).unwrap_or(0);
@@ -216,11 +212,10 @@ fn bench_ratatui(options: Options) -> io::Result<RunStats> {
             samples.push(start.elapsed());
         }
     });
-    let wall = wall_start.elapsed();
     let bytes = total.load(Ordering::Relaxed);
     Ok(summarize(
         &samples,
-        wall,
+        wall_start.elapsed(),
         bytes,
         alloc,
         options.frames,
@@ -241,12 +236,13 @@ fn summarize(
     let median = percentile(&sorted, 50);
     let p95 = percentile(&sorted, 95);
     let frames_usize = usize::try_from(frames).unwrap_or(1).max(1);
+    let allocs_tenths = (alloc.allocations.saturating_mul(10)) / frames_usize;
     RunStats {
         median,
         p95,
         wall,
         bytes_per_frame: bytes / frames_usize,
-        allocs_per_frame: alloc.allocations as f64 / frames_usize as f64,
+        allocs_tenths: u64::try_from(allocs_tenths).unwrap_or(u64::MAX),
         rss_kib,
     }
 }
@@ -265,22 +261,27 @@ fn print_agg(label: &str, runs: &[RunStats]) {
     medians.sort_unstable();
     p95s.sort_unstable();
     let mid = runs.len() / 2;
-    let alloc_avg = runs.iter().map(|r| r.allocs_per_frame).sum::<f64>() / runs.len() as f64;
+    let alloc_sum: u64 = runs.iter().map(|r| r.allocs_tenths).sum();
+    let alloc_avg = alloc_sum / u64::try_from(runs.len().max(1)).unwrap_or(1);
     let bytes_avg = runs.iter().map(|r| r.bytes_per_frame).sum::<usize>() / runs.len().max(1);
     let rss_max = runs.iter().map(|r| r.rss_kib).max().unwrap_or(0);
     println!(
-        "{label}: across {} runs median-of-medians={} median-of-p95={} avg_bytes/frame≈{} avg_allocs/frame≈{:.1} max_rss_kib={}",
+        "{label}: across {} runs median-of-medians={} median-of-p95={} avg_bytes/frame≈{} avg_allocs/frame≈{} max_rss_kib={}",
         runs.len(),
         micros(medians[mid]),
         micros(p95s[mid]),
         bytes_avg,
-        alloc_avg,
+        tenths(alloc_avg),
         rss_max,
     );
 }
 
 fn micros(d: Duration) -> String {
     format!("{:.1} µs", d.as_secs_f64() * 1_000_000.0)
+}
+
+fn tenths(value: u64) -> String {
+    format!("{}.{}", value / 10, value % 10)
 }
 
 fn rss_kib() -> usize {
@@ -361,13 +362,33 @@ fn paint_lunatui(
         body.width.saturating_sub(left_w + 1),
         body.height,
     );
+    paint_checks(model, left, text, bold, dim, bg, &mut cx);
+    paint_side(model, right, text, accent, dim, bg, &mut cx);
+    let status = Rect::new(main.x, main.y + main.height - 1, main.width, 1);
+    StatusBar::new(format!(" scorecard • 3 failing • frame {}", model.tick))
+        .style(text)
+        .render(status, &mut cx);
+    Spinner::new(model.tick)
+        .style(Style::new().fg(Color::Indexed(14)).bg(bg))
+        .render(Rect::new(status.x, status.y, 1, 1), &mut cx);
+}
+
+fn paint_checks(
+    model: &Model,
+    left: Rect,
+    text: Style,
+    bold: Attrs,
+    dim: Color,
+    bg: Color,
+    cx: &mut RenderCx<'_>,
+) {
     let block = Block::bordered()
         .border_type(BorderType::Rounded)
         .title(" Checks ")
         .style(text)
         .border_style(Style::new().fg(dim).bg(bg));
     let inner = block.inner(left);
-    block.render(left, &mut cx);
+    block.render(left, cx);
     let header = vec![vec![
         "check".into(),
         "state".into(),
@@ -384,7 +405,7 @@ fn paint_lunatui(
         ],
     )
     .style(text.with_attrs(bold))
-    .render(Rect::new(inner.x, inner.y, inner.width, 1), &mut cx);
+    .render(Rect::new(inner.x, inner.y, inner.width, 1), cx);
     let pass = Color::Rgb(0x9e, 0xce, 0x6a);
     let fail = Color::Rgb(0xf7, 0x76, 0x8e);
     let mut y = inner.y.saturating_add(1);
@@ -405,29 +426,35 @@ fn paint_lunatui(
         cx.put_str(inner.x + 25, y, &row[3], text);
         y = y.saturating_add(1);
     }
-    if right.width > 0 && right.height > 3 {
-        let log_h = right.height.saturating_sub(3);
-        let log_block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(" Log ")
-            .style(text)
-            .border_style(Style::new().fg(dim).bg(bg));
-        let log_area = Rect::new(right.x, right.y, right.width, log_h);
-        let log_inner = log_block.inner(log_area);
-        log_block.render(log_area, &mut cx);
-        paint_log_lines(model, log_inner, text, &mut cx);
-        Gauge::new((model.tick % 100) as f32 / 100.0)
-            .block(Block::bordered().title(" Progress ").style(text))
-            .gauge_style(Style::new().fg(accent).bg(bg))
-            .render(Rect::new(right.x, right.y + log_h, right.width, 3), &mut cx);
+}
+
+fn paint_side(
+    model: &Model,
+    right: Rect,
+    text: Style,
+    accent: Color,
+    dim: Color,
+    bg: Color,
+    cx: &mut RenderCx<'_>,
+) {
+    if right.width == 0 || right.height <= 3 {
+        return;
     }
-    let status = Rect::new(main.x, main.y + main.height - 1, main.width, 1);
-    StatusBar::new(format!(" scorecard • 3 failing • frame {}", model.tick))
+    let log_h = right.height.saturating_sub(3);
+    let log_block = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Log ")
         .style(text)
-        .render(status, &mut cx);
-    Spinner::new(model.tick)
-        .style(Style::new().fg(Color::Indexed(14)).bg(bg))
-        .render(Rect::new(status.x, status.y, 1, 1), &mut cx);
+        .border_style(Style::new().fg(dim).bg(bg));
+    let log_area = Rect::new(right.x, right.y, right.width, log_h);
+    let log_inner = log_block.inner(log_area);
+    log_block.render(log_area, cx);
+    paint_log_lines(model, log_inner, text, cx);
+    let ratio = f32::from(u8::try_from(model.tick % 100).unwrap_or(0)) / 100.0;
+    Gauge::new(ratio)
+        .block(Block::bordered().title(" Progress ").style(text))
+        .gauge_style(Style::new().fg(accent).bg(bg))
+        .render(Rect::new(right.x, right.y + log_h, right.width, 3), cx);
 }
 
 fn paint_log_lines(model: &Model, area: Rect, style: Style, cx: &mut RenderCx<'_>) {

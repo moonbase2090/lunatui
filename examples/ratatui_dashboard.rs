@@ -136,13 +136,13 @@ fn advance_model(model: &mut Model, tick: u32) {
 }
 
 fn demo_size(base_w: u16, base_h: u16, tick: u32) -> (u16, u16) {
-    match tick {
-        0..500 => (base_w, base_h),
-        500..1000 => (
+    if (500..1000).contains(&tick) {
+        (
             base_w.saturating_add(20).max(60),
             base_h.saturating_add(6).max(18),
-        ),
-        _ => (base_w, base_h),
+        )
+    } else {
+        (base_w, base_h)
     }
 }
 

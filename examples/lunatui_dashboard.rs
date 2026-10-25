@@ -119,13 +119,13 @@ fn advance_model(model: &mut Model, tick: u32) {
 }
 
 fn demo_size(base_w: u16, base_h: u16, tick: u32) -> (u16, u16) {
-    match tick {
-        0..500 => (base_w, base_h),
-        500..1000 => (
+    if (500..1000).contains(&tick) {
+        (
             base_w.saturating_add(20).max(60),
             base_h.saturating_add(6).max(18),
-        ),
-        _ => (base_w, base_h),
+        )
+    } else {
+        (base_w, base_h)
     }
 }
 
@@ -258,8 +258,6 @@ fn paint_main(model: &Model, area: Rect, cx: &mut RenderCx<'_>) {
     let accent = Color::Rgb(0x7a, 0xa2, 0xf7);
     let dim = Color::Rgb(0x56, 0x5f, 0x89);
     let bg = Color::Rgb(0x1a, 0x1b, 0x26);
-    let pass = Color::Rgb(0x9e, 0xce, 0x6a);
-    let fail = Color::Rgb(0xf7, 0x76, 0x8e);
     let text = Style::new().fg(Color::Rgb(0xc0, 0xca, 0xf5)).bg(bg);
     let accent_style = Style::new().fg(accent).bg(bg);
     let dim_style = Style::new().fg(dim).bg(bg);
@@ -296,7 +294,7 @@ fn paint_main(model: &Model, area: Rect, cx: &mut RenderCx<'_>) {
         body.height,
     );
 
-    render_checks(model, left, dim_style, pass, fail, bg, text, bold, cx);
+    render_checks(model, left, cx);
 
     if right.width > 0 && right.height > 3 {
         let log_h = right.height.saturating_sub(3);
@@ -314,7 +312,7 @@ fn paint_main(model: &Model, area: Rect, cx: &mut RenderCx<'_>) {
             .scroll((u16::try_from(model.scroll).unwrap_or(u16::MAX), 0))
             .style(text)
             .render(log_inner, cx);
-        Gauge::new((model.tick % 100) as f32 / 100.0)
+        Gauge::new(f32::from(u8::try_from(model.tick % 100).unwrap_or(0)) / 100.0)
             .block(
                 Block::bordered()
                     .title(" Progress ")
@@ -333,18 +331,14 @@ fn paint_main(model: &Model, area: Rect, cx: &mut RenderCx<'_>) {
         .render(Rect::new(status_area.x, status_area.y, 1, 1), cx);
 }
 
-#[allow(clippy::too_many_arguments)]
-fn render_checks(
-    model: &Model,
-    area: Rect,
-    dim_style: Style,
-    pass: Color,
-    fail: Color,
-    bg: Color,
-    text: Style,
-    bold: Attrs,
-    cx: &mut RenderCx<'_>,
-) {
+fn render_checks(model: &Model, area: Rect, cx: &mut RenderCx<'_>) {
+    let bg = Color::Rgb(0x1a, 0x1b, 0x26);
+    let dim = Color::Rgb(0x56, 0x5f, 0x89);
+    let pass = Color::Rgb(0x9e, 0xce, 0x6a);
+    let fail = Color::Rgb(0xf7, 0x76, 0x8e);
+    let text = Style::new().fg(Color::Rgb(0xc0, 0xca, 0xf5)).bg(bg);
+    let bold = Attrs::default().set_bold(true);
+    let dim_style = Style::new().fg(dim).bg(bg);
     let block = Block::bordered()
         .border_type(BorderType::Rounded)
         .title(" Checks ")
@@ -433,11 +427,7 @@ fn live_summary(options: Options, times: FrameTimes) -> String {
 }
 
 fn bench_summary(options: Options, times: FrameTimes, bytes: usize) -> String {
-    let per_frame = if times.samples == 0 {
-        0
-    } else {
-        bytes / times.samples
-    };
+    let per_frame = bytes.checked_div(times.samples).unwrap_or(0);
     format!(
         "lunatui_dashboard bench, {}x{}, {} frames, {}: p50 {}, p99 {}, max {}, bytes_total={}, bytes_per_frame≈{} ({})",
         options.width,
