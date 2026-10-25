@@ -13,6 +13,7 @@ workspace = true
 
 [features]
 render-color = ["lunatui-core/render-color"]
+subcell = ["lunatui-core/subcell"]
 # gungraun needs Linux and valgrind, so its benchmarks are opt-in.
 gungraun = ["dep:gungraun"]
 
@@ -86,3 +87,8 @@ harness = false
 name = "render_color_allocs"
 path = "tests/render_color_allocs.rs"
 required-features = ["render-color"]
+
+[[test]]
+name = "subcell_allocs"
+path = "tests/subcell_allocs.rs"
+required-features = ["subcell"]

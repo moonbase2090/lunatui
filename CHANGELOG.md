@@ -10,6 +10,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- Add off-default subcell glyph lookup with generated octants, braille, block and ASCII fallbacks, plus eighth-block bar heads.
+
 - Optional allocation-free prepared color ramps, shared OKLab conversion and fixed-point compositing in the core, with a solid ANSI fallback.
 
 ## [0.1.4] - 2026-10-25
