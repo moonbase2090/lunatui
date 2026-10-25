@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
+- `Grid::put_str` writes printable ASCII straight into the cell words, with no grapheme segmentation or per-cell cluster work, when the target cells are plain one-column cells: about 17 to 19 times faster for a screenful of short strings. Text with other characters, and writes that touch wide glyphs, take the previous path and give the same result.
 - README and `docs/performance.md` present lunatui's own dashboard numbers on one machine and one scope; the public comparison with ratatui and the side-by-side media are removed.
 ## [0.1.5] - 2026-10-26
 

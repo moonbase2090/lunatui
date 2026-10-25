@@ -46,6 +46,11 @@ impl CellWidth {
     }
 }
 
+pub(crate) fn word_width(word: u128) -> Option<CellWidth> {
+    let bits = (word >> (96 + WIDTH_SHIFT)) & u128::from(WIDTH_MASK);
+    CellWidth::from_bits(u32::try_from(bits).unwrap_or(u32::MAX))
+}
+
 /// Encoder flags in `meta` bits 14–15 (ADR 0001 §4.5).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct CellFlags {
