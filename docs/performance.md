@@ -29,6 +29,7 @@ The script writes the raw logs to `target/dashboard-fair` (override with `DASHBO
 
 - Frames are timed in a headless run into a counting sink. Terminal-emulator rendering and real terminal latency are not measured.
 - The lead is smaller at 200×60 than at 80×24, and five runs of 240 frames is a small sample. Treat gaps under about 10% as within noise.
+- Absolute times move with machine state. Two full runs of the script on the same day gave 80×24 medians of 60 µs (lunatui) and 77 µs (ratatui), then 67 µs and 84 µs; at 200×60 they gave 248 and 290 µs, then 251 and 291 µs. The ratio held (about 0.8 at 80×24 and 0.86 at 200×60), so compare the sides within one run.
 - The lunatui scene draws the tab row, the table cells and the gauge with clipped `put_str` calls, because `Table` has no per-cell styles or column spacing and `Gauge` has no label. A version built only from the widgets would be a separate comparison.
 - The two layout solvers squeeze over-constrained table columns differently, so scenes at very small sizes (for example 40×12) differ inside the table.
 - Peak RSS is the process high-water mark from `getrusage`.
