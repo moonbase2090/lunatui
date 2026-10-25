@@ -12,6 +12,7 @@ publish = false
 workspace = true
 
 [features]
+render-color = ["lunatui-core/render-color"]
 # gungraun needs Linux and valgrind, so its benchmarks are opt-in.
 gungraun = ["dep:gungraun"]
 
@@ -80,3 +81,8 @@ harness = false
 [[bench]]
 name = "criterion_core_diff"
 harness = false
+
+[[test]]
+name = "render_color_allocs"
+path = "tests/render_color_allocs.rs"
+required-features = ["render-color"]

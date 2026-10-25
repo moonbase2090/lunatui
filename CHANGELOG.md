@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- Optional allocation-free prepared color ramps, shared OKLab conversion and fixed-point compositing in the core, with a solid ANSI fallback.
+
 ## [0.1.4] - 2026-10-25
 
 ### Changed

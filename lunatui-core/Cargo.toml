@@ -10,10 +10,25 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+render-color = ["dep:libm"]
+
 [dependencies]
+libm = { version = "=0.2.16", optional = true }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
 lunatui-test = { version = "0.1.4", path = "../lunatui-test" }
 proptest = "=1.9.0"
 unicode-width = "=0.2.2"
+
+[[test]]
+name = "render_color"
+path = "tests/render_color.rs"
+required-features = ["render-color"]
+
+[[example]]
+name = "prepared_color"
+path = "../examples/prepared_color.rs"
+required-features = ["render-color"]

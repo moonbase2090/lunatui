@@ -897,6 +897,7 @@ dependencies = [
 name = "lunatui-core"
 version = "0.1.4"
 dependencies = [
+ "libm",
  "lunatui-test",
  "proptest",
  "unicode-segmentation",

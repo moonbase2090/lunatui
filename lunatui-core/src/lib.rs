@@ -10,6 +10,12 @@ mod color;
 mod diff;
 mod grapheme;
 mod grid;
+#[cfg(feature = "render-color")]
+/// Shared perceptual color conversion and interpolation.
+pub mod oklab;
+#[cfg(feature = "render-color")]
+/// Prepared color ramps and fixed-point compositing for frame rendering.
+pub mod paint;
 /// Runtime SIMD dispatch and scalar reference kernels (roadmap PR 47+).
 pub mod simd;
 mod size;
