@@ -57,3 +57,8 @@ test = false
 name = "pixel_capture"
 path = "tests/pixel_capture.rs"
 required-features = ["pixel-layer"]
+
+[[example]]
+name = "pixel_demo"
+path = "examples/pixel_demo.rs"
+required-features = ["pixel-layer"]
