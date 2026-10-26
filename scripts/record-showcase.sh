@@ -35,7 +35,11 @@ asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CA
   "$cast"
 gif="$OUT/${NAME}.gif"
 agg --fps-cap 15 --font-size 14 "$cast" "$gif"
-bytes=$(wc -c < "$gif")
+bytes=$(wc -c < "$gif" | awk '{print $1}')
+if [[ ! "$bytes" =~ ^[0-9]+$ ]]; then
+  echo "record-showcase: could not read the size of ${gif}" >&2
+  exit 3
+fi
 if (( 10#$bytes > 10#$MAX_BYTES )); then
   echo "record-showcase: ${gif} is ${bytes} bytes, over the ${MAX_BYTES}-byte limit; shorten FRAMES or lower FPS" >&2
   exit 3
