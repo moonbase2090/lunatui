@@ -186,5 +186,5 @@ fn cells_mode_writes_no_bytes_to_the_capture() {
     if let Some(image) = image {
         layer.image(1, 1, &image, Rect::new(0, 0, 2, 1), 0);
     }
-    assert!(layer.finish_frame().is_empty());
+    assert_eq!(layer.finish_frame(), b"");
 }
