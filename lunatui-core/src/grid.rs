@@ -8,7 +8,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::cell::{Cell, CellWidth, Meta};
+use crate::cell::{Cell, CellWidth, Meta, word_width};
 use crate::grapheme::{ClusterTable, DecodedGlyph, GlyphSlot, cluster_display_width};
 use crate::style::Style;
 use crate::width::char_width;
@@ -142,6 +142,50 @@ impl Grid {
         if y >= self.height {
             return;
         }
+        let bytes = text.as_bytes();
+        if x < self.width
+            && !bytes.is_empty()
+            && bytes.iter().all(|byte| (0x20..0x7F).contains(byte))
+        {
+            let count = bytes.len().min(usize::from(self.width - x));
+            if self.put_ascii(x, y, style, &bytes[..count]) {
+                return;
+            }
+        }
+        self.put_graphemes(x, y, style, text, clusters);
+    }
+
+    fn put_ascii(&mut self, x: u16, y: u16, style: Style, bytes: &[u8]) -> bool {
+        let start = usize::from(y) * usize::from(self.width) + usize::from(x);
+        let end = start + bytes.len();
+        if self.cells[start..end]
+            .iter()
+            .any(|word| word_width(*word) != Some(CellWidth::One))
+        {
+            return false;
+        }
+        let meta = Meta {
+            width: CellWidth::One,
+            ..Meta::default()
+        };
+        let blank = Cell::from_parts(GlyphSlot::continuation(), style, meta).to_bits();
+        let template = blank & !u128::from(u32::MAX);
+        for (word, byte) in self.cells[start..end].iter_mut().zip(bytes) {
+            *word = template | u128::from(*byte);
+        }
+        let columns = u16::try_from(bytes.len()).unwrap_or(u16::MAX);
+        self.mark_dirty(y, x, x + columns);
+        true
+    }
+
+    fn put_graphemes(
+        &mut self,
+        x: u16,
+        y: u16,
+        style: Style,
+        text: &str,
+        clusters: &mut ClusterTable,
+    ) {
         let mut col = x;
         let mut buf = [0u8; 4];
         for grapheme in UnicodeSegmentation::graphemes(text, true) {
@@ -490,3 +534,6 @@ fn glyph_text(glyph: GlyphSlot, clusters: &ClusterTable) -> String {
         DecodedGlyph::Continuation => String::new(),
     }
 }
+
+#[cfg(test)]
+mod put_str_tests;
