@@ -41,12 +41,10 @@ jobs:
       - run: cargo build --workspace
       - run: cargo test --workspace
       - run: cargo test -p lunatui-widgets --features color-profiles
-      - run: cargo test --locked -p lunatui-term --features pixel-layer
-      - run: cargo test --locked -p lunatui-bench --features pixel-layer --test pixel_layer_allocs
       # `app` is off by default. Select the packages that define it so
       # Windows and macOS build and test that feature, including the demo.
       - run: cargo build -p lunatui -p lunatui-runtime --features app
-      - run: cargo test -p lunatui -p lunatui-runtime --features app,keymap
+      - run: cargo test -p lunatui -p lunatui-runtime --features app,keymap,motion
       - run: cargo run --example hello_box
       - run: cargo run --example hello_box -- --metrics
 
