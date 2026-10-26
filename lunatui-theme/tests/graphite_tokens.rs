@@ -102,3 +102,21 @@ fn bundled_prismattyc_variants_use_canonical_graphite() -> Result<(), Box<dyn st
     );
     Ok(())
 }
+
+#[test]
+fn prepared_palette_keeps_colors_until_explicitly_rebuilt() {
+    let mut theme = Theme::builtin(Variant::Dark);
+    let palette = theme.prepare(Profile::TrueColor);
+    assert_eq!(palette.profile(), Profile::TrueColor);
+    assert_eq!(palette.colors().len(), 20);
+    theme.set_token(Token::Accent, Color::Rgb(1, 2, 3));
+    assert_eq!(palette.resolve(Token::Accent), Color::Rgb(98, 168, 255));
+    assert_eq!(
+        theme.prepare(Profile::TrueColor).resolve(Token::Accent),
+        Color::Rgb(1, 2, 3)
+    );
+    assert_eq!(
+        theme.prepare(Profile::Ansi16).resolve(Token::Accent),
+        Color::Indexed(4)
+    );
+}

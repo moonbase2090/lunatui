@@ -19,5 +19,7 @@ pub use serde::{
     ThemeLoadError, theme_from_json, theme_from_json_strict, theme_from_toml,
     theme_from_toml_strict,
 };
+#[cfg(feature = "color-profiles")]
+pub use theme::PreparedPalette;
 pub use theme::{Theme, Variant};
 pub use token::Token;
