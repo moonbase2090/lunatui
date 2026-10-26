@@ -21,7 +21,7 @@ mod width;
 pub use attr::{Attrs, UnderlineStyle};
 pub use cell::{Cell, CellFlags, CellWidth, Meta};
 pub use color::Color;
-pub use diff::{ChangedRun, diff_runs, diff_runs_naive};
+pub use diff::{ChangedRun, diff_runs, diff_runs_into, diff_runs_naive};
 pub use grapheme::{
     CLUSTER_TAG, CONTINUATION_GLYPH, ClusterId, ClusterTable, DecodedGlyph, GlyphSlot,
     MAX_CLUSTER_IDS, clip_display_prefix, cluster_display_width, text_display_width,

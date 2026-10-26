@@ -40,9 +40,9 @@ pub(crate) fn write_sgr_delta(
     {
         return;
     }
-    let mut params = String::new();
+    let mut params = Params::new(buffer);
     if drops_attrs(current.attrs, effective.attrs) {
-        params.push('0');
+        params.text("0");
         *current = Pen::default();
     }
     append_attr_params(&mut params, effective.attrs, current.attrs);
@@ -54,16 +54,76 @@ pub(crate) fn write_sgr_delta(
             append_color_params(&mut params, false, effective.bg);
         }
     }
-    if params.is_empty() {
+    if !params.finish() {
         return;
     }
-    buffer.extend_from_slice(b"\x1b[");
-    buffer.extend_from_slice(params.as_bytes());
-    buffer.push(b'm');
     current.attrs = effective.attrs;
     if colors {
         current.fg = effective.fg;
         current.bg = effective.bg;
+    }
+}
+
+struct Params<'a> {
+    buffer: &'a mut Vec<u8>,
+    wrote: bool,
+}
+
+impl<'a> Params<'a> {
+    fn new(buffer: &'a mut Vec<u8>) -> Self {
+        Self {
+            buffer,
+            wrote: false,
+        }
+    }
+
+    fn separator(&mut self) {
+        if self.wrote {
+            self.buffer.push(b';');
+        } else {
+            self.buffer.extend_from_slice(b"\x1b[");
+            self.wrote = true;
+        }
+    }
+
+    fn text(&mut self, value: &str) {
+        self.separator();
+        self.buffer.extend_from_slice(value.as_bytes());
+    }
+
+    fn number(&mut self, value: u32) {
+        self.separator();
+        push_decimal(self.buffer, value);
+    }
+
+    fn extend_number(&mut self, value: u32) {
+        self.buffer.push(b';');
+        push_decimal(self.buffer, value);
+    }
+
+    fn finish(self) -> bool {
+        if self.wrote {
+            self.buffer.push(b'm');
+        }
+        self.wrote
+    }
+}
+
+fn push_decimal(buffer: &mut Vec<u8>, value: u32) {
+    let mut digits = [0_u8; 10];
+    let mut len = 0;
+    let mut rest = value;
+    loop {
+        digits[len] = b'0' + u8::try_from(rest % 10).unwrap_or(0);
+        len += 1;
+        rest /= 10;
+        if rest == 0 {
+            break;
+        }
+    }
+    while len > 0 {
+        len -= 1;
+        buffer.push(digits[len]);
     }
 }
 
@@ -79,73 +139,63 @@ fn drops_attrs(have: Attrs, want: Attrs) -> bool {
         || (have.underline() != UnderlineStyle::None && have.underline() != want.underline())
 }
 
-fn append_attr_params(params: &mut String, attrs: Attrs, have: Attrs) {
+fn append_attr_params(params: &mut Params<'_>, attrs: Attrs, have: Attrs) {
     if attrs.bold() && !have.bold() {
-        push_param(params, "1");
+        params.text("1");
     }
     if attrs.dim() && !have.dim() {
-        push_param(params, "2");
+        params.text("2");
     }
     if attrs.italic() && !have.italic() {
-        push_param(params, "3");
+        params.text("3");
     }
     if have.underline() == UnderlineStyle::None {
         match attrs.underline() {
             UnderlineStyle::None => {}
-            UnderlineStyle::Single => push_param(params, "4"),
-            UnderlineStyle::Double => push_param(params, "21"),
-            UnderlineStyle::Curly => push_param(params, "4:3"),
-            UnderlineStyle::Dotted => push_param(params, "4:4"),
-            UnderlineStyle::Dashed => push_param(params, "4:5"),
+            UnderlineStyle::Single => params.text("4"),
+            UnderlineStyle::Double => params.text("21"),
+            UnderlineStyle::Curly => params.text("4:3"),
+            UnderlineStyle::Dotted => params.text("4:4"),
+            UnderlineStyle::Dashed => params.text("4:5"),
         }
     }
     if attrs.blink() && !have.blink() {
-        push_param(params, "5");
+        params.text("5");
     }
     if attrs.reverse() && !have.reverse() {
-        push_param(params, "7");
+        params.text("7");
     }
     if attrs.hidden() && !have.hidden() {
-        push_param(params, "8");
+        params.text("8");
     }
     if attrs.strikethrough() && !have.strikethrough() {
-        push_param(params, "9");
+        params.text("9");
     }
     if attrs.overline() && !have.overline() {
-        push_param(params, "53");
+        params.text("53");
     }
 }
 
-fn append_color_params(params: &mut String, fg: bool, color: Color) {
+fn append_color_params(params: &mut Params<'_>, fg: bool, color: Color) {
+    let selector = if fg { 38 } else { 48 };
     match color {
-        Color::Default => {
-            if fg {
-                push_param(params, "39");
-            } else {
-                push_param(params, "49");
-            }
-        }
+        Color::Default => params.text(if fg { "39" } else { "49" }),
         Color::Indexed(index) => {
-            if fg {
-                push_param(params, &format!("38;5;{index}"));
-            } else {
-                push_param(params, &format!("48;5;{index}"));
-            }
+            params.number(selector);
+            params.extend_number(5);
+            params.extend_number(u32::from(index));
         }
         Color::Rgb(red, green, blue) => {
-            if fg {
-                push_param(params, &format!("38;2;{red};{green};{blue}"));
-            } else {
-                push_param(params, &format!("48;2;{red};{green};{blue}"));
-            }
+            params.number(selector);
+            params.extend_number(2);
+            params.extend_number(u32::from(red));
+            params.extend_number(u32::from(green));
+            params.extend_number(u32::from(blue));
         }
         Color::Token(id) => {
-            let index = id % 256;
-            if fg {
-                push_param(params, &format!("38;5;{index}"));
-            } else {
-                push_param(params, &format!("48;5;{index}"));
-            }
+            params.number(selector);
+            params.extend_number(5);
+            params.extend_number(id % 256);
         }
     }
 }
@@ -155,11 +205,4 @@ fn resolve_token_color(color: Color, palette: &[Color]) -> Color {
         Color::Token(id) => palette.get(id as usize).copied().unwrap_or(color),
         other => other,
     }
-}
-
-fn push_param(params: &mut String, value: &str) {
-    if !params.is_empty() {
-        params.push(';');
-    }
-    params.push_str(value);
 }

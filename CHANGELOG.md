@@ -12,6 +12,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
+- The terminal encoder no longer allocates per frame once its buffers are warm: diff runs are collected into a reused buffer (new `diff_runs_into` and `collect_runs_in_row_simd_into` in `lunatui-core`) and SGR sequences are written straight into the output buffer. Output is byte-for-byte the same; a dashboard frame makes about half the allocations.
 - Terminal encoder emits SGR as a delta: it no longer resets before every color change or re-sends both colors, and only resets when an attribute turns off. The rendered result is the same; a dashboard frame is 12-20% fewer bytes (#100).
 
 ### Added

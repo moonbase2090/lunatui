@@ -23,10 +23,18 @@ pub struct ChangedRun {
 /// dirty spans on `next` when dimensions match (PRD §2.3).
 #[must_use]
 pub fn diff_runs(previous: &Grid, next: &Grid) -> Vec<ChangedRun> {
-    if previous.width() != next.width() || previous.height() != next.height() {
-        return diff_runs_naive(previous, next);
-    }
     let mut runs = Vec::new();
+    diff_runs_into(previous, next, &mut runs);
+    runs
+}
+
+/// Like [`diff_runs`], but replaces the contents of `runs`, so one buffer serves every frame.
+pub fn diff_runs_into(previous: &Grid, next: &Grid, runs: &mut Vec<ChangedRun>) {
+    runs.clear();
+    if previous.width() != next.width() || previous.height() != next.height() {
+        runs.extend(diff_runs_naive(previous, next));
+        return;
+    }
     for row in 0..next.height() {
         let Some(dirty) = next.row_dirty(row) else {
             continue;
@@ -34,15 +42,8 @@ pub fn diff_runs(previous: &Grid, next: &Grid) -> Vec<ChangedRun> {
         if !dirty.dirty {
             continue;
         }
-        runs.extend(simd::collect_runs_in_row_simd(
-            previous,
-            next,
-            row,
-            dirty.min_x,
-            dirty.max_x,
-        ));
+        simd::collect_runs_in_row_simd_into(previous, next, row, dirty.min_x, dirty.max_x, runs);
     }
-    runs
 }
 
 /// Full-grid diff used for tests and for size changes (full invalidation).

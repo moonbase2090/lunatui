@@ -38,9 +38,23 @@ pub fn collect_runs_in_row_simd(
     end: u16,
 ) -> Vec<ChangedRun> {
     let mut runs = Vec::new();
+    collect_runs_in_row_simd_into(previous, next, row, start, end, &mut runs);
+    runs
+}
+
+/// Like [`collect_runs_in_row_simd`], but appends to `runs` so a caller can reuse one buffer.
+pub fn collect_runs_in_row_simd_into(
+    previous: &Grid,
+    next: &Grid,
+    row: u16,
+    start: u16,
+    end: u16,
+    runs: &mut Vec<ChangedRun>,
+) {
+    let first = runs.len();
     if row >= previous.height() || previous.width() != next.width() {
-        collect_runs_in_row_scalar_tail(previous, next, row, start, end, &mut runs);
-        return runs;
+        collect_runs_in_row_scalar_tail(previous, next, row, start, end, runs);
+        return;
     }
     let prev_row = previous.row_word_slice(row);
     let next_row = next.row_word_slice(row);
@@ -72,25 +86,26 @@ pub fn collect_runs_in_row_simd(
         }
     }
     if col < end_usize {
-        collect_runs_in_row_scalar_tail(previous, next, row, index_to_u16(col), end, &mut runs);
+        collect_runs_in_row_scalar_tail(previous, next, row, index_to_u16(col), end, runs);
     }
-    coalesce_adjacent_runs(&mut runs);
-    runs
+    coalesce_adjacent_runs(runs, first);
 }
 
-fn coalesce_adjacent_runs(runs: &mut Vec<ChangedRun>) {
-    let mut merged: Vec<ChangedRun> = Vec::new();
-    for run in runs.drain(..) {
-        if let Some(last) = merged.last_mut()
-            && last.row == run.row
-            && last.col.saturating_add(last.width) == run.col
-        {
-            last.width = last.width.saturating_add(run.width);
-        } else {
-            merged.push(run);
+fn coalesce_adjacent_runs(runs: &mut Vec<ChangedRun>, first: usize) {
+    let mut kept = first;
+    for index in first..runs.len() {
+        let run = runs[index];
+        if kept > first {
+            let last = &mut runs[kept - 1];
+            if last.row == run.row && last.col.saturating_add(last.width) == run.col {
+                last.width = last.width.saturating_add(run.width);
+                continue;
+            }
         }
+        runs[kept] = run;
+        kept += 1;
     }
-    *runs = merged;
+    runs.truncate(kept);
 }
 
 fn collect_runs_in_row_scalar_tail(
