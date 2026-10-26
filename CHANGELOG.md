@@ -8,6 +8,16 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+
+### Changed
+
+- `RenderCx::profile(profile)` is replaced by prepared palettes: create a palette with `theme.prepare(profile)` when the theme or profile changes, then pass it to `RenderCx::palette(&palette)`. This avoids downsampling tokens during widget rendering.
+- The opt-in `graphite-tokens` feature changes the built-in light/dark palettes and the bundled `prismattyc` variants to canonical Graphite colors. Existing token ids 0–7 stay stable; twelve new ids are available when the feature is enabled. Cargo feature unification means enabling the feature through any dependency exposes the new variants across that build. `Token::COUNT` is therefore 8 or 20 according to the unified feature set, and should not be used as a persistent format size. `Token` is non-exhaustive; external matches must include a fallback arm.
+
+### Added
+
+- Added twelve opt-in Graphite semantic tokens and semantic ANSI-16 palette mappings.
+
 ## [0.1.9] - 2026-10-26
 
 ### Added
