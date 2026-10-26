@@ -10,6 +10,14 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+pixel-layer = []
+
+[[test]]
+name = "pixel_layer"
+required-features = ["pixel-layer"]
+
 [dependencies]
 lunatui-core = { version = "0.1.7", path = "../lunatui-core" }
 
@@ -44,3 +52,8 @@ test = false
 name = "fuzz_input_parser"
 path = "../fuzz/fuzz_input_parser.rs"
 test = false
+
+[[test]]
+name = "pixel_capture"
+path = "tests/pixel_capture.rs"
+required-features = ["pixel-layer"]
