@@ -235,3 +235,37 @@ fn clear_deletes_every_image_it_placed() -> Result<(), String> {
     }
     Ok(())
 }
+
+#[test]
+fn a_changed_generation_deletes_then_transmits_then_places() -> Result<(), String> {
+    let first = vec![1_u8; 4];
+    let second = vec![2_u8; 4];
+    let before = PixelImage::new(1, 1, &first).ok_or("bad image")?;
+    let after = PixelImage::new(1, 1, &second).ok_or("bad image")?;
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    layer.begin_frame();
+    layer.image(10, 1, &before, Rect::new(0, 0, 2, 1), 0);
+    layer.finish_frame();
+    layer.begin_frame();
+    layer.image(10, 2, &after, Rect::new(0, 0, 2, 1), 0);
+    let commands = parse(layer.finish_frame())?;
+    let actions: Vec<&str> = commands
+        .iter()
+        .map(|command| command.keys.get("a").map_or("", String::as_str))
+        .collect();
+    if actions != ["d", "t", "p"] {
+        return Err(format!(
+            "order was {actions:?}, expected [\"d\", \"t\", \"p\"]"
+        ));
+    }
+    if commands
+        .iter()
+        .any(|command| command.keys.get("i").map(String::as_str) != Some("10"))
+    {
+        return Err("a command targeted another image id".to_owned());
+    }
+    if commands[1].payload != second {
+        return Err("the transmitted pixels are not the new generation".to_owned());
+    }
+    Ok(())
+}

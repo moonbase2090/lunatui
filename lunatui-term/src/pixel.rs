@@ -162,6 +162,7 @@ impl PixelLayer {
         let fresh = match self.uploaded.iter_mut().find(|known| known.id == id) {
             Some(known) if *known == current => false,
             Some(known) => {
+                write_delete(&mut self.out, id);
                 *known = current;
                 true
             }
