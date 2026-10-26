@@ -28,3 +28,17 @@ The dashboard draws 240 frames (about four seconds) and exits. Add `-- --bench` 
 See the [review policy](REVIEW_POLICY.md) for PR classification, proof and merge requirements.
 
 Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI and manual sign-off: [docs/ci.md](docs/ci.md). Examples: [examples/README.md](examples/README.md).
+
+## Widget gallery
+
+Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
+
+### Sparkline
+
+Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
+
+![Sparkline service board](docs/media/sparkline.gif)
+
+![Sparkline service board, still](docs/media/sparkline.png)
+
+Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120×36, 8 s at 30 fps, dark theme).

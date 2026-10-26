@@ -13,6 +13,8 @@ mod padding;
 mod paragraph;
 mod render_cx;
 mod scrollbar;
+#[cfg(feature = "sparkline")]
+mod sparkline;
 mod spinner;
 #[cfg(feature = "widget-state")]
 mod state;
@@ -36,6 +38,11 @@ pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
 pub use render_cx::RenderCx;
 pub use scrollbar::Scrollbar;
+#[cfg(feature = "sparkline")]
+pub use sparkline::{
+    BarSet, Baseline, NINE_LEVELS, RenderDirection, Sparkline, SparklineBar, SparklineValue,
+    THREE_LEVELS,
+};
 pub use spinner::Spinner;
 #[cfg(feature = "widget-state")]
 pub use state::WidgetState;
