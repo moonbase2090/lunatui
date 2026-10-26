@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+- `Grid::put_str` writes printable ASCII straight into the cell words, with no grapheme segmentation or per-cell cluster work, when the target cells are plain one-column cells: about 17 to 19 times faster for a screenful of short strings. Text with other characters, and writes that touch wide glyphs, take the previous path and give the same result.
+
 ## [0.1.5] - 2026-10-26
 
 ### Changed
