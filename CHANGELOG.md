@@ -12,6 +12,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
+- `Grid::fill` and `Grid::set_style` work a row of packed cells at a time and mark the row dirty once, instead of placing and marking every cell: about 30 times faster for `fill` and 13 to 18 times faster for `set_style` on a full 80x24 or 200x60 grid. Wide glyphs cut by an edge of the area keep the previous per-cell handling, and the result is identical.
 - `Grid::put_str` writes printable ASCII straight into the cell words, with no grapheme segmentation or per-cell cluster work, when the target cells are plain one-column cells: about 17 to 19 times faster for a screenful of short strings. Text with other characters, and writes that touch wide glyphs, take the previous path and give the same result.
 - README and `docs/performance.md` present lunatui's own dashboard numbers on one machine and one scope, with the method and limits.
 
