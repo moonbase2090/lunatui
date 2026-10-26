@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-core = { version = "0.1.6", path = "../lunatui-core" }
+lunatui-core = { version = "0.1.7", path = "../lunatui-core" }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.190"

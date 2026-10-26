@@ -18,7 +18,7 @@ app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
 keymap = ["app", "lunatui-runtime/keymap"]
 
 [dependencies]
-lunatui-runtime = { version = "0.1.6", path = "../lunatui-runtime", optional = true }
+lunatui-runtime = { version = "0.1.7", path = "../lunatui-runtime", optional = true }
 
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }
@@ -27,9 +27,9 @@ lunatui-term = { path = "../lunatui-term" }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.6", path = "../lunatui-widgets" }
+lunatui-widgets = { version = "0.1.7", path = "../lunatui-widgets" }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
-lunatui-prismattyc = { version = "0.1.6", path = "../lunatui-prismattyc" }
+lunatui-prismattyc = { version = "0.1.7", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"
 libc = "0.2.190"
 
