@@ -9,9 +9,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_bench::widget_suite::{CASES, Case, pin_color_output};
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, clip_display_prefix};
 use lunatui_term::{ColorMode, Encoder};
-use lunatui_theme::{Profile, Theme, Variant};
+use lunatui_theme::{Profile, Theme, Token, Variant};
+use lunatui_widgets::{Block, BorderType, RenderCx, Sparkline, Widget, WidgetState};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
@@ -27,10 +28,174 @@ struct Preview {
     baseline: BaselineDraw,
 }
 
-const PREVIEWS: &[Preview] = &[];
+const PREVIEWS: &[Preview] = &[Preview {
+    name: "sparkline",
+    native: sparkline_native,
+    baseline: sparkline_baseline,
+}];
 
 fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)
+}
+
+fn wave(index: u32) -> u64 {
+    let phase = index % 72;
+    let rise = if phase < 36 { phase } else { 72 - phase };
+    u64::from(18 + rise.saturating_mul(3) + (index % 11).saturating_mul(4))
+}
+
+fn fill_wave(samples: &mut [u64], tick: u32) {
+    for (offset, sample) in samples.iter_mut().enumerate() {
+        let index = tick.saturating_add(u32::try_from(offset).unwrap_or(0));
+        *sample = wave(index);
+    }
+}
+
+fn state_at(tick: u32) -> WidgetState {
+    match (tick / 80) % 3 {
+        0 => WidgetState::Normal,
+        1 => WidgetState::Focused,
+        _ => WidgetState::Disabled,
+    }
+}
+
+fn state_name(state: WidgetState) -> &'static str {
+    if state == WidgetState::Focused {
+        "focused"
+    } else if state == WidgetState::Disabled {
+        "disabled"
+    } else {
+        "normal"
+    }
+}
+
+fn panel_border(state: WidgetState) -> BorderType {
+    match state {
+        WidgetState::Focused => BorderType::Thick,
+        _ => BorderType::Rounded,
+    }
+}
+
+fn sparkline_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let text = cx.token(Token::TextPrimary);
+    let accent = cx.token(Token::Accent);
+    let surface = cx.token(Token::Surface0);
+    let raised = cx.token(Token::Surface1);
+    let focus = cx.token(Token::FocusRing);
+    let ground = Style::new().fg(text).bg(surface);
+    cx.set_style(area, ground);
+    let live = state_at(tick);
+    if area.width < 40 || area.height < 16 {
+        let columns = usize::from(area.width).min(64);
+        let mut samples = [0; 64];
+        fill_wave(&mut samples[..columns], tick);
+        Sparkline::new(&samples[..columns])
+            .state(live)
+            .render(area, &mut cx);
+        return;
+    }
+    let main = Rect::new(
+        1,
+        0,
+        area.width.saturating_sub(2),
+        22.min(area.height.saturating_sub(14)),
+    );
+    let border = match live {
+        WidgetState::Focused => focus,
+        WidgetState::Disabled => raised,
+        _ => accent,
+    };
+    let frame = Block::bordered()
+        .border_type(panel_border(live))
+        .title(format!(" requests / s  {} ", state_name(live)))
+        .style(ground)
+        .border_style(Style::new().fg(border).bg(surface))
+        .title_style(Style::new().fg(accent).bg(surface));
+    frame.render(main, &mut cx);
+    let inner = frame.inner(main);
+    let mut samples = [0; 160];
+    let columns = usize::from(inner.width).min(samples.len());
+    fill_wave(&mut samples[..columns], tick.saturating_mul(2));
+    let plot_h = inner.height.saturating_sub(1);
+    Sparkline::new(&samples[..columns])
+        .state(live)
+        .render(Rect::new(inner.x, inner.y, inner.width, plot_h), &mut cx);
+    let latest = samples.get(columns.saturating_sub(1)).copied().unwrap_or(0);
+    let label = format!("live {latest:>4} req/s    window slides");
+    cx.put_str(
+        inner.x,
+        inner.y.saturating_add(plot_h),
+        clip_display_prefix(&label, inner.width),
+        Style::new().fg(text).bg(surface),
+    );
+    let states = [
+        WidgetState::Normal,
+        WidgetState::Focused,
+        WidgetState::Disabled,
+    ];
+    let gap = 2_u16;
+    let top = main.y.saturating_add(main.height).saturating_add(1);
+    let usable = area.height.saturating_sub(top).saturating_sub(1);
+    if usable < 4 {
+        return;
+    }
+    let panel_w = area.width.saturating_sub(2).saturating_sub(gap * 2) / 3;
+    for (index, state) in states.iter().enumerate() {
+        let x = 1 + u16::try_from(index).unwrap_or(0) * (panel_w + gap);
+        let panel = Rect::new(x, top, panel_w, usable);
+        let tone = match state {
+            WidgetState::Focused => focus,
+            WidgetState::Disabled => raised,
+            _ => text,
+        };
+        let frame = Block::bordered()
+            .border_type(panel_border(*state))
+            .title(format!(" {} ", state_name(*state)))
+            .style(ground)
+            .border_style(Style::new().fg(tone).bg(surface))
+            .title_style(Style::new().fg(tone).bg(surface));
+        frame.render(panel, &mut cx);
+        let body = frame.inner(panel);
+        let mut lane = [0; 48];
+        let lane_n = usize::from(body.width).min(lane.len());
+        fill_wave(
+            &mut lane[..lane_n],
+            tick.saturating_add(u32::try_from(index).unwrap_or(0).saturating_mul(17)),
+        );
+        Sparkline::new(&lane[..lane_n])
+            .state(*state)
+            .render(body, &mut cx);
+    }
+}
+
+fn sparkline_baseline(
+    buffer: &mut ratatui::buffer::Buffer,
+    area: RatRect,
+    theme: &Theme,
+    tick: u32,
+) {
+    let mut samples = [0; 160];
+    let columns = usize::from(area.width).min(samples.len());
+    fill_wave(&mut samples[..columns], tick.saturating_mul(2));
+    let color = match theme.resolve(Token::Accent) {
+        Color::Rgb(red, green, blue) => ratatui::style::Color::Rgb(red, green, blue),
+        Color::Indexed(index) => ratatui::style::Color::Indexed(index),
+        _ => ratatui::style::Color::Reset,
+    };
+    ratatui::widgets::Widget::render(
+        ratatui::widgets::Sparkline::default()
+            .data(samples[..columns].to_vec())
+            .style(ratatui::style::Style::default().fg(color)),
+        area,
+        buffer,
+    );
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]

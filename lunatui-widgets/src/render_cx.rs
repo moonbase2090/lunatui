@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, UnderlineStyle};
 
 use crate::overlay::blend_rgb;
 use lunatui_theme::{Theme, Token};
@@ -85,6 +85,16 @@ impl<'a> RenderCx<'a> {
         self.grid.put_str(x, y, style, text, self.clusters);
     }
 
+    pub(crate) fn put_char_patched(&mut self, x: u16, y: u16, glyph: char, style: Style) {
+        let existing = self
+            .grid
+            .get(x, y)
+            .map(lunatui_core::Cell::style)
+            .unwrap_or_default();
+        let patched = patch_style(existing, style);
+        self.grid.put_char(x, y, patched, glyph, self.clusters);
+    }
+
     /// Applies `style` to every cell in `area`, keeping glyphs unchanged.
     pub fn set_style(&mut self, area: Rect, style: Style) {
         self.grid.set_style(area, style);
@@ -107,6 +117,41 @@ impl<'a> RenderCx<'a> {
             }
         }
     }
+}
+
+pub(crate) fn patch_style(base: Style, over: Style) -> Style {
+    Style {
+        fg: if over.fg == Color::Default {
+            base.fg
+        } else {
+            over.fg
+        },
+        bg: if over.bg == Color::Default {
+            base.bg
+        } else {
+            over.bg
+        },
+        attrs: merge_attrs(base.attrs, over.attrs),
+    }
+}
+
+fn merge_attrs(base: Attrs, over: Attrs) -> Attrs {
+    if over.to_bits() == 0 {
+        return base;
+    }
+    let mut merged = base
+        .set_bold(base.bold() || over.bold())
+        .set_dim(base.dim() || over.dim())
+        .set_italic(base.italic() || over.italic())
+        .set_blink(base.blink() || over.blink())
+        .set_reverse(base.reverse() || over.reverse())
+        .set_hidden(base.hidden() || over.hidden())
+        .set_strikethrough(base.strikethrough() || over.strikethrough())
+        .set_overline(base.overline() || over.overline());
+    if over.underline() != UnderlineStyle::None {
+        merged = merged.set_underline(over.underline());
+    }
+    merged
 }
 
 fn resolve_rgb(color: Color, theme: &Theme) -> (u8, u8, u8) {

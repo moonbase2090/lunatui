@@ -13,7 +13,7 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Block, BorderType, Gauge, List, Paragraph, RenderCx, Table, Tabs, TextWrap, Widget,
+    Block, BorderType, Gauge, List, Paragraph, RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -22,7 +22,8 @@ use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{
     Block as RatBlock, BorderType as RatBorderType, Gauge as RatGauge, List as RatList, ListItem,
-    Paragraph as RatParagraph, Row, Table as RatTable, Tabs as RatTabs, Widget as RatWidget, Wrap,
+    Paragraph as RatParagraph, Row, Sparkline as RatSparkline, Table as RatTable, Tabs as RatTabs,
+    Widget as RatWidget, Wrap,
 };
 use ratatui::{Terminal, TerminalOptions, Viewport};
 
@@ -112,6 +113,13 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: gauge_lunatui,
         ratatui: gauge_ratatui,
+    },
+    Case {
+        name: "sparkline",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: sparkline_lunatui,
+        ratatui: sparkline_ratatui,
     },
 ];
 
@@ -369,6 +377,51 @@ fn gauge_lunatui(
         Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), 1),
         accent_style(),
     );
+}
+
+const SPARK_LEN: usize = 256;
+
+const SPARK: [u64; SPARK_LEN] = {
+    let mut values = [0; SPARK_LEN];
+    let mut index = 0;
+    while index < SPARK_LEN {
+        values[index] = spark_at(index);
+        index += 1;
+    }
+    values
+};
+
+const fn spark_at(index: usize) -> u64 {
+    let index = index as u64;
+    4 + (index * 17) % 48 + (index % 5) * 3
+}
+
+fn spark_window(tick: u32, width: u16) -> &'static [u64] {
+    let start = usize::try_from(tick % 40).unwrap_or(0);
+    let columns = usize::from(width).min(SPARK_LEN.saturating_sub(start));
+    &SPARK[start..start + columns]
+}
+
+fn sparkline_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let height = area.height.min(8);
+    Sparkline::new(spark_window(tick, area.width))
+        .style(accent_style())
+        .render(Rect::new(area.x, area.y, area.width, height), &mut cx);
+}
+
+fn sparkline_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let height = area.height.min(8);
+    RatSparkline::default()
+        .data(spark_window(tick, area.width))
+        .style(rat_accent())
+        .render(RatRect::new(area.x, area.y, area.width, height), buf);
 }
 
 fn gauge_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
