@@ -8,6 +8,9 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Changed
+
+- README and `docs/performance.md` present lunatui's own dashboard numbers on one machine and one scope; the public comparison with ratatui and the side-by-side media are removed.
 ## [0.1.5] - 2026-10-26
 
 ### Changed
