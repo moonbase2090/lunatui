@@ -9,6 +9,8 @@ denom = "denom"
 
 [default.extend-words]
 ratatui = "ratatui"
+# RFC 4648 base64 input vector in lunatui-term/src/pixel/tests.rs.
+fo = "fo"
 
 [files]
 # Asciinema recordings in examples/captures are raw terminal output, not prose.

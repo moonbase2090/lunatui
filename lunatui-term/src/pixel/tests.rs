@@ -13,7 +13,7 @@ fn encoded(data: &[u8]) -> String {
 fn base64_matches_the_rfc_4648_vectors() {
     assert_eq!(encoded(b""), "");
     assert_eq!(encoded(b"f"), "Zg==");
-    assert_eq!(encoded(&[b'f', b'o']), "Zm8=");
+    assert_eq!(encoded(b"fo"), "Zm8=");
     assert_eq!(encoded(b"foo"), "Zm9v");
     assert_eq!(encoded(b"foob"), "Zm9vYg==");
     assert_eq!(encoded(b"fooba"), "Zm9vYmE=");
