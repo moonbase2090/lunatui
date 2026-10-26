@@ -10,12 +10,12 @@ Measured on an Apple M5 Max (macOS, arm64), release profile, October 2026:
 
 | | 80×24 lunatui | 80×24 ratatui | 200×60 lunatui | 200×60 ratatui |
 |---|---:|---:|---:|---:|
-| Frame time, median | **67 µs** | 84 µs | **251 µs** | 291 µs |
-| Frame time, p95 | **76 µs** | 101 µs | **303 µs** | 377 µs |
+| Frame time, median | **60 µs** | 79 µs | **249 µs** | 294 µs |
+| Frame time, p95 | **65 µs** | 96 µs | **285 µs** | 378 µs |
 | Bytes written per frame | **603** | 747 | **2868** | 3199 |
 | `write()` calls per frame | 1 | 1 | **1** | 3 |
-| Allocations per frame | **81** | 513 | **163** | 881 |
-| Peak RSS | **2.9 MiB** | 3.6 MiB | **3.3 MiB** | 4.5 MiB |
+| Allocations per frame | **39** | 513 | **69** | 881 |
+| Peak RSS | **2.8 MiB** | 3.6 MiB | **3.1 MiB** | 4.6 MiB |
 
 Reproduce:
 
@@ -29,7 +29,7 @@ The script writes the raw logs to `target/dashboard-fair` (override with `DASHBO
 
 - Frames are timed in a headless run into a counting sink. Terminal-emulator rendering and real terminal latency are not measured.
 - The lead is smaller at 200×60 than at 80×24, and five runs of 240 frames is a small sample. Treat gaps under about 10% as within noise.
-- Absolute times move with machine state. Two full runs of the script on the same day gave 80×24 medians of 60 µs (lunatui) and 77 µs (ratatui), then 67 µs and 84 µs; at 200×60 they gave 248 and 290 µs, then 251 and 291 µs. The ratio held (about 0.8 at 80×24 and 0.86 at 200×60), so compare the sides within one run.
+- Absolute times move with machine state. Three full runs of the script on the same day gave 80×24 medians of 60, 67 and 60 µs for lunatui against 77, 84 and 79 µs for ratatui; at 200×60 they gave 248, 251 and 249 µs against 290, 291 and 294 µs. The ratio held (about 0.8 at 80×24 and 0.85 at 200×60), so compare the sides within one run.
 - The lunatui scene draws the tab row, the table cells and the gauge with clipped `put_str` calls, because `Table` has no per-cell styles or column spacing and `Gauge` has no label. A version built only from the widgets would be a separate comparison.
 - The two layout solvers squeeze over-constrained table columns differently, so scenes at very small sizes (for example 40×12) differ inside the table.
 - Peak RSS is the process high-water mark from `getrusage`.

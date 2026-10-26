@@ -37,11 +37,11 @@ Same machine, same dashboard scene, same scripted frames, release builds, each s
 
 | Dashboard frame | ratatui 0.30.2 | lunatui |
 |---|---|---|
-| 80×24, median / p95 | 84 / 101 µs | **67 / 76 µs** |
-| 200×60, median / p95 | 291 / 377 µs | **251 / 303 µs** |
+| 80×24, median / p95 | 79 / 96 µs | **60 / 65 µs** |
+| 200×60, median / p95 | 294 / 378 µs | **249 / 285 µs** |
 | 200×60 bytes written | 3199 | **2868** |
 | 200×60 `write()` calls | 3 | **1** |
-| 200×60 allocations | 881 | **163** |
+| 200×60 allocations | 881 | **69** |
 | Cell size | 48 B | **16 B** |
 
 Frames are timed headless into a counting sink, so terminal latency is not measured, and the 200×60 lead is modest.
