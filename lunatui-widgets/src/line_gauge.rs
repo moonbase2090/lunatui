@@ -78,7 +78,7 @@ impl Default for LineGauge<'_> {
             label: None,
             style: None,
             label_style: None,
-            filled_symbol: Cow::Borrowed(LineSet::Normal.symbol()),
+            filled_symbol: Cow::Borrowed(LineSet::Thick.symbol()),
             unfilled_symbol: Cow::Borrowed(LineSet::Normal.symbol()),
             filled_style: None,
             unfilled_style: None,
@@ -169,7 +169,7 @@ impl<'a> LineGauge<'a> {
         self
     }
 
-    /// Paints for `state`: focus uses the focus-ring token, disabled dims every part.
+    /// Focus uses the focus-ring token below warning thresholds; disabled dims every part.
     #[must_use]
     pub fn state(mut self, state: WidgetState) -> Self {
         self.state = state;
@@ -180,22 +180,27 @@ impl<'a> LineGauge<'a> {
         let bg = self.style.map_or(Color::Default, |style| style.bg);
         let tone = |token: Token| Style::new().fg(cx.token(token)).bg(bg);
         let dim = Attrs::default().set_dim(true);
-        let [mut filled, mut unfilled, mut label] = match self.state {
-            WidgetState::Normal => [
-                tone(Token::Accent),
-                tone(Token::Surface1),
-                tone(Token::TextPrimary),
-            ],
-            WidgetState::Focused => [
-                tone(Token::FocusRing),
-                tone(Token::Surface1),
-                tone(Token::TextPrimary),
-            ],
-            WidgetState::Disabled => [
-                tone(Token::TextPrimary).with_attrs(dim),
-                tone(Token::Surface1).with_attrs(dim),
-                tone(Token::TextPrimary).with_attrs(dim),
-            ],
+        let fill_token = if self.ratio >= 0.95 {
+            Token::Fail
+        } else if self.ratio >= 0.8 {
+            Token::Warn
+        } else if self.state == WidgetState::Focused {
+            Token::FocusRing
+        } else {
+            Token::Accent
+        };
+        let [mut filled, mut unfilled, mut label] = if self.state == WidgetState::Disabled {
+            [
+                tone(Token::TextMuted).with_attrs(dim),
+                tone(Token::Border).with_attrs(dim),
+                tone(Token::TextMuted).with_attrs(dim),
+            ]
+        } else {
+            [
+                tone(fill_token),
+                tone(Token::Border),
+                tone(Token::TextMuted),
+            ]
         };
         filled = self.filled_style.unwrap_or(filled);
         unfilled = self.unfilled_style.unwrap_or(unfilled);

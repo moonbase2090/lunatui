@@ -57,9 +57,8 @@ fn focused_and_disabled_styles_follow_theme_tokens() -> Result<(), String> {
                 &mut RenderCx::new(&mut grid, &mut clusters, &theme),
             );
             let token = match state {
-                WidgetState::Normal => Token::Accent,
-                WidgetState::Focused => Token::FocusRing,
-                _ => Token::TextPrimary,
+                WidgetState::Normal | WidgetState::Focused => Token::Fail,
+                _ => Token::TextMuted,
             };
             let cell = grid.get(1, 0).ok_or("missing filled cell")?;
             assert_eq!(cell.style().fg, theme.resolve(token));
@@ -152,6 +151,43 @@ fn matches_ratatui_visible_cells_for_ratios_labels_and_line_sets() -> Result<(),
                     }
                 }
             }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn default_threshold_colors_match_literal_graphite_values() -> Result<(), String> {
+    for (variant, colors) in [
+        (
+            Variant::Dark,
+            [
+                Color::Rgb(98, 168, 255),
+                Color::Rgb(242, 184, 75),
+                Color::Rgb(255, 122, 107),
+            ],
+        ),
+        (
+            Variant::Light,
+            [
+                Color::Rgb(79, 137, 209),
+                Color::Rgb(184, 122, 10),
+                Color::Rgb(194, 57, 43),
+            ],
+        ),
+    ] {
+        let theme = Theme::builtin(variant);
+        for (ratio, color) in [0.799, 0.8, 0.95].into_iter().zip(colors) {
+            let mut grid = Grid::new(8, 1);
+            let mut clusters = ClusterTable::new();
+            LineGauge::new().label("").ratio(ratio).render(
+                Rect::new(0, 0, 8, 1),
+                &mut RenderCx::new(&mut grid, &mut clusters, &theme),
+            );
+            assert_eq!(
+                grid.get(1, 0).ok_or("missing filled cell")?.style().fg,
+                color
+            );
         }
     }
     Ok(())

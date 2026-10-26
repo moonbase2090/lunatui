@@ -13,7 +13,7 @@ workspace = true
 [features]
 default = []
 widget-state = []
-line-gauge = ["widget-state"]
+line-gauge = ["widget-state", "lunatui-core/subcell", "lunatui-theme/graphite-tokens"]
 color-profiles = ["lunatui-theme/color-profiles"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
