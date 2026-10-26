@@ -1,11 +1,8 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Headless protocol capture: the bytes `PixelLayer` emits are parsed as kitty graphics
-//! APC commands (`ESC _ G <control-keys> ; <base64 payload> ESC \`) and checked against the
-//! protocol rules, independent of the layer's own writer.
-
 #![cfg(feature = "pixel-layer")]
+#![doc = include_str!("../README.md")]
 
 use std::collections::BTreeMap;
 
@@ -13,8 +10,6 @@ use lunatui_core::Rect;
 use lunatui_term::{PixelImage, PixelLayer, PixelMode};
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-/// One parsed APC command.
 #[derive(Debug)]
 struct Command {
     keys: BTreeMap<String, String>,
@@ -39,8 +34,6 @@ fn base64_decode(text: &str) -> Result<Vec<u8>, String> {
     }
     Ok(out)
 }
-
-/// Splits a byte stream into APC graphics commands; anything else must be cursor moves.
 fn parse(stream: &[u8]) -> Result<Vec<Command>, String> {
     let text = std::str::from_utf8(stream).map_err(|error| error.to_string())?;
     let mut commands = Vec::new();
@@ -124,19 +117,27 @@ fn a_chunked_image_reassembles_and_every_chunk_is_within_the_protocol_limit() ->
     layer.image(7, 1, &image, Rect::new(0, 0, 10, 5), 0);
     let commands = parse(layer.finish_frame())?;
     let mut joined = Vec::new();
-    let mut seen_last = false;
-    for command in commands
+    let transfers: Vec<&Command> = commands
         .iter()
         .take_while(|command| command.keys.get("a").map(String::as_str) != Some("p"))
-    {
+        .collect();
+    for (index, command) in transfers.iter().enumerate() {
         if command.payload.len() > 4096 {
             return Err("chunk exceeds 4096 bytes".to_owned());
         }
+        let more = command.keys.get("m").map(String::as_str);
+        let expect = if index + 1 == transfers.len() {
+            "0"
+        } else {
+            "1"
+        };
+        if more != Some(expect) {
+            return Err(format!("chunk {index} has m={more:?}, expected m={expect}"));
+        }
         joined.extend_from_slice(&command.payload);
-        seen_last = command.keys.get("m").map(String::as_str) == Some("0");
     }
-    if !seen_last {
-        return Err("the last chunk does not end the transfer".to_owned());
+    if transfers.len() < 2 {
+        return Err("the image was not split into chunks".to_owned());
     }
     if joined != rgba {
         return Err("reassembled pixels differ from the source".to_owned());
@@ -187,4 +188,51 @@ fn cells_mode_writes_no_bytes_to_the_capture() {
         layer.image(1, 1, &image, Rect::new(0, 0, 2, 1), 0);
     }
     assert_eq!(layer.finish_frame(), b"");
+}
+
+#[test]
+fn moving_and_changing_depth_places_without_transmitting() -> Result<(), String> {
+    let rgba = vec![2_u8; 4];
+    let image = PixelImage::new(1, 1, &rgba).ok_or("bad image")?;
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    layer.begin_frame();
+    layer.image(6, 1, &image, Rect::new(0, 0, 2, 1), 0);
+    layer.finish_frame();
+    layer.begin_frame();
+    layer.image(6, 1, &image, Rect::new(3, 1, 2, 1), -2);
+    let commands = parse(layer.finish_frame())?;
+    if commands
+        .iter()
+        .any(|command| command.keys.get("a").map(String::as_str) == Some("t"))
+    {
+        return Err("a move retransmitted the pixels".to_owned());
+    }
+    let place = commands.first().ok_or("no placement")?;
+    if place.keys.get("a").map(String::as_str) != Some("p") || number(place, "i") != Some(6) {
+        return Err(format!("placement is not for image 6: {:?}", place.keys));
+    }
+    if place.keys.get("z").map(String::as_str) != Some("-2") {
+        return Err("depth -2 was not written as a signed value".to_owned());
+    }
+    Ok(())
+}
+
+#[test]
+fn clear_deletes_every_image_it_placed() -> Result<(), String> {
+    let rgba = vec![4_u8; 4];
+    let image = PixelImage::new(1, 1, &rgba).ok_or("bad image")?;
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    layer.begin_frame();
+    layer.image(8, 1, &image, Rect::new(0, 0, 2, 1), 0);
+    layer.image(9, 1, &image, Rect::new(2, 0, 2, 1), 0);
+    layer.finish_frame();
+    let commands = parse(layer.clear())?;
+    let ids: Vec<u64> = commands
+        .iter()
+        .filter_map(|command| number(command, "i"))
+        .collect();
+    if ids != vec![8, 9] {
+        return Err(format!("clear deleted {ids:?}, expected [8, 9]"));
+    }
+    Ok(())
 }
