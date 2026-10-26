@@ -13,6 +13,9 @@ workspace = true
 [features]
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
+widget-state = []
+line-gauge = ["widget-state"]
+sparkline = ["widget-state"]
 
 [dependencies]
 lunatui-core = { version = "0.1.4", path = "../lunatui-core" }

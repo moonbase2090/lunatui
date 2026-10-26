@@ -80,3 +80,11 @@ harness = false
 [[bench]]
 name = "criterion_core_diff"
 harness = false
+
+[[bench]]
+name = "widget_suite"
+harness = false
+
+[[bench]]
+name = "criterion_widgets"
+harness = false
