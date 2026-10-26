@@ -9,6 +9,8 @@ mod borders;
 mod calendar;
 mod gauge;
 mod lightcycle;
+#[cfg(feature = "line-gauge")]
+mod line_gauge;
 mod list;
 mod overlay;
 mod padding;
@@ -56,3 +58,8 @@ pub use table::Table;
 pub use tabs::Tabs;
 pub use text_input::TextInput;
 pub use widget::Widget;
+
+#[cfg(feature = "line-gauge")]
+pub use line_gauge::{LineGauge, LineSet};
+#[cfg(feature = "widget-state")]
+pub use state::WidgetState;

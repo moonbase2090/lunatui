@@ -12,9 +12,9 @@ workspace = true
 
 [features]
 default = []
-color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 line-gauge = ["widget-state"]
+color-profiles = ["lunatui-theme/color-profiles"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
 
@@ -68,3 +68,8 @@ required-features = ["color-profiles"]
 name = "sparkline"
 path = "tests/sparkline.rs"
 required-features = ["sparkline"]
+
+[[test]]
+name = "line_gauge"
+path = "tests/line_gauge.rs"
+required-features = ["line-gauge"]
