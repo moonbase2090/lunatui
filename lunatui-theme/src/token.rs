@@ -4,6 +4,7 @@
 /// Semantic colors with stable packed token ids.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[repr(u32)]
+#[non_exhaustive]
 pub enum Token {
     /// Semantic `surface.0` color.
     Surface0 = 0,
@@ -60,10 +61,20 @@ pub enum Token {
 }
 
 impl Token {
-    /// Number of enabled tokens.
+    /// Number of tokens enabled in this Cargo feature set.
+    ///
+    /// This is 20 when `graphite-tokens` is enabled and 8 otherwise. Cargo
+    /// unifies dependency features, so another dependency can enable the
+    /// additional variants for the whole build. Do not persist this value as
+    /// a format size or assume a fixed count across feature sets.
     #[cfg(feature = "graphite-tokens")]
     pub const COUNT: usize = 20;
-    /// Number of enabled tokens.
+    /// Number of tokens enabled in this Cargo feature set.
+    ///
+    /// This is 20 when `graphite-tokens` is enabled and 8 otherwise. Cargo
+    /// unifies dependency features, so another dependency can enable the
+    /// additional variants for the whole build. Do not persist this value as
+    /// a format size or assume a fixed count across feature sets.
     #[cfg(not(feature = "graphite-tokens"))]
     pub const COUNT: usize = 8;
 

@@ -15,6 +15,15 @@ and bundled `prismattyc`, `prismattyc-dark`, and `prismattyc-light` themes use
 Graphite colors. The first eight token ids keep their meanings. Twelve additional
 tokens cover borders, muted/strong/idle text, focus/hover surfaces, danger text,
 and the motion head. `Token::all()` returns all 20 when this feature is enabled.
+Cargo unifies dependency features, so enabling `lunatui-theme/graphite-tokens`
+through any dependency enables the extra token variants for the whole build.
+`Token::COUNT` is 8 without the feature and 20 with it; do not use it as a
+persistent format size or assume it is fixed across feature sets. `Token` is
+non-exhaustive, so downstream matches need a fallback arm.
+
+Enabling the feature also changes the colors returned by `Theme::builtin` and
+the three bundled `prismattyc` themes. Applications that depend on their prior
+palette should keep this feature disabled or provide explicit token overrides.
 
 Colors come from Graphite commit `337ab5d8a33bf1a968291d4a858dc89c9905df8c`.
 The reference focus blue is `#62A8FF`; the light accent is Graphite's contrast-adjusted
@@ -40,4 +49,9 @@ does not implement host `ThemeSource` derivation or terminal capability probing.
 at startup and after a theme/profile change, then pass a borrow to
 `RenderCx::palette`. Token resolution during widget rendering is an array lookup.
 `PreparedPalette::colors()` supplies the same table to the terminal encoder.
-The previous `RenderCx::profile` setter is replaced by this prepared-palette API.
+The previous `RenderCx::profile(profile)` setter is replaced by preparing a
+palette outside the render loop with `theme.prepare(profile)` and supplying it
+to the context with `RenderCx::new(...).palette(&palette)`. Rebuild the palette
+when the theme or terminal profile changes. The previous setter downsampled
+token colors during each widget render; the prepared palette does that work
+once, before rendering starts.
