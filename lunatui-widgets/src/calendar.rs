@@ -129,7 +129,6 @@ impl Date {
         }
     }
 
-    /// Sunday is 0.
     fn weekday(self) -> u8 {
         let days = days_from_civil(self.year, u32::from(self.month), u32::from(self.day));
         u8::try_from(days.wrapping_add(4).rem_euclid(7)).unwrap_or(0)
