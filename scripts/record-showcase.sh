@@ -34,6 +34,7 @@ asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CA
   -c "$(printf '%q ' "$BIN" --side lunatui --case "$CASE" --width "$WIDTH" --height "$HEIGHT" --frames "$FRAMES" --fps "$FPS" --profile "$PROFILE" --theme "$THEME")" \
   "$cast"
 gif="$OUT/${NAME}.gif"
+python3 "$ROOT/scripts/trim-cast.py" "$cast"
 agg --fps-cap 15 --font-size 14 "$cast" "$gif"
 bytes=$(wc -c < "$gif" | awk '{print $1}')
 if [[ ! "$bytes" =~ ^[0-9]+$ ]]; then
