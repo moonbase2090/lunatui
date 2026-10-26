@@ -35,3 +35,9 @@ python3 scripts/generate-graphite-tokens.py path/to/graphite --check
 The generator reads the pinned Git commit rather than working files. ANSI-16
 mappings follow `docs/DESIGN_STANDARD.md`; they are Lunatui policy. This feature
 does not implement host `ThemeSource` derivation or terminal capability probing.
+
+`Theme::prepare(profile)` returns a fixed-size `PreparedPalette`. Prepare it once
+at startup and after a theme/profile change, then pass a borrow to
+`RenderCx::palette`. Token resolution during widget rendering is an array lookup.
+`PreparedPalette::colors()` supplies the same table to the terminal encoder.
+The previous `RenderCx::profile` setter is replaced by this prepared-palette API.

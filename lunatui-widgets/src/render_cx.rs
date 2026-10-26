@@ -7,7 +7,7 @@ use crate::overlay::blend_rgb;
 use lunatui_theme::{Theme, Token};
 
 #[cfg(feature = "color-profiles")]
-use lunatui_theme::Profile;
+use lunatui_theme::{PreparedPalette, Profile};
 
 /// Grid, theme, and cluster state for [`Widget::render`](crate::Widget::render) (PRD §3.2 / DD-3).
 #[derive(Debug)]
@@ -16,7 +16,7 @@ pub struct RenderCx<'a> {
     clusters: &'a mut ClusterTable,
     theme: &'a Theme,
     #[cfg(feature = "color-profiles")]
-    profile: Option<Profile>,
+    palette: Option<&'a PreparedPalette>,
 }
 
 impl<'a> RenderCx<'a> {
@@ -41,16 +41,23 @@ impl<'a> RenderCx<'a> {
             clusters,
             theme,
             #[cfg(feature = "color-profiles")]
-            profile: None,
+            palette: None,
         }
     }
 
-    /// Downsamples resolved token colors through `profile` when the `color-profiles` feature is on.
+    /// Borrow token colors prepared at startup or when the theme changes.
     #[cfg(feature = "color-profiles")]
     #[must_use]
-    pub fn profile(mut self, profile: Profile) -> Self {
-        self.profile = Some(profile);
+    pub fn palette(mut self, palette: &'a PreparedPalette) -> Self {
+        self.palette = Some(palette);
         self
+    }
+
+    /// The prepared terminal color profile, if one was supplied.
+    #[cfg(feature = "color-profiles")]
+    #[must_use]
+    pub fn color_profile(&self) -> Option<Profile> {
+        self.palette.map(PreparedPalette::profile)
     }
 
     /// Active theme for the frame.
@@ -61,15 +68,14 @@ impl<'a> RenderCx<'a> {
         self.theme
     }
 
-    /// Resolves a semantic token to a color (profile downsampling when enabled).
+    /// Resolves a semantic token through the prepared palette or active theme.
     #[must_use]
     pub fn token(&self, token: Token) -> Color {
-        let base = self.theme.resolve(token);
         #[cfg(feature = "color-profiles")]
-        if let Some(profile) = self.profile {
-            return profile.downsample(base);
+        if let Some(palette) = self.palette {
+            return palette.resolve(token);
         }
-        base
+        self.theme.resolve(token)
     }
 
     /// Resolves a theme-file token name, if recognized.

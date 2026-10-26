@@ -5,7 +5,7 @@
 
 use lunatui_bench::CountingAllocator;
 use lunatui_core::Color;
-use lunatui_theme::{Theme, Token, Variant};
+use lunatui_theme::{Profile, Theme, Token, Variant};
 use std::hint::black_box;
 
 #[global_allocator]
@@ -14,12 +14,13 @@ static ALLOC: CountingAllocator = CountingAllocator::system();
 #[test]
 fn measured_token_resolution_returns_graphite_colors_without_allocations() {
     let theme = Theme::builtin(Variant::Dark);
+    let palette = theme.prepare(Profile::TrueColor);
     let (colors, stats) = ALLOC.measure(|| {
         [
-            black_box(&theme).resolve(black_box(Token::Border)),
-            black_box(&theme).resolve(black_box(Token::TextMuted)),
-            black_box(&theme).resolve(black_box(Token::Warn)),
-            black_box(&theme).resolve(black_box(Token::Fail)),
+            black_box(&palette).resolve(black_box(Token::Border)),
+            black_box(&palette).resolve(black_box(Token::TextMuted)),
+            black_box(&palette).resolve(black_box(Token::Warn)),
+            black_box(&palette).resolve(black_box(Token::Fail)),
         ]
     });
     assert_eq!(
