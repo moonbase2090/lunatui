@@ -35,7 +35,7 @@ impl SparklineBar {
         }
     }
 
-    /// Style layered on the sparkline style. `Color::Default` leaves that channel alone.
+    /// Style layered on the sparkline style. [`lunatui_core::Color::Default`] leaves that channel alone.
     #[must_use]
     pub fn style(mut self, style: impl Into<Option<Style>>) -> Self {
         self.style = style.into();

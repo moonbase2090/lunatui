@@ -31,18 +31,14 @@ Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI 
 
 ## Widget gallery
 
-### Sparkline
-
-![Sparkline widget: three rows of scrolling bars in the dark theme](docs/media/sparkline.gif)
-
-Screenshot: [docs/media/sparkline.png](docs/media/sparkline.png). Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120x36, 8 s at 30 fps).
-
 Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
 
 ### Sparkline
 
-Live request rate, with the series sliding and the widget moving through normal, focused, and disabled.
+Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
 
-![Sparkline still](docs/gallery/sparkline.png)
+![Sparkline service board](docs/media/sparkline.gif)
 
-![Sparkline recording](docs/gallery/sparkline.gif)
+![Sparkline service board, still](docs/media/sparkline.png)
+
+Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120×36, 8 s at 30 fps, dark theme).

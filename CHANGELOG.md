@@ -13,6 +13,10 @@ Every PR adds its entry under **Unreleased**.
 - `Sparkline` widget, behind the `sparkline` feature. Bar heights, direction, max, missing samples, and per-bar styles match ratatui when a style is set. Without one, bars use theme tokens for normal, focused, and disabled, and the latest sample is emphasized. `Baseline::Minimum` lifts the floor to the smallest sample.
 - `Grid::put_char` writes one width-1 character, including its text attributes, without grapheme segmentation.
 
+### Changed
+
+- The sparkline gallery is a live service board: labeled series, a moving selection, per-row value and min/max, and an error row that turns red over its threshold.
+
 ## [0.1.8] - 2026-10-26
 
 ### Added
