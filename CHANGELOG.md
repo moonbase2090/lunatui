@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - README and `docs/performance.md` compare lunatui and ratatui on the same machine with the same dashboard scene and scope (frame time, bytes, writes, allocations, RSS), replacing figures measured on different machines and over different scopes.
 
+### Added
+
+- Pixel layer in `lunatui-term`, behind the off-by-default `pixel-layer` feature: `PixelMode::from_caps` chooses kitty graphics only when the terminal answered the query and no multiplexer is present, and `PixelLayer` keeps RGBA images on screen with the least traffic (transmit on a new content generation, place again only on a move or depth change, delete when no longer listed). It allocates nothing in steady state; in `Cells` mode it emits nothing so callers draw a cell fallback.
+
 ## [0.1.4] - 2026-10-25
 
 ### Changed
