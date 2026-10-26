@@ -13,6 +13,7 @@ workspace = true
 
 [features]
 pixel-layer = ["lunatui-term/pixel-layer"]
+render-color = ["lunatui-core/render-color"]
 # gungraun needs Linux and valgrind, so its benchmarks are opt-in.
 gungraun = ["dep:gungraun"]
 
@@ -94,3 +95,8 @@ harness = false
 name = "pixel_layer_allocs"
 path = "tests/pixel_layer_allocs.rs"
 required-features = ["pixel-layer"]
+
+[[test]]
+name = "render_color_allocs"
+path = "tests/render_color_allocs.rs"
+required-features = ["render-color"]

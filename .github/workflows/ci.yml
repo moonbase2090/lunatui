@@ -40,6 +40,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --workspace
       - run: cargo test --workspace
+      - run: cargo test --locked -p lunatui-core --features render-color
+      - run: cargo test --locked -p lunatui-bench --features render-color --test render_color_allocs
       - run: cargo test -p lunatui-widgets --features color-profiles
       - run: cargo test --locked -p lunatui-term --features pixel-layer
       - run: cargo test --locked -p lunatui-bench --features pixel-layer --test pixel_layer_allocs
