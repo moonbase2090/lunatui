@@ -25,7 +25,7 @@ Strict loaders require the eight base file tokens; extension tokens are optional
 With `color-profiles`, `Theme::palette_for(Profile::Ansi16)` uses semantic ANSI
 indices, including index 4 for accent/focus, 3 for warning and 1 for danger.
 RGB overrides do not change those semantic indices. Truecolor preserves overrides;
-256-color mode precomputes nearest OKLab colors at palette preparation time.
+256-color mode precomputes nearest `OKLab` colors at palette preparation time.
 
 ```sh
 cargo test --locked -p lunatui-theme --features graphite-tokens,color-profiles
