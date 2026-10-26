@@ -17,6 +17,7 @@ widget-state = []
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
+barchart = []
 bigtext = ["widget-state", "lunatui-core/subcell"]
 
 [dependencies]
@@ -58,6 +59,11 @@ path = "tests/tabs.rs"
 [[test]]
 name = "text_input"
 path = "tests/text_input.rs"
+
+[[test]]
+name = "bar_chart"
+path = "tests/bar_chart.rs"
+required-features = ["barchart"]
 
 [[test]]
 name = "overlay"
