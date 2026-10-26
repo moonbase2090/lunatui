@@ -38,6 +38,6 @@ The `criterion` benches (`cargo bench -p lunatui-bench`) track regressions in in
 
 ## Limits
 
-- Absolute times move with machine state. Three full runs of the script on one day gave 80×24 medians of 60, 67 and 60 µs, and 200×60 medians of 248, 251 and 249 µs.
+- Absolute times move with machine state. Five full runs of the script on the same and later days gave lunatui 80×24 medians of 60.3, 64.0, 69.6, 67.2 and 59.7 µs and 200×60 medians of 252.5, 251.5, 266.0, 250.7 and 249.2 µs; the table above is from the most recent of them.
 - Five runs of 240 frames is a small sample. Treat differences under about 10% as noise.
 - Widget benchmarks are gated per widget in `cargo xtask bench` and are not summarised here.
