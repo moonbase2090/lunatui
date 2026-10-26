@@ -12,9 +12,14 @@ FRAMES="${FRAMES:-240}"
 FPS="${FPS:-30}"
 PROFILE="${PROFILE:-truecolor}"
 THEME="${THEME:-dark}"
-MAX_BYTES="${MAX_BYTES:-2000000}"
+HARD_MAX_BYTES=2000000
+MAX_BYTES="${MAX_BYTES:-$HARD_MAX_BYTES}"
 OUT="${OUT:-$ROOT/target/widget-showcase}"
 if [[ ! "$CASE" =~ ^[a-z][a-z-]*$ ]]; then echo "record-showcase: bad CASE" >&2; exit 2; fi
+if (( MAX_BYTES > HARD_MAX_BYTES )); then
+  echo "record-showcase: MAX_BYTES may not exceed ${HARD_MAX_BYTES} (the gallery limit)" >&2
+  exit 2
+fi
 for value in "$WIDTH" "$HEIGHT" "$FRAMES" "$FPS" "$MAX_BYTES"; do
   if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then echo "record-showcase: sizes and counts must be positive integers" >&2; exit 2; fi
 done
