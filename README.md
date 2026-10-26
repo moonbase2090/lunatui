@@ -31,6 +31,12 @@ Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI 
 
 ## Widget gallery
 
+### Calendar
+
+![Calendar widget: a monthly calendar in the dark theme](docs/media/calendar.gif)
+
+Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-showcase.sh` (`CASE=calendar`, 120x36, 8 s at 30 fps).
+
 Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
 
 ### Calendar
