@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Records one parity-suite widget on the lunatui and ratatui sides with identical
 # size, frame count, fps, theme and color profile, then stacks them side by side.
-# Requires asciinema 3, agg and ffmpeg. Output: OUT/<case>-<size>-<profile>-<theme>.{cast,gif,mp4}
+# Requires asciinema 3, agg and ffmpeg. Output: OUT/<case>-<size>-<profile>-<theme>-side-by-side.mp4
+# plus the per-side casts and GIFs. Keep README assets small: a short run, MP4 or WebP.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 CASE="${CASE:-block}"
 WIDTH="${WIDTH:-80}"
 HEIGHT="${HEIGHT:-24}"
-FRAMES="${FRAMES:-120}"
+FRAMES="${FRAMES:-60}"
 FPS="${FPS:-30}"
 PROFILE="${PROFILE:-truecolor}"
 THEME="${THEME:-dark}"
@@ -24,5 +25,6 @@ for side in lunatui ratatui; do
   agg --font-size 14 "${OUT}/${NAME}-${side}.cast" "${OUT}/${NAME}-${side}.gif"
 done
 ffmpeg -loglevel error -y -i "${OUT}/${NAME}-lunatui.gif" -i "${OUT}/${NAME}-ratatui.gif" \
-  -filter_complex "[0:v][1:v]hstack=inputs=2" "${OUT}/${NAME}-side-by-side.gif"
-echo "Recordings: ${OUT}/${NAME}-side-by-side.gif"
+  -filter_complex "[0:v][1:v]hstack=inputs=2,format=yuv420p" -c:v libx264 -crf 28 -movflags +faststart \
+  "${OUT}/${NAME}-side-by-side.mp4"
+echo "Recording: ${OUT}/${NAME}-side-by-side.mp4"
