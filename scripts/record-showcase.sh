@@ -16,13 +16,13 @@ HARD_MAX_BYTES=2000000
 MAX_BYTES="${MAX_BYTES:-$HARD_MAX_BYTES}"
 OUT="${OUT:-$ROOT/target/widget-showcase}"
 if [[ ! "$CASE" =~ ^[a-z][a-z-]*$ ]]; then echo "record-showcase: bad CASE" >&2; exit 2; fi
-if (( MAX_BYTES > HARD_MAX_BYTES )); then
+for value in "$WIDTH" "$HEIGHT" "$FRAMES" "$FPS" "$MAX_BYTES"; do
+  if [[ ! "$value" =~ ^[1-9][0-9]{0,9}$ ]]; then echo "record-showcase: sizes and counts must be positive integers" >&2; exit 2; fi
+done
+if (( 10#$MAX_BYTES > HARD_MAX_BYTES )); then
   echo "record-showcase: MAX_BYTES may not exceed ${HARD_MAX_BYTES} (the gallery limit)" >&2
   exit 2
 fi
-for value in "$WIDTH" "$HEIGHT" "$FRAMES" "$FPS" "$MAX_BYTES"; do
-  if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then echo "record-showcase: sizes and counts must be positive integers" >&2; exit 2; fi
-done
 case "$PROFILE" in truecolor | ansi256 | ansi16) ;; *) echo "record-showcase: unknown PROFILE" >&2; exit 2 ;; esac
 case "$THEME" in dark | light) ;; *) echo "record-showcase: unknown THEME" >&2; exit 2 ;; esac
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
@@ -36,7 +36,7 @@ asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CA
 gif="$OUT/${NAME}.gif"
 agg --fps-cap 15 --font-size 14 "$cast" "$gif"
 bytes=$(wc -c < "$gif")
-if (( bytes > MAX_BYTES )); then
+if (( 10#$bytes > 10#$MAX_BYTES )); then
   echo "record-showcase: ${gif} is ${bytes} bytes, over the ${MAX_BYTES}-byte limit; shorten FRAMES or lower FPS" >&2
   exit 3
 fi
