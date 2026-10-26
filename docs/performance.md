@@ -34,7 +34,7 @@ The script writes the raw logs and a summary to `target/dashboard-fair`. `FRAMES
 
 ## Microbenchmarks
 
-The `criterion` benches (`cargo bench -p lunatui-bench`) track regressions in individual operations, for example the unchanged-grid diff at about 4.6 µs for 200×60 and the dashboard render step at about 215 µs on the development hardware.
+The `criterion` benches (`cargo bench -p lunatui-bench`) track regressions in individual operations. The unchanged-grid diff of the packed-cell prototype (ADR 0001) takes about 4.6 µs at 200×60 on the development hardware; the dashboard render figures are the same scene measured on the baseline, so read them from the bench output rather than this page.
 
 ## Limits
 
