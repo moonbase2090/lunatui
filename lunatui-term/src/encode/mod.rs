@@ -8,7 +8,7 @@ use lunatui_core::{
     Cell, CellWidth, ChangedRun, ClusterTable, Color, DecodedGlyph, Grid, diff_runs_into,
 };
 
-use cursor::write_cup;
+pub(crate) use cursor::write_cup;
 pub use cursor::write_cursor_state;
 use sgr::{Pen, write_sgr_delta};
 

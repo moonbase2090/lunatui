@@ -12,6 +12,7 @@ publish = false
 workspace = true
 
 [features]
+pixel-layer = ["lunatui-term/pixel-layer"]
 # gungraun needs Linux and valgrind, so its benchmarks are opt-in.
 gungraun = ["dep:gungraun"]
 
@@ -88,3 +89,8 @@ harness = false
 [[bench]]
 name = "criterion_widgets"
 harness = false
+
+[[test]]
+name = "pixel_layer_allocs"
+path = "tests/pixel_layer_allocs.rs"
+required-features = ["pixel-layer"]

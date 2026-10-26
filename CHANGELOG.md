@@ -35,6 +35,10 @@ Every PR adds its entry under **Unreleased**.
 
 - Motion core in `lunatui-runtime`, behind the off-by-default `motion` feature: the design standard's `Ease::OutCubic` and `Ease::InCubic` curves, the 80/160/240 ms durations with a 300 ms cap, `DampedSpring` (stiffness, damping and mass; `standard` is 300/30/1 and settles within an eighth of a cell), interruptible `Transition`, `FramePacer` (60 to 30 fps after two slow frames), `MotionPolicy` for the `LUNATUI_REDUCED_MOTION` flag, and `Scheduler::set_frame_period`.
 
+### Added
+
+- Pixel layer in `lunatui-term`, behind the off-by-default `pixel-layer` feature: `PixelMode::from_caps` chooses kitty graphics only when the terminal answered the query and no multiplexer is present, and `PixelLayer` keeps RGBA images on screen with the least traffic (transmit on a new content generation, place again only on a move or depth change, delete when no longer listed). It allocates nothing in steady state; in `Cells` mode it emits nothing so callers draw a cell fallback.
+
 ## [0.1.4] - 2026-10-25
 
 ### Changed

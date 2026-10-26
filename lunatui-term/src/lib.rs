@@ -6,6 +6,8 @@
 mod caps;
 mod encode;
 mod input;
+#[cfg(feature = "pixel-layer")]
+mod pixel;
 mod session;
 
 /// Windows console VT output and crossterm input (PR 27).
@@ -24,4 +26,6 @@ pub use input::{
     Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
     MouseUnit, Parser, Paste, Scroll, fuzz_input_parser,
 };
+#[cfg(feature = "pixel-layer")]
+pub use pixel::{PixelImage, PixelLayer, PixelMode};
 pub use session::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};

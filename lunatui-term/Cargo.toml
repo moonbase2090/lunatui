@@ -10,6 +10,14 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+pixel-layer = []
+
+[[test]]
+name = "pixel_layer"
+required-features = ["pixel-layer"]
+
 [dependencies]
 lunatui-core = { version = "0.1.6", path = "../lunatui-core" }
 
