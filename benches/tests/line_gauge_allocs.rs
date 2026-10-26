@@ -22,7 +22,7 @@ fn actual_default_value_and_subcell_render_allocate_nothing() {
         .label("CPU")
         .ratio(0.25)
         .render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
-    let (_, stats) = ALLOC.measure(|| {
+    let ((), stats) = ALLOC.measure(|| {
         LineGauge::new()
             .label("CPU")
             .ratio(black_box(0.53125))

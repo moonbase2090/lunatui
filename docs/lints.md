@@ -22,6 +22,10 @@ No rules yet.
 | `benches/src/calibration.rs`, `grow_buffer` | `clippy::same_item_push` | Growing one push at a time is the workload being measured | PR 02 (#4) |
 | `benches/benches/gungraun_calibration.rs`, crate root | `missing_docs` | gungraun's benchmark macros generate undocumented public items | PR 02 (#4); `#[allow]` replaced in #6 |
 | `lunatui-term/src/bin/session_pty_probe.rs`, `run_panic` | `clippy::panic` | PTY integration test exercises panic restore | PR 10 (#22) |
+| `lunatui-widgets/src/line_gauge.rs`, `filled_eighths` | `clippy::cast_possible_truncation` | The private ratio is finite and clamped to 0..=1; floor deliberately quantizes at most 524280 eighths | LineGauge |
+| `lunatui-widgets/src/line_gauge.rs`, `filled_eighths` | `clippy::cast_sign_loss` | The clamped ratio and u16 column count are nonnegative | LineGauge |
+| `lunatui-widgets/src/line_gauge.rs`, `percent_label` | `clippy::cast_possible_truncation` | Rounded percent is bounded to 0..=100 before conversion to u8 | LineGauge |
+| `lunatui-widgets/src/line_gauge.rs`, `percent_label` | `clippy::cast_sign_loss` | The clamped ratio produces a nonnegative percentage | LineGauge |
 
 ## Checks
 

@@ -6,7 +6,7 @@ use std::borrow::Cow;
 use unicode_segmentation::UnicodeSegmentation;
 
 use lunatui_core::{Attrs, Color, Rect, Size, Style, clip_display_prefix, width as display_width};
-use lunatui_theme::Token;
+use lunatui_theme::{Profile, Token};
 
 use crate::{Block, RenderCx, Widget, WidgetState};
 
@@ -21,7 +21,7 @@ pub enum LineSet {
     Thick,
     /// Double horizontal line (`═`).
     Double,
-    /// Plain hyphen (`-`) for terminals without Unicode box drawing.
+    /// ASCII `#` fill and `-` track for terminals without Unicode box drawing.
     Ascii,
 }
 
@@ -138,10 +138,16 @@ impl<'a> LineGauge<'a> {
         self
     }
 
-    /// Draws both the filled and the unfilled part with `set`.
+    /// Use a discrete line set, with `#`/`-` for ASCII.
+    ///
+    /// Call `subcell(true)` afterwards to restore an eighth-block head.
     #[must_use]
     pub fn line_set(mut self, set: LineSet) -> Self {
-        self.filled_symbol = Cow::Borrowed(set.symbol());
+        self.filled_symbol = Cow::Borrowed(if set == LineSet::Ascii {
+            "#"
+        } else {
+            set.symbol()
+        });
         self.unfilled_symbol = Cow::Borrowed(set.symbol());
         self.subcell = false;
         self
@@ -230,6 +236,9 @@ impl<'a> LineGauge<'a> {
             filled.attrs = filled.attrs.set_dim(true);
             unfilled.attrs = unfilled.attrs.set_dim(true);
             label.attrs = label.attrs.set_dim(true);
+        }
+        if self.state == WidgetState::Focused && cx.color_profile() == Some(Profile::Ansi16) {
+            label.attrs = label.attrs.set_bold(true).set_reverse(true);
         }
         [filled, unfilled, label]
     }

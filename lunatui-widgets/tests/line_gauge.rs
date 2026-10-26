@@ -123,6 +123,7 @@ fn matches_ratatui_visible_cells_for_ratios_labels_and_line_sets() -> Result<(),
                         .ratio(ratio)
                         .label(label)
                         .line_set(set)
+                        .filled_symbol(symbol)
                         .style(Style::new().fg(Color::Indexed(3)))
                         .label_style(Style::new().fg(Color::Indexed(3)))
                         .filled_style(Style::new().fg(Color::Indexed(2)))
@@ -261,4 +262,58 @@ fn repaint_clears_old_label_and_does_not_touch_other_rows() {
         .render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
     assert_eq!(grid.row_display(1, &clusters), "x ─────────────── 0%");
     assert!(grid.row_display(0, &clusters).starts_with("sentinel"));
+}
+
+#[test]
+fn prepared_ansi16_uses_semantic_indices_and_noncolor_focus() -> Result<(), &'static str> {
+    use lunatui_theme::Profile;
+    let theme = Theme::builtin(Variant::Dark);
+    let palette = theme.prepare(Profile::Ansi16);
+    for (state, ratio, expected_fill) in [
+        (WidgetState::Normal, 0.5, 4),
+        (WidgetState::Normal, 0.8, 3),
+        (WidgetState::Normal, 0.95, 1),
+        (WidgetState::Focused, 0.5, 4),
+        (WidgetState::Disabled, 0.5, 8),
+    ] {
+        let mut grid = Grid::new(20, 1);
+        let mut clusters = ClusterTable::new();
+        LineGauge::new()
+            .label("CPU")
+            .ratio(ratio)
+            .state(state)
+            .render(
+                Rect::new(0, 0, 20, 1),
+                &mut RenderCx::new(&mut grid, &mut clusters, &theme).palette(&palette),
+            );
+        let filled = grid.get(4, 0).ok_or("missing track")?;
+        assert_eq!(filled.style().fg, Color::Indexed(expected_fill));
+        assert_eq!(filled.style().attrs.dim(), state == WidgetState::Disabled);
+        let value = grid.get(17, 0).ok_or("missing value")?;
+        assert_eq!(value.style().fg, Color::Indexed(8));
+        assert_eq!(value.style().attrs.bold(), state == WidgetState::Focused);
+        assert_eq!(value.style().attrs.reverse(), state == WidgetState::Focused);
+    }
+    Ok(())
+}
+
+#[test]
+fn ascii_fallback_and_nonfinite_progress_have_literal_output() {
+    let (grid, clusters) = render(
+        &LineGauge::new()
+            .label("CPU")
+            .ratio(0.53125)
+            .line_set(LineSet::Ascii),
+        20,
+        1,
+    );
+    assert_eq!(grid.row_display(0, &clusters), "CPU ######------ 53%");
+    for (ratio, expected) in [
+        (f64::NAN, "───────── 0%"),
+        (f64::NEG_INFINITY, "───────── 0%"),
+        (f64::INFINITY, "━━━━━━━ 100%"),
+    ] {
+        let (grid, clusters) = render(&LineGauge::new().ratio(ratio), 12, 1);
+        assert_eq!(grid.row_display(0, &clusters), expected);
+    }
 }
