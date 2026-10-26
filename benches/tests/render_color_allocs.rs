@@ -31,6 +31,10 @@ fn sampling_and_compositing_allocate_nothing_and_return_the_expected_colors()
         }
         sum
     });
+    println!(
+        "prepared color checksum={sum}; measured allocations={}",
+        stats.allocations
+    );
     assert_eq!(sum, 146_700);
     assert_eq!(stats.allocations, 0);
     Ok(())

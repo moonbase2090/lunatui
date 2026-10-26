@@ -92,3 +92,14 @@ fn reduced_color_ramps_snap_to_the_resolved_solid_token() -> Result<(), Box<dyn 
     assert!(PreparedRamp::<1>::new([0; 3], [255; 3], RampOutput::TrueColor).is_err());
     Ok(())
 }
+
+#[test]
+fn prepared_ramp_rounds_half_steps_to_the_nearest_color() -> Result<(), Box<dyn std::error::Error>>
+{
+    let ramp = PreparedRamp::<3>::new([0; 3], [255; 3], RampOutput::TrueColor)?;
+    assert_eq!(ramp.sample(16_383), Color::Rgb(0, 0, 0));
+    assert_eq!(ramp.sample(16_384), Color::Rgb(99, 99, 99));
+    assert_eq!(ramp.sample(49_151), Color::Rgb(99, 99, 99));
+    assert_eq!(ramp.sample(49_152), Color::Rgb(255, 255, 255));
+    Ok(())
+}
