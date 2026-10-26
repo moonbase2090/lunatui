@@ -52,3 +52,8 @@ test = false
 name = "fuzz_input_parser"
 path = "../fuzz/fuzz_input_parser.rs"
 test = false
+
+[[test]]
+name = "pixel_capture"
+path = "tests/pixel_capture.rs"
+required-features = ["pixel-layer"]

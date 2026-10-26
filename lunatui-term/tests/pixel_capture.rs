@@ -1,7 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-#![cfg(feature = "pixel-layer")]
 #![doc = include_str!("../README.md")]
 
 use std::collections::BTreeMap;
