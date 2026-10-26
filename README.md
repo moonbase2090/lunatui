@@ -28,3 +28,15 @@ The dashboard draws 240 frames (about four seconds) and exits. Add `-- --bench` 
 See the [review policy](REVIEW_POLICY.md) for PR classification, proof and merge requirements.
 
 Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI and manual sign-off: [docs/ci.md](docs/ci.md). Examples: [examples/README.md](examples/README.md).
+
+## Widget gallery
+
+Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
+
+### Calendar
+
+October with release and on-call dates, the selected day moving, and normal, focused, and disabled months beside it.
+
+![Calendar still](docs/gallery/calendar.png)
+
+![Calendar recording](docs/gallery/calendar.gif)

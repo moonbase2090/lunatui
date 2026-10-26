@@ -13,18 +13,21 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Block, BorderType, Gauge, List, Paragraph, RenderCx, Table, Tabs, TextWrap, Widget,
+    Block, BorderType, Date, Gauge, List, Monthly, Paragraph, RenderCx, Table, Tabs, TextWrap,
+    Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint as RatConstraint, Rect as RatRect};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::text::{Line, Span};
+use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
     Block as RatBlock, BorderType as RatBorderType, Gauge as RatGauge, List as RatList, ListItem,
     Paragraph as RatParagraph, Row, Table as RatTable, Tabs as RatTabs, Widget as RatWidget, Wrap,
 };
 use ratatui::{Terminal, TerminalOptions, Viewport};
+use time::{Date as TimeDate, Month};
 
 /// Terminal sizes every case runs at.
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
@@ -103,6 +106,13 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: tabs_lunatui,
         ratatui: tabs_ratatui,
+    },
+    Case {
+        name: "calendar",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: calendar_lunatui,
+        ratatui: calendar_ratatui,
     },
     Case {
         name: "gauge",
@@ -339,6 +349,76 @@ fn tabs_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .padding("", "")
         .divider(" ")
         .render(RatRect::new(area.x, area.y, area.width, 1), buf);
+}
+
+fn calendar_month(tick: u32) -> u8 {
+    u8::try_from((tick % 12) + 1).unwrap_or(1)
+}
+
+fn calendar_date(tick: u32) -> Date {
+    Date::from_ymd(2024, calendar_month(tick), 1).unwrap_or(Date::UNIX_EPOCH)
+}
+
+fn rat_month(tick: u32) -> Month {
+    match tick % 12 {
+        0 => Month::January,
+        1 => Month::February,
+        2 => Month::March,
+        3 => Month::April,
+        4 => Month::May,
+        5 => Month::June,
+        6 => Month::July,
+        7 => Month::August,
+        8 => Month::September,
+        9 => Month::October,
+        10 => Month::November,
+        _ => Month::December,
+    }
+}
+
+fn rat_calendar_date(tick: u32) -> TimeDate {
+    TimeDate::from_calendar_date(2024, rat_month(tick), 1).unwrap_or(TimeDate::MIN)
+}
+
+struct DayThirteen;
+
+impl DateStyler for DayThirteen {
+    fn get_style(&self, date: TimeDate) -> RatStyle {
+        if date.day() == 13 {
+            rat_accent()
+        } else {
+            RatStyle::new()
+        }
+    }
+}
+
+fn calendar_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let date = calendar_date(tick);
+    let event = Date::from_ymd(date.year(), date.month(), 13).unwrap_or(date);
+    let events = [(event, accent_style())];
+    Monthly::new(date, events.as_slice())
+        .default_style(text_style())
+        .show_month_header(accent_style())
+        .show_weekdays_header(dim_style())
+        .show_surrounding(dim_style())
+        .render(area, &mut cx);
+}
+
+fn calendar_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let date = rat_calendar_date(tick);
+    RatMonthly::new(date, DayThirteen)
+        .default_style(rat_text())
+        .show_month_header(rat_accent())
+        .show_weekdays_header(rat_dim())
+        .show_surrounding(rat_dim())
+        .render(area, buf);
 }
 
 fn ratio(width: u16, tick: u32) -> f32 {

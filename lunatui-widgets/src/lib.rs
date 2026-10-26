@@ -5,6 +5,8 @@
 
 mod block;
 mod borders;
+#[cfg(feature = "calendar")]
+mod calendar;
 mod gauge;
 mod lightcycle;
 mod list;
@@ -25,6 +27,8 @@ mod widget;
 
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
+#[cfg(feature = "calendar")]
+pub use calendar::{Date, DateStyle, Monthly};
 pub use gauge::Gauge;
 pub use lightcycle::Lightcycle;
 pub use list::List;

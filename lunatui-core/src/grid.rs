@@ -157,6 +157,50 @@ impl Grid {
         self.put_graphemes(x, y, style, text, clusters);
     }
 
+    /// Places `ch` at `(x, y)` with `style`, including text attributes.
+    ///
+    /// A width-1 character replaces that cell directly. Any other character goes
+    /// through [`put_str`](Self::put_str), which does not store attributes, and
+    /// then [`set_style`](Self::set_style) writes them.
+    pub fn put_char(
+        &mut self,
+        x: u16,
+        y: u16,
+        style: Style,
+        ch: char,
+        clusters: &mut ClusterTable,
+    ) {
+        if y >= self.height || x >= self.width {
+            return;
+        }
+        if char_width(ch) == 1
+            && let Some(slot) = GlyphSlot::inline_scalar(ch)
+            && self
+                .get(x, y)
+                .is_none_or(|cell| cell.meta().width == CellWidth::One)
+        {
+            self.place(
+                x,
+                y,
+                Cell::from_parts(
+                    slot,
+                    style,
+                    Meta {
+                        width: CellWidth::One,
+                        attrs: style.attrs,
+                        ..Meta::default()
+                    },
+                ),
+            );
+            return;
+        }
+        let mut encoded = [0; 4];
+        self.put_str(x, y, style, ch.encode_utf8(&mut encoded), clusters);
+        if style.attrs.to_bits() != 0 {
+            self.set_style(Rect::new(x, y, 1, 1), style);
+        }
+    }
+
     fn put_ascii(&mut self, x: u16, y: u16, style: Style, bytes: &[u8]) -> bool {
         let start = usize::from(y) * usize::from(self.width) + usize::from(x);
         let end = start + bytes.len();
@@ -579,7 +623,7 @@ mod put_str_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::{CellWidth, ClusterTable, Grid, Rect, Style};
+    use super::{Cell, CellWidth, ClusterTable, Grid, Rect, Style};
     use crate::{Attrs, Color};
 
     impl Grid {
@@ -677,6 +721,23 @@ mod tests {
 
     fn area(rng: &mut Rng) -> Rect {
         Rect::new(rng.small(14), rng.small(5), rng.small(9), rng.small(4))
+    }
+
+    #[test]
+    fn put_char_stores_a_width_one_glyph_and_its_attributes() {
+        let mut clusters = ClusterTable::new();
+        let mut grid = Grid::new(2, 1);
+        let style = Style::new()
+            .fg(Color::Indexed(2))
+            .with_attrs(Attrs::default().set_bold(true));
+        grid.put_char(0, 0, style, '█', &mut clusters);
+        assert_eq!(grid.row_display(0, &clusters), "█ ");
+        assert_eq!(
+            grid.get(0, 0)
+                .map(Cell::style)
+                .map(|style| (style.fg, style.attrs.bold())),
+            Some((Color::Indexed(2), true))
+        );
     }
 
     #[test]

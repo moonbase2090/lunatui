@@ -27,10 +27,11 @@ lunatui-term = { path = "../lunatui-term" }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.8", path = "../lunatui-widgets" }
+lunatui-widgets = { version = "0.1.8", path = "../lunatui-widgets", features = ["calendar"] }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
 lunatui-prismattyc = { version = "0.1.8", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"
+time = { version = "=0.3.55", default-features = false }
 libc = "0.2.190"
 
 # Examples live in the top-level `examples/` directory (PRD M13) and are
@@ -143,3 +144,8 @@ name = "widget_preview"
 path = "../examples/widget_preview.rs"
 test = false
 required-features = ["color-profiles"]
+
+[[example]]
+name = "calendar"
+path = "../examples/calendar.rs"
+test = true
