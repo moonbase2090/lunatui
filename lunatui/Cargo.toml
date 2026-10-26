@@ -137,3 +137,9 @@ test = true
 name = "port_ratatui_list"
 path = "../examples/port_ratatui_list.rs"
 test = true
+
+[[example]]
+name = "widget_preview"
+path = "../examples/widget_preview.rs"
+test = false
+required-features = ["color-profiles"]
