@@ -23,6 +23,7 @@ Every PR adds its entry under **Unreleased**.
 - `TextInput::field_style`, `TextInput::padding`, and `TextInput::show_cursor` style the cells inside the field, inset the text, and hide the cursor of an unfocused field.
 - `Monthly::weekend_style` styles Saturdays and Sundays under event styles, and `Monthly::selected_style` styles the selected day as a chip that covers the blank cell on each side.
 - `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
+- A `BarChart` widget behind the off-by-default `barchart` feature: bars of any width with eighth-block tops, a bar gap, per-bar styles, a track style, and labels under the bars.
 
 ### Changed
 
