@@ -33,16 +33,8 @@ Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI 
 
 ### Calendar
 
-![Calendar widget: a monthly calendar in the dark theme](docs/media/calendar.gif)
+A team schedule: the month beside that day's agenda, colored release, review, on-call, and incident days, today held in a raised cell, and the selection walking from late October into November.
 
-Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-showcase.sh` (`CASE=calendar`, 120x36, 8 s at 30 fps).
+![Calendar widget: a team schedule in the dark theme](docs/media/calendar.gif)
 
-Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
-
-### Calendar
-
-October with release and on-call dates, the selected day moving, and normal, focused, and disabled months beside it.
-
-![Calendar still](docs/gallery/calendar.png)
-
-![Calendar recording](docs/gallery/calendar.gif)
+Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-showcase.sh` (`CASE=calendar`, 120×36, 8 s at 30 fps, dark).

@@ -13,6 +13,10 @@ Every PR adds its entry under **Unreleased**.
 - `Monthly` calendar, behind the `calendar` feature. A Sunday-based month grid matches ratatui, including the month and weekday headers, surrounding days, event styles, and block padding. `state` paints the selected day, headers, and surrounding days from theme tokens.
 - `Grid::put_char` writes one width-1 character, including its text attributes, without grapheme segmentation.
 
+### Changed
+
+- The calendar gallery is a team schedule: a month beside the day's agenda, colored event days, a today highlight, and a selection that walks into the next month.
+
 ## [0.1.8] - 2026-10-26
 
 ### Added

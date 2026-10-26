@@ -9,10 +9,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_bench::widget_suite::{CASES, Case, pin_color_output};
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, clip_display_prefix};
+use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, clip_display_prefix};
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
-use lunatui_widgets::{Block, BorderType, Date, Monthly, RenderCx, Widget, WidgetState};
+use lunatui_widgets::{Block, BorderType, Date, DateStyle, Monthly, RenderCx, Widget, WidgetState};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
@@ -39,84 +39,706 @@ fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)
 }
 
-fn state_at(tick: u32) -> WidgetState {
-    match (tick / 80) % 3 {
-        0 => WidgetState::Normal,
-        1 => WidgetState::Focused,
-        _ => WidgetState::Disabled,
-    }
+const DAY_HOLD: u32 = 15;
+const MONTHS: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+const WEEKDAYS: [&str; 7] = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+];
+const SHORT_DAYS: [&str; 7] = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+#[derive(Clone, Copy)]
+enum Kind {
+    Release,
+    Review,
+    OnCall,
+    Incident,
 }
 
-fn state_name(state: WidgetState) -> &'static str {
-    if state == WidgetState::Focused {
-        "focused"
-    } else if state == WidgetState::Disabled {
-        "disabled"
-    } else {
-        "normal"
-    }
-}
-
-fn border_for(state: WidgetState) -> BorderType {
-    if state == WidgetState::Focused {
-        BorderType::Thick
-    } else {
-        BorderType::Rounded
-    }
-}
-
-fn month_on(year: i32, month: u8, day: u8) -> Date {
-    Date::from_ymd(year, month, day).unwrap_or(Date::UNIX_EPOCH)
-}
-
-fn shift_month(month: u8, delta: i32) -> (i32, u8) {
-    let shifted = i32::from(month) - 1 + delta;
-    let year = 2026 + shifted.div_euclid(12);
-    let index = shifted.rem_euclid(12);
-    (year, u8::try_from(index).unwrap_or(0) + 1)
-}
-
-fn paint_month(
-    cx: &mut RenderCx<'_>,
-    area: Rect,
-    year: i32,
+struct Entry {
     month: u8,
     day: u8,
-    state: WidgetState,
-    title: &str,
-) {
-    if area.width < 8 || area.height < 6 {
+    time: &'static str,
+    title: &'static str,
+    detail: &'static str,
+    kind: Kind,
+}
+
+const ENTRIES: &[Entry] = &[
+    Entry {
+        month: 10,
+        day: 22,
+        time: "09:30",
+        title: "Branch cut",
+        detail: "Open the release branch for the preview.",
+        kind: Kind::Release,
+    },
+    Entry {
+        month: 10,
+        day: 23,
+        time: "15:00",
+        title: "Design review",
+        detail: "Walk the month and the agenda together.",
+        kind: Kind::Review,
+    },
+    Entry {
+        month: 10,
+        day: 24,
+        time: "11:00",
+        title: "Docs pass",
+        detail: "Read the gallery notes before they freeze.",
+        kind: Kind::Review,
+    },
+    Entry {
+        month: 10,
+        day: 26,
+        time: "10:00",
+        title: "Ship window",
+        detail: "Tag the preview and publish the notes.",
+        kind: Kind::Release,
+    },
+    Entry {
+        month: 10,
+        day: 26,
+        time: "16:30",
+        title: "On-call handoff",
+        detail: "Primary swaps at the end of the day.",
+        kind: Kind::OnCall,
+    },
+    Entry {
+        month: 10,
+        day: 28,
+        time: "14:00",
+        title: "Incident review",
+        detail: "Trace last week's error budget.",
+        kind: Kind::Incident,
+    },
+    Entry {
+        month: 10,
+        day: 30,
+        time: "17:00",
+        title: "Docs freeze",
+        detail: "Gallery and changelog stop moving.",
+        kind: Kind::Review,
+    },
+    Entry {
+        month: 11,
+        day: 1,
+        time: "18:00",
+        title: "November board",
+        detail: "Move open notes onto the new month.",
+        kind: Kind::Review,
+    },
+    Entry {
+        month: 11,
+        day: 2,
+        time: "10:00",
+        title: "Sprint plan",
+        detail: "Pick the next set of widgets.",
+        kind: Kind::Review,
+    },
+    Entry {
+        month: 11,
+        day: 3,
+        time: "09:00",
+        title: "Beta cut",
+        detail: "Cut the beta from the release branch.",
+        kind: Kind::Release,
+    },
+    Entry {
+        month: 11,
+        day: 4,
+        time: "13:00",
+        title: "Demo",
+        detail: "Show the schedule on a real screen.",
+        kind: Kind::Release,
+    },
+    Entry {
+        month: 11,
+        day: 6,
+        time: "15:00",
+        title: "Retro",
+        detail: "Walk what slowed the last cycle.",
+        kind: Kind::Review,
+    },
+    Entry {
+        month: 11,
+        day: 9,
+        time: "11:00",
+        title: "On-call drill",
+        detail: "Page the backup and time the reply.",
+        kind: Kind::OnCall,
+    },
+];
+
+#[derive(Clone, Copy)]
+struct Ink {
+    text: Color,
+    surface: Color,
+    raised: Color,
+    accent: Color,
+    ok: Color,
+    warn: Color,
+    fail: Color,
+    focus: Color,
+}
+
+impl Ink {
+    fn new(cx: &RenderCx<'_>) -> Self {
+        Self {
+            text: cx.token(Token::TextPrimary),
+            surface: cx.token(Token::Surface0),
+            raised: cx.token(Token::Surface1),
+            accent: cx.token(Token::Accent),
+            ok: cx.token(Token::Ok),
+            warn: cx.token(Token::Warn),
+            fail: cx.token(Token::Fail),
+            focus: cx.token(Token::FocusRing),
+        }
+    }
+
+    fn kind(self, kind: Kind) -> Color {
+        match kind {
+            Kind::Release => self.ok,
+            Kind::Review => self.warn,
+            Kind::OnCall => self.accent,
+            Kind::Incident => self.fail,
+        }
+    }
+}
+
+struct Scene {
+    ink: Ink,
+    tick: u32,
+    width: u16,
+    height: u16,
+    selected: Date,
+    today: Date,
+}
+
+struct DayMarks {
+    today: Date,
+    selected: Date,
+    raised: Color,
+    release: Color,
+    review: Color,
+    oncall: Color,
+    incident: Color,
+}
+
+impl DateStyle for DayMarks {
+    fn style_for(&self, date: Date) -> Style {
+        if date == self.selected {
+            return Style::new();
+        }
+        let mut style = Style::new();
+        if date == self.today {
+            style = style.bg(self.raised);
+        }
+        if let Some(entry) = first_entry(date) {
+            let color = match entry.kind {
+                Kind::Release => self.release,
+                Kind::Review => self.review,
+                Kind::OnCall => self.oncall,
+                Kind::Incident => self.incident,
+            };
+            style = style.fg(color);
+        }
+        style
+    }
+}
+
+fn on_day(entry: &Entry, date: Date) -> bool {
+    entry.month == date.month() && entry.day == date.day()
+}
+
+fn first_entry(date: Date) -> Option<&'static Entry> {
+    ENTRIES.iter().find(|entry| on_day(entry, date))
+}
+
+fn month_name(date: Date) -> &'static str {
+    MONTHS
+        .get(usize::from(date.month().saturating_sub(1)))
+        .copied()
+        .unwrap_or("")
+}
+
+fn month_abbr(date: Date) -> &'static str {
+    let name = month_name(date);
+    name.get(..3).unwrap_or(name)
+}
+
+fn weekday_index(date: Date) -> usize {
+    let Ok(month) = time::Month::try_from(date.month()) else {
+        return 0;
+    };
+    let Ok(civil) = time::Date::from_calendar_date(date.year(), month, date.day()) else {
+        return 0;
+    };
+    match civil.weekday() {
+        time::Weekday::Sunday => 0,
+        time::Weekday::Monday => 1,
+        time::Weekday::Tuesday => 2,
+        time::Weekday::Wednesday => 3,
+        time::Weekday::Thursday => 4,
+        time::Weekday::Friday => 5,
+        time::Weekday::Saturday => 6,
+    }
+}
+
+fn weekday_name(date: Date) -> &'static str {
+    WEEKDAYS.get(weekday_index(date)).copied().unwrap_or("Day")
+}
+
+fn short_day(date: Date) -> &'static str {
+    SHORT_DAYS.get(weekday_index(date)).copied().unwrap_or("Da")
+}
+
+fn add_days(date: Date, days: i32) -> Date {
+    let Ok(month) = time::Month::try_from(date.month()) else {
+        return date;
+    };
+    let Ok(civil) = time::Date::from_calendar_date(date.year(), month, date.day()) else {
+        return date;
+    };
+    let Some(next) = civil.checked_add(time::Duration::days(i64::from(days))) else {
+        return date;
+    };
+    Date::from_ymd(next.year(), u8::from(next.month()), next.day()).unwrap_or(date)
+}
+
+fn selected_on(tick: u32) -> Date {
+    let start = Date::from_ymd(2026, 10, 24).unwrap_or(Date::UNIX_EPOCH);
+    let steps = i32::try_from(tick / DAY_HOLD).unwrap_or(0);
+    add_days(start, steps)
+}
+
+fn today_date() -> Date {
+    Date::from_ymd(2026, 10, 26).unwrap_or(Date::UNIX_EPOCH)
+}
+
+fn bold(style: Style) -> Style {
+    style.with_attrs(Attrs::new().set_bold(true))
+}
+
+fn paint(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, text: &str, style: Style) {
+    if width == 0 {
         return;
     }
-    let text = cx.token(Token::TextPrimary);
-    let accent = cx.token(Token::Accent);
-    let surface = cx.token(Token::Surface0);
-    let raised = cx.token(Token::Surface1);
-    let focus = cx.token(Token::FocusRing);
-    let ok = cx.token(Token::Ok);
-    let warn = cx.token(Token::Warn);
-    let ground = Style::new().fg(text).bg(surface);
-    let tone = match state {
-        WidgetState::Focused => focus,
-        WidgetState::Disabled => raised,
-        _ => accent,
+    cx.put_str(x, y, clip_display_prefix(text, width), style);
+}
+
+fn hint_for(tick: u32, selected: Date) -> &'static str {
+    let into = tick % DAY_HOLD;
+    if tick > 0 && into < 8 && selected.day() == 1 {
+        "n  month"
+    } else if tick > 0 && into < 6 {
+        "l  day"
+    } else {
+        "h l day     n month"
+    }
+}
+
+fn draw_chrome(cx: &mut RenderCx<'_>, scene: &Scene) {
+    let bar = Style::new().fg(scene.ink.text).bg(scene.ink.raised);
+    cx.set_style(Rect::new(0, 0, scene.width, 1), bar);
+    let badge = bold(Style::new().fg(scene.ink.surface).bg(scene.ink.ok));
+    paint(cx, 1, 0, 6, " live ", badge);
+    paint(cx, 8, 0, 12, "schedule", bold(bar));
+    let month = format!("{} {}", month_name(scene.selected), scene.selected.year());
+    let month_cols = u16::try_from(month.len()).unwrap_or(0);
+    let month_x = scene.width.saturating_sub(month_cols) / 2;
+    if month_x > 20 {
+        paint(
+            cx,
+            month_x,
+            0,
+            month_cols,
+            &month,
+            bold(Style::new().fg(scene.ink.accent).bg(scene.ink.raised)),
+        );
+    }
+    let second = (scene.tick / 30) % 60;
+    let clock = format!("14:02:{second:02}");
+    let clock_cols = u16::try_from(clock.len()).unwrap_or(0);
+    let clock_x = scene.width.saturating_sub(clock_cols.saturating_add(1));
+    paint(
+        cx,
+        clock_x,
+        0,
+        clock_cols,
+        &clock,
+        Style::new().fg(scene.ink.accent).bg(scene.ink.raised),
+    );
+    paint(
+        cx,
+        1,
+        1,
+        28,
+        "prod     team calendar",
+        Style::new().fg(scene.ink.text).bg(scene.ink.surface),
+    );
+    let footer_y = scene.height.saturating_sub(1);
+    cx.set_style(Rect::new(0, footer_y, scene.width, 1), bar);
+    let hint = hint_for(scene.tick, scene.selected);
+    let hint_color = if hint.starts_with('n') {
+        scene.ink.accent
+    } else if hint.starts_with('l') {
+        scene.ink.focus
+    } else {
+        scene.ink.text
     };
+    paint(
+        cx,
+        1,
+        footer_y,
+        24,
+        hint,
+        Style::new().fg(hint_color).bg(scene.ink.raised),
+    );
+    let stamp = format!(
+        "{:04}-{:02}-{:02}",
+        scene.selected.year(),
+        scene.selected.month(),
+        scene.selected.day()
+    );
+    let stamp_cols = u16::try_from(stamp.len()).unwrap_or(0);
+    paint(
+        cx,
+        scene.width.saturating_sub(stamp_cols.saturating_add(1)),
+        footer_y,
+        stamp_cols,
+        &stamp,
+        Style::new().fg(scene.ink.focus).bg(scene.ink.raised),
+    );
+}
+
+fn day_marks(scene: &Scene) -> DayMarks {
+    DayMarks {
+        today: scene.today,
+        selected: scene.selected,
+        raised: scene.ink.raised,
+        release: scene.ink.ok,
+        review: scene.ink.warn,
+        oncall: scene.ink.accent,
+        incident: scene.ink.fail,
+    }
+}
+
+fn draw_month(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect) {
+    if area.width < 23 || area.height < 9 {
+        return;
+    }
+    let ground = Style::new().fg(scene.ink.text).bg(scene.ink.surface);
     let frame = Block::bordered()
-        .border_type(border_for(state))
-        .title(format!(" {title} "))
+        .border_type(BorderType::Rounded)
         .style(ground)
-        .border_style(Style::new().fg(tone).bg(surface))
-        .title_style(Style::new().fg(tone).bg(surface));
+        .border_style(Style::new().fg(scene.ink.focus).bg(scene.ink.surface));
     frame.render(area, cx);
     let inner = frame.inner(area);
-    let events = [
-        (month_on(year, month, 3), Style::new().fg(warn)),
-        (month_on(year, month, 14), Style::new().fg(ok)),
-        (month_on(year, month, 26), Style::new().fg(accent)),
-    ];
-    Monthly::new(month_on(year, month, day), events.as_slice())
-        .state(state)
-        .render(inner, cx);
+    let cal_w = 21_u16;
+    if inner.width < cal_w || inner.height < 7 {
+        return;
+    }
+    let pad = inner.width.saturating_sub(cal_w) / 2;
+    Monthly::new(scene.selected, day_marks(scene))
+        .state(WidgetState::Focused)
+        .render(
+            Rect::new(
+                inner.x.saturating_add(pad),
+                inner.y,
+                cal_w,
+                inner.height.min(8),
+            ),
+            cx,
+        );
+}
+
+fn draw_legend(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect) {
+    if area.height == 0 || area.width < 12 {
+        return;
+    }
+    let y = area.y;
+    paint(
+        cx,
+        area.x,
+        y,
+        12,
+        "• release",
+        Style::new().fg(scene.ink.ok).bg(scene.ink.surface),
+    );
+    paint(
+        cx,
+        area.x.saturating_add(14),
+        y,
+        10,
+        "• review",
+        Style::new().fg(scene.ink.warn).bg(scene.ink.surface),
+    );
+    if area.height > 1 {
+        let next = y.saturating_add(1);
+        paint(
+            cx,
+            area.x,
+            next,
+            12,
+            "• on-call",
+            Style::new().fg(scene.ink.accent).bg(scene.ink.surface),
+        );
+        paint(
+            cx,
+            area.x.saturating_add(14),
+            next,
+            12,
+            "• incident",
+            Style::new().fg(scene.ink.fail).bg(scene.ink.surface),
+        );
+    }
+}
+
+fn week_line(date: Date) -> String {
+    let count = ENTRIES.iter().filter(|entry| on_day(entry, date)).count();
+    match first_entry(date) {
+        Some(entry) if count > 1 => format!(
+            "{} {:02}  {} +{}",
+            short_day(date),
+            date.day(),
+            entry.title,
+            count - 1
+        ),
+        Some(entry) => format!("{} {:02}  {}", short_day(date), date.day(), entry.title),
+        None => format!("{} {:02}", short_day(date), date.day()),
+    }
+}
+
+fn draw_week(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect) {
+    if area.height < 4 || area.width < 12 {
+        return;
+    }
+    let label = Style::new().fg(scene.ink.accent).bg(scene.ink.surface);
+    paint(cx, area.x, area.y, area.width, "This week", bold(label));
+    let index = weekday_index(scene.selected);
+    let sunday = add_days(scene.selected, -i32::try_from(index).unwrap_or(0));
+    let text = Style::new().fg(scene.ink.text).bg(scene.ink.surface);
+    for offset in 0_i32..7 {
+        let y = area
+            .y
+            .saturating_add(1)
+            .saturating_add(u16::try_from(offset).unwrap_or(0));
+        if y >= area.y.saturating_add(area.height) {
+            break;
+        }
+        let date = add_days(sunday, offset);
+        let picked = date == scene.selected;
+        let style = if picked {
+            Style::new().fg(scene.ink.focus).bg(scene.ink.raised)
+        } else if date == scene.today {
+            Style::new().fg(scene.ink.ok).bg(scene.ink.surface)
+        } else {
+            text
+        };
+        if picked {
+            cx.set_style(
+                Rect::new(area.x, y, area.width, 1),
+                Style::new().fg(scene.ink.text).bg(scene.ink.raised),
+            );
+        }
+        paint(
+            cx,
+            area.x,
+            y,
+            area.width,
+            &week_line(date),
+            if picked { bold(style) } else { style },
+        );
+    }
+}
+
+fn draw_event_chip(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, entry: &Entry, y: u16) {
+    let chip = Style::new().fg(scene.ink.text).bg(scene.ink.raised);
+    cx.set_style(Rect::new(area.x, y, area.width, 2), chip);
+    let mark = Style::new()
+        .fg(scene.ink.kind(entry.kind))
+        .bg(scene.ink.raised);
+    paint(cx, area.x, y, 1, "▌", mark);
+    paint(cx, area.x.saturating_add(2), y, 5, entry.time, mark);
+    paint(
+        cx,
+        area.x.saturating_add(9),
+        y,
+        area.width.saturating_sub(9),
+        entry.title,
+        bold(chip),
+    );
+    paint(
+        cx,
+        area.x.saturating_add(2),
+        y.saturating_add(1),
+        area.width.saturating_sub(2),
+        entry.detail,
+        chip,
+    );
+}
+
+fn draw_up_next(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, y: u16) {
+    if y.saturating_add(1) >= area.y.saturating_add(area.height) {
+        return;
+    }
+    paint(
+        cx,
+        area.x,
+        y,
+        area.width,
+        "Up next",
+        bold(Style::new().fg(scene.ink.accent).bg(scene.ink.surface)),
+    );
+    let mut line = y.saturating_add(1);
+    let bottom = area.y.saturating_add(area.height);
+    let text = Style::new().fg(scene.ink.text).bg(scene.ink.surface);
+    for step in 1..22 {
+        if line >= bottom {
+            break;
+        }
+        let date = add_days(scene.selected, step);
+        for entry in ENTRIES.iter().filter(|entry| on_day(entry, date)) {
+            if line >= bottom {
+                break;
+            }
+            paint(
+                cx,
+                area.x,
+                line,
+                area.width,
+                &format!(
+                    "{:02} {}  {}  {}",
+                    date.day(),
+                    month_abbr(date),
+                    entry.time,
+                    entry.title
+                ),
+                text.fg(scene.ink.kind(entry.kind)),
+            );
+            line = line.saturating_add(1);
+        }
+    }
+}
+
+fn draw_agenda(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect) {
+    if area.width < 24 || area.height < 8 {
+        return;
+    }
+    let ground = Style::new().fg(scene.ink.text).bg(scene.ink.surface);
+    let title = if scene.selected == scene.today {
+        format!(
+            " {} {} {}  ·  today ",
+            weekday_name(scene.selected),
+            scene.selected.day(),
+            month_name(scene.selected)
+        )
+    } else {
+        format!(
+            " {} {} {} ",
+            weekday_name(scene.selected),
+            scene.selected.day(),
+            month_name(scene.selected)
+        )
+    };
+    let frame = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(title)
+        .style(ground)
+        .border_style(Style::new().fg(scene.ink.accent).bg(scene.ink.surface))
+        .title_style(bold(Style::new().fg(scene.ink.text).bg(scene.ink.surface)));
+    frame.render(area, cx);
+    let inner = frame.inner(area);
+    if inner.width < 16 || inner.height < 4 {
+        return;
+    }
+    let count = ENTRIES
+        .iter()
+        .filter(|entry| on_day(entry, scene.selected))
+        .count();
+    let summary = if count == 0 {
+        "Clear day".to_owned()
+    } else if count == 1 {
+        "1 scheduled".to_owned()
+    } else {
+        format!("{count} scheduled")
+    };
+    paint(
+        cx,
+        inner.x,
+        inner.y,
+        inner.width,
+        &summary,
+        Style::new().fg(scene.ink.focus).bg(scene.ink.surface),
+    );
+    let mut y = inner.y.saturating_add(2);
+    let bottom = inner.y.saturating_add(inner.height);
+    for entry in ENTRIES.iter().filter(|entry| on_day(entry, scene.selected)) {
+        if y.saturating_add(2) >= bottom {
+            break;
+        }
+        draw_event_chip(cx, scene, inner, entry, y);
+        y = y.saturating_add(3);
+    }
+    if count == 0 && y < bottom {
+        paint(cx, inner.x, y, inner.width, "Nothing scheduled.", ground);
+        y = y.saturating_add(2);
+    } else {
+        y = y.saturating_add(1);
+    }
+    draw_up_next(cx, scene, inner, y);
+}
+
+fn draw_board(cx: &mut RenderCx<'_>, scene: &Scene) {
+    let top = 3_u16;
+    let bottom = scene.height.saturating_sub(2);
+    if bottom <= top {
+        return;
+    }
+    let left_w = if scene.width >= 110 { 40 } else { 32 };
+    let month = Rect::new(1, top, left_w, 9);
+    draw_month(cx, scene, month);
+    let mut y = top.saturating_add(10);
+    if bottom.saturating_sub(y) >= 10 {
+        draw_legend(cx, scene, Rect::new(2, y, left_w.saturating_sub(2), 2));
+        y = y.saturating_add(3);
+    }
+    draw_week(
+        cx,
+        scene,
+        Rect::new(2, y, left_w.saturating_sub(2), bottom.saturating_sub(y)),
+    );
+    let agenda_x = left_w.saturating_add(2);
+    draw_agenda(
+        cx,
+        scene,
+        Rect::new(
+            agenda_x,
+            top,
+            scene.width.saturating_sub(agenda_x).saturating_sub(1),
+            bottom.saturating_sub(top),
+        ),
+    );
 }
 
 fn calendar_native(
@@ -126,57 +748,33 @@ fn calendar_native(
     area: Rect,
     tick: u32,
 ) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
     let mut cx = RenderCx::new(grid, clusters, theme);
-    let text = cx.token(Token::TextPrimary);
-    let surface = cx.token(Token::Surface0);
-    let ground = Style::new().fg(text).bg(surface);
-    cx.set_style(area, ground);
-    let live = state_at(tick);
-    let day = u8::try_from((tick / 4) % 28).unwrap_or(0) + 1;
-    let (year, month) = (2026, 10);
-    if area.width < 70 || area.height < 20 {
-        paint_month(&mut cx, area, year, month, day, live, state_name(live));
+    let scene = Scene {
+        ink: Ink::new(&cx),
+        tick,
+        width: area.width,
+        height: area.height,
+        selected: selected_on(tick),
+        today: today_date(),
+    };
+    draw_chrome(&mut cx, &scene);
+    if scene.width < 64 || scene.height < 20 {
+        draw_month(
+            &mut cx,
+            &scene,
+            Rect::new(
+                1,
+                3,
+                scene.width.saturating_sub(2),
+                scene.height.saturating_sub(5),
+            ),
+        );
         return;
     }
-    let main_h = 16.min(area.height.saturating_sub(14));
-    paint_month(
-        &mut cx,
-        Rect::new(1, 0, 36, main_h),
-        year,
-        month,
-        day,
-        live,
-        &format!("October  {day}  {}", state_name(live)),
-    );
-    let note = format!("release window   day {day:>2}   on-call rotates");
-    cx.put_str(
-        40,
-        2,
-        clip_display_prefix(&note, area.width.saturating_sub(42)),
-        Style::new().fg(text).bg(surface),
-    );
-    let states = [
-        WidgetState::Normal,
-        WidgetState::Focused,
-        WidgetState::Disabled,
-    ];
-    let top = main_h.saturating_add(1);
-    let panel_h = area.height.saturating_sub(top).saturating_sub(1);
-    let gap = 2_u16;
-    let panel_w = area.width.saturating_sub(2).saturating_sub(gap * 2) / 3;
-    for (index, state) in states.iter().enumerate() {
-        let (panel_year, panel_month) = shift_month(month, i32::try_from(index).unwrap_or(0) - 1);
-        let x = 1 + u16::try_from(index).unwrap_or(0) * (panel_w + gap);
-        paint_month(
-            &mut cx,
-            Rect::new(x, top, panel_w, panel_h),
-            panel_year,
-            panel_month,
-            day,
-            *state,
-            state_name(*state),
-        );
-    }
+    draw_board(&mut cx, &scene);
 }
 
 struct NoEvents;
