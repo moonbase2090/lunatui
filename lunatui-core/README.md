@@ -40,3 +40,28 @@ The conversion follows [the OKLab reference](https://bottosson.github.io/posts/o
 RGB endpoints and opacity are values supplied by the application, rather than a
 new widget palette. Theme-wide Graphite token mapping and animation remain in
 their owning layers.
+
+## Subcell glyphs
+
+The off-default `subcell` feature maps a row-major 2×4 coverage mask to one
+character. Bit 0 is top-left, bit 1 is top-right, then successive rows continue
+left to right through bit 7 at bottom-right. Probe font support in the application at startup, then retain the
+selected `GlyphSet`. The preference order is octants, braille, quarter blocks,
+and ASCII. Octants and braille preserve all eight positions. Quarter blocks
+retain completely covered quadrants; ASCII uses `#` for any coverage.
+
+Horizontal and vertical eighth-block lookup functions support smooth bar heads.
+These require block-capable fonts; applications choose ASCII bars separately.
+No lookup allocates or probes terminal capabilities.
+
+```sh
+cargo test --locked -p lunatui-core --features subcell
+cargo test --locked -p lunatui-bench --features subcell --test subcell_allocs
+cargo run --locked -p lunatui-core --example subcell_preview --features subcell
+```
+
+The octant table comes from [Unicode 17.0.0 names](https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt),
+including legacy aliases for masks without a named octant. Regenerate it with
+`python3 scripts/generate-octants.py [path/to/UnicodeData.txt]`. The script verifies
+the pinned input SHA-256, all 256 masks and unique output glyphs, then runs
+`rustfmt`. Without an input path it downloads the pinned file.

@@ -20,6 +20,9 @@ pub mod paint;
 pub mod simd;
 mod size;
 mod style;
+#[cfg(feature = "subcell")]
+/// Startup glyph selection and subcell coverage lookup.
+pub mod subcell;
 /// Border, corner, and line glyphs for drawing widgets.
 pub mod symbols;
 mod width;

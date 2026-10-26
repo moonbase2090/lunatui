@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# Copyright (c) 2026 Moonbase 2090 LLC
+# SPDX-License-Identifier: MIT
+"""Regenerate the 2x4 mask table from Unicode 17.0.0 names.
+
+Pass a local UnicodeData.txt to work offline; otherwise fetch the pinned input.
+"""
+import hashlib
+from pathlib import Path
+import sys
+import subprocess
+import urllib.request
+
+URL = "https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt"
+SHA256 = "2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c"
+raw = Path(sys.argv[1]).read_bytes() if len(sys.argv) == 2 else urllib.request.urlopen(URL, timeout=30).read()
+if hashlib.sha256(raw).hexdigest() != SHA256:
+    raise SystemExit("UnicodeData SHA-256 mismatch")
+rows = [line.split(";") for line in raw.decode().splitlines()]
+names = {row[1]: int(row[0], 16) for row in rows}
+table = {}
+for name, codepoint in names.items():
+    if name.startswith("BLOCK OCTANT-"):
+        mask = sum(1 << (int(digit) - 1) for digit in name.removeprefix("BLOCK OCTANT-"))
+        if mask in table:
+            raise SystemExit(f"Duplicate mask {mask}")
+        table[mask] = codepoint
+aliases = {
+    0x00: "SPACE", 0x01: "LEFT HALF UPPER ONE QUARTER BLOCK",
+    0x02: "RIGHT HALF UPPER ONE QUARTER BLOCK", 0x03: "UPPER ONE QUARTER BLOCK",
+    0x05: "QUADRANT UPPER LEFT", 0x0A: "QUADRANT UPPER RIGHT",
+    0x0F: "UPPER HALF BLOCK", 0x14: "MIDDLE LEFT ONE QUARTER BLOCK",
+    0x28: "MIDDLE RIGHT ONE QUARTER BLOCK", 0x3F: "UPPER THREE QUARTERS BLOCK",
+    0x40: "LEFT HALF LOWER ONE QUARTER BLOCK", 0x50: "QUADRANT LOWER LEFT",
+    0x55: "LEFT HALF BLOCK", 0x5A: "QUADRANT UPPER RIGHT AND LOWER LEFT",
+    0x5F: "QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER LEFT",
+    0x80: "RIGHT HALF LOWER ONE QUARTER BLOCK", 0xA0: "QUADRANT LOWER RIGHT",
+    0xA5: "QUADRANT UPPER LEFT AND LOWER RIGHT", 0xAA: "RIGHT HALF BLOCK",
+    0xAF: "QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER RIGHT",
+    0xC0: "LOWER ONE QUARTER BLOCK", 0xF0: "LOWER HALF BLOCK",
+    0xF5: "QUADRANT UPPER LEFT AND LOWER LEFT AND LOWER RIGHT",
+    0xFA: "QUADRANT UPPER RIGHT AND LOWER LEFT AND LOWER RIGHT",
+    0xFC: "LOWER THREE QUARTERS BLOCK", 0xFF: "FULL BLOCK",
+}
+if set(table) & set(aliases):
+    raise SystemExit("Alias overlaps a named octant")
+table.update({mask: names[name] for mask, name in aliases.items()})
+if set(table) != set(range(256)) or len(set(table.values())) != 256:
+    raise SystemExit("Expected 256 unique glyphs")
+output = ["// Copyright (c) 2026 Moonbase 2090 LLC", "// SPDX-License-Identifier: MIT", "", "pub(super) const OCTANTS: [char; 256] = ["]
+for start in range(0, 256, 8):
+    output.append("    " + ", ".join("'\\u{%x}'" % table[i] for i in range(start, start + 8)) + ",")
+output.append("];\n")
+target = Path(__file__).resolve().parents[1].joinpath("lunatui-core/src/subcell_octants.rs")
+target.write_text("\n".join(output))
+subprocess.run(["rustfmt", str(target)], check=True)
