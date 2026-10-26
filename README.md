@@ -31,6 +31,12 @@ Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI 
 
 ## Widget gallery
 
+### Sparkline
+
+![Sparkline widget: three rows of scrolling bars in the dark theme](docs/media/sparkline.gif)
+
+Screenshot: [docs/media/sparkline.png](docs/media/sparkline.png). Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120x36, 8 s at 30 fps).
+
 Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
 
 ### Sparkline
