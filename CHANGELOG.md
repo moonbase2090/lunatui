@@ -22,6 +22,10 @@ Every PR adds its entry under **Unreleased**.
 
 - Widget parity bench suite: each widget is compared with its ratatui equivalent on identical data at 80x24 and 200x60, in a render-only and a full-frame scope, with a cell-for-cell parity test and a gate in `cargo xtask bench` (frame ratio and allocations) for new widgets. The six existing widgets are tracked, not gated. `docs/DESIGN_STANDARD.md` records the visual and performance standard widgets follow. A shared `WidgetState` (normal, focused, disabled) is available behind the off-by-default `widget-state` feature of `lunatui-widgets`.
 
+### Added
+
+- Motion core in `lunatui-runtime`, behind the off-by-default `motion` feature: the design standard's `Ease::OutCubic` and `Ease::InCubic` curves, the 80/160/240 ms durations with a 300 ms cap, `DampedSpring` (stiffness, damping and mass; `standard` is 300/30/1 and settles within an eighth of a cell), interruptible `Transition`, `FramePacer` (60 to 30 fps after two slow frames), `MotionPolicy` for the `LUNATUI_REDUCED_MOTION` flag, and `Scheduler::set_frame_period`.
+
 ## [0.1.4] - 2026-10-25
 
 ### Changed

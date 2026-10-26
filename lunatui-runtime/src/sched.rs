@@ -115,6 +115,12 @@ impl Scheduler {
         self.next_frame_at = Some(finished.saturating_add(self.frame_period));
     }
 
+    /// Changes the animation frame period, for example when a frame pacer degrades to 30 fps.
+    #[cfg(feature = "motion")]
+    pub fn set_frame_period(&mut self, period: Duration) {
+        self.frame_period = period;
+    }
+
     /// Timer wakeups requested by [`SchedulePoll::SleepUntil`].
     #[must_use]
     pub const fn timer_wakeups(&self) -> u64 {

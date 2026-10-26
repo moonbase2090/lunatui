@@ -11,10 +11,15 @@ repository.workspace = true
 default = []
 app = []
 keymap = []
+motion = []
 
 [[test]]
 name = "keymap"
 required-features = ["keymap"]
+
+[[test]]
+name = "motion"
+required-features = ["motion"]
 
 [dependencies]
 lunatui-core = { version = "0.1.5", path = "../lunatui-core" }
