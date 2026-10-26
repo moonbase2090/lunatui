@@ -91,6 +91,11 @@ impl<'a> RenderCx<'a> {
         self.grid.put_str(x, y, style, text, self.clusters);
     }
 
+    #[cfg(feature = "line-gauge")]
+    pub(crate) fn fill(&mut self, area: Rect, style: Style, glyph: char) {
+        self.grid.fill(area, style, glyph, self.clusters);
+    }
+
     pub(crate) fn put_char_patched(&mut self, x: u16, y: u16, glyph: char, style: Style) {
         let existing = self
             .grid

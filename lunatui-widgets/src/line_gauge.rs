@@ -40,9 +40,10 @@ impl LineSet {
 
 /// Single-line progress bar: a label, then a line that is filled up to `ratio`.
 ///
-/// Matches ratatui's `LineGauge` layout: the label starts the first row of the area, one column
-/// is left empty after it, and the remaining columns hold `floor(columns * ratio)` filled cells
-/// followed by unfilled cells. Colors come from theme tokens unless a style is set explicitly.
+/// The optional label is on the left and the value is right-aligned. The remaining
+/// track uses heavy filled lines, light unfilled lines and an eighth-block head.
+/// Applications animate by supplying frame-clock values through `ratio`.
+/// Colors come from theme tokens unless a style is set explicitly.
 ///
 /// ```
 /// use lunatui_core::{ClusterTable, Grid, Rect};
@@ -54,13 +55,15 @@ impl LineSet {
 /// let mut clusters = ClusterTable::new();
 /// let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
 /// LineGauge::new().ratio(0.5).render(Rect::new(0, 0, 20, 1), &mut cx);
-/// assert!(grid.row_display(0, &clusters).starts_with(" 50% "));
+/// assert!(grid.row_display(0, &clusters).ends_with("50%"));
 /// ```
 #[derive(Clone, Debug)]
 pub struct LineGauge<'a> {
     block: Option<Block>,
     ratio: f64,
     label: Option<Cow<'a, str>>,
+    value_label: Option<Cow<'a, str>>,
+    subcell: bool,
     style: Option<Style>,
     label_style: Option<Style>,
     filled_symbol: Cow<'a, str>,
@@ -76,6 +79,8 @@ impl Default for LineGauge<'_> {
             block: None,
             ratio: 0.0,
             label: None,
+            value_label: None,
+            subcell: true,
             style: None,
             label_style: None,
             filled_symbol: Cow::Borrowed(LineSet::Thick.symbol()),
@@ -112,10 +117,24 @@ impl<'a> LineGauge<'a> {
         self
     }
 
-    /// Replaces the default `NN%` label.
+    /// Sets an optional left-aligned label.
     #[must_use]
     pub fn label(mut self, label: impl Into<Cow<'a, str>>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    /// Replace the right-aligned percentage; an empty value hides it.
+    #[must_use]
+    pub fn value_label(mut self, value: impl Into<Cow<'a, str>>) -> Self {
+        self.value_label = Some(value.into());
+        self
+    }
+
+    /// Enable eighth-cell precision for the filled head. Enabled by default.
+    #[must_use]
+    pub fn subcell(mut self, enabled: bool) -> Self {
+        self.subcell = enabled;
         self
     }
 
@@ -124,6 +143,7 @@ impl<'a> LineGauge<'a> {
     pub fn line_set(mut self, set: LineSet) -> Self {
         self.filled_symbol = Cow::Borrowed(set.symbol());
         self.unfilled_symbol = Cow::Borrowed(set.symbol());
+        self.subcell = false;
         self
     }
 
@@ -131,6 +151,7 @@ impl<'a> LineGauge<'a> {
     #[must_use]
     pub fn filled_symbol(mut self, symbol: impl Into<Cow<'a, str>>) -> Self {
         self.filled_symbol = valid_symbol(symbol.into());
+        self.subcell = false;
         self
     }
 
@@ -235,16 +256,53 @@ fn paint(cx: &mut RenderCx<'_>, x: u16, y: u16, limit: u16, text: &str, style: S
         return x;
     }
     cx.put_str(x, y, draw, style);
-    cx.set_style(Rect::new(x, y, drawn, 1), style);
     x + drawn
 }
 
-fn filled_columns(columns: u16, ratio: f64) -> u16 {
-    let limit = f64::from(columns) * ratio;
-    let count = (1..=columns)
-        .take_while(|column| f64::from(*column) <= limit)
-        .count();
-    u16::try_from(count).unwrap_or(columns)
+fn repeat(cx: &mut RenderCx<'_>, area: Rect, symbol: &str, style: Style) {
+    let mut chars = symbol.chars();
+    if let Some(glyph) = chars.next()
+        && chars.next().is_none()
+    {
+        cx.fill(area, style, glyph);
+        return;
+    }
+    let right = area.x.saturating_add(area.width);
+    for x in area.x..right {
+        paint(cx, x, area.y, right, symbol, style);
+    }
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "Private ratio is finite and clamped to 0..=1; output fits in 524280 eighths"
+)]
+fn filled_eighths(columns: u16, ratio: f64) -> u32 {
+    (f64::from(columns) * ratio * 8.0).floor() as u32
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "Private ratio is finite and clamped to 0..=1; rounded percent fits in u8"
+)]
+fn percent_label(ratio: f64, buffer: &mut [u8; 4]) -> &str {
+    let percent = (ratio * 100.0).round() as u8;
+    let start = if percent == 100 {
+        *buffer = *b"100%";
+        0
+    } else if percent >= 10 {
+        buffer[1] = b'0' + percent / 10;
+        buffer[2] = b'0' + percent % 10;
+        buffer[3] = b'%';
+        1
+    } else {
+        buffer[2] = b'0' + percent;
+        buffer[3] = b'%';
+        2
+    };
+    core::str::from_utf8(&buffer[start..]).unwrap_or("")
 }
 
 impl Widget for LineGauge<'_> {
@@ -265,40 +323,58 @@ impl Widget for LineGauge<'_> {
             return;
         }
         let [filled_style, unfilled_style, label_style] = self.styles(cx);
+        cx.fill(
+            Rect::new(inner.x, inner.y, inner.width, 1),
+            self.style.unwrap_or_default(),
+            ' ',
+        );
         let right = inner.x.saturating_add(inner.width);
-        let default_label;
-        let label = if let Some(label) = &self.label {
-            label.as_ref()
+        let mut buffer = [0_u8; 4];
+        let value = self
+            .value_label
+            .as_deref()
+            .unwrap_or_else(|| percent_label(self.ratio, &mut buffer));
+        let visible_value = clip_display_prefix(value, right.saturating_sub(inner.x));
+        let value_width = u16::try_from(display_width(visible_value)).unwrap_or(inner.width);
+        let value_start = right - value_width;
+        let label_limit = value_start
+            .saturating_sub(u16::from(value_width != 0))
+            .max(inner.x);
+        let label = self.label.as_deref().unwrap_or("");
+        let label_end = paint(cx, inner.x, inner.y, label_limit, label, label_style);
+        let start = if self.label.is_some() {
+            label_end.saturating_add(1)
         } else {
-            default_label = format!("{:3.0}%", self.ratio * 100.0);
-            default_label.as_str()
+            inner.x
         };
-        let label_end = paint(cx, inner.x, inner.y, right, label, label_style);
-        let start = label_end.saturating_add(1);
-        if start >= right {
-            return;
-        }
-        let end = start + filled_columns(right - start, self.ratio);
-        for column in start..end {
-            paint(
-                cx,
-                column,
+        let end = label_limit.max(start).min(right);
+        let total = filled_eighths(end.saturating_sub(start), self.ratio);
+        let full = u16::try_from(total / 8).unwrap_or(0);
+        let fraction = u8::try_from(total % 8).unwrap_or(0);
+        repeat(
+            cx,
+            Rect::new(start, inner.y, full, 1),
+            &self.filled_symbol,
+            filled_style,
+        );
+        let unfilled_start = start.saturating_add(full);
+        repeat(
+            cx,
+            Rect::new(
+                unfilled_start,
                 inner.y,
-                right,
-                &self.filled_symbol,
-                filled_style,
-            );
+                end.saturating_sub(unfilled_start),
+                1,
+            ),
+            &self.unfilled_symbol,
+            unfilled_style,
+        );
+        if self.subcell && fraction != 0 && start.saturating_add(full) < end {
+            let mut encoded = [0_u8; 4];
+            let cap = lunatui_core::subcell::horizontal_eighths(fraction).encode_utf8(&mut encoded);
+            paint(cx, start + full, inner.y, end, cap, filled_style);
         }
-        for column in end..right {
-            paint(
-                cx,
-                column,
-                inner.y,
-                right,
-                &self.unfilled_symbol,
-                unfilled_style,
-            );
-        }
+        paint(cx, value_start, inner.y, right, visible_value, label_style);
     }
 
     fn measure(&self, avail: Size) -> Size {

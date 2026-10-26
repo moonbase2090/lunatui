@@ -25,6 +25,8 @@ fn render(gauge: &LineGauge<'_>, width: u16, height: u16) -> (Grid, ClusterTable
 #[test]
 fn literal_progress_and_symbol_validation() {
     let gauge = LineGauge::new()
+        .value_label("")
+        .subcell(false)
         .label("")
         .ratio(0.5)
         .filled_symbol("+")
@@ -32,13 +34,25 @@ fn literal_progress_and_symbol_validation() {
     let (grid, clusters) = render(&gauge, 7, 1);
     assert_eq!(grid.row_display(0, &clusters), " +++---");
     let (grid, clusters) = render(
-        &LineGauge::new().label("").ratio(1.0).filled_symbol("日"),
+        &LineGauge::new()
+            .value_label("")
+            .subcell(false)
+            .label("")
+            .ratio(1.0)
+            .filled_symbol("日"),
         4,
         1,
     );
     assert_eq!(grid.row_display(0, &clusters), " ---");
-    let (grid, clusters) = render(&LineGauge::new().ratio(f64::NAN), 10, 1);
-    assert_eq!(grid.row_display(0, &clusters), "  0% ─────");
+    let (grid, clusters) = render(
+        &LineGauge::new()
+            .value_label("")
+            .subcell(false)
+            .ratio(f64::NAN),
+        10,
+        1,
+    );
+    assert_eq!(grid.row_display(0, &clusters), "──────────");
 }
 
 #[test]
@@ -52,10 +66,16 @@ fn focused_and_disabled_styles_follow_theme_tokens() -> Result<(), String> {
         ] {
             let mut grid = Grid::new(5, 1);
             let mut clusters = ClusterTable::new();
-            LineGauge::new().label("").ratio(1.0).state(state).render(
-                Rect::new(0, 0, 5, 1),
-                &mut RenderCx::new(&mut grid, &mut clusters, &theme),
-            );
+            LineGauge::new()
+                .value_label("")
+                .subcell(false)
+                .label("")
+                .ratio(1.0)
+                .state(state)
+                .render(
+                    Rect::new(0, 0, 5, 1),
+                    &mut RenderCx::new(&mut grid, &mut clusters, &theme),
+                );
             let token = match state {
                 WidgetState::Normal | WidgetState::Focused => Token::Fail,
                 _ => Token::TextMuted,
@@ -67,6 +87,8 @@ fn focused_and_disabled_styles_follow_theme_tokens() -> Result<(), String> {
     }
     let (grid, _) = render(
         &LineGauge::new()
+            .value_label("")
+            .subcell(false)
             .label("")
             .ratio(1.0)
             .filled_style(Style::new().fg(Color::Indexed(2)))
@@ -96,6 +118,8 @@ fn matches_ratatui_visible_cells_for_ratios_labels_and_line_sets() -> Result<(),
                     (LineSet::Ascii, "-"),
                 ] {
                     let ours = LineGauge::new()
+                        .value_label("")
+                        .subcell(false)
                         .ratio(ratio)
                         .label(label)
                         .line_set(set)
@@ -180,10 +204,15 @@ fn default_threshold_colors_match_literal_graphite_values() -> Result<(), String
         for (ratio, color) in [0.799, 0.8, 0.95].into_iter().zip(colors) {
             let mut grid = Grid::new(8, 1);
             let mut clusters = ClusterTable::new();
-            LineGauge::new().label("").ratio(ratio).render(
-                Rect::new(0, 0, 8, 1),
-                &mut RenderCx::new(&mut grid, &mut clusters, &theme),
-            );
+            LineGauge::new()
+                .value_label("")
+                .subcell(false)
+                .label("")
+                .ratio(ratio)
+                .render(
+                    Rect::new(0, 0, 8, 1),
+                    &mut RenderCx::new(&mut grid, &mut clusters, &theme),
+                );
             assert_eq!(
                 grid.get(1, 0).ok_or("missing filled cell")?.style().fg,
                 color
@@ -191,4 +220,45 @@ fn default_threshold_colors_match_literal_graphite_values() -> Result<(), String
         }
     }
     Ok(())
+}
+
+#[test]
+fn design_layout_keeps_value_right_and_uses_fractional_head() {
+    for (ratio, label, width, expected) in [
+        (0.5, None, 20, "━━━━━━━━──────── 50%"),
+        (0.53125, None, 20, "━━━━━━━━▌─────── 53%"),
+        (0.5, Some("CPU"), 20, "CPU ━━━━━━────── 50%"),
+        (0.5, None, 7, "━▌─ 50%"),
+        (0.5, None, 3, "50%"),
+        (0.5, None, 2, "50"),
+        (0.5, None, 1, "5"),
+        (0.0, None, 12, "───────── 0%"),
+        (1.0, None, 12, "━━━━━━━ 100%"),
+    ] {
+        let mut gauge = LineGauge::new().ratio(ratio);
+        if let Some(label) = label {
+            gauge = gauge.label(label);
+        }
+        let (grid, clusters) = render(&gauge, width, 1);
+        assert_eq!(grid.row_display(0, &clusters), expected);
+    }
+}
+
+#[test]
+fn repaint_clears_old_label_and_does_not_touch_other_rows() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(20, 2);
+    let mut clusters = ClusterTable::new();
+    grid.put_str(0, 0, Style::new(), "sentinel", &mut clusters);
+    let area = Rect::new(0, 1, 20, 1);
+    LineGauge::new()
+        .label("long")
+        .ratio(0.5)
+        .render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+    LineGauge::new()
+        .label("x")
+        .ratio(0.0)
+        .render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+    assert_eq!(grid.row_display(1, &clusters), "x ─────────────── 0%");
+    assert!(grid.row_display(0, &clusters).starts_with("sentinel"));
 }

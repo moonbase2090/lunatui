@@ -160,7 +160,7 @@ impl Grid {
     /// Places `ch` at `(x, y)` with `style`, including text attributes.
     ///
     /// A width-1 character replaces that cell directly. Any other character goes
-    /// through [`put_str`](Self::put_str), which does not store attributes, and
+    /// through [`put_str`](Self::put_str), which stores attributes, and
     /// then [`set_style`](Self::set_style) writes them.
     pub fn put_char(
         &mut self,
@@ -212,6 +212,7 @@ impl Grid {
         }
         let meta = Meta {
             width: CellWidth::One,
+            attrs: style.attrs,
             ..Meta::default()
         };
         let blank = Cell::from_parts(GlyphSlot::continuation(), style, meta).to_bits();
@@ -342,6 +343,7 @@ impl Grid {
         let word = (display == 1).then(|| {
             let meta = Meta {
                 width: CellWidth::One,
+                attrs: style.attrs,
                 ..Meta::default()
             };
             Cell::from_parts(glyph_for_char(ch, clusters), style, meta).to_bits()
@@ -388,6 +390,7 @@ impl Grid {
                         style,
                         Meta {
                             width: CellWidth::Two,
+                            attrs: style.attrs,
                             ..Meta::default()
                         },
                     ),
@@ -400,6 +403,7 @@ impl Grid {
                         style,
                         Meta {
                             width: CellWidth::Continuation,
+                            attrs: style.attrs,
                             ..Meta::default()
                         },
                     ),
@@ -420,6 +424,7 @@ impl Grid {
                         style,
                         Meta {
                             width: CellWidth::One,
+                            attrs: style.attrs,
                             ..Meta::default()
                         },
                     ),
@@ -549,6 +554,7 @@ impl Grid {
             style,
             Meta {
                 width: CellWidth::One,
+                attrs: style.attrs,
                 ..Meta::default()
             },
         );

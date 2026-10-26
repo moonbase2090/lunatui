@@ -15,6 +15,7 @@ workspace = true
 pixel-layer = ["lunatui-term/pixel-layer"]
 render-color = ["lunatui-core/render-color"]
 subcell = ["lunatui-core/subcell"]
+line-gauge = ["lunatui-widgets/line-gauge"]
 graphite-tokens = ["lunatui-theme/graphite-tokens", "lunatui-theme/color-profiles"]
 # gungraun needs Linux and valgrind, so its benchmarks are opt-in.
 gungraun = ["dep:gungraun"]
@@ -113,3 +114,8 @@ required-features = ["subcell"]
 name = "graphite_token_allocs"
 path = "tests/graphite_token_allocs.rs"
 required-features = ["graphite-tokens"]
+
+[[test]]
+name = "line_gauge_allocs"
+path = "tests/line_gauge_allocs.rs"
+required-features = ["line-gauge"]
