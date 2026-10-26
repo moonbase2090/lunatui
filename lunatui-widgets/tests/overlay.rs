@@ -5,7 +5,7 @@
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_test::styled_snapshot;
-use lunatui_theme::{Theme, Variant};
+use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{Block, FocusTrap, Overlay, RenderCx, Widget, blend_rgb};
 
 #[test]
@@ -24,7 +24,8 @@ fn blend_rgb_midpoint() {
 
 #[test]
 fn default_background_blends_with_theme_surface() -> Result<(), &'static str> {
-    let theme = Theme::builtin(Variant::Light);
+    let mut theme = Theme::builtin(Variant::Light);
+    theme.set_token(Token::Surface0, Color::Rgb(245, 245, 247));
     let mut grid = Grid::new(3, 1);
     let mut clusters = ClusterTable::new();
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);

@@ -76,40 +76,12 @@ impl Token {
     /// Parse a packed token id.
     #[must_use]
     pub const fn from_id(id: u32) -> Option<Self> {
-        match id {
-            0 => Some(Self::Surface0),
-            1 => Some(Self::Surface1),
-            2 => Some(Self::TextPrimary),
-            3 => Some(Self::Accent),
-            4 => Some(Self::Ok),
-            5 => Some(Self::Warn),
-            6 => Some(Self::Fail),
-            7 => Some(Self::FocusRing),
-            #[cfg(feature = "graphite-tokens")]
-            8 => Some(Self::Border),
-            #[cfg(feature = "graphite-tokens")]
-            9 => Some(Self::TextMuted),
-            #[cfg(feature = "graphite-tokens")]
-            10 => Some(Self::TextStrong),
-            #[cfg(feature = "graphite-tokens")]
-            11 => Some(Self::SurfaceRaised),
-            #[cfg(feature = "graphite-tokens")]
-            12 => Some(Self::BorderTitle),
-            #[cfg(feature = "graphite-tokens")]
-            13 => Some(Self::HoverOutline),
-            #[cfg(feature = "graphite-tokens")]
-            14 => Some(Self::TextIdle),
-            #[cfg(feature = "graphite-tokens")]
-            15 => Some(Self::FocusFill),
-            #[cfg(feature = "graphite-tokens")]
-            16 => Some(Self::FocusLine),
-            #[cfg(feature = "graphite-tokens")]
-            17 => Some(Self::TextMutedOnFocus),
-            #[cfg(feature = "graphite-tokens")]
-            18 => Some(Self::OnDanger),
-            #[cfg(feature = "graphite-tokens")]
-            19 => Some(Self::MotionHead),
-            _ => None,
+        let tokens = Self::all();
+        let index = id as usize;
+        if index < tokens.len() {
+            Some(tokens[index])
+        } else {
+            None
         }
     }
 
