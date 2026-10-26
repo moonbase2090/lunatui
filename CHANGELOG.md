@@ -8,10 +8,18 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-26
+
 ### Changed
 
 - `Grid::put_str` writes printable ASCII straight into the cell words, with no grapheme segmentation or per-cell cluster work, when the target cells are plain one-column cells: about 17 to 19 times faster for a screenful of short strings. Text with other characters, and writes that touch wide glyphs, take the previous path and give the same result.
-- README and `docs/performance.md` present lunatui's own dashboard numbers on one machine and one scope; the public comparison with ratatui and the side-by-side media are removed.
+- README and `docs/performance.md` present lunatui's own dashboard numbers on one machine and one scope, with the method and limits.
+
+### Added
+
+- Motion core in `lunatui-runtime`, behind the off-by-default `motion` feature: the design standard's out-cubic and in-cubic easing curves, the 80, 160 and 240 ms durations with a 300 ms cap, a damped spring with explicit stiffness, damping and mass, an interruptible transition, a frame pacer that drops from 60 to 30 fps after two slow frames, the `LUNATUI_REDUCED_MOTION` policy, and `Scheduler::set_frame_period`.
+- Widget recording script `scripts/record-widget.sh` and the `widget_preview` example: a widget case drawn at a fixed frame rate with a chosen size, frame count, fps, color profile and theme, recorded to an MP4 for pull requests and the README gallery.
+
 ## [0.1.5] - 2026-10-26
 
 ### Changed
