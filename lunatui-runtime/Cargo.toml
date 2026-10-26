@@ -17,8 +17,8 @@ name = "keymap"
 required-features = ["keymap"]
 
 [dependencies]
-lunatui-core = { version = "0.1.4", path = "../lunatui-core" }
-lunatui-term = { version = "0.1.4", path = "../lunatui-term" }
+lunatui-core = { version = "0.1.5", path = "../lunatui-core" }
+lunatui-term = { version = "0.1.5", path = "../lunatui-term" }
 
 [dev-dependencies]
 proptest = "1.9"

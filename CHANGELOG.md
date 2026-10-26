@@ -8,20 +8,25 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-26
+
 ### Changed
 
 - README and `docs/performance.md` compare lunatui and ratatui on the same machine with the same dashboard scene and scope (frame time, bytes, writes, allocations, RSS), replacing figures measured on different machines and over different scopes.
+- The terminal encoder no longer allocates per frame once its buffers are warm: diff runs are collected into a reused buffer (new `diff_runs_into` and `collect_runs_in_row_simd_into` in `lunatui-core`) and SGR sequences are written straight into the output buffer. Output is byte-for-byte the same; a dashboard frame makes about half the allocations.
+
+### Added
+
+- Widget parity bench suite: each widget is compared with its ratatui equivalent on identical data at 80x24 and 200x60, in a render-only and a full-frame scope, with a cell-for-cell parity test and a gate in `cargo xtask bench` (frame ratio and allocations) for new widgets. The six existing widgets are tracked, not gated. `docs/DESIGN_STANDARD.md` records the visual and performance standard widgets follow. A shared `WidgetState` (normal, focused, disabled) is available behind the off-by-default `widget-state` feature of `lunatui-widgets`.
 
 ## [0.1.4] - 2026-10-25
 
 ### Changed
 
-- The terminal encoder no longer allocates per frame once its buffers are warm: diff runs are collected into a reused buffer (new `diff_runs_into` and `collect_runs_in_row_simd_into` in `lunatui-core`) and SGR sequences are written straight into the output buffer. Output is byte-for-byte the same; a dashboard frame makes about half the allocations.
 - Terminal encoder emits SGR as a delta: it no longer resets before every color change or re-sends both colors, and only resets when an attribute turns off. The rendered result is the same; a dashboard frame is 12-20% fewer bytes (#100).
 
 ### Added
 
-- Widget parity bench suite: each widget is compared with its ratatui equivalent on identical data at 80x24 and 200x60, in a render-only and a full-frame scope, with a cell-for-cell parity test and a gate in `cargo xtask bench` (frame ratio and allocations) for new widgets. The six existing widgets are tracked, not gated. `docs/DESIGN_STANDARD.md` records the visual and performance standard widgets follow. A shared `WidgetState` (normal, focused, disabled) is available behind the off-by-default `widget-state` feature of `lunatui-widgets`.
 - **Keymap registry:** a keymap registry with shortcut overlay and command palette renderers behind the `keymap` feature, with an example and PTY tests (#90).
 - Fair Lunatui vs stock Ratatui dashboard comparison: separate release binaries with the same model and scripted ticks, a report runner (frame time, CPU, RSS, bytes, writes and allocations per frame), and a test that keeps the two scenes identical cell for cell. Run it with `scripts/run-dashboard-fair.sh` (#101).
 - **Native protocol discovery:** `lunatui-prismattyc` parses capability 0.4 `native.grid.v1` advertisements behind an off-by-default `NativePolicy::DirectLocal` opt-in. Discovery never activates native ownership; ANSI remains the renderer, with a documented fallback repaint prefix (#94, #96).
