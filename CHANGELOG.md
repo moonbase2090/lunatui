@@ -11,6 +11,8 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `BigTextFont::FiveBySeven`, a compact 5×7 clock font for the digits `0`–`9` and `:`, drawn with full blocks.
+- A CI guard for the site widget gallery: `scripts/check-gallery-real-output.sh` fails when a site capture example writes cells after a widget renders, and `lunatui/tests/site_gallery_repro.rs` re-renders each scene and compares it, and its committed PNG, with a recorded manifest.
+- `CONTRIBUTING.md` and a pull request template carry the rule that demos show real widget output only.
 
 ### Changed
 
