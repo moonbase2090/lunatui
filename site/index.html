@@ -74,7 +74,7 @@ a{color:inherit}
 .hero-copy .tagline{animation-delay:.82s}.hero-copy .brush{animation-delay:.94s}.hero-copy .lede{animation-delay:1.06s}.hero-copy .install{animation-delay:1.18s}
 @keyframes copy-in{to{opacity:1;transform:translateY(0)}}
 .skip-link{position:absolute;left:16px;top:12px;z-index:20;padding:10px 16px;background:var(--moon);color:var(--night);transform:translateY(-160%);border-radius:8px}.skip-link:focus{transform:none}
-.motion-toggle{position:absolute;z-index:6;right:24px;top:92px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:22px;background:rgba(14,19,44,.86);color:var(--ink);font:500 14px var(--sans);cursor:pointer}
+.nav-actions{display:flex;align-items:center;gap:8px}.motion-toggle{min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:18px;background:rgba(14,19,44,.6);color:var(--ink2);font:500 13px var(--sans);cursor:pointer;white-space:nowrap}.motion-toggle:hover{color:var(--ink)}
 h1{font:600 clamp(64px,10vw,124px)/1 var(--serif);letter-spacing:-.01em}
 .tagline{font:500 clamp(24px,3vw,36px)/1.2 var(--serif);color:var(--lav);margin:14px 0 10px}
 .brush{width:110px;height:6px;border-radius:6px;background:linear-gradient(90deg,var(--lav),transparent);margin-bottom:22px}
@@ -162,7 +162,7 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
  .hills{height:200px}
  .hero-copy{padding:220px 18px 24px;max-width:100%;--fx:90%;--fy:72%}
  .hero-copy::before{inset:120px -18px -24px;border-radius:42%;filter:blur(16px);mask-image:radial-gradient(ellipse var(--fx) var(--fy) at 45% 48%,#000 24%,transparent 100%),linear-gradient(transparent,#000 110px);mask-composite:intersect}
- .motion-toggle{right:18px;top:82px}
+ .motion-toggle{min-height:40px;padding:0 10px;font-size:12px}
  .moon{animation:none}
  .meteors{z-index:2}
  section.block{padding:48px 0}
@@ -245,8 +245,8 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
 <a class="skip-link" href="#main-content">Skip to content</a>
 <header class="nav"><div class="container">
  <a class="logo" href="#top"><svg viewBox="0 0 24 24"><path d="M15 3a9 9 0 1 0 6 15A8 8 0 0 1 15 3z" fill="#ece7da"/></svg>Lunatui</a>
- <nav aria-label="Main" id="main-links"><ul><li><a href="#docs">Docs</a></li><li><a href="#gallery">Gallery</a></li><li><a href="#speed">Benchmarks</a></li><li><a href="#tech">Technical</a></li></ul></nav>
- <button class="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="main-links"><span aria-hidden="true">☰</span></button>
+ <div class="nav-actions"><nav aria-label="Main" id="main-links"><ul><li><a href="#docs">Docs</a></li><li><a href="#gallery">Gallery</a></li><li><a href="#speed">Benchmarks</a></li><li><a href="#tech">Technical</a></li></ul></nav>
+ <button class="motion-toggle" type="button" aria-pressed="false">Pause motion</button><button class="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="main-links"><span aria-hidden="true">☰</span></button></div>
 </div></header>
 <main id="main-content" tabindex="-1">
 <section class="hero">
@@ -258,7 +258,6 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
  <div class="meteors" data-depth="0.4" aria-hidden="true"></div>
  <img class="hills" src="assets/hills.webp" alt="" data-depth="0.15" decoding="async">
  <div class="hero-fade"></div>
- <button class="motion-toggle" type="button" aria-pressed="false">Pause motion</button>
  <div class="container"><div class="hero-copy reveal">
   <h1>Lunatui</h1>
   <p class="tagline">Moonlit terminal UIs in Rust</p>
