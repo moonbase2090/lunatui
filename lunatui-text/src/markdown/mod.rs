@@ -11,7 +11,7 @@ mod links;
 mod table;
 mod tables;
 
-pub use ast::{Alignment, Block, Document, Inline, Item, List, Options, Table};
+pub use ast::{Alignment, Block, Document, Extension, Inline, Item, List, Options, Table};
 
 /// Parses `source` as Markdown.
 ///

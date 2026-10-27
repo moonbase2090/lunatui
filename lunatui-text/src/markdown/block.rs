@@ -6,7 +6,7 @@ extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use super::ast::{Alignment, Block, Document, Inline, Item, List, Options, Table};
+use super::ast::{Alignment, Block, Document, Extension, Inline, Item, List, Options, Table};
 use super::chars::unescape;
 use super::html::{html_block_ends, html_block_start};
 use super::inline;
@@ -319,13 +319,14 @@ impl Blocks {
     }
 
     fn finalize_paragraph(&mut self, id: usize) {
-        let mut text = core::mem::take(&mut self.nodes[id].text);
-        while let Some(definition) = parse_definition(&text) {
+        let text = core::mem::take(&mut self.nodes[id].text);
+        let mut start = 0;
+        while let Some(definition) = parse_definition(&text[start..]) {
             self.refs
                 .insert(&definition.label, definition.dest, definition.title);
-            text = String::from(&text[definition.consumed..]);
+            start += definition.consumed;
         }
-        let trimmed = text.trim_end_matches([' ', '\t', '\n']);
+        let trimmed = text[start..].trim_end_matches([' ', '\t', '\n']);
         if trimmed.is_empty() {
             self.nodes[id].kind = Kind::Removed;
         } else {
@@ -612,7 +613,7 @@ impl Blocks {
         if !is_paragraph {
             return None;
         }
-        if self.options.tables
+        if self.options.enabled(Extension::Tables)
             && let Some(alignments) = delimiter_row(rest)
             && let Some(start) = self.start_table(cursor, state, alignments)
         {
@@ -845,7 +846,7 @@ impl Blocks {
         for (index, &child) in children.iter().enumerate() {
             let node = &self.nodes[child];
             if index == 0
-                && self.options.task_lists
+                && self.options.enabled(Extension::TaskLists)
                 && matches!(node.kind, Kind::Paragraph)
                 && let Some((state, rest)) = task_marker(&node.text)
             {

@@ -128,44 +128,75 @@ pub enum Inline {
     Html(String),
 }
 
-/// Parser switches.
+/// A syntax extension beyond `CommonMark`.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "independent public switches, one per extension"
-)]
+pub enum Extension {
+    /// Pipe tables.
+    Tables,
+    /// `~~strikethrough~~`.
+    Strikethrough,
+    /// `[ ]` and `[x]` task markers at the start of list items.
+    TaskLists,
+    /// Bare `www.` addresses, `http(s)://` URLs and email addresses become links.
+    Autolinks,
+}
+
+impl Extension {
+    const fn bit(self) -> u8 {
+        match self {
+            Self::Tables => 1,
+            Self::Strikethrough => 2,
+            Self::TaskLists => 4,
+            Self::Autolinks => 8,
+        }
+    }
+}
+
+/// Parser switches: which extensions are on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Options {
-    /// Parse pipe tables.
-    pub tables: bool,
-    /// Parse `~~strikethrough~~`.
-    pub strikethrough: bool,
-    /// Parse `[ ]` and `[x]` task markers at the start of list items.
-    pub task_lists: bool,
-    /// Turn bare `www.` addresses, `http(s)://` URLs and email addresses into links.
-    pub autolinks: bool,
+    extensions: u8,
 }
 
 impl Options {
     /// Strict `CommonMark`: every extension off.
     #[must_use]
     pub const fn commonmark() -> Self {
-        Self {
-            tables: false,
-            strikethrough: false,
-            task_lists: false,
-            autolinks: false,
-        }
+        Self { extensions: 0 }
     }
 
     /// `CommonMark` plus the GitHub Flavored Markdown extensions.
     #[must_use]
     pub const fn gfm() -> Self {
         Self {
-            tables: true,
-            strikethrough: true,
-            task_lists: true,
-            autolinks: true,
+            extensions: Extension::Tables.bit()
+                | Extension::Strikethrough.bit()
+                | Extension::TaskLists.bit()
+                | Extension::Autolinks.bit(),
         }
+    }
+
+    /// These options with `extension` turned on.
+    #[must_use]
+    pub const fn with(self, extension: Extension) -> Self {
+        Self {
+            extensions: self.extensions | extension.bit(),
+        }
+    }
+
+    /// These options with `extension` turned off.
+    #[must_use]
+    pub const fn without(self, extension: Extension) -> Self {
+        Self {
+            extensions: self.extensions & !extension.bit(),
+        }
+    }
+
+    /// Whether `extension` is on.
+    #[must_use]
+    pub const fn enabled(self, extension: Extension) -> bool {
+        self.extensions & extension.bit() != 0
     }
 }
 

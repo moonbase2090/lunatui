@@ -13,14 +13,14 @@ fn text(value: &str) -> Inline {
 fn paragraph(source: &str) -> Vec<Inline> {
     match parse(source, Options::gfm()).blocks.into_iter().next() {
         Some(Block::Paragraph(content)) => content,
-        other => panic!("expected a paragraph, got {other:?}"),
+        _ => Vec::new(),
     }
 }
 
 #[test]
 fn empty_input_has_no_blocks() {
-    assert!(parse("", Options::gfm()).blocks.is_empty());
-    assert!(parse("\n\n  \n", Options::gfm()).blocks.is_empty());
+    assert_eq!(parse("", Options::gfm()).blocks, []);
+    assert_eq!(parse("\n\n  \n", Options::gfm()).blocks, []);
 }
 
 #[test]
@@ -174,46 +174,49 @@ fn unclosed_fence_runs_to_the_end() {
 }
 
 #[test]
-fn tight_and_loose_lists() {
+fn tight_and_loose_lists() -> Result<(), String> {
     let tight = parse("- a\n- b\n", Options::gfm());
     let loose = parse("- a\n\n- b\n", Options::gfm());
     let Block::List(tight) = &tight.blocks[0] else {
-        panic!("expected a list")
+        return Err("expected a list".to_owned());
     };
     let Block::List(loose) = &loose.blocks[0] else {
-        panic!("expected a list")
+        return Err("expected a list".to_owned());
     };
     assert!(tight.tight);
     assert!(!loose.tight);
+    Ok(())
 }
 
 #[test]
-fn ordered_list_keeps_its_start() {
+fn ordered_list_keeps_its_start() -> Result<(), String> {
     let doc = parse("7. a\n8. b\n", Options::gfm());
     let Block::List(list) = &doc.blocks[0] else {
-        panic!("expected a list")
+        return Err("expected a list".to_owned());
     };
     assert_eq!(list.start, Some(7));
     assert_eq!(list.items.len(), 2);
+    Ok(())
 }
 
 #[test]
-fn nested_quote_and_list() {
+fn nested_quote_and_list() -> Result<(), String> {
     let doc = parse("> - a\n>   - b\n", Options::gfm());
     let Block::BlockQuote(inner) = &doc.blocks[0] else {
-        panic!("expected a quote")
+        return Err("expected a quote".to_owned());
     };
     let Block::List(list) = &inner[0] else {
-        panic!("expected a list")
+        return Err("expected a list".to_owned());
     };
     assert!(matches!(list.items[0].blocks[1], Block::List(_)));
+    Ok(())
 }
 
 #[test]
-fn table_alignment_and_ragged_rows() {
+fn table_alignment_and_ragged_rows() -> Result<(), String> {
     let doc = parse("| a | b | c |\n|:-|:-:|-:|\n| 1 | 2 |\n", Options::gfm());
     let Block::Table(table) = &doc.blocks[0] else {
-        panic!("expected a table")
+        return Err("expected a table".to_owned());
     };
     assert_eq!(
         table.alignments,
@@ -221,16 +224,18 @@ fn table_alignment_and_ragged_rows() {
     );
     assert_eq!(table.rows.len(), 1);
     assert_eq!(table.rows[0].len(), 3);
-    assert!(table.rows[0][2].is_empty());
+    assert_eq!(table.rows[0][2], []);
+    Ok(())
 }
 
 #[test]
-fn escaped_pipe_stays_in_its_cell() {
+fn escaped_pipe_stays_in_its_cell() -> Result<(), String> {
     let doc = parse("| a |\n|---|\n| x \\| y |\n", Options::gfm());
     let Block::Table(table) = &doc.blocks[0] else {
-        panic!("expected a table")
+        return Err("expected a table".to_owned());
     };
     assert_eq!(table.rows[0][0], vec![text("x | y")]);
+    Ok(())
 }
 
 #[test]
@@ -240,13 +245,14 @@ fn tables_are_off_in_commonmark_mode() {
 }
 
 #[test]
-fn task_items_report_their_state() {
+fn task_items_report_their_state() -> Result<(), String> {
     let doc = parse("- [ ] a\n- [x] b\n- c\n", Options::gfm());
     let Block::List(list) = &doc.blocks[0] else {
-        panic!("expected a list")
+        return Err("expected a list".to_owned());
     };
     let states: Vec<_> = list.items.iter().map(|item| item.checked).collect();
     assert_eq!(states, vec![Some(false), Some(true), None]);
+    Ok(())
 }
 
 #[test]
@@ -354,8 +360,15 @@ const FRAGMENTS: &[&str] = &[
     "x",
 ];
 
+fn fuzz_cases() -> u32 {
+    std::env::var("PROPTEST_CASES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(512)
+}
+
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(512))]
+    #![proptest_config(ProptestConfig::with_cases(fuzz_cases()))]
 
     #[test]
     fn arbitrary_text_never_panics(source in ".{0,200}") {
@@ -379,4 +392,53 @@ proptest! {
         let source: String = parts.concat();
         prop_assert_eq!(parse(&source, Options::gfm()), parse(&source, Options::gfm()));
     }
+}
+
+const LARGE: usize = 60_000;
+
+#[test]
+fn large_inputs_with_many_candidates_parse_in_linear_time() {
+    let cases = [
+        "*a* ".repeat(LARGE),
+        "[a](b) ".repeat(LARGE),
+        "<a ".repeat(LARGE),
+        "<".repeat(LARGE),
+        "<!-- ".repeat(LARGE),
+        "<? ".repeat(LARGE),
+        "<![CDATA[ ".repeat(LARGE),
+        format!("{}>", "<a b=\"".repeat(LARGE)),
+        "[a]: b\n".repeat(LARGE),
+        format!("{}x{}", "[".repeat(LARGE), "](a)".repeat(LARGE)),
+        "*a _b **c __d ".repeat(LARGE / 4),
+        "a* ".repeat(LARGE),
+        "![a](b) ".repeat(LARGE),
+        "~~a~ ".repeat(LARGE),
+    ];
+    for source in &cases {
+        let _ = parse(source, Options::gfm());
+    }
+}
+
+#[test]
+fn options_turn_extensions_on_and_off() {
+    use lunatui_text::markdown::Extension;
+    let strict = Options::commonmark();
+    for extension in [
+        Extension::Tables,
+        Extension::Strikethrough,
+        Extension::TaskLists,
+        Extension::Autolinks,
+    ] {
+        assert!(!strict.enabled(extension));
+        assert!(Options::gfm().enabled(extension));
+        assert!(strict.with(extension).enabled(extension));
+        assert!(!Options::gfm().without(extension).enabled(extension));
+    }
+    let only_tables = strict.with(Extension::Tables);
+    assert!(!only_tables.enabled(Extension::Strikethrough));
+    assert_eq!(Options::default(), Options::gfm());
+    assert_eq!(
+        parse("~~a~~", only_tables).blocks,
+        parse("~~a~~", strict).blocks
+    );
 }

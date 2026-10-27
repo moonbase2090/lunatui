@@ -6,9 +6,9 @@ extern crate alloc;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use super::ast::{Inline, Options};
+use super::ast::{Extension, Inline, Options};
 use super::chars::{is_punct, is_space, parse_entity};
-use super::html::{autolink_len, inline_html_len};
+use super::html::{Ends, autolink_len, inline_html_len};
 use super::links::{Refs, parse_destination, parse_label, parse_title, skip_space_and_one_newline};
 
 #[derive(Debug)]
@@ -23,7 +23,6 @@ struct Delim {
 #[derive(Debug)]
 struct Bracket {
     image: bool,
-    active: bool,
     src_start: usize,
 }
 
@@ -41,6 +40,9 @@ struct Parser<'a> {
     refs: &'a Refs,
     options: Options,
     failed_ticks: Vec<usize>,
+    ends: Ends,
+    brackets: Vec<usize>,
+    barrier: usize,
 }
 
 pub(super) fn parse(text: &str, refs: &Refs, options: Options) -> Vec<Inline> {
@@ -51,11 +53,14 @@ pub(super) fn parse(text: &str, refs: &Refs, options: Options) -> Vec<Inline> {
         refs,
         options,
         failed_ticks: Vec::new(),
+        ends: Ends::new(text),
+        brackets: Vec::new(),
+        barrier: 0,
     };
     parser.run();
     let toks = core::mem::take(&mut parser.toks);
     let inlines = build(toks);
-    if options.autolinks {
+    if options.enabled(Extension::Autolinks) {
         super::autolink::apply(inlines)
     } else {
         inlines
@@ -77,21 +82,13 @@ impl Parser<'_> {
                 b'\\' => self.escape(),
                 b'`' => self.backticks(),
                 b'*' | b'_' => self.delimiter_run(),
-                b'~' if self.options.strikethrough => self.delimiter_run(),
+                b'~' if self.options.enabled(Extension::Strikethrough) => self.delimiter_run(),
                 b'[' => {
-                    self.toks.push(Tok::Bracket(Bracket {
-                        image: false,
-                        active: true,
-                        src_start: self.pos + 1,
-                    }));
+                    self.open_bracket(false, self.pos + 1);
                     self.pos += 1;
                 }
                 b'!' if bytes.get(self.pos + 1) == Some(&b'[') => {
-                    self.toks.push(Tok::Bracket(Bracket {
-                        image: true,
-                        active: true,
-                        src_start: self.pos + 2,
-                    }));
+                    self.open_bracket(true, self.pos + 2);
                     self.pos += 2;
                 }
                 b']' => self.close_bracket(),
@@ -101,6 +98,11 @@ impl Parser<'_> {
                 _ => self.plain_text(),
             }
         }
+    }
+
+    fn open_bracket(&mut self, image: bool, src_start: usize) {
+        self.brackets.push(self.toks.len());
+        self.toks.push(Tok::Bracket(Bracket { image, src_start }));
     }
 
     fn push_text(&mut self, piece: &str) {
@@ -116,7 +118,7 @@ impl Parser<'_> {
 
     fn plain_text(&mut self) {
         let bytes = self.text.as_bytes();
-        let strike = self.options.strikethrough;
+        let strike = self.options.enabled(Extension::Strikethrough);
         let start = self.pos;
         let mut end = start + 1;
         while end < bytes.len() && !is_special(bytes[end], strike) {
@@ -271,7 +273,7 @@ impl Parser<'_> {
                 content: alloc::vec![Inline::Text(String::from(inner))],
             }));
             self.pos += length;
-        } else if let Some(length) = inline_html_len(rest) {
+        } else if let Some(length) = inline_html_len(rest, self.pos, &self.ends) {
             self.toks
                 .push(Tok::Node(Inline::Html(String::from(&rest[..length]))));
             self.pos += length;
@@ -283,20 +285,17 @@ impl Parser<'_> {
 
     fn close_bracket(&mut self) {
         let close = self.pos;
-        let opener = self
-            .toks
-            .iter()
-            .rposition(|tok| matches!(tok, Tok::Bracket(_)));
-        let Some(index) = opener else {
+        let Some(&index) = self.brackets.last() else {
             self.push_text("]");
             self.pos += 1;
             return;
         };
-        let (image, active, src_start) = match &self.toks[index] {
-            Tok::Bracket(bracket) => (bracket.image, bracket.active, bracket.src_start),
+        let (image, src_start) = match &self.toks[index] {
+            Tok::Bracket(bracket) => (bracket.image, bracket.src_start),
             _ => return,
         };
         let literal = if image { "![" } else { "[" };
+        let active = image || self.brackets.len() > self.barrier;
         let resolved = if active {
             self.inline_link(close + 1)
                 .or_else(|| self.reference(src_start, close))
@@ -305,12 +304,17 @@ impl Parser<'_> {
         };
         let Some((dest, title, end)) = resolved else {
             self.toks[index] = Tok::Node(Inline::Text(String::from(literal)));
+            self.brackets.pop();
+            self.barrier = self.barrier.min(self.brackets.len());
             self.push_text("]");
             self.pos += 1;
             return;
         };
         let children: Vec<Tok> = self.toks.split_off(index + 1);
         self.toks.pop();
+        while self.brackets.last().is_some_and(|&at| at >= index) {
+            self.brackets.pop();
+        }
         let content = build(children);
         let node = if image {
             Inline::Image {
@@ -326,14 +330,10 @@ impl Parser<'_> {
             }
         };
         self.toks.push(Tok::Node(node));
-        if !image {
-            for tok in &mut self.toks {
-                if let Tok::Bracket(bracket) = tok
-                    && !bracket.image
-                {
-                    bracket.active = false;
-                }
-            }
+        if image {
+            self.barrier = self.barrier.min(self.brackets.len());
+        } else {
+            self.barrier = self.brackets.len();
         }
         self.pos = end;
     }
@@ -458,85 +458,81 @@ fn can_match(opener: &Delim, closer: &Delim) -> bool {
     !odd_rule
 }
 
-fn build(mut toks: Vec<Tok>) -> Vec<Inline> {
+fn build(toks: Vec<Tok>) -> Vec<Inline> {
+    let mut out: Vec<Tok> = Vec::with_capacity(toks.len());
+    let mut openers: Vec<usize> = Vec::new();
     let mut bottoms = [[[0usize; 3]; 2]; 3];
-    let mut current = 0;
-    while current < toks.len() {
-        let (ch, orig, can_open) = match &toks[current] {
-            Tok::Delim(delim) if delim.can_close => (delim.ch, delim.orig, delim.can_open),
-            _ => {
-                current += 1;
-                continue;
-            }
-        };
-        let key = (kind_index(ch), usize::from(can_open), orig % 3);
-        let limit = bottoms[key.0][key.1][key.2];
-        let found = (limit..current)
-            .rev()
-            .find(|&index| match (&toks[index], &toks[current]) {
-                (Tok::Delim(opener), Tok::Delim(closer)) => can_match(opener, closer),
-                _ => false,
-            });
-        let Some(opener_index) = found else {
-            bottoms[key.0][key.1][key.2] = current;
-            if !can_open && let Tok::Delim(delim) = &toks[current] {
-                let text = delim_text(delim);
-                toks[current] = Tok::Node(text);
-            }
-            current += 1;
+    for tok in toks {
+        let Tok::Delim(mut closer) = tok else {
+            out.push(tok);
             continue;
         };
-        current = apply_match(&mut toks, opener_index, current);
-        for row in &mut bottoms {
-            for cell in row {
-                for value in cell {
-                    if *value > opener_index {
-                        *value = opener_index;
+        while closer.can_close && closer.count > 0 {
+            let key = (
+                kind_index(closer.ch),
+                usize::from(closer.can_open),
+                closer.orig % 3,
+            );
+            let limit = bottoms[key.0][key.1][key.2];
+            let found = (limit..openers.len()).rev().find(|&slot| {
+                matches!(&out[openers[slot]], Tok::Delim(opener) if can_match(opener, &closer))
+            });
+            let Some(slot) = found else {
+                bottoms[key.0][key.1][key.2] = openers.len();
+                break;
+            };
+            let opener_at = openers[slot];
+            let (ch, use_len) = match &out[opener_at] {
+                Tok::Delim(opener) => {
+                    let use_len = if opener.ch == b'~' {
+                        opener.count
+                    } else if opener.count >= 2 && closer.count >= 2 {
+                        2
+                    } else {
+                        1
+                    };
+                    (opener.ch, use_len)
+                }
+                _ => break,
+            };
+            let content = flatten(out.split_off(opener_at + 1));
+            let node = match (ch, use_len) {
+                (b'~', _) => Inline::Strikethrough(content),
+                (_, 2) => Inline::Strong(content),
+                _ => Inline::Emphasis(content),
+            };
+            let opener_empty = match &mut out[opener_at] {
+                Tok::Delim(opener) => {
+                    opener.count -= use_len;
+                    opener.count == 0
+                }
+                _ => false,
+            };
+            closer.count -= use_len;
+            if opener_empty {
+                out.truncate(opener_at);
+                openers.truncate(slot);
+            } else {
+                openers.truncate(slot + 1);
+            }
+            out.push(Tok::Node(node));
+            for row in &mut bottoms {
+                for cell in row {
+                    for value in cell {
+                        *value = (*value).min(openers.len());
                     }
                 }
             }
         }
-    }
-    flatten(toks)
-}
-
-fn apply_match(toks: &mut Vec<Tok>, opener_index: usize, closer_index: usize) -> usize {
-    let (ch, use_len) = match (&toks[opener_index], &toks[closer_index]) {
-        (Tok::Delim(opener), Tok::Delim(closer)) => {
-            let use_len = if opener.ch == b'~' {
-                opener.count
-            } else if opener.count >= 2 && closer.count >= 2 {
-                2
-            } else {
-                1
-            };
-            (opener.ch, use_len)
+        if closer.count == 0 {
+            continue;
         }
-        _ => return closer_index + 1,
-    };
-    let inner: Vec<Tok> = toks.drain(opener_index + 1..closer_index).collect();
-    let content = flatten(inner);
-    let node = match (ch, use_len) {
-        (b'~', _) => Inline::Strikethrough(content),
-        (_, 2) => Inline::Strong(content),
-        _ => Inline::Emphasis(content),
-    };
-    toks.insert(opener_index + 1, Tok::Node(node));
-    let mut closer_at = opener_index + 2;
-    if let Tok::Delim(opener) = &mut toks[opener_index] {
-        opener.count -= use_len;
+        if closer.can_open {
+            openers.push(out.len());
+            out.push(Tok::Delim(closer));
+        } else {
+            out.push(Tok::Node(delim_text(&closer)));
+        }
     }
-    if let Tok::Delim(closer) = &mut toks[closer_at] {
-        closer.count -= use_len;
-    }
-    let closer_empty = matches!(&toks[closer_at], Tok::Delim(d) if d.count == 0);
-    if closer_empty {
-        toks.remove(closer_at);
-    }
-    let opener_empty = matches!(&toks[opener_index], Tok::Delim(d) if d.count == 0);
-    if opener_empty {
-        toks.remove(opener_index);
-        closer_at -= 1;
-    }
-    closer_at
+    flatten(out)
 }
