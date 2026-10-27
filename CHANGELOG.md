@@ -8,6 +8,11 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Changed
+
+- The calendar gallery walks from the branch cut into the next month and ends on the on-call drill. The agenda and the week list fill the screen.
+- Widget recordings pad the side-by-side frame so an odd height still encodes.
+
 ## [0.1.10] - 2026-10-27
 
 ### Added
@@ -16,8 +21,6 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
-- The calendar gallery walks from the branch cut into the next month and ends on the on-call drill. The agenda and the week list fill the screen.
-- Widget recordings pad the side-by-side frame so an odd height still encodes.
 - The big text gallery is a cutover board: a live clock, a countdown that reaches zero, ticking metrics, a moving selection, and an error count that turns red while it is hot.
 - Big text digits, capitals, and `:.-%` use an 8×8 bitmap derived from Press Start 2P (SIL Open Font License 1.1, `lunatui-widgets/assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII is a hollow box. Full blocks are two columns wide. Sextants pad one blank pixel row. The gallery draws those digits with the square-pixel sizes.
 
