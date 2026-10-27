@@ -61,14 +61,15 @@ pub(crate) fn split(inner: Rect, spec: &WrapSpec<'_>, line: Constraint) -> Wrapp
     let line_constraints = alloc::vec![line; breaks.len()];
     let line_gap = i16::try_from(spec.line_gap).unwrap_or(i16::MAX);
     let (line_sizes, line_gaps, mut needs_solver) =
-        solve_fast::axis_sizes(cross_len, &line_constraints, line_gap, Flex::Start);
+        solve_fast::axis_sizes_bounded(cross_len, &line_constraints, &[], line_gap, Flex::Start);
     let (bands, _) = solve_fast::place(inner, cross_axis, &line_sizes, &line_gaps);
     let mut segments = Vec::with_capacity(spec.constraints.len());
     let mut lines = Vec::with_capacity(breaks.len());
     for (range, band) in breaks.into_iter().zip(bands) {
-        let (sizes, gaps, line_needs_solver) = solve_fast::axis_sizes(
+        let (sizes, gaps, line_needs_solver) = solve_fast::axis_sizes_bounded(
             main_len,
             &spec.constraints[range.clone()],
+            &[],
             spec.spacing,
             spec.flex,
         );
