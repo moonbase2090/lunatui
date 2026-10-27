@@ -97,10 +97,18 @@ impl Layout {
             Axis::Horizontal => inner.width,
             Axis::Vertical => inner.height,
         };
+        #[cfg(feature = "size-limits")]
+        let bounds: Vec<(u16, u16)> = self
+            .limits
+            .iter()
+            .map(|limit| (limit.min(), limit.max()))
+            .collect();
+        #[cfg(not(feature = "size-limits"))]
+        let bounds: Vec<(u16, u16)> = Vec::new();
         let (sizes, gaps, needs_solver) = solve_fast::axis_sizes_bounded(
             len,
             &self.constraints,
-            &self.bounds(),
+            &bounds,
             self.spacing,
             self.flex,
         );
@@ -110,23 +118,6 @@ impl Layout {
             spacers,
             needs_solver,
         }
-    }
-
-    #[cfg(feature = "size-limits")]
-    fn bounds(&self) -> Vec<(u16, u16)> {
-        self.limits
-            .iter()
-            .map(|limit| (limit.min(), limit.max()))
-            .collect()
-    }
-
-    #[cfg(not(feature = "size-limits"))]
-    #[expect(
-        clippy::unused_self,
-        reason = "matches the size-limits build, where the bounds come from self"
-    )]
-    fn bounds(&self) -> Vec<(u16, u16)> {
-        Vec::new()
     }
 
     fn new(axis: Axis, constraints: impl IntoIterator<Item = Constraint>) -> Self {

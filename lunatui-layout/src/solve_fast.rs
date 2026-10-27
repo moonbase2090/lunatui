@@ -16,7 +16,6 @@ struct Spec {
     upper: u64,
     weight: u32,
     shrink: u8,
-    /// A floor from a segment limit, on top of `lower`. Zero when there is none.
     floor: u64,
 }
 
@@ -26,8 +25,6 @@ impl Spec {
     }
 }
 
-/// Segment sizes and gaps for one axis. `bounds` holds an optional `(floor, cap)` per segment;
-/// missing entries are unbounded, and a floor above the cap raises the cap to the floor.
 pub(crate) fn axis_sizes_bounded(
     len: u16,
     constraints: &[Constraint],
@@ -366,9 +363,6 @@ fn promote_zero_fills(constraints: &[Constraint], weights: &mut [u32]) {
     }
 }
 
-/// Share `extra` cells over the weighted segments, on top of `base`. A segment whose share would
-/// leave it under its floor or over its cap is fixed at that bound, and the cells are shared again
-/// among the rest, until nothing moves. Without floors or caps this is one weighted pass.
 fn grow_weighted(sizes: &mut [u64], base: &[u64], specs: &[Spec], weights: &[u32], extra: u64) {
     let mut active: Vec<usize> = (0..weights.len())
         .filter(|&index| weights[index] > 0)
@@ -412,8 +406,6 @@ fn grow_weighted(sizes: &mut [u64], base: &[u64], specs: &[Spec], weights: &[u32
     }
 }
 
-/// `base` plus each active segment's weighted share of `pool`. Floor shares first, then one extra
-/// cell each to the largest remainders, lowest index first on ties.
 fn weighted_targets(base: &[u64], weights: &[u32], active: &[usize], pool: u64) -> Vec<u64> {
     let total: u64 = active.iter().map(|&index| u64::from(weights[index])).sum();
     let mut targets: Vec<u64> = active
