@@ -8,12 +8,12 @@ use std::io::{self, Write};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use lunatui_core::{ClusterTable, Grid, Rect, Size, Style};
+use lunatui_core::{ClusterTable, Grid};
 use lunatui_term::{ColorMode, Encoder};
-use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{Block, Padding, Paragraph, RenderCx, Spinner, SpinnerPreset, Widget};
+use lunatui_theme::{Theme, Variant};
 
-const LABEL_COLUMNS: u16 = 22;
+#[path = "deploy_board.rs"]
+mod deploy_board;
 
 struct Options {
     width: u16,
@@ -23,66 +23,10 @@ struct Options {
     snapshot: bool,
 }
 
-fn label(preset: SpinnerPreset) -> String {
-    let ms = preset.interval().as_millis();
-    format!("{:<12}{ms:>4} ms", preset.name())
-}
-
-fn frame_index(preset: SpinnerPreset, tick: u32, fps: u32) -> u32 {
+fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, tick: u32, fps: u32) {
     let fps = u64::from(fps.max(1));
     let elapsed = u64::from(tick).saturating_mul(1_000) / fps;
-    let interval = u64::try_from(preset.interval().as_millis()).unwrap_or(u64::MAX);
-    let interval = interval.max(1);
-    u32::try_from(elapsed / interval).unwrap_or(u32::MAX)
-}
-
-fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, tick: u32, fps: u32) {
-    let area = Rect::new(0, 0, grid.width(), grid.height());
-    let mut cx = RenderCx::new(grid, clusters, theme);
-    let text = cx.token(Token::TextPrimary);
-    let accent = cx.token(Token::Accent);
-    let surface = cx.token(Token::Surface0);
-    let ground = Style::new().fg(text).bg(surface);
-    let frame = Block::bordered()
-        .title(" presets ")
-        .style(ground)
-        .border_style(Style::new().fg(accent).bg(surface))
-        .title_style(Style::new().fg(accent).bg(surface))
-        .padding(Padding {
-            left: 1,
-            right: 1,
-            top: 0,
-            bottom: 0,
-        });
-    frame.render(area, &mut cx);
-    let inner = frame.inner(area);
-    let spin_style = Style::new().fg(accent).bg(surface);
-    for (index, preset) in SpinnerPreset::ALL.iter().enumerate() {
-        let Ok(row) = u16::try_from(index) else {
-            break;
-        };
-        let y = inner.y.saturating_add(row);
-        if y >= inner.y.saturating_add(inner.height) || inner.width == 0 {
-            break;
-        }
-        Paragraph::new(label(*preset)).style(ground).render(
-            Rect::new(inner.x, y, LABEL_COLUMNS.min(inner.width), 1),
-            &mut cx,
-        );
-        let origin = inner.x.saturating_add(LABEL_COLUMNS);
-        if origin >= inner.x.saturating_add(inner.width) {
-            continue;
-        }
-        let room = inner.x.saturating_add(inner.width).saturating_sub(origin);
-        let spinner = Spinner::new(frame_index(*preset, tick, fps))
-            .preset(*preset)
-            .style(spin_style);
-        let columns = spinner.measure(Size::new(room, 1)).width;
-        if columns == 0 {
-            continue;
-        }
-        spinner.render(Rect::new(origin, y, columns, 1), &mut cx);
-    }
+    deploy_board::draw(grid, clusters, theme, elapsed);
 }
 
 fn snapshot(options: &Options) -> io::Result<()> {
@@ -176,48 +120,65 @@ fn invalid(message: String) -> io::Error {
 
 #[cfg(test)]
 mod tests {
-    use super::{draw, frame_index};
+    use super::deploy_board::frame_index;
+    use super::draw;
     use lunatui_core::{ClusterTable, Grid};
     use lunatui_theme::{Theme, Variant};
     use lunatui_widgets::SpinnerPreset;
 
-    fn screen(tick: u32) -> String {
+    fn at(preset: SpinnerPreset, tick: u32, fps: u32) -> u32 {
+        let fps = u64::from(fps.max(1));
+        let elapsed = u64::from(tick).saturating_mul(1_000) / fps;
+        frame_index(preset, elapsed)
+    }
+
+    fn screen(width: u16, height: u16, tick: u32) -> String {
         let theme = Theme::builtin(Variant::Dark);
-        let mut grid = Grid::new(64, 12);
+        let mut grid = Grid::new(width, height);
         let mut clusters = ClusterTable::new();
         draw(&mut grid, &mut clusters, &theme, tick, 10);
         grid.display_text(&clusters)
     }
 
-    fn row_with<'a>(screen: &'a str, name: &str) -> &'a str {
+    fn row_with<'a>(screen: &'a str, needle: &str) -> &'a str {
         screen
             .lines()
-            .find(|line| line.contains(name))
+            .find(|line| line.contains(needle))
             .unwrap_or("")
     }
 
     #[test]
-    fn the_screen_names_every_preset() {
-        let frame = screen(0);
-        for preset in SpinnerPreset::ALL {
-            assert!(frame.contains(preset.name()), "{}", preset.name());
-        }
-        let dots = row_with(&frame, "dots");
-        assert!(dots.contains('⠋'));
-        assert!(dots.contains("80 ms"));
-        let line = row_with(&frame, "line");
-        assert!(line.contains('|'));
-        let later = screen(2);
-        let line = row_with(&later, "line");
-        assert!(line.contains('/'));
-        assert!(!line.contains('|'));
-        let next = screen(1);
-        let bounce_now = row_with(&frame, "bounce");
-        let bounce_next = row_with(&next, "bounce");
-        assert!(bounce_now.contains('●'));
-        assert!(bounce_next.contains('●'));
-        assert_ne!(bounce_now, bounce_next);
-        assert_eq!(frame_index(SpinnerPreset::LINE, 0, 10), 0);
-        assert_eq!(frame_index(SpinnerPreset::LINE, 2, 10), 1);
+    fn the_board_is_a_deploy_screen() {
+        let frame = screen(120, 36, 0);
+        assert!(frame.contains("production deploy"));
+        assert!(frame.contains("release 2.4.1"));
+        assert!(frame.contains("compiling workspace"));
+        assert!(frame.contains("418 passed"));
+        assert!(frame.contains("10 percent of traffic"));
+        assert!(frame.contains("layer 4 of 8"));
+        assert!(frame.contains("revision 48"));
+        assert!(frame.contains("62 regions"));
+        assert!(frame.contains("draining connections"));
+        assert!(frame.contains("job 19"));
+        assert!(frame.contains("site sync"));
+        assert!(frame.contains("3 regions left"));
+        assert!(!frame.contains("80 ms"));
+        assert!(!frame.contains("dots"));
+        let checks = row_with(&frame, "418 passed");
+        assert!(checks.contains('|'));
+        let later = screen(120, 36, 2);
+        let checks_later = row_with(&later, "418 passed");
+        assert!(checks_later.contains('/'));
+        let migrate = row_with(&frame, "migrate");
+        let next = screen(120, 36, 1);
+        let migrate_next = row_with(&next, "migrate");
+        assert!(migrate.contains('●'));
+        assert!(migrate_next.contains('●'));
+        assert_ne!(migrate, migrate_next);
+        assert!(!frame.contains('█'));
+        assert!(screen(120, 36, 40).contains('█'));
+        assert!(screen(20, 8, 0).contains("release"));
+        assert_eq!(at(SpinnerPreset::LINE, 0, 10), 0);
+        assert_eq!(at(SpinnerPreset::LINE, 2, 10), 1);
     }
 }
