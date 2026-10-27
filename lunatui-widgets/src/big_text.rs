@@ -23,7 +23,7 @@ pub enum BigTextFont {
     /// The built-in 8×8 Press Start 2P bitmap.
     #[default]
     PressStart2P,
-    /// A compact 5×7 clock font for `2`, `3`, `4`, `7`, and `:` made from full-cell blocks.
+    /// A compact 5×7 clock font for the digits `0`–`9` and `:` made from full-cell blocks.
     /// Other non-control characters render as blank glyphs with the standard inter-glyph gap.
     FiveBySeven,
 }

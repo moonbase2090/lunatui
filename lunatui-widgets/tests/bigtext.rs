@@ -80,6 +80,87 @@ fn five_by_seven_clock_font_measures_and_shades_rows() {
 }
 
 #[test]
+fn five_by_seven_draws_every_digit() {
+    let digits: [(char, [&str; 7]); 10] = [
+        (
+            '0',
+            [
+                " ### ", "#   #", "#   #", "#   #", "#   #", "#   #", " ### ",
+            ],
+        ),
+        (
+            '1',
+            [
+                "  #  ", " ##  ", "  #  ", "  #  ", "  #  ", "  #  ", " ### ",
+            ],
+        ),
+        (
+            '2',
+            [
+                " ### ", "#   #", "    #", "   # ", "  #  ", " #   ", "#####",
+            ],
+        ),
+        (
+            '3',
+            [
+                "#####", "   # ", "  #  ", "   # ", "    #", "#   #", " ### ",
+            ],
+        ),
+        (
+            '4',
+            [
+                "   # ", "  ## ", " # # ", "#  # ", "#####", "   # ", "   # ",
+            ],
+        ),
+        (
+            '5',
+            [
+                "#####", "#    ", "#### ", "    #", "    #", "#   #", " ### ",
+            ],
+        ),
+        (
+            '6',
+            [
+                "  ## ", " #   ", "#    ", "#### ", "#   #", "#   #", " ### ",
+            ],
+        ),
+        (
+            '7',
+            [
+                "#####", "    #", "   # ", "  #  ", " #   ", " #   ", " #   ",
+            ],
+        ),
+        (
+            '8',
+            [
+                " ### ", "#   #", "#   #", " ### ", "#   #", "#   #", " ### ",
+            ],
+        ),
+        (
+            '9',
+            [
+                " ### ", "#   #", "#   #", " ####", "    #", "   # ", " ##  ",
+            ],
+        ),
+    ];
+    for (digit, pattern) in digits {
+        for (row, bits) in pattern.iter().enumerate() {
+            let cells: String = bits
+                .chars()
+                .map(|bit| if bit == '#' { "██" } else { "  " })
+                .chain(["  "])
+                .collect();
+            let row = u16::try_from(row).unwrap_or_default();
+            assert_eq!(
+                clock_row_string(&digit.to_string(), row),
+                cells,
+                "{digit} row {row}"
+            );
+        }
+    }
+}
+
+#[test]
 fn five_by_seven_unsupported_characters_are_blank_glyphs() {
     let expected = "            ";
     for row in 0..7 {
