@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{Color, Rect, Size};
+use lunatui_core::{Color, Rect, Size, Style};
 
 use crate::{RenderCx, Widget};
 
@@ -45,6 +45,9 @@ impl FocusTrap {
 }
 
 /// Dimmed full-area backdrop plus a centered modal child.
+///
+/// The modal area is cleared before the content is drawn, so nothing from the
+/// backdrop shows through it.
 #[derive(Clone, Debug)]
 pub struct Overlay<W> {
     content: W,
@@ -52,6 +55,7 @@ pub struct Overlay<W> {
     backdrop_alpha: f32,
     backdrop_tint: Color,
     trap: FocusTrap,
+    shadow: Option<Style>,
 }
 
 impl<W> Overlay<W> {
@@ -64,6 +68,7 @@ impl<W> Overlay<W> {
             backdrop_alpha: 0.55,
             backdrop_tint: Color::Rgb(0, 0, 0),
             trap: FocusTrap::enabled(),
+            shadow: None,
         }
     }
 
@@ -72,6 +77,14 @@ impl<W> Overlay<W> {
     pub fn backdrop(mut self, alpha: f32, tint: Color) -> Self {
         self.backdrop_alpha = alpha.clamp(0.0, 1.0);
         self.backdrop_tint = tint;
+        self
+    }
+
+    /// Drop shadow: the modal's rectangle shifted one cell right and one down,
+    /// filled with `style` behind the modal.
+    #[must_use]
+    pub fn shadow(mut self, style: Style) -> Self {
+        self.shadow = Some(style);
         self
     }
 
@@ -95,8 +108,18 @@ impl<W: Widget> Widget for Overlay<W> {
             return;
         }
         cx.blend_backdrop(area, self.backdrop_alpha, self.backdrop_tint);
+        if let Some(shadow) = self.shadow {
+            let offset = Rect::new(
+                self.modal.x.saturating_add(1),
+                self.modal.y.saturating_add(1),
+                self.modal.width,
+                self.modal.height,
+            );
+            fill_blank(cx, intersect(offset, area), shadow);
+        }
         let modal = intersect(self.modal, area);
         if modal.width > 0 && modal.height > 0 {
+            fill_blank(cx, modal, Style::new());
             self.content.render(modal, cx);
         }
     }
@@ -106,6 +129,13 @@ impl<W: Widget> Widget for Overlay<W> {
             return Size::new(0, 0);
         }
         avail
+    }
+}
+
+fn fill_blank(cx: &mut RenderCx<'_>, area: Rect, style: Style) {
+    let blank = " ".repeat(usize::from(area.width));
+    for y in area.y..area.y.saturating_add(area.height) {
+        cx.put_str(area.x, y, &blank, style);
     }
 }
 
