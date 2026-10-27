@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lunatui — Moonlit terminal UIs in Rust</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="Lunatui is a Rust library for building terminal user interfaces.">
+<link rel="preload" href="assets/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/CormorantGaramond-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/sky.webp" as="image" media="(min-width: 768px)" fetchpriority="high">
+<link rel="preload" href="assets/sky-mobile.webp" as="image" media="(max-width: 767px)" fetchpriority="high">
+<link rel="preload" href="assets/moon.webp" as="image">
+<link rel="preload" href="assets/hills.webp" as="image">
+<style>
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:500;font-display:swap;src:url('assets/fonts/CormorantGaramond-Medium.woff2') format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/CormorantGaramond-SemiBold.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/Inter-Regular.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:500;font-display:swap;src:url('assets/fonts/Inter-Medium.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/Inter-SemiBold.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/JetBrainsMono-Regular.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/JetBrainsMono-SemiBold.woff2') format('woff2')}
+@font-face{font-family:'Press Start 2P';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/PressStart2P-Regular.woff2') format('woff2')}
+@font-face{font-family:'Rajdhani';font-style:normal;font-weight:300;font-display:swap;src:url('assets/fonts/Rajdhani-Light.woff2') format('woff2')}
+@font-face{font-family:'JetBrainsMono NFM';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/JetBrainsMonoNerdFontMono-Regular.woff') format('woff')}
+@font-face{font-family:'JetBrainsMono NFM';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/JetBrainsMonoNerdFontMono-SemiBold.woff') format('woff')}
+
+
+:root{--night:#0b1026;--navy:#141b3a;--panel:rgba(14,19,44,.72);--line:rgba(160,150,230,.22);--ink:#ece7da;--ink2:#aab0cc;--lav:#b9a7f0;--lav2:#8f7ce0;--moon:#f3e2b0;--term:#0a0d1c;--green:#9be3a8;--grey:#5a6178;--serif:"Cormorant Garamond",Georgia,serif;--sans:Inter,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--night);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+.container{max-width:1180px;margin:0 auto;padding:0 32px}
+/* nav */
+.nav{position:absolute;top:0;left:0;right:0;z-index:5}
+.nav .container{display:flex;align-items:center;justify-content:space-between;height:76px}
+.logo{display:flex;align-items:center;gap:10px;font:600 28px var(--serif);text-decoration:none;min-height:44px}
+.logo svg{width:26px;height:26px}
+.nav ul{display:flex;gap:6px;list-style:none}
+.nav ul a{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;text-decoration:none;color:var(--ink2);font-size:15px}
+.nav ul a:hover{color:var(--ink)}
+/* hero */
+.hero{position:relative;min-height:760px;overflow:hidden;background:var(--night)}
+.sky-frame{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sky{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;animation:drift 8s ease-in-out infinite}
+@keyframes drift{0%,100%{transform:scale(1.08) translateX(-1.5%)}50%{transform:scale(1.08) translateX(1.5%)}}
+.moon{animation:pulse 4s ease-in-out infinite}
+@keyframes pulse{0%,100%{filter:brightness(1) drop-shadow(0 0 0 rgba(243,226,176,0))}50%{filter:brightness(1.12) drop-shadow(0 0 28px rgba(243,226,176,.55))}}
+.hero::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(9,13,32,.78),rgba(9,13,32,.35) 45%,rgba(9,13,32,0) 70%)}
+.hero-copy h1,.tagline,.lede{text-shadow:0 2px 14px rgba(5,8,22,.9)}
+@media (max-width:767px){.hero::after{background:linear-gradient(180deg,rgba(9,13,32,0) 20%,rgba(9,13,32,.7) 45%,rgba(9,13,32,.6) 80%)}}
+.moon{position:absolute;right:8%;top:70px;width:340px;mix-blend-mode:screen;z-index:1}
+.hills{position:absolute;left:0;right:0;bottom:-2px;width:100%;height:340px;object-fit:cover;object-position:top;z-index:2;filter:brightness(1.35) saturate(1.1)}
+.hero-fade{position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(transparent,var(--night));z-index:3}
+.stars{position:absolute;inset:0;z-index:1;pointer-events:none}
+.stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 6px #fff;animation:tw 1s ease-in-out infinite alternate}
+@keyframes tw{from{opacity:.25}to{opacity:1}}
+.shoot{position:absolute;top:120px;left:20%;width:140px;height:2px;background:linear-gradient(90deg,transparent,#fff);transform:rotate(-18deg);opacity:0;animation:shoot 8s 0s linear infinite;z-index:1}
+@keyframes shoot{0%,30%{opacity:0;translate:0 0}33%{opacity:1}42%{opacity:0;translate:420px 140px}100%{opacity:0;translate:420px 140px}}
+.hero-copy{position:relative;z-index:4;padding-top:150px;max-width:620px}
+h1{font:600 clamp(64px,10vw,124px)/1 var(--serif);letter-spacing:-.01em}
+.tagline{font:500 clamp(24px,3vw,36px)/1.2 var(--serif);color:var(--lav);margin:14px 0 10px}
+.brush{width:110px;height:6px;border-radius:6px;background:linear-gradient(90deg,var(--lav),transparent);margin-bottom:22px}
+.lede{color:var(--ink2);font-size:17px;max-width:460px}
+.install{margin-top:28px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;max-width:380px;backdrop-filter:blur(6px)}
+.install-h{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--ink2);margin-bottom:8px}
+.copy{min-width:44px;min-height:44px;border:0;background:transparent;color:var(--ink2);cursor:pointer;border-radius:8px}
+.copy:hover{background:rgba(255,255,255,.06)}
+.install code{display:block;background:var(--term);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:15px var(--mono)}
+.install code b{color:var(--lav);font-weight:400}
+/* sections */
+section.block{padding:72px 0}
+.sec-h{text-align:center;margin-bottom:34px}
+.sec-h h2{font:600 clamp(32px,4vw,44px) var(--serif);display:flex;align-items:center;justify-content:center;gap:16px}
+.sec-h h2::before,.sec-h h2::after{content:"☾";color:var(--lav);font-size:.7em}
+.sec-h p{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink2);margin-top:4px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+/* gallery */
+.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.tile{padding:14px}
+.tile-h{display:flex;justify-content:space-between;font-weight:500;margin-bottom:10px}
+.tile-h span:last-child{letter-spacing:2px;color:var(--ink2)}
+
+
+
+
+
+
+
+
+
+
+.dots{display:none}
+/* speed */
+.speed{display:grid;grid-template-columns:1fr 240px;gap:24px;align-items:center;padding:28px 32px}
+.speed-cap{font:12px var(--mono);letter-spacing:.12em;color:var(--ink2);text-transform:uppercase;margin-bottom:16px}
+.row{display:grid;grid-template-columns:90px 1fr 120px;align-items:center;gap:14px;margin:12px 0}
+.track{height:22px;background:rgba(255,255,255,.04);border-radius:4px}
+.fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--lav2),var(--lav))}
+
+.val{font:14px var(--mono);color:var(--ink2)}
+
+.badge{display:flex;align-items:center;gap:16px}
+.badge svg{width:64px;height:64px;flex:none}
+.badge strong{display:block;font:600 34px var(--serif)}
+.badge span{font-size:13px;color:var(--ink2);letter-spacing:.06em;text-transform:uppercase}
+/* tech */
+.tech{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tech .panel{padding:22px}
+.tech h3{font:600 24px var(--serif);margin-bottom:8px}
+.tech ul{padding-left:18px;color:var(--ink2);font-size:14.5px}
+.tech li{margin:4px 0}
+
+
+/* docs */
+.docs{display:flex;align-items:center;gap:22px;padding:26px 30px}
+.docs svg{width:56px;height:56px;flex:none}
+.docs h2{font:600 32px var(--serif)}
+.docs p{color:var(--ink2)}
+.btn-moon{margin-left:auto;display:inline-flex;align-items:center;gap:12px;min-height:52px;padding:0 30px;border-radius:14px 30px 18px 26px;background:var(--lav);color:#16123a;font:600 20px var(--serif);text-decoration:none;white-space:nowrap}
+/* footer */
+footer{border-top:1px solid var(--line);padding:32px 0 40px;color:var(--ink2);font-size:14px}
+footer .container{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+footer nav{display:flex;flex-wrap:wrap}
+footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;text-decoration:none}
+/* motion */
+.reveal{animation:up .8s ease-out both}
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@media (max-width:1000px){.gallery{grid-template-columns:repeat(2,1fr)}.tech{grid-template-columns:1fr 1fr}.speed{grid-template-columns:1fr}}
+@media (max-width:767px){
+ .container{padding:0 20px}
+ .nav ul{display:none}
+ .nav .menu{display:inline-flex}
+ .hero{min-height:720px}
+ .moon{width:190px;right:-10px;top:70px}
+
+ .hills{height:200px}
+ .hero-copy{padding-top:220px}
+ .stars i:nth-child(n+7){display:none}
+ .shoot{display:none}
+ .sky,.moon{animation:none}
+ .stars i{animation:none;opacity:.8}
+ .reveal{animation-duration:.4s}
+ @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+ section.block{padding:48px 0}
+ .gallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin:0 -20px;padding:0 20px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .gallery::-webkit-scrollbar{display:none}
+ .gallery .tile{flex:0 0 78%;scroll-snap-align:center}
+ .dots{display:flex;justify-content:center;gap:4px;margin-top:10px}
+ .dots button{width:44px;height:44px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center}
+ .dots button::after{content:"";width:8px;height:8px;border-radius:50%;background:#3a4068}
+ .dots button[aria-current=true]::after{background:var(--lav);width:22px;border-radius:4px}
+ .speed{padding:22px 18px}
+ .row{grid-template-columns:70px 1fr;gap:6px 10px}
+ .row .val{grid-column:2}
+ .tech{grid-template-columns:1fr}
+ .docs{flex-direction:column;align-items:flex-start;padding:22px}
+ .btn-moon{margin-left:0;width:100%;justify-content:center}
+ footer .container{flex-direction:column;align-items:flex-start}
+}
+.menu{display:none;min-width:44px;min-height:44px;align-items:center;justify-content:center;background:transparent;border:1px solid var(--line);border-radius:10px;color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* Maker section */
+#maker{--bg:#101218;--line:#232837;--ink:#e6e8ee;--ink-2:#9aa1b2;--ink-3:#929bad;--blue:#62a8ff;--mono:"JetBrainsMono NFM","JetBrainsMono Nerd Font Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-family:var(--mono);color:var(--ink);font-size:16px;line-height:1.6;padding:104px 0}
+#maker .wrap{max-width:1120px;margin:0 auto;padding:0 32px}
+#maker h2{font-weight:300}
+#maker .btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 18px;font-size:14px;font-weight:600;transition:.16s;text-decoration:none;font-family:var(--mono)}
+#maker .btn-ghost{border:1px solid var(--line);color:var(--ink);background:rgba(16,18,24,.2);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+#maker .btn-ghost:hover{border-color:#39415a;background:rgba(16,18,24,.35)}
+#maker .btn-lg{padding:13px 24px;font-size:15px}
+#maker .kicker{font-family:var(--mono);font-size:13px;color:var(--ink-3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px}
+#maker .maker-card{position:relative;isolation:isolate;overflow:hidden;border:1px solid #303541;border-radius:16px;padding:52px 68px 52px 52px;display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:clamp(32px,4vw,58px);align-items:center;background:linear-gradient(rgba(230,232,238,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(230,232,238,.035) 1px,transparent 1px),radial-gradient(circle at 13% 50%,rgba(230,232,238,.05),transparent 23%),#07080a;background-size:96px 96px,96px 96px,auto,auto;box-shadow:0 28px 70px rgba(0,0,0,.25),inset 0 0 80px rgba(255,255,255,.018)}
+#maker .moonbase-lockup{position:relative;display:flex;align-items:flex-end;gap:17px;min-width:0}
+#maker .moonbase-orbit{position:relative;display:block;width:88px;aspect-ratio:1;border:1px solid rgba(230,232,238,.88);border-radius:50%}
+#maker .moonbase-orbit::before{content:"";position:absolute;left:-14px;right:-14px;top:50%;height:1px;background:rgba(230,232,238,.9);transform:rotate(-17deg)}
+#maker .moonbase-orbit::after{content:"";position:absolute;right:6px;top:24px;width:4px;aspect-ratio:1;border-radius:50%;background:var(--ink);box-shadow:0 0 9px rgba(230,232,238,.7)}
+#maker .moonbase-orbit i{position:absolute;inset:18px;border:1px solid rgba(230,232,238,.2);border-radius:50%}
+#maker .moonbase-lockup__code{color:var(--ink-3);font-size:8px;letter-spacing:.18em;line-height:1.8;text-transform:uppercase;white-space:nowrap}
+#maker .maker-copy{min-width:0}
+#maker .kicker{margin-bottom:11px;font-size:10px;letter-spacing:.2em}
+#maker .maker-wordmark{display:flex;align-items:baseline;gap:.22em;margin-bottom:13px;font-family:"Rajdhani",sans-serif;font-size:clamp(36px,4vw,58px);font-weight:300;letter-spacing:.07em;line-height:.9;text-transform:uppercase;flex-wrap:wrap;overflow-wrap:anywhere}
+#maker .maker-wordmark span:last-child{color:transparent;-webkit-text-stroke:1px rgba(230,232,238,.85);font-size:.78em;letter-spacing:.13em}
+#maker .maker-copy>p:last-child{color:var(--ink-2);max-width:590px;font-size:14px}
+#maker .maker-cta{position:relative;z-index:1;white-space:normal;text-align:center;border-color:#3a404d;border-radius:0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;min-height:44px}
+#maker .maker-edge-code{position:absolute;right:17px;top:50%;color:var(--ink-3);font-size:7px;letter-spacing:.22em;writing-mode:vertical-rl;transform:translateY(-50%);text-transform:uppercase}
+@media (max-width:920px){#maker .maker-card{grid-template-columns:1fr;padding:46px;text-align:center;justify-items:center}#maker .maker-copy>p:last-child{max-width:640px}#maker .maker-edge-code{right:14px}}
+@media (max-width:560px){#maker .wrap{padding:0 20px}#maker .maker-card{padding:38px 24px 42px;gap:30px}#maker .moonbase-lockup{transform:translateX(8px)}#maker .moonbase-orbit{width:76px}#maker .maker-wordmark{flex-direction:column;align-items:center;gap:8px;font-size:clamp(37px,12vw,50px)}#maker .maker-wordmark span:last-child{font-size:.68em}#maker .maker-copy>p:last-child{font-size:13px}#maker .maker-cta{width:100%;justify-content:center;padding-inline:14px}#maker .maker-edge-code{display:none}}
+
+/* Site interactions and media. */
+.widget-demo{display:block;width:100%;height:170px;object-fit:contain;background:var(--term);border:1px solid var(--line);border-radius:8px}
+.method{max-width:690px;margin-top:16px;color:var(--ink2);font-size:13px}
+.method a,.source{color:var(--lav);text-underline-offset:3px}
+.source{display:inline-block;margin-top:12px;font:12px var(--mono)}
+.panel:focus-within{outline:2px solid var(--lav)}
+:focus-visible{outline:3px solid var(--moon);outline-offset:4px}
+@media (max-width:767px){
+ .nav{position:absolute}
+ .nav nav{position:absolute;top:66px;left:20px;right:20px;padding:8px 14px;background:rgba(14,19,44,.97);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(12px);opacity:0;visibility:hidden;transform:translateY(-8px);transition:opacity .18s ease,transform .18s ease,visibility .18s}
+ .nav nav.open{opacity:1;visibility:visible;transform:none}
+ .nav ul{display:flex;flex-direction:column;gap:0}
+ .nav ul a{width:100%;padding:0 8px}
+ .menu{display:inline-flex}
+ .widget-demo{height:190px}
+}
+@media (min-width:768px){.menu{display:none}}
+@media (prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto!important}
+ *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+ .reveal{opacity:1;transform:none}
+}
+.font-credit{width:100%;font-size:11px;color:var(--ink2)}
+.font-credit a{color:inherit;text-underline-offset:2px}
+@media (max-width:767px){
+ .install{backdrop-filter:none;-webkit-backdrop-filter:none}
+}
+
+
+.source,.method a{display:inline-flex;align-items:center;min-height:44px}
+.font-credit a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}
+</style>
+</head>
+<body id="top">
+<header class="nav"><div class="container">
+ <a class="logo" href="#top"><svg viewBox="0 0 24 24"><path d="M15 3a9 9 0 1 0 6 15A8 8 0 0 1 15 3z" fill="#ece7da"/></svg>Lunatui</a>
+ <nav aria-label="Main" id="main-links"><ul><li><a href="#docs">Docs</a></li><li><a href="#gallery">Gallery</a></li><li><a href="#speed">Benchmarks</a></li><li><a href="#tech">Technical</a></li></ul></nav>
+ <button class="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="main-links"><span aria-hidden="true">☰</span></button>
+</div></header>
+<main>
+<section class="hero">
+ <picture class="sky-frame" aria-hidden="true"><source srcset="assets/sky-mobile.webp" media="(max-width: 767px)"><img class="sky" src="assets/sky.webp" alt="" fetchpriority="high" decoding="sync"></picture>
+ <img class="moon" src="assets/moon.webp" alt="" data-depth="0.15" decoding="async">
+ <img class="hills" src="assets/hills.webp" alt="" data-depth="0.05" decoding="async">
+ <div class="stars" aria-hidden="true"><i style="left:12%;top:18%"></i><i style="left:30%;top:9%;animation-delay:.6s"></i><i style="left:46%;top:24%;animation-delay:1.2s"></i><i style="left:58%;top:12%"></i><i style="left:88%;top:52%;animation-delay:.9s"></i><i style="left:6%;top:44%;animation-delay:2s"></i><i style="left:40%;top:40%"></i><i style="left:66%;top:36%;animation-delay:1.6s"></i><i style="left:22%;top:30%;animation-delay:.3s"></i><i style="left:94%;top:14%"></i><i style="left:52%;top:6%;animation-delay:2.4s"></i><i style="left:76%;top:46%;animation-delay:1s"></i></div>
+ <div class="shoot" aria-hidden="true"></div>
+ <div class="hero-fade"></div>
+ <div class="container"><div class="hero-copy reveal">
+  <h1>Lunatui</h1>
+  <p class="tagline">Moonlit terminal UIs in Rust</p>
+  <div class="brush"></div>
+  <p class="lede">A Rust library for building terminal user interfaces.</p>
+  <div class="install"><div class="install-h">Install with Cargo <button class="copy" aria-label="Copy install command"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button></div><code>$ cargo add <b>lunatui</b></code></div>
+ </div></div>
+</section>
+
+<section class="block" id="gallery"><div class="container">
+ <div class="sec-h reveal"><h2>Widget Gallery</h2><p>Rich widgets. Beautiful terminal.</p></div>
+ <div class="gallery" id="carousel">
+  <article class="tile panel"><div class="tile-h"><span>Calendar</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-src="assets/media/calendar.gif" alt="Calendar widget rendering a monthly schedule" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>BigText</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-src="assets/media/bigtext.gif" alt="BigText widget rendering large block lettering" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Sparkline</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-src="assets/media/sparkline.gif" alt="Sparkline widget drawing a live data trend" loading="lazy" decoding="async" width="240" height="170"></article>
+ </div>
+ <div class="dots" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show Calendar"></button><button type="button" aria-label="Show BigText"></button><button type="button" aria-label="Show Sparkline"></button></div>
+</div></section>
+
+<section class="block" id="speed"><div class="container">
+ <div class="sec-h reveal"><h2>Speed Test</h2><p>Measured frame time. Lower is faster.</p></div>
+ <div class="panel speed">
+  <div>
+   <div class="speed-cap">Median time per frame · release build</div>
+   <div class="row"><span>80 × 24</span><div class="track" role="img" aria-label="60 microseconds median frame time"><div class="fill" style="width:24.1%"></div></div><span class="val">60 µs</span></div>
+   <div class="row"><span>200 × 60</span><div class="track" role="img" aria-label="249 microseconds median frame time"><div class="fill" style="width:100%"></div></div><span class="val">249 µs</span></div>
+   <p class="method">Each result is the median of five runs of 240 frames. Timing covers widget paint, diffing, ANSI encoding, and a counting sink write; terminal rendering and model updates are outside the measurement. <a href="https://github.com/moonbase2090/lunatui/blob/main/docs/performance.md">Method and full results</a>.</p>
+  </div>
+  <div class="badge"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="#b9a7f0" stroke-width="3"/><path d="M19 33l9 9 17-19" fill="none" stroke="#b9a7f0" stroke-width="4" stroke-linecap="round"/></svg><div><strong>5 runs</strong><span>per screen size</span></div></div>
+ </div>
+</div></section>
+
+<section class="block" id="tech"><div class="container">
+ <div class="sec-h reveal"><h2>Technical details</h2><p>How Lunatui draws the night</p></div>
+ <div class="tech">
+  <article class="panel"><h3>Rendering</h3><ul><li>16-byte packed cells</li><li>Damage-tracked diffing</li><li>ANSI output encoder writes once per frame</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Source: project overview</a></article>
+  <article class="panel"><h3>Input &amp; runtime</h3><ul><li>Keyboard, mouse, and bracketed-paste input</li><li>Focus management and hit testing</li><li>Event-driven frame scheduling with animation</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Source: project overview</a></article>
+  <article class="panel"><h3>Widgets &amp; themes</h3><ul><li>Calendar, BigText, and Sparkline widgets</li><li>Theme tokens and terminal color capabilities</li><li>Unicode grapheme and width handling</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/tree/main/lunatui-widgets">Source: widget crate</a></article>
+  <article class="panel"><h3>Performance method</h3><ul><li>Apple M5 Max · macOS arm64 · release build</li><li>240 frames per run; median of five runs</li><li>Headless counting sink; no terminal latency included</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/docs/performance.md">Source: full report</a></article>
+  <article class="panel"><h3>Build requirements</h3><ul><li>Rust 1.88 minimum</li><li>MIT licensed</li><li>Install from crates.io with Cargo</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/Cargo.toml">Source: package manifest</a></article>
+ </div>
+</div></section>
+
+<section class="block" id="docs"><div class="container">
+ <div class="panel docs"><svg viewBox="0 0 56 56" fill="none" stroke="#b9a7f0" stroke-width="2.5"><path d="M6 12c8-3 15-2 22 3v32c-7-5-14-6-22-3zM50 12c-8-3-15-2-22 3v32c7-5 14-6 22-3z"/></svg>
+  <div><h2>Docs</h2><p>Get started, customize, and build beautiful TUIs.</p></div>
+  <a class="btn-moon" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Read the documentation →</a></div>
+</div></section>
+
+<section id="maker">
+  <div class="wrap">
+    <div class="maker-card">
+      <div class="moonbase-lockup" aria-hidden="true">
+        <span class="moonbase-orbit"><i></i></span>
+        <span class="moonbase-lockup__code">MB / SYS<br>2090–C</span>
+      </div>
+      <div class="maker-copy">
+        <p class="kicker">Independent systems / The maker</p>
+        <h2 class="maker-wordmark"><span>Moonbase</span><span>2090</span></h2>
+        <p>Moonbase2090 builds Lunatui. The source is available under the MIT License, copyright Moonbase 2090 LLC.</p>
+      </div>
+      <a class="btn btn-ghost btn-lg maker-cta" href="https://moonbase2090.com" target="_blank" rel="noopener">Visit Moonbase 2090 &nearr;</a>
+      <span class="maker-edge-code" aria-hidden="true">CANIS / LUNAR / SIGNAL–2090</span>
+    </div>
+  </div>
+</section>
+</main>
+<footer><div class="container">
+ <div><span class="logo" style="font-size:24px">☾ Lunatui</span>Rust terminal UI library · © Moonbase 2090 LLC · MIT License</div>
+ <nav aria-label="Footer"><a href="#docs">Docs</a><a href="#gallery">Gallery</a><a href="#speed">Benchmarks</a><a href="https://moonbase2090.com">Moonbase 2090</a></nav>
+ <p class="font-credit">Fonts: Press Start 2P by The Press Start 2P Project Authors (<a href="assets/fonts/PressStart2P-OFL.txt">license</a>); Cormorant Garamond by the Cormorant Project (<a href="assets/fonts/CormorantGaramond-OFL.txt">license</a>); Inter by the Inter Project (<a href="assets/fonts/Inter-OFL.txt">license</a>); JetBrains Mono by JetBrains (<a href="assets/fonts/OFL.txt">license</a>); Rajdhani by Indian Type Foundry (<a href="assets/fonts/Rajdhani-OFL.txt">license</a>). SIL Open Font License 1.1.</p>
+</div></footer>
+<script src="assets/site.js" defer></script>
+</body></html>
