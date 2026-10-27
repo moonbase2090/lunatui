@@ -73,7 +73,7 @@ impl Widget for StatusBar {
             cx.put_str(area.x, area.y, draw, self.style);
             return;
         }
-        let end = area.x + area.width;
+        let end = area.x.saturating_add(area.width);
         let right_width = self
             .right
             .iter()

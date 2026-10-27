@@ -314,3 +314,19 @@ fn status_bar_text_clears_the_rest_of_its_row() {
         assert_eq!(style(x).bg, panel, "x={x}");
     }
 }
+
+#[test]
+fn status_bar_clips_an_area_at_the_u16_edge() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 0, "keep", Style::new());
+
+    StatusBar::new("body")
+        .left([("left", Style::new())])
+        .right([("right", Style::new())])
+        .render(Rect::new(u16::MAX - 5, 0, 10, 1), &mut cx);
+
+    assert_eq!(grid.row_display(0, &clusters), "keep");
+}
