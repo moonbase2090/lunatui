@@ -11,11 +11,13 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `Monthly` calendar, behind the `calendar` feature. A Sunday-based month grid matches ratatui, including the month and weekday headers, surrounding days, event styles, and block padding. `state` paints the selected day, headers, and surrounding days from theme tokens.
+- `Sparkline` widget, behind the `sparkline` feature. Bar heights, direction, max, missing samples, and per-bar styles match ratatui when a style is set. Without one, bars use theme tokens for normal, focused, and disabled, and the latest sample is emphasized. `Baseline::Minimum` lifts the floor to the smallest sample.
 - `Grid::put_char` writes one width-1 character, including its text attributes, without grapheme segmentation.
 
 ### Changed
 
 - The calendar gallery is a team schedule: a month beside the day's agenda, colored event days, a today highlight, and a selection that walks into the next month.
+- The sparkline gallery is a live service board: labeled series, a moving selection, per-row value and min/max, and an error row that turns red over its threshold.
 
 ## [0.1.8] - 2026-10-26
 

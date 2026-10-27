@@ -31,6 +31,18 @@ Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI 
 
 ## Widget gallery
 
+Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
+
+### Sparkline
+
+Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
+
+![Sparkline service board](docs/media/sparkline.gif)
+
+![Sparkline service board, still](docs/media/sparkline.png)
+
+Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120×36, 8 s at 30 fps, dark theme).
+
 ### Calendar
 
 A team schedule: the month beside that day's agenda, colored release, review, on-call, and incident days, today held in a raised cell, and the selection walking from late October into November.

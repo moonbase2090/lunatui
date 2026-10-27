@@ -63,3 +63,8 @@ required-features = ["calendar"]
 name = "status_dot_color_profiles"
 path = "tests/status_dot_color_profiles.rs"
 required-features = ["color-profiles"]
+
+[[test]]
+name = "sparkline"
+path = "tests/sparkline.rs"
+required-features = ["sparkline"]
