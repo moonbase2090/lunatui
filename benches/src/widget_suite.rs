@@ -13,8 +13,8 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Block, BorderType, Date, Gauge, List, Monthly, Paragraph, RenderCx, Sparkline, Table, Tabs,
-    TextWrap, Widget,
+    BigText, Block, BorderType, Date, Gauge, List, Monthly, Paragraph, PixelSize, RenderCx,
+    Sparkline, Table, Tabs, TextWrap, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -130,6 +130,13 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: sparkline_lunatui,
         ratatui: sparkline_ratatui,
+    },
+    Case {
+        name: "bigtext",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: bigtext_lunatui,
+        ratatui: bigtext_ratatui,
     },
 ];
 
@@ -517,6 +524,49 @@ fn gauge_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
                 .border_style(rat_dim()),
         )
         .render(RatRect::new(area.x, area.y, area.width, 3), buf);
+}
+
+fn big_label(tick: u32) -> &'static str {
+    const LABELS: [&str; 8] = [
+        "REQ 1840", "REQ 1841", "REQ 1842", "REQ 1843", "REQ 1844", "REQ 1845", "REQ 1846",
+        "REQ 1847",
+    ];
+    LABELS[usize::try_from(tick % 8).unwrap_or(0)]
+}
+
+fn bigtext_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    BigText::new(big_label(tick))
+        .pixel_size(PixelSize::Quadrant)
+        .style(accent_style())
+        .render(area, &mut cx);
+}
+
+fn bigtext_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let text = BigText::new(big_label(tick))
+        .pixel_size(PixelSize::Quadrant)
+        .style(accent_style());
+    let (_width, height) = PixelSize::Quadrant.cells();
+    let rows = height.min(area.height);
+    for row in 0..rows {
+        let mut glyphs = [' '; 64];
+        let columns = text.row_glyphs(row, &mut glyphs);
+        let y = area.y.saturating_add(row);
+        let limit = columns.min(glyphs.len()).min(usize::from(area.width));
+        for (col, glyph) in glyphs.iter().take(limit).enumerate() {
+            let x = area.x.saturating_add(u16::try_from(col).unwrap_or(0));
+            if x >= area.x.saturating_add(area.width) || y >= area.y.saturating_add(area.height) {
+                break;
+            }
+            buf[(x, y)].set_char(*glyph).set_style(rat_accent());
+        }
+    }
 }
 
 /// Shared byte and `write()` counters for the frame sink.

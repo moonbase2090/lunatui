@@ -27,7 +27,7 @@ lunatui-term = { path = "../lunatui-term" }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.9", path = "../lunatui-widgets", features = ["calendar", "sparkline"] }
+lunatui-widgets = { version = "0.1.9", path = "../lunatui-widgets", features = ["bigtext", "calendar", "sparkline"] }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
 lunatui-prismattyc = { version = "0.1.9", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"
@@ -144,6 +144,11 @@ name = "widget_preview"
 path = "../examples/widget_preview.rs"
 test = false
 required-features = ["color-profiles"]
+
+[[example]]
+name = "bigtext"
+path = "../examples/bigtext.rs"
+test = true
 
 [[example]]
 name = "calendar"

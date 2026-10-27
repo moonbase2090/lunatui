@@ -8,6 +8,15 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `BigText` widget, behind the `bigtext` feature. An 8×8 bitmap is packed into full blocks (two columns per pixel), half blocks, quadrants, braille, sextants, or octants. Sextants pad one blank pixel row, and sextants and octants pack as quadrants until `subcell_glyphs` is set. An explicit style is painted as given. Without one, letters follow theme tokens for normal, focused, and disabled.
+
+### Changed
+
+- The big text gallery is a cutover board: a live clock, a countdown that reaches zero, ticking metrics, a moving selection, and an error count that turns red while it is hot.
+- Big text digits, capitals, and `:.-%` use an 8×8 bitmap derived from Press Start 2P (SIL Open Font License 1.1, `lunatui-widgets/assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII is a hollow box. Full blocks are two columns wide. Sextants pad one blank pixel row. The gallery draws those digits with the square-pixel sizes.
+
 ## [0.1.9] - 2026-10-26
 
 ### Added
