@@ -907,6 +907,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "lunatui-image"
+version = "0.1.11"
+
+[[package]]
 name = "lunatui-layout"
 version = "0.1.12"
 dependencies = [

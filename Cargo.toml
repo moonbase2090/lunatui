@@ -8,6 +8,7 @@ members = [
     "lunatui-term",
     "lunatui-runtime",
     "lunatui-theme",
+    "lunatui-image",
     "lunatui-widgets",
     "lunatui-test",
     "lunatui-ratatui",
