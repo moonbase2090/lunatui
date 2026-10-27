@@ -303,6 +303,7 @@ impl Grid {
                 style,
                 Meta {
                     width: CellWidth::Two,
+                    attrs: style.attrs,
                     ..Meta::default()
                 },
             );
@@ -311,6 +312,7 @@ impl Grid {
                 style,
                 Meta {
                     width: CellWidth::Continuation,
+                    attrs: style.attrs,
                     ..Meta::default()
                 },
             );
@@ -323,6 +325,7 @@ impl Grid {
                 style,
                 Meta {
                     width: CellWidth::One,
+                    attrs: style.attrs,
                     ..Meta::default()
                 },
             );
