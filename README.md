@@ -49,7 +49,7 @@ A team schedule: the month beside that day's agenda, colored release, review, on
 
 ![Calendar widget: a team schedule in the dark theme](docs/media/calendar.gif)
 
-Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-showcase.sh` (`CASE=calendar`, 120×36, dark, about 11 seconds).
+Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-widget.sh` (`CASE=calendar`, 120×36, dark, about 11 seconds).
 
 ### BigText
 
