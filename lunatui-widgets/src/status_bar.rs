@@ -6,6 +6,9 @@ use lunatui_core::{Rect, Size, Style, clip_display_prefix, width};
 use crate::{RenderCx, Widget};
 
 /// Single-line status strip (dashboard footer parity).
+///
+/// Rendering first fills the whole row with [`StatusBar::style`], so a shorter
+/// status leaves nothing from the previous one behind.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StatusBar {
     text: String,
@@ -35,8 +38,7 @@ impl StatusBar {
 
     /// Segments drawn from the left edge, each with its own style.
     ///
-    /// With any segments set, the whole row is filled with [`StatusBar::style`]
-    /// first, and the text from [`StatusBar::new`] follows the left segments.
+    /// The text from [`StatusBar::new`] follows the left segments.
     #[must_use]
     pub fn left<T: Into<String>>(mut self, segments: impl IntoIterator<Item = (T, Style)>) -> Self {
         self.left = segments
@@ -65,18 +67,18 @@ impl Widget for StatusBar {
         if area.width == 0 || area.height == 0 {
             return;
         }
-        if self.left.is_empty() && self.right.is_empty() {
-            let draw = clip_display_prefix(&self.text, area.width);
-            cx.put_str(area.x, area.y, draw, self.style);
-            return;
-        }
-        let end = area.x + area.width;
         cx.put_str(
             area.x,
             area.y,
             &" ".repeat(usize::from(area.width)),
             self.style,
         );
+        if self.left.is_empty() && self.right.is_empty() {
+            let draw = clip_display_prefix(&self.text, area.width);
+            cx.put_str(area.x, area.y, draw, self.style);
+            return;
+        }
+        let end = area.x + area.width;
         let right_width = self
             .right
             .iter()
