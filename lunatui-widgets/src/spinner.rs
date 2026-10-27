@@ -10,7 +10,7 @@ const HALF_MOON: [&str; 4] = ["◐", "◓", "◑", "◒"];
 const QUADRANT: [&str; 4] = ["▖", "▗", "▝", "▘"];
 const BRAILLE_RING: [&str; 8] = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"];
 const ARC: [&str; 4] = ["◜", "◝", "◞", "◟"];
-const BARS: [&str; 1] = ["▁▃▅"];
+const BARS: [&str; 6] = ["▁▃▅", "▃▅▇", "▅▇▅", "▇▅▃", "▅▃▁", "▃▁▃"];
 
 /// Frame family used by a spinner.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -43,7 +43,9 @@ impl SpinnerPattern {
     }
 }
 
-/// Braille animation frame (ratatui dashboard spinner parity).
+/// A frame from a spinner pattern.
+///
+/// The widget is stateless: the caller supplies each frame index with `new` and schedules redraws.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Spinner {
     frame: u32,
