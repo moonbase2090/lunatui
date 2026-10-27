@@ -14,6 +14,8 @@ use lunatui_core::{
 };
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
+#[cfg(feature = "line-gauge")]
+use lunatui_widgets::LineGauge;
 use lunatui_widgets::{
     Block, BorderType, Date, DateStyle, Monthly, RenderCx, Sparkline, Widget, WidgetState,
 };
@@ -43,6 +45,12 @@ const PREVIEWS: &[Preview] = &[
         name: "sparkline",
         native: sparkline_native,
         baseline: sparkline_baseline,
+    },
+    #[cfg(feature = "line-gauge")]
+    Preview {
+        name: "line-gauge",
+        native: line_gauge_native,
+        baseline: line_gauge_baseline,
     },
 ];
 
@@ -1505,6 +1513,95 @@ fn sparkline_baseline(
     );
 }
 
+#[cfg(feature = "line-gauge")]
+fn line_gauge_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let ink = ink_from(&cx);
+    cx.put_str(
+        2,
+        2,
+        "BUILD PIPELINE  /  release candidate 0.1.9",
+        bold(Style::new().fg(ink.accent).bg(ink.surface)),
+    );
+    cx.put_str(
+        2,
+        4,
+        "Live resource utilization across the final verification run",
+        Style::new().fg(ink.text).bg(ink.surface),
+    );
+
+    let wave = (tick % 120) as f64 / 120.0;
+    let cpu = 0.42 + wave * 0.38;
+    let memory = 0.61 + ((tick % 80) as f64 / 80.0) * 0.11;
+    let network = 0.14 + ((tick % 50) as f64 / 50.0) * 0.16;
+    let jobs = 0.76 + ((tick % 45) as f64 / 45.0) * 0.19;
+    for (index, (title, label, ratio, state)) in [
+        ("COMPILE", "CPU", cpu, WidgetState::Focused),
+        ("PACKAGE", "MEMORY", memory, WidgetState::Normal),
+        ("UPLOAD", "NETWORK", network, WidgetState::Disabled),
+        ("VERIFY", "JOBS", jobs, WidgetState::Normal),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let y = 7 + u16::try_from(index).unwrap_or(0) * 6;
+        LineGauge::new()
+            .block(Block::bordered().title(title))
+            .label(label)
+            .ratio(ratio)
+            .state(state)
+            .render(Rect::new(2, y, area.width.saturating_sub(4), 4), &mut cx);
+    }
+
+    let footer_y = area.height.saturating_sub(2);
+    let seconds = tick / 30;
+    cx.put_str(
+        2,
+        footer_y,
+        "all checks passing  ·  4 workers  ·  ETA 00:18",
+        Style::new().fg(ink.ok).bg(ink.surface),
+    );
+    let clock = format!("14:02:{:02}", seconds % 60);
+    let clock_width = u16::try_from(clock.len()).unwrap_or(0);
+    cx.put_str(
+        area.width.saturating_sub(clock_width.saturating_add(2)),
+        footer_y,
+        &clock,
+        Style::new().fg(ink.text).bg(ink.surface),
+    );
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    for (index, (label, ratio)) in [
+        ("CPU", 0.42 + f64::from(tick % 120) / 120.0 * 0.38),
+        ("MEMORY", 0.61 + f64::from(tick % 80) / 80.0 * 0.11),
+        ("NETWORK", 0.14 + f64::from(tick % 50) / 50.0 * 0.16),
+        ("JOBS", 0.76 + f64::from(tick % 45) / 45.0 * 0.19),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let y = 7 + u16::try_from(index).unwrap_or(0) * 6;
+        ratatui::widgets::Widget::render(
+            ratatui::widgets::Gauge::default()
+                .ratio(ratio)
+                .label(format!("{label} {ratio:.0}%")),
+            RatRect::new(3, y + 1, area.width.saturating_sub(6), 1),
+            buffer,
+        );
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Side {
     Lunatui,
@@ -1524,7 +1621,11 @@ struct Options {
 
 fn main() -> io::Result<()> {
     let options = parse(&env::args().skip(1).collect::<Vec<_>>())?;
-    let Some(case) = CASES.iter().find(|case| case.name == options.case) else {
+    let Some(case) = CASES
+        .iter()
+        .find(|case| case.name == options.case)
+        .or_else(|| preview(&options.case).and_then(|_| CASES.first()))
+    else {
         return Err(invalid(format!("unknown case: {}", options.case)));
     };
     pin_color_output();

@@ -50,3 +50,13 @@ A team schedule: the month beside that day's agenda, colored release, review, on
 ![Calendar widget: a team schedule in the dark theme](docs/media/calendar.gif)
 
 Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-showcase.sh` (`CASE=calendar`, 120×36, 8 s at 30 fps, dark).
+
+### LineGauge
+
+Live build pipeline: four labeled gauges track CPU, memory, network and verification jobs. The CPU gauge is focused, the network row is disabled, and each value moves with the recording clock.
+
+![LineGauge build pipeline](docs/media/line-gauge.gif)
+
+![LineGauge build pipeline, still](docs/media/line-gauge.png)
+
+Recorded with `scripts/record-showcase.sh` (`CASE=line-gauge`, 120×36, 8 s at 30 fps, dark).

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Records one widget showcase, lunatui only, for the README gallery: 120x36 by default, a
 # motion run of about 8 seconds at 30 fps, a dark theme, and a GIF that must stay under 2 MB.
-# Also writes a PNG screenshot of the first frame. Requires asciinema 3, agg and ffmpeg.
+# Also writes a PNG screenshot after terminal startup. Requires asciinema 3, agg and ffmpeg.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -27,7 +27,7 @@ case "$PROFILE" in truecolor | ansi256 | ansi16) ;; *) echo "record-showcase: un
 case "$THEME" in dark | light) ;; *) echo "record-showcase: unknown THEME" >&2; exit 2 ;; esac
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
-cargo build -q --release -p lunatui --features color-profiles --example widget_preview
+cargo build -q --release -p lunatui --features color-profiles,line-gauge --example widget_preview
 BIN="$ROOT/target/release/examples/widget_preview"
 cast="$OUT/${NAME}.cast"
 asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CASE}" \
@@ -45,5 +45,5 @@ if (( 10#$bytes > 10#$MAX_BYTES )); then
   echo "record-showcase: ${gif} is ${bytes} bytes, over the ${MAX_BYTES}-byte limit; shorten FRAMES or lower FPS" >&2
   exit 3
 fi
-ffmpeg -loglevel error -y -i "$gif" -frames:v 1 "$OUT/${NAME}.png"
+ffmpeg -loglevel error -y -ss 1 -i "$gif" -frames:v 1 "$OUT/${NAME}.png"
 echo "Showcase: ${gif} (${bytes} bytes), screenshot: ${OUT}/${NAME}.png"
