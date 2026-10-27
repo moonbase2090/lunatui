@@ -384,3 +384,71 @@ fn monday_markers_skip_events_on_surrounding_days() -> Result<(), String> {
     assert_eq!(rows[0].chars().nth(12), Some(' '));
     Ok(())
 }
+
+#[test]
+fn weekend_style_colors_weekends_under_event_styles() -> Result<(), String> {
+    let weekend = Style::new().fg(Color::Rgb(143, 124, 224));
+    let event = Style::new().fg(Color::Rgb(185, 167, 240));
+    let events = [(ymd(2024, 6, 8)?, event)];
+    let monthly = Monthly::new(ymd(2024, 6, 3)?, events.as_slice())
+        .week_start(WeekStart::Monday)
+        .default_style(Style::new().fg(Color::Rgb(236, 231, 218)))
+        .weekend_style(weekend)
+        .show_weekdays_header(Style::new());
+    let (grid, clusters) = paint(&monthly, 21, 7);
+    let rows = rows(&grid, &clusters);
+    assert_eq!(rows[1], "                 1  2");
+    assert_eq!(rows[2], "  3  4  5  6  7  8  9");
+    let fg = |x, y| grid.get(x, y).map(|cell| cell.style().fg);
+    assert_eq!(fg(17, 1), Some(weekend.fg), "Saturday 1");
+    assert_eq!(fg(20, 1), Some(weekend.fg), "Sunday 2");
+    assert_eq!(fg(17, 2), Some(event.fg), "Saturday 8 has an event");
+    assert_eq!(fg(20, 2), Some(weekend.fg), "Sunday 9");
+    assert_eq!(fg(14, 2), Some(Color::Rgb(236, 231, 218)), "Friday 7");
+    Ok(())
+}
+
+#[test]
+fn selected_style_covers_the_day_and_one_cell_on_each_side() -> Result<(), String> {
+    let chip = Style::new()
+        .fg(Color::Rgb(10, 13, 28))
+        .bg(Color::Rgb(185, 167, 240));
+    let event = Style::new().fg(Color::Rgb(243, 226, 176));
+    let events = [(ymd(2024, 6, 4)?, event)];
+    let monthly = Monthly::new(ymd(2024, 6, 4)?, events.as_slice())
+        .week_start(WeekStart::Monday)
+        .selected_style(chip)
+        .show_weekdays_header(Style::new());
+    let (grid, _) = paint(&monthly, 21, 7);
+    let style = |x| {
+        grid.get(x, 2)
+            .map(lunatui_core::Cell::style)
+            .unwrap_or_default()
+    };
+    for x in 3..=6 {
+        assert_eq!(style(x).bg, chip.bg, "x={x}");
+    }
+    assert_eq!(
+        style(4).fg,
+        chip.fg,
+        "the selected style wins over the event style"
+    );
+    assert_ne!(style(2).bg, chip.bg);
+    assert_ne!(style(7).bg, chip.bg);
+    Ok(())
+}
+
+#[test]
+fn selected_chip_stays_inside_the_area_in_the_last_column() -> Result<(), String> {
+    let chip = Style::new().bg(Color::Rgb(185, 167, 240));
+    let monthly = Monthly::new(ymd(2024, 6, 9)?, ())
+        .week_start(WeekStart::Monday)
+        .selected_style(chip)
+        .show_weekdays_header(Style::new());
+    let (grid, _) = paint(&monthly, 22, 7);
+    let bg = |x| grid.get(x, 2).map(|cell| cell.style().bg);
+    assert_eq!(bg(18), Some(chip.bg));
+    assert_eq!(bg(20), Some(chip.bg));
+    assert_ne!(bg(21), Some(chip.bg));
+    Ok(())
+}
