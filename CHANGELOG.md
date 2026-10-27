@@ -41,6 +41,7 @@ Every PR adds its entry under **Unreleased**.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
 - `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
+- `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
 
 ### Changed
 
