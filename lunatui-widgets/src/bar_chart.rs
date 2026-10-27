@@ -12,7 +12,8 @@ use crate::{RenderCx, Widget};
 /// Each bar is `width` cells wide with a gap between bars (one cell by default), and its height
 /// is the value scaled to the largest value (or to `max`). Partial heights use eighth blocks, so
 /// bar tops move smoothly; a level below one eighth of a row leaves that row blank. Bars use the
-/// accent token unless a style is set.
+/// accent token unless a style is set. Rendering first blanks the whole area, keeping each
+/// cell's background, so a second render leaves nothing behind.
 ///
 /// ```
 /// use lunatui_core::{ClusterTable, Grid, Rect};
@@ -102,7 +103,8 @@ impl<'a> BarChart<'a> {
         self
     }
 
-    /// One label per bar, drawn left-aligned under it on the bottom row.
+    /// One label per bar, drawn left-aligned under it on the bottom row and
+    /// clipped to the bar's width.
     #[must_use]
     pub const fn labels(mut self, labels: &'a [&'a str]) -> Self {
         self.labels = labels;
@@ -129,6 +131,11 @@ impl Widget for BarChart<'_> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         if area.width == 0 || area.height == 0 || self.values.is_empty() {
             return;
+        }
+        for y in area.y..area.y + area.height {
+            for x in area.x..area.x + area.width {
+                cx.put_char_patched(x, y, ' ', Style::new());
+            }
         }
         let max = self
             .max
@@ -188,8 +195,7 @@ impl Widget for BarChart<'_> {
             if label_rows == 1
                 && let Some(label) = self.labels.get(index)
             {
-                let room = right - x;
-                let draw = clip_display_prefix(label, room);
+                let draw = clip_display_prefix(label, cells);
                 if u16::try_from(width(draw)).unwrap_or(0) > 0 {
                     cx.put_str(x, bottom, draw, self.label_style);
                 }
