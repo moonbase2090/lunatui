@@ -149,3 +149,39 @@ fn row_gap_leaves_blank_rows_between_data_rows() {
     assert_eq!(row_text(&grid, 2), "diff   0.19 ok  ");
     assert_eq!(row_text(&grid, 4), "scroll 1.44 ok  ");
 }
+
+#[test]
+fn a_second_render_clears_the_old_symbol_band_and_gap_rows() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(16, 5);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 1, "xxxxxxxxxxxxxxxx", Style::new());
+    let table = |selected| {
+        Table::new(bench_source(), columns())
+            .selected(Some(selected))
+            .highlight_style(Style::new().bg(SEL))
+            .highlight_symbol("▌", Style::new())
+            .row_gap(1)
+    };
+    table(1).render(Rect::new(0, 0, 16, 5), &mut cx);
+    table(0).render(Rect::new(0, 0, 16, 5), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "▌draw   0.81 ok ");
+    assert_eq!(
+        grid.row_display(1, &clusters),
+        "                ",
+        "gap row is cleared"
+    );
+    assert_eq!(
+        grid.row_display(2, &clusters),
+        " diff   0.19 ok ",
+        "old symbol is gone"
+    );
+    for x in 0..16 {
+        assert_ne!(
+            grid.get(x, 2).map(|cell| cell.style().bg),
+            Some(SEL),
+            "x={x}"
+        );
+    }
+}
