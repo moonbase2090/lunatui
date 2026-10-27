@@ -5,7 +5,9 @@
 
 use lunatui_core::{ClusterTable, Grid, Rect};
 use lunatui_theme::{Theme, Variant};
-use lunatui_widgets::{Gauge, RenderCx, Spinner, StatusBar, Tabs, TextInput, Widget};
+use lunatui_widgets::{
+    Gauge, RenderCx, Spinner, SpinnerPattern, StatusBar, Tabs, TextInput, Widget,
+};
 
 #[test]
 fn tabs_and_status_render() {
@@ -30,6 +32,53 @@ fn gauge_and_spinner_render() {
     Gauge::new(0.5).render(Rect::new(0, 0, 10, 1), &mut cx);
     Spinner::new(3).render(Rect::new(10, 0, 1, 1), &mut cx);
     assert!(grid.row_display(0, &clusters).contains('█'));
+}
+
+#[test]
+fn spinner_patterns_render_the_target_frames() {
+    let cases = [
+        (SpinnerPattern::BrailleDots, "⠋", 1),
+        (SpinnerPattern::HalfMoon, "◐", 1),
+        (SpinnerPattern::Quadrant, "▖", 1),
+        (SpinnerPattern::BrailleRing, "⣾", 1),
+        (SpinnerPattern::Arc, "◜", 1),
+        (SpinnerPattern::Bars, "▁▃▅", 3),
+    ];
+    for (pattern, expected, columns) in cases {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut grid = Grid::new(3, 1);
+        let mut clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        let spinner = Spinner::new(0).pattern(pattern);
+        assert_eq!(
+            spinner.measure(lunatui_core::Size::new(3, 1)).width,
+            columns
+        );
+        spinner.render(Rect::new(0, 0, columns, 1), &mut cx);
+        assert!(grid.row_display(0, &clusters).starts_with(expected));
+    }
+}
+
+fn spinner_row(pattern: SpinnerPattern, frame: u32) -> String {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(3, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Spinner::new(frame)
+        .pattern(pattern)
+        .render(Rect::new(0, 0, 3, 1), &mut cx);
+    grid.row_display(0, &clusters)
+}
+
+#[test]
+fn spinner_cycles_wrap_at_each_patterns_frame_count() {
+    assert_eq!(spinner_row(SpinnerPattern::BrailleRing, 0), "⣾  ");
+    assert_eq!(spinner_row(SpinnerPattern::BrailleRing, 7), "⣷  ");
+    assert_eq!(spinner_row(SpinnerPattern::BrailleRing, 8), "⣾  ");
+
+    assert_eq!(spinner_row(SpinnerPattern::Bars, 0), "▁▃▅");
+    assert_eq!(spinner_row(SpinnerPattern::Bars, 5), "▃▁▃");
+    assert_eq!(spinner_row(SpinnerPattern::Bars, 6), "▁▃▅");
 }
 
 #[test]

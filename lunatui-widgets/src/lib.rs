@@ -51,7 +51,7 @@ pub use sparkline::{
     BarSet, Baseline, NINE_LEVELS, RenderDirection, Sparkline, SparklineBar, SparklineValue,
     THREE_LEVELS,
 };
-pub use spinner::Spinner;
+pub use spinner::{Spinner, SpinnerPattern};
 #[cfg(feature = "widget-state")]
 pub use state::WidgetState;
 pub use status_bar::StatusBar;
