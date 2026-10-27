@@ -21,6 +21,10 @@ No rules yet.
 |---|---|---|---|
 | `benches/src/calibration.rs`, `grow_buffer` | `clippy::same_item_push` | Growing one push at a time is the workload being measured | PR 02 (#4) |
 | `benches/benches/gungraun_calibration.rs`, crate root | `missing_docs` | gungraun's benchmark macros generate undocumented public items | PR 02 (#4); `#[allow]` replaced in #6 |
+| `lunatui-widgets/src/line_gauge.rs`, `filled_eighths` | `clippy::cast_possible_truncation` | The clamped ratio and maximum terminal width bound eighths to 524280 | LineGauge |
+| `lunatui-widgets/src/line_gauge.rs`, `filled_eighths` | `clippy::cast_sign_loss` | The clamped ratio and maximum terminal width bound eighths to 524280 | LineGauge |
+| `lunatui-widgets/src/line_gauge.rs`, `percent_label` | `clippy::cast_possible_truncation` | The clamped ratio bounds rounded percent to 0..=100 | LineGauge |
+| `lunatui-widgets/src/line_gauge.rs`, `percent_label` | `clippy::cast_sign_loss` | The clamped ratio bounds rounded percent to 0..=100 | LineGauge |
 | `lunatui-term/src/bin/session_pty_probe.rs`, `run_panic` | `clippy::panic` | PTY integration test exercises panic restore | PR 10 (#22) |
 
 ## Checks

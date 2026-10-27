@@ -20,7 +20,9 @@ THEME="${THEME:-dark}"
 OUT="${OUT:-$ROOT/target/widget-recordings}"
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
-cargo build -q --release -p lunatui --features color-profiles --example widget_preview
+FEATURES=(color-profiles)
+if [[ "$CASE" == "line-gauge" ]]; then FEATURES+=(line-gauge); fi
+cargo build -q --release -p lunatui --features "${FEATURES[*]}" --example widget_preview
 BIN="$ROOT/target/release/examples/widget_preview"
 for value in "$WIDTH" "$HEIGHT" "$FRAMES" "$FPS"; do
   if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
@@ -41,4 +43,8 @@ ffmpeg -loglevel error -y -i "${OUT}/${NAME}-lunatui.gif" -i "${OUT}/${NAME}-rat
   -filter_complex "[0:v][1:v]hstack=inputs=2,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p" \
   -c:v libx264 -crf 28 -movflags +faststart \
   "${OUT}/${NAME}-side-by-side.mp4"
+ffmpeg -loglevel error -y -ss 1 -i "${OUT}/${NAME}-side-by-side.mp4" -frames:v 1 \
+  "${OUT}/${NAME}-side-by-side.png"
+test -s "${OUT}/${NAME}-side-by-side.png"
 echo "Recording: ${OUT}/${NAME}-side-by-side.mp4"
+echo "Screenshot: ${OUT}/${NAME}-side-by-side.png"

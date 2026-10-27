@@ -12,6 +12,8 @@ use lunatui_layout::Constraint;
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
+#[cfg(feature = "line-gauge")]
+use lunatui_widgets::LineGauge;
 use lunatui_widgets::{
     BigText, Block, BorderType, Date, Gauge, List, Monthly, Paragraph, PixelSize, RenderCx,
     Sparkline, Table, Tabs, TextWrap, Widget,
@@ -21,6 +23,8 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint as RatConstraint, Rect as RatRect};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::text::{Line, Span};
+#[cfg(feature = "line-gauge")]
+use ratatui::widgets::LineGauge as RatLineGauge;
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
     Block as RatBlock, BorderType as RatBorderType, Gauge as RatGauge, List as RatList, ListItem,
@@ -123,6 +127,14 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: gauge_lunatui,
         ratatui: gauge_ratatui,
+    },
+    #[cfg(feature = "line-gauge")]
+    Case {
+        name: "line-gauge",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: line_gauge_lunatui,
+        ratatui: line_gauge_ratatui,
     },
     Case {
         name: "sparkline",
@@ -466,6 +478,27 @@ fn gauge_lunatui(
     );
 }
 
+#[cfg(feature = "line-gauge")]
+fn line_gauge_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    LineGauge::new()
+        .label("")
+        .value_label("")
+        .ratio(f64::from(ratio(area.width, tick)))
+        .subcell(false)
+        .filled_symbol("━")
+        .unfilled_symbol("─")
+        .style(base_style())
+        .filled_style(accent_style())
+        .unfilled_style(dim_style())
+        .render(area, &mut RenderCx::new(grid, clusters, theme));
+}
+
 const SPARK_LEN: usize = 256;
 
 const SPARK: [u64; SPARK_LEN] = {
@@ -524,6 +557,19 @@ fn gauge_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
                 .border_style(rat_dim()),
         )
         .render(RatRect::new(area.x, area.y, area.width, 3), buf);
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    RatLineGauge::default()
+        .ratio(f64::from(ratio(area.width, tick)))
+        .label("")
+        .filled_symbol("━")
+        .unfilled_symbol("─")
+        .style(rat_base())
+        .filled_style(rat_accent())
+        .unfilled_style(rat_dim())
+        .render(area, buf);
 }
 
 fn big_label(tick: u32) -> &'static str {

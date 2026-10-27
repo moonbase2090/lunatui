@@ -27,7 +27,9 @@ case "$PROFILE" in truecolor | ansi256 | ansi16) ;; *) echo "record-showcase: un
 case "$THEME" in dark | light) ;; *) echo "record-showcase: unknown THEME" >&2; exit 2 ;; esac
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
-cargo build -q --release -p lunatui --features color-profiles --example widget_preview
+FEATURES=(color-profiles)
+if [[ "$CASE" == "line-gauge" ]]; then FEATURES+=(line-gauge); fi
+cargo build -q --release -p lunatui --features "${FEATURES[*]}" --example widget_preview
 BIN="$ROOT/target/release/examples/widget_preview"
 cast="$OUT/${NAME}.cast"
 asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CASE}" \

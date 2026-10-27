@@ -18,13 +18,16 @@ use lunatui_widgets::{
     Alignment, BigText, Block, BorderType, Date, DateStyle, Monthly, PixelSize, RenderCx,
     Sparkline, Widget, WidgetState,
 };
-
 #[path = "deploy_board.rs"]
 mod deploy_board;
+#[cfg(feature = "line-gauge")]
+use lunatui_widgets::{LineGauge, LineSet};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
 use ratatui::style::Color as RatColor;
+#[cfg(feature = "line-gauge")]
+use ratatui::widgets::{Block as RatBlock, LineGauge as RatLineGauge, Widget as RatWidget};
 use ratatui::{Terminal, TerminalOptions, Viewport};
 use time::{Date as TimeDate, Month};
 
@@ -36,6 +39,11 @@ struct Preview {
     native: NativeDraw,
     baseline: BaselineDraw,
 }
+
+#[cfg(feature = "line-gauge")]
+const LINE_GAUGE_LABELS: [&str; 10] = [
+    "CPU", "QUEUE", "DISK", "MEMORY", "NETWORK", "CACHE", "JOBS", "LATENCY", "ERRORS", "BUDGET",
+];
 
 const PREVIEWS: &[Preview] = &[
     Preview {
@@ -58,7 +66,168 @@ const PREVIEWS: &[Preview] = &[
         native: deploy_native,
         baseline: deploy_baseline,
     },
+    #[cfg(feature = "line-gauge")]
+    Preview {
+        name: "line-gauge",
+        native: line_gauge_motion,
+        baseline: line_gauge_baseline,
+    },
 ];
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_motion(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let frame = Block::bordered()
+        .title(" service health ")
+        .style(
+            Style::new()
+                .fg(theme.resolve(Token::TextPrimary))
+                .bg(theme.resolve(Token::Surface0)),
+        )
+        .title_style(
+            Style::new()
+                .fg(theme.resolve(Token::TextStrong))
+                .bg(theme.resolve(Token::Surface0)),
+        )
+        .border_style(Style::new().fg(theme.resolve(Token::Border)));
+    frame.render(area, &mut RenderCx::new(grid, clusters, theme));
+    let inner = frame.inner(area);
+    let row_gap = if inner.height > 40 { 5 } else { 3 };
+    let row_count = usize::from(inner.height.saturating_add(row_gap - 1) / row_gap)
+        .min(LINE_GAUGE_LABELS.len());
+    for (index, label) in LINE_GAUGE_LABELS
+        .iter()
+        .copied()
+        .take(row_count)
+        .enumerate()
+    {
+        let offset = u16::try_from(index)
+            .unwrap_or(u16::MAX)
+            .saturating_mul(row_gap);
+        let row = Rect::new(inner.x, inner.y.saturating_add(offset), inner.width, 1);
+        let set = line_gauge_set(index);
+        let state = line_gauge_state(index);
+        let ratio = line_gauge_ratio(tick, index);
+        LineGauge::new()
+            .label(label)
+            .ratio(ratio)
+            .line_set(set)
+            .subcell(set != LineSet::Ascii)
+            .state(state)
+            .render(row, &mut RenderCx::new(grid, clusters, theme));
+    }
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
+    let frame = RatBlock::bordered()
+        .title(" service health ")
+        .style(
+            ratatui::style::Style::new()
+                .fg(rat_color(theme.resolve(Token::TextPrimary)))
+                .bg(rat_color(theme.resolve(Token::Surface0))),
+        )
+        .title_style(
+            ratatui::style::Style::new()
+                .fg(rat_color(theme.resolve(Token::TextStrong)))
+                .bg(rat_color(theme.resolve(Token::Surface0))),
+        )
+        .border_style(ratatui::style::Style::new().fg(rat_color(theme.resolve(Token::Border))));
+    let inner = frame.inner(area);
+    frame.render(area, buffer);
+    let row_gap = if inner.height > 40 { 5 } else { 3 };
+    let row_count = usize::from(inner.height.saturating_add(row_gap - 1) / row_gap)
+        .min(LINE_GAUGE_LABELS.len());
+    for (index, label) in LINE_GAUGE_LABELS
+        .iter()
+        .copied()
+        .take(row_count)
+        .enumerate()
+    {
+        let offset = u16::try_from(index)
+            .unwrap_or(u16::MAX)
+            .saturating_mul(row_gap);
+        let row = RatRect::new(inner.x, inner.y.saturating_add(offset), inner.width, 1);
+        let set = line_gauge_set(index);
+        let state = line_gauge_state(index);
+        let ratio = line_gauge_ratio(tick, index);
+        let label = format!("{label}  {:3.0}%", ratio * 100.0);
+        let fill = if state == WidgetState::Disabled {
+            Token::TextMuted
+        } else if ratio >= 0.95 {
+            Token::Fail
+        } else if ratio >= 0.8 {
+            Token::Warn
+        } else if state == WidgetState::Focused {
+            Token::FocusRing
+        } else {
+            Token::Accent
+        };
+        let track = if state == WidgetState::Disabled {
+            Token::TextMuted
+        } else {
+            Token::Border
+        };
+        let (filled, unfilled) = line_gauge_symbols(set);
+        RatLineGauge::default()
+            .ratio(ratio)
+            .label(label)
+            .filled_symbol(filled)
+            .unfilled_symbol(unfilled)
+            .style(
+                ratatui::style::Style::new()
+                    .fg(rat_color(theme.resolve(Token::TextPrimary)))
+                    .bg(rat_color(theme.resolve(Token::Surface0))),
+            )
+            .filled_style(ratatui::style::Style::new().fg(rat_color(theme.resolve(fill))))
+            .unfilled_style(ratatui::style::Style::new().fg(rat_color(theme.resolve(track))))
+            .render(row, buffer);
+    }
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_set(index: usize) -> LineSet {
+    match index % 4 {
+        0 => LineSet::Normal,
+        1 => LineSet::Thick,
+        2 => LineSet::Double,
+        _ => LineSet::Ascii,
+    }
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_symbols(set: LineSet) -> (&'static str, &'static str) {
+    match set {
+        LineSet::Normal => ("─", "─"),
+        LineSet::Thick => ("━", "━"),
+        LineSet::Double => ("═", "═"),
+        LineSet::Ascii => ("#", "-"),
+        _ => ("━", "─"),
+    }
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_state(index: usize) -> WidgetState {
+    if index == 0 {
+        WidgetState::Focused
+    } else if index == LINE_GAUGE_LABELS.len() - 1 {
+        WidgetState::Disabled
+    } else {
+        WidgetState::Normal
+    }
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_ratio(tick: u32, row: usize) -> f64 {
+    let phase = f64::from((tick + u32::try_from(row).unwrap_or(0) * 24) % 240) / 240.0
+        * std::f64::consts::TAU;
+    0.18 + (0.76 * (0.5 + phase.sin() * 0.5))
+}
 
 fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)

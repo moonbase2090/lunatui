@@ -28,5 +28,5 @@ The bench targets live in `benches/` and the tests in `tests/`. Run everything w
 - **Color policy.** Both entrypoints pin color output on (`pin_color_output`), so ratatui's crossterm backend writes colors whatever `NO_COLOR` says and both sides encode truecolor. Byte counts do not depend on the environment.
 - **Arguments.** `--max-ratio N` must be a finite number above zero; anything else (including `NaN`) is an error, not a disabled gate. `--gate-all` also gates the tracked cases, to see how far they are from the bar.
 
-Run it with `cargo bench -p lunatui-bench --bench widget_suite` (add `-- --gate` to enforce, `--max-ratio N` to change the limit) and, for statistics per widget, `cargo bench -p lunatui-bench --bench criterion_widgets`.
+Run it with `cargo bench -p lunatui-bench --features line-gauge --bench widget_suite` (add `-- --gate` to enforce, `--max-ratio N` to change the limit). The fair `LineGauge` comparison uses the same 80×24 and 200×60 cases on each side: `cargo bench -p lunatui-bench --features line-gauge --bench criterion_widgets -- widget_line-gauge_`.
 

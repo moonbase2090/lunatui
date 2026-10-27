@@ -16,6 +16,7 @@ default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
 keymap = ["app", "lunatui-runtime/keymap"]
+line-gauge = ["lunatui-widgets/line-gauge", "lunatui-bench/line-gauge"]
 
 [dependencies]
 lunatui-runtime = { version = "0.1.12", path = "../lunatui-runtime", optional = true }
@@ -143,7 +144,7 @@ test = true
 name = "widget_preview"
 path = "../examples/widget_preview.rs"
 test = false
-required-features = ["color-profiles"]
+required-features = ["color-profiles", "line-gauge"]
 
 [[example]]
 name = "bigtext"

@@ -58,3 +58,14 @@ A cutover board: a live clock, a countdown that reaches zero, and ticking metric
 ![BigText widget: a cutover board in the dark theme](docs/media/bigtext.gif)
 
 Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36, dark, about 11 seconds).
+
+### LineGauge
+
+A live service health board rendered by Lunatui and Ratatui side by side. Each row uses a real LineGauge widget, with the selected row, disabled state, value label, threshold colors, and line styles visible in the recording.
+
+| Terminal | Truecolor | ANSI-16 |
+|---|---|---|
+| 80×24 | [Screenshot](docs/media/line-gauge-80x24-truecolor.png) · [Recording](docs/media/line-gauge-80x24-truecolor.mp4) | [Screenshot](docs/media/line-gauge-80x24-ansi16.png) · [Recording](docs/media/line-gauge-80x24-ansi16.mp4) |
+| 200×60 | [Screenshot](docs/media/line-gauge-200x60-truecolor.png) · [Recording](docs/media/line-gauge-200x60-truecolor.mp4) | [Screenshot](docs/media/line-gauge-200x60-ansi16.png) · [Recording](docs/media/line-gauge-200x60-ansi16.mp4) |
+
+Recorded from the real widget preview with `scripts/record-widget.sh` (`CASE=line-gauge`, dark theme, 180 frames at 30 fps). The screenshot is extracted from the side-by-side recording.
