@@ -355,3 +355,29 @@ fn monday_start_renders_event_dot_in_date_gutter() -> Result<(), String> {
     assert_eq!(dot_style.fg, Color::Rgb(185, 167, 240));
     Ok(())
 }
+
+#[test]
+fn monday_start_counts_six_week_months() -> Result<(), String> {
+    let date = ymd(2021, 5, 1)?;
+    let plain = Monthly::new(date, ()).week_start(WeekStart::Monday);
+    assert_eq!(plain.height(), 6);
+    let decorated = plain
+        .show_month_header(Style::new())
+        .show_weekdays_header(Style::new());
+    assert_eq!(decorated.height(), 8);
+    Ok(())
+}
+
+#[test]
+fn monday_markers_skip_events_on_surrounding_days() -> Result<(), String> {
+    let visible = ymd(2024, 5, 31)?;
+    let current = ymd(2024, 6, 3)?;
+    let events = [(visible, Style::new().fg(Color::Rgb(185, 167, 240)))];
+    let calendar = Monthly::new(current, events.as_slice())
+        .week_start(WeekStart::Monday)
+        .event_markers(true);
+    let (grid, clusters) = paint(&calendar, 21, 6);
+    let rows = rows(&grid, &clusters);
+    assert_eq!(rows[0].chars().nth(12), Some(' '));
+    Ok(())
+}

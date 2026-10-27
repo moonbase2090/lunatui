@@ -456,7 +456,9 @@ impl<S: DateStyle> Monthly<S> {
                 } else {
                     self.background_style()
                 };
-                let has_marker = self.event_markers && self.events.has_event(cursor);
+                let has_marker = self.event_markers
+                    && cursor.month == self.date.month
+                    && self.events.has_event(cursor);
                 let marker = if has_marker { '•' } else { ' ' };
                 let marker_style = if has_marker {
                     self.events.style_for(cursor)
