@@ -70,8 +70,8 @@ class Fonts:
 
 
 def parse(stream, cols, rows):
-    grid = [[[" ", DEFAULT_FG, DEFAULT_BG, False] for _ in range(cols)] for _ in range(rows)]
-    fg, bg, bold = DEFAULT_FG, DEFAULT_BG, False
+    grid = [[[" ", DEFAULT_FG, DEFAULT_BG, False, False] for _ in range(cols)] for _ in range(rows)]
+    fg, bg, bold, dim = DEFAULT_FG, DEFAULT_BG, False, False
     x = y = 0
     i = 0
     while i < len(stream):
@@ -97,11 +97,13 @@ def parse(stream, cols, rows):
                 while k < len(codes):
                     code = codes[k]
                     if code == 0:
-                        fg, bg, bold = DEFAULT_FG, DEFAULT_BG, False
+                        fg, bg, bold, dim = DEFAULT_FG, DEFAULT_BG, False, False
                     elif code == 1:
                         bold = True
+                    elif code == 2:
+                        dim = True
                     elif code == 22:
-                        bold = False
+                        bold, dim = False, False
                     elif code == 39:
                         fg = DEFAULT_FG
                     elif code == 49:
@@ -121,7 +123,7 @@ def parse(stream, cols, rows):
             y += 1
         else:
             if 0 <= y < rows and 0 <= x < cols:
-                grid[y][x] = [ch, fg, bg, bold]
+                grid[y][x] = [ch, fg, bg, bold, dim]
             x += 1
         i += 1
     return grid
@@ -193,13 +195,22 @@ def shape(draw, ch, left, top, fg):
     return False
 
 
+def halfway(fg, bg):
+    """Dim text: the foreground mixed halfway toward the background."""
+    a = [int(fg[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(bg[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#%02X%02X%02X" % tuple((x + y) // 2 for x, y in zip(a, b))
+
+
 def render(grid, fonts, out):
     rows, cols = len(grid), len(grid[0])
     image = Image.new("RGB", (cols * CW, rows * CH))
     draw = ImageDraw.Draw(image)
     for y in range(rows):
         for x in range(cols):
-            ch, fg, bg, bold = grid[y][x]
+            ch, fg, bg, bold, dim = grid[y][x]
+            if dim:
+                fg = halfway(fg, bg)
             left, top = x * CW, y * CH
             draw.rectangle([left, top, left + CW - 1, top + CH - 1], fill=bg)
             if ch == " " or shape(draw, ch, left, top, fg):
