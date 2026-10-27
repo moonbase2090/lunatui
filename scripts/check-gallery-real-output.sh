@@ -67,7 +67,7 @@ for file in "${files[@]}"; do
       [qr/\bput_str\b|\bput_cell\b|\bwrite_cell\b|\bset_string\b|\bset_stringn\b|\bset_cell\b|\bset_symbol\b|\bcell_mut\b/,
         "writes cells directly; render a widget instead"],
       [qr/\.(?:put|fill|patch|paint)\s*\(/,
-        "paints cells after render; pass data and styles to a widget instead"],
+        "looks like painting cells; pass data and styles to a widget instead, or rename the call if it is not a cell write"],
       [qr/\bexact_rows\b/, "hard-coded glyph rows"],
       [qr/widget[-_]targets/, "copies from the widget target mocks"],
       [qr/"[^"\n]*$glyph{4,}[^"\n]*"/, "hard-coded glyph row in a string literal"],
