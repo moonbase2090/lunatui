@@ -38,6 +38,7 @@ for side in lunatui ratatui; do
   agg --font-size 14 "${OUT}/${NAME}-${side}.cast" "${OUT}/${NAME}-${side}.gif"
 done
 ffmpeg -loglevel error -y -i "${OUT}/${NAME}-lunatui.gif" -i "${OUT}/${NAME}-ratatui.gif" \
-  -filter_complex "[0:v][1:v]hstack=inputs=2,format=yuv420p" -c:v libx264 -crf 28 -movflags +faststart \
+  -filter_complex "[0:v][1:v]hstack=inputs=2,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p" \
+  -c:v libx264 -crf 28 -movflags +faststart \
   "${OUT}/${NAME}-side-by-side.mp4"
 echo "Recording: ${OUT}/${NAME}-side-by-side.mp4"

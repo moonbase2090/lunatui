@@ -56,7 +56,7 @@ fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)
 }
 
-const DAY_HOLD: u32 = 15;
+const DAY_HOLD: u32 = 11;
 const MONTHS: [&str; 12] = [
     "January",
     "February",
@@ -343,7 +343,7 @@ fn add_days(date: Date, days: i32) -> Date {
 }
 
 fn selected_on(tick: u32) -> Date {
-    let start = Date::from_ymd(2026, 10, 24).unwrap_or(Date::UNIX_EPOCH);
+    let start = Date::from_ymd(2026, 10, 22).unwrap_or(Date::UNIX_EPOCH);
     let steps = i32::try_from(tick / DAY_HOLD).unwrap_or(0);
     add_days(start, steps)
 }
@@ -546,6 +546,32 @@ fn week_line(date: Date) -> String {
     }
 }
 
+fn paint_day_row(cx: &mut RenderCx<'_>, scene: &Scene, x: u16, y: u16, width: u16, date: Date) {
+    let picked = date == scene.selected;
+    let text = Style::new().fg(scene.ink.text).bg(scene.ink.surface);
+    let style = if picked {
+        Style::new().fg(scene.ink.focus).bg(scene.ink.raised)
+    } else if date == scene.today {
+        Style::new().fg(scene.ink.ok).bg(scene.ink.surface)
+    } else {
+        text
+    };
+    if picked {
+        cx.set_style(
+            Rect::new(x, y, width, 1),
+            Style::new().fg(scene.ink.text).bg(scene.ink.raised),
+        );
+    }
+    paint(
+        cx,
+        x,
+        y,
+        width,
+        &week_line(date),
+        if picked { bold(style) } else { style },
+    );
+}
+
 fn draw_week(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect) {
     if area.height < 4 || area.width < 12 {
         return;
@@ -554,38 +580,23 @@ fn draw_week(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect) {
     paint(cx, area.x, area.y, area.width, "This week", bold(label));
     let index = weekday_index(scene.selected);
     let sunday = add_days(scene.selected, -i32::try_from(index).unwrap_or(0));
-    let text = Style::new().fg(scene.ink.text).bg(scene.ink.surface);
-    for offset in 0_i32..7 {
-        let y = area
-            .y
-            .saturating_add(1)
-            .saturating_add(u16::try_from(offset).unwrap_or(0));
-        if y >= area.y.saturating_add(area.height) {
-            break;
+    let bottom = area.y.saturating_add(area.height);
+    let mut row = area.y.saturating_add(1);
+    let mut offset = 0_i32;
+    let mut labeled_next = false;
+    while row < bottom {
+        if offset >= 7 && !labeled_next {
+            if row.saturating_add(1) >= bottom {
+                break;
+            }
+            paint(cx, area.x, row, area.width, "Next", bold(label));
+            labeled_next = true;
+            row = row.saturating_add(1);
+            continue;
         }
-        let date = add_days(sunday, offset);
-        let picked = date == scene.selected;
-        let style = if picked {
-            Style::new().fg(scene.ink.focus).bg(scene.ink.raised)
-        } else if date == scene.today {
-            Style::new().fg(scene.ink.ok).bg(scene.ink.surface)
-        } else {
-            text
-        };
-        if picked {
-            cx.set_style(
-                Rect::new(area.x, y, area.width, 1),
-                Style::new().fg(scene.ink.text).bg(scene.ink.raised),
-            );
-        }
-        paint(
-            cx,
-            area.x,
-            y,
-            area.width,
-            &week_line(date),
-            if picked { bold(style) } else { style },
-        );
+        paint_day_row(cx, scene, area.x, row, area.width, add_days(sunday, offset));
+        offset = offset.saturating_add(1);
+        row = row.saturating_add(1);
     }
 }
 
@@ -615,9 +626,46 @@ fn draw_event_chip(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, entry: &Ent
     );
 }
 
-fn draw_up_next(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, y: u16) {
-    if y.saturating_add(1) >= area.y.saturating_add(area.height) {
+fn upcoming_count(selected: Date) -> u16 {
+    let mut count = 0_u16;
+    for step in 1..22 {
+        let date = add_days(selected, step);
+        for _entry in ENTRIES.iter().filter(|entry| on_day(entry, date)) {
+            count = count.saturating_add(1);
+        }
+    }
+    count
+}
+
+fn draw_month_ledger(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, y: u16) {
+    let bottom = area.y.saturating_add(area.height);
+    if y.saturating_add(1) >= bottom {
         return;
+    }
+    paint(
+        cx,
+        area.x,
+        y,
+        area.width,
+        month_name(scene.selected),
+        bold(Style::new().fg(scene.ink.accent).bg(scene.ink.surface)),
+    );
+    let start =
+        Date::from_ymd(scene.selected.year(), scene.selected.month(), 1).unwrap_or(scene.selected);
+    let mut line = y.saturating_add(1);
+    let mut offset = 0_i32;
+    while line < bottom {
+        paint_day_row(cx, scene, area.x, line, area.width, add_days(start, offset));
+        offset = offset.saturating_add(1);
+        line = line.saturating_add(1);
+    }
+}
+
+fn draw_up_next(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, y: u16) -> u16 {
+    if upcoming_count(scene.selected) == 0
+        || y.saturating_add(1) >= area.y.saturating_add(area.height)
+    {
+        return y;
     }
     paint(
         cx,
@@ -656,6 +704,7 @@ fn draw_up_next(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, y: u16) {
             line = line.saturating_add(1);
         }
     }
+    line
 }
 
 fn draw_agenda(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect) {
@@ -723,7 +772,8 @@ fn draw_agenda(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect) {
     } else {
         y = y.saturating_add(1);
     }
-    draw_up_next(cx, scene, inner, y);
+    let next = draw_up_next(cx, scene, inner, y);
+    draw_month_ledger(cx, scene, inner, next);
 }
 
 fn draw_board(cx: &mut RenderCx<'_>, scene: &Scene) {

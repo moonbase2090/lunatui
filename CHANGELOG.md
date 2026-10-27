@@ -8,6 +8,11 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Changed
+
+- The calendar gallery walks from the branch cut into the next month and ends on the on-call drill. The agenda and the week list fill the screen. The clip opens on the schedule.
+- Widget recordings pad the side-by-side frame so an odd height still encodes.
+
 ## [0.1.10] - 2026-10-27
 
 ### Added
