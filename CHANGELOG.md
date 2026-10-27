@@ -8,12 +8,17 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-10-27
+
 ### Added
 
+- The Lunatui website, a static page under `site/` with a widget gallery, benchmark results, and documentation links.
 - Added twelve opt-in Graphite semantic tokens and semantic ANSI-16 palette mappings.
 
 ### Changed
 
+- CI deploys the website to Cloudflare Pages and runs the Graphite token tests.
+- The README names the porting guide "Migration guide".
 - The calendar gallery walks from the branch cut into the next month and ends on the on-call drill. The agenda and the week list fill the screen. The clip opens on the schedule.
 - Widget recordings pad the side-by-side frame so an odd height still encodes.
 - `RenderCx::profile(profile)` is replaced by prepared palettes: create a palette with `theme.prepare(profile)` when the theme or profile changes, then pass it to `RenderCx::palette(&palette)`. This avoids downsampling tokens during widget rendering.
