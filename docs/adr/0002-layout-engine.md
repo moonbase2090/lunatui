@@ -147,6 +147,17 @@ Specified now so PR 14's rectangles do not grow a second meaning.
 
 A `Constraint` is a copyable enum. A `Rect` is four `u16`s, 8 bytes. The fast path builds two `Vec`s (sizes and gaps) and the output rectangles. There is no solver object, no hash map of variables, and no `f64` change list. PR 16's memo stores the output rectangles, not the solver.
 
+### 4.10 Segment limits and aspect fit (opt-in `size-limits`)
+
+Added behind the `size-limits` Cargo feature, which is off by default. §4.9 (wrapped splits) is a separate feature.
+
+- **`Layout::limits([...])`** gives each segment an optional floor and cap (`Limit::at_least`, `at_most`, `between`), on top of its `Constraint`. Segments past the end of the list have none. The `Constraint` enum is unchanged, so no exhaustive match breaks.
+- **Floors** join the constraint's own floor. When floors do not fit, they are cut like a `Min` floor, in the same order, and `needs_solver` is set.
+- **Caps** lower the constraint's upper bound. When a floor is above the cap, the floor wins.
+- **Growing segments are water-filled.** `Fill`, and `Min` outside `Legacy`, share the leftover by weight. A segment whose share would put it under its floor or over its cap is fixed at that bound, and the leftover is shared again among the rest until nothing moves. If the total floor violation is larger, only floor violators are fixed in that round; if the cap violation is larger, only cap violators; if they are equal, both. Without limits, nothing violates and this is the single weighted pass of §4.3, with the same remainder rule. Main and this branch give identical results on a million random splits without limits.
+- **Leftover a capped segment cannot take** goes to the gaps as flex says. `Legacy` still covers the area, and so does a lone segment under `SpaceBetween`; both can push the last segment past its cap.
+- **`aspect_fit(area, cols, rows)`** returns the largest `cols : rows` rectangle inside `area`, centred, rounding down, with the odd cell after it. Aspect is not a constraint because a one-axis split does not know the other axis's final size. Fit a segment's rectangle after the split. Terminal cells are about twice as tall as wide, so a shape that looks square is `2 : 1`.
+
 ## 5. Invariants
 
 These become the PR 14 property tests. Spacing below is non-negative unless a row says otherwise.
