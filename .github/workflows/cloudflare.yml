@@ -1,0 +1,86 @@
+name: Deploy Lunatui to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-pages-production
+  cancel-in-progress: false
+
+env:
+  CF_API: https://api.cloudflare.com/client/v4
+  CF_PROJECT: lunatui
+  WRANGLER_VERSION: 4.142.0
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Check Cloudflare secrets are set
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eu
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN secret is empty"
+            exit 1
+          fi
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID secret is empty"
+            exit 1
+          fi
+          echo "secrets present"
+
+      - name: Verify Cloudflare access
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          # Account-owned tokens verify at /accounts/{id}/tokens/verify.
+          VERIFY=$(curl -sS --fail-with-body \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "$CF_API/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify" || true)
+          SUCCESS=$(printf '%s' "$VERIFY" | jq -r '.success // false')
+          echo "token verify success: $SUCCESS"
+          echo "token verify codes: $(printf '%s' "$VERIFY" | jq -c '[.errors[]?.code] // []')"
+          if [ "$SUCCESS" != "true" ]; then
+            echo "::error::Cloudflare token verification failed; check the account token and account ID"
+            exit 1
+          fi
+
+      - name: Create Pages project if missing
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -eu
+          PROJECTS=$(npx --yes "wrangler@${WRANGLER_VERSION}" pages project list)
+          if printf '%s\n' "$PROJECTS" | grep -qE '(^|[[:space:]])lunatui([[:space:]]|$)'; then
+            echo "Pages project exists"
+          else
+            npx --yes "wrangler@${WRANGLER_VERSION}" pages project create "$CF_PROJECT" \
+              --production-branch main
+          fi
+
+      - name: Deploy site to Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx --yes "wrangler@${WRANGLER_VERSION}" pages deploy site \
+            --project-name="$CF_PROJECT" --branch=main
