@@ -102,3 +102,10 @@ jobs:
         env:
           RUSTFLAGS: ""
       - run: cargo xtask bench
+
+  gallery-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: ./scripts/check-gallery-real-output-selftest.sh
+      - run: ./scripts/check-gallery-real-output.sh
