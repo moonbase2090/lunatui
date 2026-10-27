@@ -32,7 +32,9 @@ impl CellStyle for Vec<Vec<Style>> {
 
 /// Column layout for [`Table`].
 ///
-/// The selected row's highlight style covers the whole row, gaps included.
+/// Every row the table draws is cleared across its full width first, so a
+/// second render leaves nothing behind. The selected row's highlight style
+/// covers the whole row, gaps included.
 #[derive(Clone, Debug)]
 pub struct Table<S, C = ()> {
     source: S,
@@ -218,7 +220,9 @@ impl<S: RowSource, C: CellStyle> Widget for Table<S, C> {
         let solved = layout.split(body);
         let bottom = area.y + area.height;
         let mut y = area.y;
+        let blank_row = " ".repeat(usize::from(area.width));
         if let Some(header) = &self.header {
+            cx.put_str(area.x, y, &blank_row, self.style);
             for (column, segment) in solved.segments.iter().enumerate() {
                 if segment.width == 0 {
                     continue;
@@ -229,7 +233,6 @@ impl<S: RowSource, C: CellStyle> Widget for Table<S, C> {
             }
             y += 1;
         }
-        let blank_row = " ".repeat(usize::from(area.width));
         let mut row = RowBuilder::default();
         let mut index = self.offset;
         while y < bottom && index < self.source.len() {
@@ -244,9 +247,7 @@ impl<S: RowSource, C: CellStyle> Widget for Table<S, C> {
             } else {
                 None
             };
-            if let Some(band_style) = band {
-                cx.put_str(area.x, y, &blank_row, band_style);
-            }
+            cx.put_str(area.x, y, &blank_row, band.unwrap_or(self.style));
             if let (true, Some((symbol, symbol_style))) = (selected, self.highlight_symbol) {
                 let draw = clip_display_prefix(symbol, gutter);
                 cx.put_str(area.x, y, draw, patch_style(self.highlight, symbol_style));
@@ -266,7 +267,14 @@ impl<S: RowSource, C: CellStyle> Widget for Table<S, C> {
                 let text = row.cells.get(column).map_or("", String::as_str);
                 self.put_aligned(cx, *segment, column, y, text, style);
             }
-            y = y.saturating_add(1).saturating_add(self.row_gap);
+            y = y.saturating_add(1);
+            for _ in 0..self.row_gap {
+                if y >= bottom {
+                    break;
+                }
+                cx.put_str(area.x, y, &blank_row, self.style);
+                y += 1;
+            }
             index += 1;
         }
     }
