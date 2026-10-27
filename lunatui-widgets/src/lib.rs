@@ -61,5 +61,3 @@ pub use widget::Widget;
 
 #[cfg(feature = "line-gauge")]
 pub use line_gauge::{LineGauge, LineSet};
-#[cfg(feature = "widget-state")]
-pub use state::WidgetState;
