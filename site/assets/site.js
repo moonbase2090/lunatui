@@ -5,6 +5,7 @@ const skyLayer = document.querySelector('.sky-layer');
 const skyImage = document.querySelector('.sky');
 const starField = document.querySelector('.stars');
 const meteorField = document.querySelector('.meteors');
+const moonFrame = document.querySelector('.moon-frame');
 const depthLayers = [...document.querySelectorAll('[data-depth]')];
 
 // Each layer moves down by a share of the scroll, so far layers lag behind near ones.
@@ -74,6 +75,24 @@ for (let i = 0; i < dotCount; i += 1) {
   starField.append(dot);
 }
 
+// Now and then a random small star flares, on top of its steady twinkle.
+const smallStars = [...starField.querySelectorAll('.dot')];
+function flashStar() {
+  const star = smallStars[Math.floor(Math.random() * smallStars.length)];
+  star.animate([
+    { offset: 0.3, opacity: 1, transform: 'scale(2.6)', boxShadow: '0 0 12px 3px rgba(255,250,235,.9)' },
+  ], { duration: 900 + Math.random() * 800, easing: 'ease-out' });
+}
+(function scheduleFlash() {
+  setTimeout(() => {
+    if (!hero.classList.contains('motion-paused')) {
+      flashStar();
+      if (Math.random() < 0.25) setTimeout(flashStar, 150 + Math.random() * 350);
+    }
+    scheduleFlash();
+  }, 700 + Math.random() * 2300);
+}());
+
 // Map artwork positions through object-fit: cover and the sky's zoom.
 function placeGlints() {
   const width = skyLayer.clientWidth;
@@ -93,21 +112,38 @@ function placeGlints() {
 placeGlints();
 new ResizeObserver(placeGlints).observe(skyLayer);
 
-// Shooting stars fall down and to the left on a 20-40 degree slope, head first,
-// at uneven intervals. Phones get shorter, rarer ones.
+// Shooting stars fall down and to the right on a 20-40 degree slope, head first,
+// away from the title and clear of the moon, at uneven intervals.
+// Phones get shorter, rarer ones.
 let meteorTimer = 0;
 let meteorsRunning = false;
 function launchMeteor() {
   const width = skyLayer.clientWidth;
   const height = skyLayer.clientHeight;
   const small = mobileViewport.matches;
-  const angle = (20 + Math.random() * 20) * Math.PI / 180;
-  const distance = (small ? 150 : 300) + Math.random() * (small ? 90 : 260);
-  const startX = width * (small ? 0.6 + Math.random() * 0.4 : 0.3 + Math.random() * 0.65);
-  const startY = height * (0.04 + Math.random() * 0.3);
-  const endX = startX - Math.cos(angle) * distance;
-  const endY = startY + Math.sin(angle) * distance;
-  const turn = `rotate(${(180 - angle * 180 / Math.PI).toFixed(1)}deg)`;
+  const fieldBox = meteorField.getBoundingClientRect();
+  const moonBox = moonFrame.getBoundingClientRect();
+  const moonX = moonBox.left - fieldBox.left + moonBox.width / 2;
+  const moonY = moonBox.top - fieldBox.top + moonBox.height / 2;
+  const clearance = moonBox.width * 0.45 + 30;
+  let angle;
+  let startX;
+  let startY;
+  let endX;
+  let endY;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    angle = (20 + Math.random() * 20) * Math.PI / 180;
+    const distance = (small ? 150 : 300) + Math.random() * (small ? 90 : 260);
+    startX = width * (small ? 0.04 + Math.random() * 0.5 : 0.4 + Math.random() * 0.45);
+    startY = height * (small ? 0.03 + Math.random() * 0.15 : 0.04 + Math.random() * 0.3);
+    endX = startX + Math.cos(angle) * distance;
+    endY = startY + Math.sin(angle) * distance;
+    // Distance from the moon's centre to the closest point on the path.
+    const along = Math.min(1, Math.max(0, ((moonX - startX) * (endX - startX) + (moonY - startY) * (endY - startY)) / (distance * distance)));
+    if (Math.hypot(startX + (endX - startX) * along - moonX, startY + (endY - startY) * along - moonY) > clearance) break;
+    if (attempt === 11) return;
+  }
+  const turn = `rotate(${(angle * 180 / Math.PI).toFixed(1)}deg)`;
   const duration = 650 + Math.random() * 650;
 
   const meteor = document.createElement('div');
@@ -132,7 +168,7 @@ function scheduleMeteor(delay) {
   meteorTimer = setTimeout(() => {
     launchMeteor();
     const pair = Math.random() < 0.15;
-    const gap = mobileViewport.matches ? 4000 + Math.random() * 5000 : 2000 + Math.random() * 4500;
+    const gap = mobileViewport.matches ? 6000 + Math.random() * 8000 : 3500 + Math.random() * 7500;
     scheduleMeteor(pair ? 500 + Math.random() * 700 : gap);
   }, delay);
 }
