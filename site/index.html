@@ -94,7 +94,8 @@ section.block{padding:72px 0}
 .zoom{border:0;padding:0;background:transparent;max-width:min(94vw,1280px);width:100%}
 .zoom::backdrop{background:rgba(5,8,22,.86)}
 .zoom figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
-.zoom img{display:block;width:100%;height:auto;border-radius:8px;image-rendering:pixelated}
+.zoom{max-height:94vh;overflow:hidden}
+.zoom img{display:block;width:100%;height:auto;max-height:calc(94vh - 100px);object-fit:contain;border-radius:8px;image-rendering:pixelated}
 .zoom figcaption{display:flex;justify-content:space-between;align-items:center;color:var(--ink);font-weight:500;margin-bottom:12px}
 .zoom-close{min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font-size:20px;cursor:pointer}
 
