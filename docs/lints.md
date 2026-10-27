@@ -22,6 +22,9 @@ No rules yet.
 | `benches/src/calibration.rs`, `grow_buffer` | `clippy::same_item_push` | Growing one push at a time is the workload being measured | PR 02 (#4) |
 | `benches/benches/gungraun_calibration.rs`, crate root | `missing_docs` | gungraun's benchmark macros generate undocumented public items | PR 02 (#4); `#[allow]` replaced in #6 |
 | `lunatui-term/src/bin/session_pty_probe.rs`, `run_panic` | `clippy::panic` | PTY integration test exercises panic restore | PR 10 (#22) |
+| `examples/gallery.rs`, `main` | `clippy::too_many_lines` | Keep the established demo's widget composition together | PR 137 |
+| `examples/site_widget_gallery.rs`, `date` | `clippy::expect_used` | The fixed calendar dates are valid demo constants | PR 137 |
+| `examples/site_widget_gallery.rs`, `render_case` | `clippy::too_many_lines` | Keep each fixed-cell widget scene with its dispatch case | PR 137 |
 
 ## Checks
 
