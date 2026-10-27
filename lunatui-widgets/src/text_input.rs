@@ -14,6 +14,9 @@ pub struct TextInput {
     style: Style,
     cursor_style: Style,
     cursor_glyph: &'static str,
+    field_style: Option<Style>,
+    padding: u16,
+    show_cursor: bool,
 }
 
 impl TextInput {
@@ -27,6 +30,9 @@ impl TextInput {
             style: Style::new(),
             cursor_style: Style::new(),
             cursor_glyph: "│",
+            field_style: None,
+            padding: 0,
+            show_cursor: true,
         }
     }
 
@@ -58,6 +64,29 @@ impl TextInput {
         self.cursor_glyph = glyph;
         self
     }
+
+    /// Style for every cell inside the block, drawn before the text.
+    ///
+    /// Without it, cells the text does not cover keep what was there.
+    #[must_use]
+    pub fn field_style(mut self, style: Style) -> Self {
+        self.field_style = Some(style);
+        self
+    }
+
+    /// Blank cells between the field edge and the text, on each side.
+    #[must_use]
+    pub fn padding(mut self, cells: u16) -> Self {
+        self.padding = cells;
+        self
+    }
+
+    /// Whether the cursor glyph is drawn. Pass `false` for an unfocused field.
+    #[must_use]
+    pub fn show_cursor(mut self, show: bool) -> Self {
+        self.show_cursor = show;
+        self
+    }
 }
 
 impl Widget for TextInput {
@@ -65,13 +94,24 @@ impl Widget for TextInput {
         if area.width == 0 || area.height == 0 {
             return;
         }
-        let inner = if let Some(block) = &self.block {
+        let field = if let Some(block) = &self.block {
             block.render(area, cx);
             block.inner(area)
         } else {
             area
         };
-        if inner.width == 0 || inner.height == 0 {
+        if field.width == 0 || field.height == 0 {
+            return;
+        }
+        if let Some(style) = self.field_style {
+            let blank = " ".repeat(usize::from(field.width));
+            for row in field.y..field.y + field.height {
+                cx.put_str(field.x, row, &blank, style);
+            }
+        }
+        let pad = self.padding.min(field.width / 2);
+        let inner = Rect::new(field.x + pad, field.y, field.width - 2 * pad, field.height);
+        if inner.width == 0 {
             return;
         }
         let y = inner.y + inner.height / 2;
@@ -84,7 +124,7 @@ impl Widget for TextInput {
         cx.put_str(inner.x, y, visible, self.style);
         let rel = cursor_col.saturating_sub(window_col);
         let col = u16::try_from(rel).unwrap_or(0);
-        if col < inner.width {
+        if self.show_cursor && col < inner.width {
             let available = inner.width.saturating_sub(col);
             let cursor = clip_display_prefix(self.cursor_glyph, available);
             if !cursor.is_empty() {
