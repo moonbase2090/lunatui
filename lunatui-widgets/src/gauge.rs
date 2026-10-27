@@ -11,6 +11,8 @@ pub struct Gauge {
     ratio: f32,
     block: Option<Block>,
     fill_style: Style,
+    track_style: Option<Style>,
+    sub_cell: bool,
 }
 
 impl Gauge {
@@ -21,6 +23,8 @@ impl Gauge {
             ratio: ratio.clamp(0.0, 1.0),
             block: None,
             fill_style: Style::new(),
+            track_style: None,
+            sub_cell: false,
         }
     }
 
@@ -37,7 +41,32 @@ impl Gauge {
         self.fill_style = style;
         self
     }
+
+    /// Style for the cells the fill has not reached.
+    #[must_use]
+    pub fn track_style(mut self, style: Style) -> Self {
+        self.track_style = Some(style);
+        self
+    }
+
+    /// Draws the fractional end of the fill as a left eighth block (`▏` to `▉`).
+    /// Any fraction past the last whole cell shows at least `▏`.
+    #[must_use]
+    pub fn sub_cell(mut self, enabled: bool) -> Self {
+        self.sub_cell = enabled;
+        self
+    }
 }
+
+const LEFT_EIGHTHS: [(f32, &str); 7] = [
+    (0.0, "▏"),
+    (0.25, "▎"),
+    (0.375, "▍"),
+    (0.5, "▌"),
+    (0.625, "▋"),
+    (0.75, "▊"),
+    (0.875, "▉"),
+];
 
 fn filled_columns(width: u16, ratio: f32) -> u16 {
     if width == 0 {
@@ -73,6 +102,25 @@ impl Widget for Gauge {
         let draw = clip_display_prefix(&bar, inner.width);
         let y = inner.y + inner.height / 2;
         cx.put_str(inner.x, y, draw, self.fill_style);
+        let mut next = filled;
+        if self.sub_cell && filled < inner.width {
+            let fraction = self.ratio * f32::from(inner.width) - f32::from(filled);
+            if fraction > 0.0 {
+                let eighths = LEFT_EIGHTHS
+                    .iter()
+                    .take_while(|(threshold, _)| fraction >= *threshold)
+                    .last()
+                    .map_or(LEFT_EIGHTHS[0].1, |(_, glyph)| *glyph);
+                cx.put_str(inner.x + filled, y, eighths, self.fill_style);
+                next = filled + 1;
+            }
+        }
+        if let Some(track) = self.track_style
+            && next < inner.width
+        {
+            let rest = " ".repeat(usize::from(inner.width - next));
+            cx.put_str(inner.x + next, y, &rest, track);
+        }
     }
 
     fn measure(&self, avail: Size) -> Size {
