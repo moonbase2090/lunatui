@@ -9,10 +9,10 @@ use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, text_display_w
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Alignment, BigText, BigTextFont, Block, BorderType, Constraint, Date, Gauge, Lightcycle, List,
-    Monthly, Padding, Paragraph, RenderCx, Scrollbar, Sparkline, SparklineBar, Spinner,
-    SpinnerPattern, StatusBar, StatusDot, StatusState, Table, Tabs, TextInput, TextWrap, VecSource,
-    WeekStart, Widget,
+    Alignment, BigText, BigTextFont, Block, BorderType, Borders, Constraint, Date, Gauge,
+    Lightcycle, List, Monthly, Padding, Paragraph, RenderCx, Scrollbar, Sparkline, SparklineBar,
+    Spinner, SpinnerPattern, StatusBar, StatusDot, StatusState, Table, Tabs, TextInput, TextWrap,
+    TitlePosition, VecSource, WeekStart, Widget,
 };
 
 const WIDTH: u16 = 64;
@@ -110,15 +110,37 @@ fn spark_glyph(level: f32) -> char {
     }
 }
 
-fn framed(cx: &mut RenderCx<'_>, title: &str) -> Rect {
+fn frame(title: &str, hint: Option<&str>) -> Block {
     let frame = Block::bordered()
         .border_type(BorderType::Rounded)
         .style(Style::new().fg(INK).bg(BG))
-        .border_style(Style::new().fg(LINE).bg(BG));
-    let area = Rect::new(0, 0, WIDTH, HEIGHT);
-    frame.render(area, cx);
-    put_bold(cx, 2, 0, &format!(" ☾ {title} "), LAV);
-    frame.inner(area)
+        .border_style(style(LINE))
+        .title(format!(" ☾ {title} "))
+        .title_style(bold(LAV))
+        .title_inset(1);
+    match hint {
+        Some(hint) => frame.title_at(
+            format!(" {hint} "),
+            TitlePosition::Bottom,
+            Alignment::Right,
+            style(DIM),
+        ),
+        None => frame,
+    }
+}
+
+fn label(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, style: Style) {
+    let width = u16::try_from(text_display_width(text)).unwrap_or_default();
+    Paragraph::new(text)
+        .style(style)
+        .render(Rect::new(x, y, width, 1), cx);
+}
+
+fn rule(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, color: Color) {
+    Block::new()
+        .borders(Borders::TOP)
+        .border_style(style(color))
+        .render(Rect::new(x, y, width, 1), cx);
 }
 
 fn panel(title: &str, accent: Color) -> Block {
@@ -148,15 +170,20 @@ fn date(year: i32, month: u8, day: u8) -> Date {
     reason = "The gallery dispatch keeps each isolated widget scene together."
 )]
 fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme) -> bool {
-    grid.fill(
-        Rect::new(0, 0, WIDTH, HEIGHT),
-        Style::new().fg(INK).bg(BG),
-        ' ',
-        clusters,
-    );
     let mut cx = RenderCx::new(grid, clusters, theme);
-    let _body = framed(
-        &mut cx,
+    let hint = match name {
+        "bigtext" => Some("24h · local time"),
+        "calendar" => Some("←→ month · ↵ select"),
+        "gauge" => Some("tab focus · space pause"),
+        "list" => Some("↑↓ move · ↵ open · x toggle"),
+        "sparkline" => Some("1s refresh · q quit"),
+        "spinner" => Some("12 styles · 80ms frame"),
+        "table" => Some("↑↓ select · s sort · / filter"),
+        "tabs" => Some("←→ / 1-4 switch"),
+        "textinput" => Some("tab next · ↵ submit · esc cancel"),
+        _ => None,
+    };
+    frame(
         match name {
             "bigtext" => "BigText",
             "block" => "Block",
@@ -178,7 +205,9 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             "borders" => "Borders",
             _ => return false,
         },
-    );
+        hint,
+    )
+    .render(Rect::new(0, 0, WIDTH, HEIGHT), &mut cx);
     match name {
         "bigtext" => {
             BigText::new("23:47")
@@ -1211,50 +1240,33 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             put(&mut cx, 12, 21, "· sorted by median ↓", DIM);
         }
         "tabs" => {
-            put(&mut cx, 1, 3, &"─".repeat(62), LINE);
-            put(&mut cx, 0, 3, "├", LINE);
-            put(&mut cx, 63, 3, "┤", LINE);
-            Block::bordered()
-                .border_type(BorderType::Rounded)
-                .style(Style::new().bg(BG))
-                .border_style(style(LINE_HI))
-                .render(Rect::new(29, 1, 13, 3), &mut cx);
-            Tabs::new([
-                "  1 Overview ",
-                "   2 Logs ",
-                "   3 Metrics ",
-                "   4 Settings ",
-            ])
-            .select(2)
-            .style(style(MUTED))
-            .highlight_style(bold(LAV))
-            .render(Rect::new(3, 2, 58, 1), &mut cx);
-            put(&mut cx, 29, 2, "│", LINE_HI);
-            put(&mut cx, 41, 2, "│", LINE_HI);
-            put(&mut cx, 29, 3, "╯", LINE_HI);
-            put(&mut cx, 41, 3, "╰", LINE_HI);
-            fill(&mut cx, Rect::new(30, 3, 11, 1), BG);
-            put_bold(&mut cx, 31, 2, "3", LAV);
-            put_bold(&mut cx, 33, 2, "Metrics", LAV);
-            put_bold(&mut cx, 3, 5, "Metrics", MOON);
-            put(&mut cx, 11, 5, "· lunatui-demo · uptime 3h 12m", DIM);
+            Tabs::new(["1 Overview", "2 Logs", "3 Metrics", "4 Settings"])
+                .select(2)
+                .style(style(MUTED))
+                .highlight_style(bold(LAV))
+                .boxed(style(LINE_HI), style(LINE))
+                .join_parent_border(true)
+                .indent(2)
+                .render(Rect::new(0, 1, WIDTH, 3), &mut cx);
+            label(&mut cx, 3, 5, "Metrics", bold(MOON));
+            label(&mut cx, 11, 5, "· lunatui-demo · uptime 3h 12m", style(DIM));
             let stats = [
                 ("Frames", "1.25k/s", LAV),
                 ("Draw", "0.81 ms", MOON),
                 ("Cells Δ", "6.1%", GREEN),
                 ("Alloc", "0 B/f", BLUE),
             ];
-            for (index, (label, value, color)) in stats.into_iter().enumerate() {
+            for (index, (name, value, color)) in stats.into_iter().enumerate() {
                 let x = 3 + u16::try_from(index).unwrap_or_default() * 15;
                 Block::bordered()
                     .border_type(BorderType::Rounded)
                     .style(Style::new().bg(BG))
                     .border_style(style(LINE))
                     .render(Rect::new(x, 7, 14, 4), &mut cx);
-                put(&mut cx, x + 2, 8, label, MUTED);
-                put_bold(&mut cx, x + 2, 9, value, color);
+                label(&mut cx, x + 2, 8, name, style(MUTED));
+                label(&mut cx, x + 2, 9, value, bold(color));
             }
-            put(&mut cx, 3, 12, "Frame time (ms)", MUTED);
+            label(&mut cx, 3, 12, "Frame time (ms)", style(MUTED));
             let data = [
                 266_667, 291_265, 418_906, 389_714, 391_815, 426_476, 348_413, 394_706, 467_743,
                 569_953, 448_720, 422_656, 342_337, 482_362, 540_538, 389_734, 537_149, 624_567,
@@ -1265,7 +1277,7 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 484_695, 435_423,
             ];
             for (row, value) in [(13, "2"), (15, "1"), (18, "0")] {
-                put(&mut cx, 3, row, value, DIM);
+                label(&mut cx, 3, row, value, style(DIM));
             }
             let bars: Vec<_> = data
                 .iter()
@@ -1281,76 +1293,63 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             Sparkline::new(&bars)
                 .max(1_000_000)
                 .render(Rect::new(5, 13, 56, 6), &mut cx);
-            put(&mut cx, 5, 19, &"─".repeat(56), LINE);
-            put(&mut cx, 5, 20, "-60s", DIM);
-            put(&mut cx, 30, 20, "-30s", DIM);
-            put(&mut cx, 57, 20, "now", DIM);
+            rule(&mut cx, 5, 19, 56, LINE);
+            label(&mut cx, 5, 20, "-60s", style(DIM));
+            label(&mut cx, 30, 20, "-30s", style(DIM));
+            label(&mut cx, 57, 20, "now", style(DIM));
         }
         "textinput" => {
-            put_bold(&mut cx, 3, 2, "Create project", MOON);
-            put(&mut cx, 3, 3, "Scaffold a new Lunatui app.", MUTED);
-            put_bold(&mut cx, 4, 5, "Name", LAV);
-            put(&mut cx, 49, 5, "✓ available", GREEN);
-            TextInput::new("moon-dash", 10)
-                .block(panel("", LINE_HI).padding(Padding {
-                    left: 2,
-                    right: 2,
-                    top: 0,
-                    bottom: 0,
-                }))
-                .style(style(INK).bg(PANEL_RAISED))
-                .cursor_style(Style::new().fg(BG).bg(LAV))
-                .cursor_glyph(" ")
-                .render(Rect::new(3, 6, 58, 3), &mut cx);
-            fill(&mut cx, Rect::new(4, 7, 56, 1), PANEL_RAISED);
-            put_on(&mut cx, 6, 7, "moon-dash", INK, PANEL_RAISED);
-            put_on(&mut cx, 15, 7, " ", BG, LAV);
-            put(&mut cx, 4, 9, "Template", MUTED);
-            TextInput::new("dashboard  ▾", "dashboard  ▾".len())
-                .block(
-                    panel("", LINE)
-                        .style(Style::new().bg(PANEL))
-                        .padding(Padding {
-                            left: 2,
-                            right: 2,
-                            top: 0,
-                            bottom: 0,
-                        }),
-                )
-                .style(style(MUTED).bg(PANEL))
-                .cursor_style(Style::new().fg(PANEL).bg(PANEL))
-                .render(Rect::new(3, 10, 58, 3), &mut cx);
-            put_on(&mut cx, 18, 11, " ", PANEL, PANEL);
-            put_on(&mut cx, 6, 11, "dashboard  ▾", INK, PANEL);
-            put(&mut cx, 4, 13, "Description", MUTED);
-            put(&mut cx, 52, 13, "optional", DIM);
-            TextInput::new("A tiny system monitor…", "A tiny system monitor…".len())
-                .block(
-                    panel("", LINE)
-                        .style(Style::new().bg(PANEL))
-                        .padding(Padding {
-                            left: 2,
-                            right: 2,
-                            top: 0,
-                            bottom: 0,
-                        }),
-                )
-                .style(style(DIM).bg(PANEL))
-                .cursor_style(Style::new().fg(PANEL).bg(PANEL))
-                .render(Rect::new(3, 14, 58, 3), &mut cx);
-            put_on(&mut cx, 28, 15, " ", PANEL, PANEL);
-            put(&mut cx, 4, 18, "[", DIM);
-            put(&mut cx, 5, 18, "✓", LAV);
-            put(&mut cx, 6, 18, "]", DIM);
-            put(&mut cx, 8, 18, "Initialize git repository", MUTED);
-            put(&mut cx, 4, 19, "[ ]", DIM);
-            put(&mut cx, 8, 19, "Add example tests", MUTED);
-            put(&mut cx, 4, 21, "name: moon-dash", DIM);
-            fill(&mut cx, Rect::new(37, 21, 8, 1), PANEL);
-            put_on(&mut cx, 37, 21, " Cancel ", MUTED, PANEL);
-            fill(&mut cx, Rect::new(45, 21, 2, 1), BG);
-            put_on_bold(&mut cx, 47, 21, "  Create ↵  ", BG, LAV);
-            cx.set_style(Rect::new(49, 21, 8, 1), bold(BG).bg(LAV));
+            label(&mut cx, 3, 2, "Create project", bold(MOON));
+            label(&mut cx, 3, 3, "Scaffold a new Lunatui app.", style(MUTED));
+            let fields = [
+                ("Name", "moon-dash", Some(("✓ available", GREEN)), true),
+                ("Template", "dashboard  ▾", None, false),
+                (
+                    "Description",
+                    "A tiny system monitor…",
+                    Some(("optional", DIM)),
+                    false,
+                ),
+            ];
+            for (index, (name, value, note, focused)) in fields.into_iter().enumerate() {
+                let y = 5 + u16::try_from(index).unwrap_or_default() * 4;
+                label(
+                    &mut cx,
+                    4,
+                    y,
+                    name,
+                    if focused { bold(LAV) } else { style(MUTED) },
+                );
+                if let Some((text, color)) = note {
+                    let width = u16::try_from(text_display_width(text)).unwrap_or_default();
+                    label(&mut cx, WIDTH - 4 - width, y, text, style(color));
+                }
+                let field_bg = if focused { PANEL_RAISED } else { PANEL };
+                let value_color = if index == 2 { DIM } else { INK };
+                TextInput::new(value, value.len())
+                    .block(
+                        Block::bordered()
+                            .border_type(BorderType::Rounded)
+                            .style(Style::new().bg(BG))
+                            .border_style(style(if focused { LINE_HI } else { LINE })),
+                    )
+                    .field_style(Style::new().bg(field_bg))
+                    .padding(2)
+                    .style(style(value_color).bg(field_bg))
+                    .cursor_glyph(" ")
+                    .cursor_style(Style::new().fg(BG).bg(LAV))
+                    .show_cursor(focused)
+                    .render(Rect::new(3, y + 1, 58, 3), &mut cx);
+            }
+            label(&mut cx, 4, 18, "[", style(DIM));
+            label(&mut cx, 5, 18, "✓", style(LAV));
+            label(&mut cx, 6, 18, "]", style(DIM));
+            label(&mut cx, 8, 18, "Initialize git repository", style(MUTED));
+            label(&mut cx, 4, 19, "[ ]", style(DIM));
+            label(&mut cx, 8, 19, "Add example tests", style(MUTED));
+            label(&mut cx, 4, 21, "name: moon-dash", style(DIM));
+            label(&mut cx, 37, 21, " Cancel ", style(MUTED).bg(PANEL));
+            label(&mut cx, 47, 21, "  Create ↵  ", bold(BG).bg(LAV));
         }
         "borders" => {
             put(&mut cx, 6, 4, "Soft corners keep structure quiet.", MUTED);
@@ -1371,23 +1370,6 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             }
         }
         _ => return false,
-    }
-    if let Some(hint) = match name {
-        "bigtext" => Some("24h · local time"),
-        "calendar" => Some("←→ month · ↵ select"),
-        "gauge" => Some("tab focus · space pause"),
-        "list" => Some("↑↓ move · ↵ open · x toggle"),
-        "sparkline" => Some("1s refresh · q quit"),
-        "spinner" => Some("12 styles · 80ms frame"),
-        "table" => Some("↑↓ select · s sort · / filter"),
-        "tabs" => Some("←→ / 1-4 switch"),
-        "textinput" => Some("tab next · ↵ submit · esc cancel"),
-        _ => None,
-    } {
-        let x = WIDTH
-            .saturating_sub(u16::try_from(hint.chars().count()).unwrap_or_default())
-            .saturating_sub(3);
-        put(&mut cx, x, HEIGHT - 1, &format!(" {hint} "), DIM);
     }
     true
 }
