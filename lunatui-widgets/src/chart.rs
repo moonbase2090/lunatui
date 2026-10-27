@@ -403,20 +403,19 @@ const RIGHT: u8 = 2;
 const BOTTOM: u8 = 4;
 const TOP: u8 = 8;
 
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "the value is a plot coordinate of at most a few thousand ticks"
-)]
 fn round_to_tick(value: f64) -> i64 {
-    value.round() as i64
+    let bits = value.round().to_bits();
+    let exponent = i32::try_from((bits >> 52) & 0x7ff).unwrap_or(0) - 1023;
+    if exponent < 0 {
+        return 0;
+    }
+    let mantissa = (bits & ((1_u64 << 52) - 1)) + (1_u64 << 52);
+    let shift = u32::try_from(52 - exponent.min(52)).unwrap_or(0);
+    i64::try_from(mantissa >> shift).unwrap_or(i64::MAX)
 }
 
-#[expect(
-    clippy::cast_precision_loss,
-    reason = "plot spans are at most a few thousand ticks, far inside f64's exact range"
-)]
 fn span(cells: i64) -> f64 {
-    cells as f64
+    f64::from(i32::try_from(cells).unwrap_or(i32::MAX))
 }
 
 impl Window {
