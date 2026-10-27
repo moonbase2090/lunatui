@@ -217,6 +217,8 @@ pub struct Monthly<S> {
     month_header: Option<Style>,
     default_style: Style,
     explicit_default: bool,
+    weekend: Option<Style>,
+    selected: Option<Style>,
     block: Option<Block>,
     state: WidgetState,
     themed: bool,
@@ -253,6 +255,8 @@ impl<S> Monthly<S> {
             month_header: None,
             default_style: Style::new(),
             explicit_default: false,
+            weekend: None,
+            selected: None,
             block: None,
             state: WidgetState::Normal,
             themed: false,
@@ -299,6 +303,24 @@ impl<S> Monthly<S> {
     pub fn default_style(mut self, style: Style) -> Self {
         self.default_style = style;
         self.explicit_default = true;
+        self
+    }
+
+    /// Style for Saturdays and Sundays in this month. Event styles are layered on top.
+    #[must_use]
+    pub fn weekend_style(mut self, style: Style) -> Self {
+        self.weekend = Some(style);
+        self
+    }
+
+    /// Style for the selected day, layered over its event style.
+    ///
+    /// It also covers the blank cell on each side of the day inside the grid,
+    /// so the day reads as a chip. A side cell that shows an event marker keeps
+    /// the marker.
+    #[must_use]
+    pub fn selected_style(mut self, style: Style) -> Self {
+        self.selected = Some(style);
         self
     }
 
@@ -449,7 +471,9 @@ impl<S: DateStyle> Monthly<S> {
     fn paint_week(&self, x: u16, y: u16, width: u16, mut cursor: Date, cx: &mut RenderCx<'_>) {
         let right = x.saturating_add(width);
         let mut column = x;
+        let mut after_selected = false;
         for index in 0..7 {
+            let selected_here = self.is_selected(cursor);
             if column < right {
                 let gutter = if index == 0 {
                     Style::new()
@@ -462,6 +486,8 @@ impl<S: DateStyle> Monthly<S> {
                 let marker = if has_marker { '•' } else { ' ' };
                 let marker_style = if has_marker {
                     self.events.style_for(cursor)
+                } else if selected_here || after_selected {
+                    self.selected.map_or(gutter, |chip| patch(gutter, chip))
                 } else {
                     gutter
                 };
@@ -475,8 +501,13 @@ impl<S: DateStyle> Monthly<S> {
                 }
                 column = column.saturating_add(1);
             }
+            after_selected = selected_here;
             cursor = cursor.succ();
         }
+    }
+
+    fn is_selected(&self, date: Date) -> bool {
+        self.selected.is_some() && date == self.date
     }
 
     fn format_date(&self, date: Date, cx: &RenderCx<'_>) -> ([char; 2], Style) {
@@ -489,7 +520,16 @@ impl<S: DateStyle> Monthly<S> {
             } else {
                 Style::new()
             };
-            (day_chars(date.day), patch(base, event))
+            let base = match self.weekend {
+                Some(weekend) if matches!(date.weekday(), 0 | 6) => patch(base, weekend),
+                _ => base,
+            };
+            let styled = patch(base, event);
+            let styled = match self.selected {
+                Some(chip) if date == self.date => patch(styled, chip),
+                _ => styled,
+            };
+            (day_chars(date.day), styled)
         } else if let Some(surrounding) = self.surrounding {
             let base = patch(self.default_style, surrounding);
             (day_chars(date.day), patch(base, event))
