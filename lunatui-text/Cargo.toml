@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-core = { version = "0.1.8", path = "../lunatui-core" }
+lunatui-core = { version = "0.1.9", path = "../lunatui-core" }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]

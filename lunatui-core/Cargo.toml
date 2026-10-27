@@ -20,7 +20,7 @@ libm = { version = "=0.2.16", optional = true }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.8", path = "../lunatui-test" }
+lunatui-test = { version = "0.1.9", path = "../lunatui-test" }
 proptest = "=1.9.0"
 unicode-width = "=0.2.2"
 
