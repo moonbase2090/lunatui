@@ -20,14 +20,14 @@ sparkline = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 
 [dependencies]
-lunatui-core = { version = "0.1.9", path = "../lunatui-core" }
-lunatui-layout = { version = "0.1.9", path = "../lunatui-layout" }
-lunatui-text = { version = "0.1.9", path = "../lunatui-text" }
-lunatui-theme = { version = "0.1.9", path = "../lunatui-theme" }
+lunatui-core = { version = "0.1.10", path = "../lunatui-core" }
+lunatui-layout = { version = "0.1.10", path = "../lunatui-layout" }
+lunatui-text = { version = "0.1.10", path = "../lunatui-text" }
+lunatui-theme = { version = "0.1.10", path = "../lunatui-theme" }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.9", path = "../lunatui-test" }
+lunatui-test = { version = "0.1.10", path = "../lunatui-test" }
 ratatui = "=0.30.2"
 time = { version = "=0.3.55", default-features = false }
 

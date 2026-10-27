@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-10-27
+
 ### Added
 
 - `BigText` widget, behind the `bigtext` feature. An 8×8 bitmap is packed into full blocks (two columns per pixel), half blocks, quadrants, braille, sextants, or octants. Sextants pad one blank pixel row, and sextants and octants pack as quadrants until `subcell_glyphs` is set. An explicit style is painted as given. Without one, letters follow theme tokens for normal, focused, and disabled.
