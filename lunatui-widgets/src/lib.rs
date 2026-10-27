@@ -34,7 +34,7 @@ pub use big_text::{BigText, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
-pub use calendar::{Date, DateStyle, Monthly};
+pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use gauge::Gauge;
 pub use lightcycle::Lightcycle;
 pub use list::List;

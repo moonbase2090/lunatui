@@ -24,7 +24,18 @@ const MONTHS: [&str; 12] = [
 ];
 
 const WEEKDAYS: &str = " Su Mo Tu We Th Fr Sa";
+const WEEKDAYS_MONDAY: &str = " Mo Tu We Th Fr Sa Su";
 const GRID_WIDTH: u16 = 21;
+
+/// First weekday shown in a monthly calendar.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum WeekStart {
+    /// Sunday through Saturday, the default.
+    #[default]
+    Sunday,
+    /// Monday through Sunday.
+    Monday,
+}
 
 /// A Gregorian calendar date.
 ///
@@ -143,6 +154,16 @@ impl Date {
         }
         date
     }
+
+    fn monday_on_or_before(self) -> Self {
+        let mut date = self;
+        let mut left = (self.weekday() + 6) % 7;
+        while left > 0 {
+            date = date.pred();
+            left -= 1;
+        }
+        date
+    }
 }
 
 /// Style for one date. The last matching sample wins when several are provided.
@@ -150,6 +171,11 @@ pub trait DateStyle {
     /// Style layered onto the date's base style. [`Color::Default`](lunatui_core::Color::Default)
     /// leaves that channel alone.
     fn style_for(&self, date: Date) -> Style;
+
+    /// Whether this date has an event, independent of its event style.
+    fn has_event(&self, _date: Date) -> bool {
+        false
+    }
 }
 
 impl DateStyle for &[(Date, Style)] {
@@ -161,6 +187,10 @@ impl DateStyle for &[(Date, Style)] {
             }
         }
         style
+    }
+
+    fn has_event(&self, date: Date) -> bool {
+        self.iter().any(|(event, _)| *event == date)
     }
 }
 
@@ -180,6 +210,8 @@ impl DateStyle for () {
 pub struct Monthly<S> {
     date: Date,
     events: S,
+    week_start: WeekStart,
+    event_markers: bool,
     surrounding: Option<Style>,
     weekday: Option<Style>,
     month_header: Option<Style>,
@@ -214,6 +246,8 @@ impl<S> Monthly<S> {
         Self {
             date,
             events,
+            week_start: WeekStart::Sunday,
+            event_markers: false,
             surrounding: None,
             weekday: None,
             month_header: None,
@@ -223,6 +257,20 @@ impl<S> Monthly<S> {
             state: WidgetState::Normal,
             themed: false,
         }
+    }
+
+    /// First weekday column. The default is Sunday.
+    #[must_use]
+    pub fn week_start(mut self, week_start: WeekStart) -> Self {
+        self.week_start = week_start;
+        self
+    }
+
+    /// Adds a dot in the date gutter for every event sample.
+    #[must_use]
+    pub fn event_markers(mut self, enabled: bool) -> Self {
+        self.event_markers = enabled;
+        self
     }
 
     /// Style for days outside this month. Without it, those cells are blank.
@@ -280,7 +328,7 @@ impl<S> Monthly<S> {
     #[must_use]
     pub fn height(&self) -> u16 {
         let (_, extra) = self.chrome();
-        u16::from(week_rows(self.date))
+        u16::from(week_rows(self.date, self.week_start))
             .saturating_add(self.header_rows())
             .saturating_add(extra)
     }
@@ -347,7 +395,11 @@ impl<S: DateStyle> Monthly<S> {
             self.paint_weekdays(Rect::new(area.x, y, area.width, 1), cx);
             y = y.saturating_add(1);
         }
-        let mut cursor = self.date.first_of_month().sunday_on_or_before();
+        let first = self.date.first_of_month();
+        let mut cursor = match self.week_start {
+            WeekStart::Sunday => first.sunday_on_or_before(),
+            WeekStart::Monday => first.monday_on_or_before(),
+        };
         let stop = next_month(self.date.month);
         let mut rows = 0_u8;
         while cursor.month != stop && rows < 6 {
@@ -381,7 +433,11 @@ impl<S: DateStyle> Monthly<S> {
 
     fn paint_weekdays(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let style = self.weekday_style(cx);
-        for (offset, ch) in WEEKDAYS.chars().enumerate() {
+        let weekdays = match self.week_start {
+            WeekStart::Sunday => WEEKDAYS,
+            WeekStart::Monday => WEEKDAYS_MONDAY,
+        };
+        for (offset, ch) in weekdays.chars().enumerate() {
             let column = area.x.saturating_add(u16::try_from(offset).unwrap_or(0));
             if column >= area.x.saturating_add(area.width) {
                 break;
@@ -400,7 +456,14 @@ impl<S: DateStyle> Monthly<S> {
                 } else {
                     self.background_style()
                 };
-                cx.put_char_patched(column, y, ' ', gutter);
+                let has_marker = self.event_markers && self.events.has_event(cursor);
+                let marker = if has_marker { '•' } else { ' ' };
+                let marker_style = if has_marker {
+                    self.events.style_for(cursor)
+                } else {
+                    gutter
+                };
+                cx.put_char_patched(column, y, marker, marker_style);
             }
             column = column.saturating_add(1);
             let (text, style) = self.format_date(cursor, cx);
@@ -526,8 +589,12 @@ fn next_month(month: u8) -> u8 {
     if month == 12 { 1 } else { month + 1 }
 }
 
-fn week_rows(date: Date) -> u8 {
-    let mut cursor = date.first_of_month().sunday_on_or_before();
+fn week_rows(date: Date, week_start: WeekStart) -> u8 {
+    let first = date.first_of_month();
+    let mut cursor = match week_start {
+        WeekStart::Sunday => first.sunday_on_or_before(),
+        WeekStart::Monday => first.monday_on_or_before(),
+    };
     let stop = next_month(date.month);
     let mut rows = 0_u8;
     while cursor.month != stop && rows < 6 {

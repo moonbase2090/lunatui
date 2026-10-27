@@ -5,7 +5,7 @@
 
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{Block, Date, Monthly, Padding, RenderCx, Widget, WidgetState};
+use lunatui_widgets::{Block, Date, Monthly, Padding, RenderCx, WeekStart, Widget, WidgetState};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
 use ratatui::style::{Color as RatColor, Modifier, Style as RatStyle};
@@ -329,5 +329,29 @@ fn last_event_style_wins() -> Result<(), String> {
         return Err("missing event cell".to_owned());
     };
     assert_eq!(cell.fg, Color::Rgb(0, 1, 0));
+    Ok(())
+}
+
+#[test]
+fn monday_start_renders_event_dot_in_date_gutter() -> Result<(), String> {
+    let date = ymd(2024, 6, 3)?;
+    let event_style = Style::new().fg(Color::Rgb(185, 167, 240));
+    let events = [(date, event_style)];
+    let monthly = Monthly::new(date, events.as_slice())
+        .week_start(WeekStart::Monday)
+        .event_markers(true)
+        .show_weekdays_header(Style::new());
+    let (grid, clusters) = paint(&monthly, 21, 6);
+    let rows = rows(&grid, &clusters);
+    assert_eq!(rows[0], " Mo Tu We Th Fr Sa Su");
+    assert!(
+        rows[2].starts_with("• 3"),
+        "unexpected second week: {}",
+        rows[2]
+    );
+    let Some(dot_style) = grid.get(0, 2).map(lunatui_core::Cell::style) else {
+        return Err("missing first-day event marker".to_owned());
+    };
+    assert_eq!(dot_style.fg, Color::Rgb(185, 167, 240));
     Ok(())
 }
