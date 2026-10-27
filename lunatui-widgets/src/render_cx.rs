@@ -96,6 +96,11 @@ impl<'a> RenderCx<'a> {
         }
     }
 
+    /// Fills `area` with `ch` and `style` without building an intermediate string.
+    pub fn fill(&mut self, area: Rect, style: Style, ch: char) {
+        self.grid.fill(area, style, ch, self.clusters);
+    }
+
     pub(crate) fn put_char_patched(&mut self, x: u16, y: u16, glyph: char, style: Style) {
         let existing = self
             .grid
