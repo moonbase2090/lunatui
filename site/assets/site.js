@@ -94,9 +94,6 @@ const galleryLoader = new IntersectionObserver((entries, observer) => {
   observer.disconnect();
 }, { rootMargin: '0px 0px -250px 0px' });
 galleryLoader.observe(document.querySelector('#gallery'));
-document.querySelectorAll('.stars i:not(.static)').forEach((star) => {
-  star.style.animationDelay = `${-Math.random() * 6}s`;
-});
 updateMotionToggle();
 updateHeroMotion();
 
