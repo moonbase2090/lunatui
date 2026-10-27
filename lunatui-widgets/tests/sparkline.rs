@@ -240,6 +240,26 @@ fn per_bar_styles_match_ratatui() -> Result<(), String> {
 }
 
 #[test]
+fn row_styles_apply_a_vertical_gradient_over_the_sparkline_style() {
+    let data = [8_u64; 3];
+    let background = Color::Rgb(10, 13, 28);
+    let top = Style::new().fg(Color::Rgb(185, 167, 240));
+    let lower = Style::new().fg(Color::Rgb(143, 124, 224));
+    let (grid, _) = paint(
+        &Sparkline::new(&data)
+            .max(8)
+            .style(Style::new().fg(Color::Rgb(185, 167, 240)).bg(background))
+            .row_styles(&[top, lower]),
+        3,
+        3,
+    );
+    assert_eq!(grid.get(0, 0).map(|cell| cell.style().fg), Some(top.fg));
+    assert_eq!(grid.get(0, 1).map(|cell| cell.style().fg), Some(lower.fg));
+    assert_eq!(grid.get(0, 2).map(|cell| cell.style().fg), Some(lower.fg));
+    assert_eq!(grid.get(0, 2).map(|cell| cell.style().bg), Some(background));
+}
+
+#[test]
 fn three_levels_and_bordered_block_match_ratatui() -> Result<(), String> {
     let data = [0, 2, 4, 6, 8];
     let (grid, clusters) = paint(

@@ -8,8 +8,13 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `BigTextFont::FiveBySeven`, a compact 5×7 clock font for the digits `0`–`9` and `:`, drawn with full blocks.
+
 ### Fixed
 
+- The PTY integration tests for `lunatui` and `lunatui-test` carry their crate docs on Windows, where the tests are compiled out, so `missing_docs` no longer fails the Windows build.
 - The website hero sky no longer drifts side to side; the sky image is static.
 
 ## [0.1.11] - 2026-10-27

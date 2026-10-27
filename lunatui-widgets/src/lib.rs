@@ -30,11 +30,11 @@ mod text_input;
 mod widget;
 
 #[cfg(feature = "bigtext")]
-pub use big_text::{BigText, PixelSize};
+pub use big_text::{BigText, BigTextFont, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
-pub use calendar::{Date, DateStyle, Monthly};
+pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use gauge::Gauge;
 pub use lightcycle::Lightcycle;
 pub use list::List;
@@ -51,7 +51,7 @@ pub use sparkline::{
     BarSet, Baseline, NINE_LEVELS, RenderDirection, Sparkline, SparklineBar, SparklineValue,
     THREE_LEVELS,
 };
-pub use spinner::Spinner;
+pub use spinner::{Spinner, SpinnerPattern};
 #[cfg(feature = "widget-state")]
 pub use state::WidgetState;
 pub use status_bar::StatusBar;

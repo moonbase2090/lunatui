@@ -3,9 +3,11 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{ClusterTable, Grid, Rect};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
-use lunatui_widgets::{Gauge, RenderCx, Spinner, StatusBar, Tabs, TextInput, Widget};
+use lunatui_widgets::{
+    Gauge, RenderCx, Spinner, SpinnerPattern, StatusBar, Tabs, TextInput, Widget,
+};
 
 #[test]
 fn tabs_and_status_render() {
@@ -33,6 +35,53 @@ fn gauge_and_spinner_render() {
 }
 
 #[test]
+fn spinner_patterns_render_the_target_frames() {
+    let cases = [
+        (SpinnerPattern::BrailleDots, "⠋", 1),
+        (SpinnerPattern::HalfMoon, "◐", 1),
+        (SpinnerPattern::Quadrant, "▖", 1),
+        (SpinnerPattern::BrailleRing, "⣾", 1),
+        (SpinnerPattern::Arc, "◜", 1),
+        (SpinnerPattern::Bars, "▁▃▅", 3),
+    ];
+    for (pattern, expected, columns) in cases {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut grid = Grid::new(3, 1);
+        let mut clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        let spinner = Spinner::new(0).pattern(pattern);
+        assert_eq!(
+            spinner.measure(lunatui_core::Size::new(3, 1)).width,
+            columns
+        );
+        spinner.render(Rect::new(0, 0, columns, 1), &mut cx);
+        assert!(grid.row_display(0, &clusters).starts_with(expected));
+    }
+}
+
+fn spinner_row(pattern: SpinnerPattern, frame: u32) -> String {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(3, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Spinner::new(frame)
+        .pattern(pattern)
+        .render(Rect::new(0, 0, 3, 1), &mut cx);
+    grid.row_display(0, &clusters)
+}
+
+#[test]
+fn spinner_cycles_wrap_at_each_patterns_frame_count() {
+    assert_eq!(spinner_row(SpinnerPattern::BrailleRing, 0), "⣾  ");
+    assert_eq!(spinner_row(SpinnerPattern::BrailleRing, 7), "⣷  ");
+    assert_eq!(spinner_row(SpinnerPattern::BrailleRing, 8), "⣾  ");
+
+    assert_eq!(spinner_row(SpinnerPattern::Bars, 0), "▁▃▅");
+    assert_eq!(spinner_row(SpinnerPattern::Bars, 5), "▃▁▃");
+    assert_eq!(spinner_row(SpinnerPattern::Bars, 6), "▁▃▅");
+}
+
+#[test]
 fn text_input_caret_aligns_after_wide_grapheme() {
     let theme = Theme::builtin(Variant::Dark);
     let mut grid = Grid::new(4, 1);
@@ -53,6 +102,33 @@ fn text_input_renders_cursor() {
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
     TextInput::new("hi", 2).render(Rect::new(0, 0, 10, 1), &mut cx);
     assert!(grid.row_display(0, &clusters).contains('│'));
+}
+
+#[test]
+fn text_input_supports_a_styled_block_cursor() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(12, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    let background = Color::Rgb(185, 167, 240);
+    TextInput::new("moon-dash", 9)
+        .cursor_glyph(" ")
+        .cursor_style(Style::new().fg(Color::Rgb(10, 13, 28)).bg(background))
+        .render(Rect::new(0, 0, 12, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "moon-dash   ");
+    assert_eq!(grid.get(9, 0).map(|cell| cell.style().bg), Some(background));
+}
+
+#[test]
+fn text_input_clips_a_wide_cursor_at_the_inner_edge() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(3, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    TextInput::new("a", 1)
+        .cursor_glyph("界")
+        .render(Rect::new(0, 0, 2, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "a  ");
 }
 
 #[test]

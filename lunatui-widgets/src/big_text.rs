@@ -8,12 +8,25 @@ use lunatui_theme::Token;
 use crate::state::WidgetState;
 use crate::{Alignment, RenderCx, Widget};
 
+#[path = "clock_font.rs"]
+mod clock_font;
 #[path = "font.rs"]
 mod font;
 
 const GLYPH_PX: u16 = 8;
 const INK_COLUMNS: u8 = 8;
 const GLYPH_COLUMNS: usize = 16;
+
+/// Bitmap font used to draw large text.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum BigTextFont {
+    /// The built-in 8×8 Press Start 2P bitmap.
+    #[default]
+    PressStart2P,
+    /// A compact 5×7 clock font for the digits `0`–`9` and `:` made from full-cell blocks.
+    /// Other non-control characters render as blank glyphs with the standard inter-glyph gap.
+    FiveBySeven,
+}
 
 /// How an 8×8 character is packed into terminal cells.
 ///
@@ -60,11 +73,12 @@ impl PixelSize {
     }
 }
 
-/// Large text drawn from an 8×8 bitmap.
+/// Large text drawn from a bitmap font.
 ///
 /// Glyph bitmaps for digits, capitals, and `:.-%` are derived from Press Start 2P by `CodeMan38`,
 /// SIL Open Font License 1.1 (`assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII is a
-/// hollow box.
+/// hollow box. The opt-in [`BigTextFont::FiveBySeven`] font is a compact clock face for the
+/// digits and `:`.
 ///
 /// With [`style`](Self::style) set, that style is used as given. Otherwise the text follows theme
 /// tokens: primary text at rest, accent and bold when focused, and dimmed primary text when
@@ -89,6 +103,8 @@ impl PixelSize {
 #[derive(Clone, Debug)]
 pub struct BigText<'a> {
     text: &'a str,
+    font: BigTextFont,
+    row_styles: Vec<Style>,
     pixel_size: PixelSize,
     subcell_glyphs: bool,
     style: Style,
@@ -105,6 +121,8 @@ impl<'a> BigText<'a> {
     pub fn new(text: &'a str) -> Self {
         Self {
             text,
+            font: BigTextFont::PressStart2P,
+            row_styles: Vec::new(),
             pixel_size: PixelSize::Full,
             subcell_glyphs: false,
             style: Style::new(),
@@ -118,6 +136,20 @@ impl<'a> BigText<'a> {
     #[must_use]
     pub fn pixel_size(mut self, pixel_size: PixelSize) -> Self {
         self.pixel_size = pixel_size;
+        self
+    }
+
+    /// Selects the bitmap font. `FiveBySeven` uses two full block cells per pixel.
+    #[must_use]
+    pub fn font(mut self, font: BigTextFont) -> Self {
+        self.font = font;
+        self
+    }
+
+    /// Applies styles by bitmap row, repeating the final style for any remaining rows.
+    #[must_use]
+    pub fn row_styles(mut self, styles: &[Style]) -> Self {
+        self.row_styles = styles.to_vec();
         self
     }
 
@@ -158,6 +190,31 @@ impl<'a> BigText<'a> {
     /// Returns the full row width in columns. Columns past `out.len()` are not stored.
     #[must_use]
     pub fn row_glyphs(&self, cell_row: u16, out: &mut [char]) -> usize {
+        if self.font == BigTextFont::FiveBySeven {
+            if cell_row >= 7 {
+                return 0;
+            }
+            let mut written = 0usize;
+            for ch in self.glyphs() {
+                let (rows, width) = clock_font::five_by_seven(ch);
+                for bit in rows[usize::from(cell_row)].as_bytes().iter().take(width) {
+                    let glyph = if *bit == b'#' { '█' } else { ' ' };
+                    for _ in 0..2 {
+                        if let Some(slot) = out.get_mut(written) {
+                            *slot = glyph;
+                        }
+                        written = written.saturating_add(1);
+                    }
+                }
+                for _ in 0..2 {
+                    if let Some(slot) = out.get_mut(written) {
+                        *slot = ' ';
+                    }
+                    written = written.saturating_add(1);
+                }
+            }
+            return written;
+        }
         let size = self.resolved_size();
         let (_width, height) = size.cells();
         if cell_row >= height {
@@ -189,6 +246,17 @@ impl<'a> BigText<'a> {
     }
 
     fn columns(&self) -> u16 {
+        if self.font == BigTextFont::FiveBySeven {
+            let wide = self
+                .glyphs()
+                .map(|ch| {
+                    let (rows, width) = clock_font::five_by_seven(ch);
+                    let _ = rows;
+                    width.saturating_mul(2).saturating_add(2)
+                })
+                .sum::<usize>();
+            return u16::try_from(wide).unwrap_or(u16::MAX);
+        }
         let (cell_w, _) = self.resolved_size().cells();
         let wide = self.glyphs().count().saturating_mul(usize::from(cell_w));
         u16::try_from(wide).unwrap_or(u16::MAX)
@@ -220,7 +288,33 @@ impl<'a> BigText<'a> {
         let y = area.y.saturating_add(cell_row);
         let right = area.x.saturating_add(area.width);
         let mut x = origin_x;
+        if self.font == BigTextFont::FiveBySeven {
+            let row_style = self.row_style(cell_row, style);
+            for ch in self.glyphs() {
+                let (rows, width) = clock_font::five_by_seven(ch);
+                if cell_row < 7 {
+                    let bits = rows[usize::from(cell_row)].as_bytes();
+                    for (column, bit) in bits.iter().take(width).enumerate() {
+                        if *bit == b'#' {
+                            let cell_x = x.saturating_add(u16::try_from(column * 2).unwrap_or(0));
+                            if cell_x < right {
+                                cx.put_char_patched(cell_x, y, '█', row_style);
+                            }
+                            let second = cell_x.saturating_add(1);
+                            if second < right {
+                                cx.put_char_patched(second, y, '█', row_style);
+                            }
+                        }
+                    }
+                }
+                x = x.saturating_add(
+                    u16::try_from(width.saturating_mul(2).saturating_add(2)).unwrap_or(u16::MAX),
+                );
+            }
+            return;
+        }
         let size = self.resolved_size();
+        let row_style = self.row_style(cell_row, style);
         for ch in self.glyphs() {
             if x >= right {
                 break;
@@ -231,10 +325,18 @@ impl<'a> BigText<'a> {
                 if x >= right {
                     break;
                 }
-                cx.put_char_patched(x, y, *glyph, style);
+                cx.put_char_patched(x, y, *glyph, row_style);
                 x = x.saturating_add(1);
             }
         }
+    }
+
+    fn row_style(&self, row: u16, fallback: Style) -> Style {
+        self.row_styles
+            .get(usize::from(row))
+            .or_else(|| self.row_styles.last())
+            .copied()
+            .unwrap_or(fallback)
     }
 }
 
@@ -244,7 +346,11 @@ impl Widget for BigText<'_> {
             return;
         }
         let style = self.paint_style(cx);
-        let (_cell_w, cell_h) = self.resolved_size().cells();
+        let cell_h = if self.font == BigTextFont::FiveBySeven {
+            7
+        } else {
+            self.resolved_size().cells().1
+        };
         let origin_x =
             area.x
                 .saturating_add(aligned_offset(self.alignment, area.width, self.columns()));
@@ -258,7 +364,11 @@ impl Widget for BigText<'_> {
         if avail.width == 0 || avail.height == 0 {
             return Size::new(0, 0);
         }
-        let (_cell_w, cell_h) = self.resolved_size().cells();
+        let cell_h = if self.font == BigTextFont::FiveBySeven {
+            7
+        } else {
+            self.resolved_size().cells().1
+        };
         Size::new(self.columns().min(avail.width), cell_h.min(avail.height))
     }
 }
