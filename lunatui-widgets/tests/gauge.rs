@@ -42,6 +42,25 @@ fn without_sub_cell_the_gauge_keeps_whole_cells() {
 }
 
 #[test]
+fn a_shorter_render_without_a_track_clears_the_old_fill() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(8, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Gauge::new(0.95)
+        .sub_cell(true)
+        .gauge_style(Style::new().fg(LAV).bg(TRACK))
+        .render(Rect::new(0, 0, 8, 1), &mut cx);
+    Gauge::new(0.3)
+        .sub_cell(true)
+        .render(Rect::new(0, 0, 8, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "██▍     ");
+    for x in 3..8 {
+        assert_eq!(grid.get(x, 0).map(Cell::style), Some(Style::new()), "x={x}");
+    }
+}
+
+#[test]
 fn track_style_fills_the_unfilled_cells() {
     let gauge = Gauge::new(0.45)
         .sub_cell(true)
