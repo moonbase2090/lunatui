@@ -545,6 +545,7 @@ fn barchart_lunatui(
         .map(Bar::new)
         .collect();
     BarChart::from_bars(&bars)
+        .background(base_style())
         .max(130)
         .style(accent_style())
         .render(Rect::new(area.x, area.y, area.width, height), &mut cx);

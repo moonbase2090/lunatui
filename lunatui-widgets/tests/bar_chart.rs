@@ -3,7 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{Bar, BarChart, BarDirection, BarGroup, RenderCx, Widget, WidgetState};
 use ratatui::buffer::Buffer;
@@ -326,9 +326,9 @@ fn bars_keep_the_background_behind_them() {
     let mut clusters = ClusterTable::new();
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
     let panel = lunatui_core::Color::Rgb(10, 20, 30);
-    cx.set_style(Rect::new(0, 0, 3, 2), Style::new().bg(panel));
     let data = [Bar::new(4).label("a"), Bar::new(1)];
     BarChart::from_bars(&data)
+        .background(Style::new().bg(panel))
         .max(8)
         .render(Rect::new(0, 0, 3, 2), &mut cx);
     for (x, y) in [(0, 0), (0, 1), (1, 0), (2, 0)] {
@@ -531,35 +531,48 @@ fn horizontal_label_and_value_use_the_upper_middle_row() {
 #[test]
 fn a_second_render_leaves_nothing_of_the_first() {
     let theme = Theme::builtin(Variant::Dark);
-    let mut grid = Grid::new(24, 6);
-    let mut clusters = ClusterTable::new();
     let area = Rect::new(0, 0, 24, 6);
-    let big = [Bar::new(100).label("ab").text_value("100"), Bar::new(60)];
+    let panel = Style::new().bg(Color::Rgb(10, 20, 30));
+    let big = [
+        Bar::new(100).label("ab").text_value("100"),
+        Bar::new(60).text_value("60"),
+    ];
     let small = [Bar::new(10)];
+    let cells = |grid: &Grid| -> Vec<u128> {
+        (0..6)
+            .flat_map(|y| (0..24).map(move |x| (x, y)))
+            .map(|(x, y)| grid.cell_bits(x, y))
+            .collect()
+    };
     for direction in [BarDirection::Vertical, BarDirection::Horizontal] {
-        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
-        BarChart::from_bars(&big)
-            .direction(direction)
-            .max(100)
-            .render(area, &mut cx);
-        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
-        BarChart::from_bars(&small)
-            .direction(direction)
-            .max(100)
-            .render(area, &mut cx);
-        let drawn: String = (0..6).map(|row| grid.row_display(row, &clusters)).collect();
-        let fresh = {
-            let mut grid = Grid::new(24, 6);
-            let mut clusters = ClusterTable::new();
-            let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
-            BarChart::from_bars(&small)
+        let chart = |bars| {
+            BarChart::from_bars(bars)
                 .direction(direction)
                 .max(100)
-                .render(area, &mut cx);
-            (0..6)
-                .map(|row| grid.row_display(row, &clusters))
-                .collect::<String>()
+                .background(panel)
         };
-        assert_eq!(drawn, fresh, "{direction:?}");
+        let mut grid = Grid::new(24, 6);
+        let mut clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        chart(&big).render(area, &mut cx);
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        chart(&small).render(area, &mut cx);
+        let mut fresh = Grid::new(24, 6);
+        let mut fresh_clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut fresh, &mut fresh_clusters, &theme);
+        chart(&small).render(area, &mut cx);
+        assert_eq!(cells(&grid), cells(&fresh), "{direction:?}");
     }
+}
+
+#[test]
+fn the_background_style_fills_cells_the_chart_does_not_draw() {
+    let panel = Style::new().bg(Color::Rgb(10, 20, 30));
+    let data = [Bar::new(8)];
+    let chart = BarChart::from_bars(&data).background(panel);
+    let (grid, _) = paint(&chart, 3, 2);
+    assert_eq!(style_at(&grid, 2, 0), panel);
+    assert_eq!(style_at(&grid, 1, 1), panel);
+    let (grid, _) = paint(&BarChart::from_bars(&data), 3, 2);
+    assert_eq!(style_at(&grid, 2, 0), Style::new());
 }

@@ -125,6 +125,7 @@ pub struct BarChart<'a> {
     max: Option<u64>,
     show_values: bool,
     state: WidgetState,
+    background: Option<Style>,
     bar_style: Option<Style>,
     label_style: Option<Style>,
     value_style: Option<Style>,
@@ -153,6 +154,7 @@ impl<'a> BarChart<'a> {
             max: None,
             show_values: false,
             state: WidgetState::Normal,
+            background: None,
             bar_style: None,
             label_style: None,
             value_style: None,
@@ -205,6 +207,14 @@ impl<'a> BarChart<'a> {
     #[must_use]
     pub const fn state(mut self, state: WidgetState) -> Self {
         self.state = state;
+        self
+    }
+
+    /// Style the area is reset to before anything is drawn, such as a panel background. Without
+    /// one, cells are reset to the default style.
+    #[must_use]
+    pub const fn background(mut self, style: Style) -> Self {
+        self.background = Some(style);
         self
     }
 
@@ -471,7 +481,7 @@ impl Widget for BarChart<'_> {
         if area.width == 0 || area.height == 0 {
             return;
         }
-        cx.clear_area(area);
+        cx.clear_area(area, self.background.unwrap_or_default());
         let max = self.max.unwrap_or_else(|| self.largest());
         match self.direction {
             BarDirection::Vertical => self.render_vertical(area, cx, max),

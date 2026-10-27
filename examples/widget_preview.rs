@@ -2081,6 +2081,10 @@ impl BarBoard {
         Style::new().fg(self.text)
     }
 
+    fn fill(&self) -> Style {
+        Style::new().fg(self.text).bg(self.surface)
+    }
+
     fn requests(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let plot = self.panel("Requests per minute", area, cx);
         let tiers = [self.ok, self.accent, self.warn].map(|color| Style::new().fg(color));
@@ -2114,6 +2118,7 @@ impl BarBoard {
             .map(|(group, name)| BarGroup::new(group).label(name))
             .collect();
         BarChart::from_groups(&groups)
+            .background(self.fill())
             .bar_width(4)
             .bar_gap(1)
             .group_gap(3)
@@ -2143,6 +2148,7 @@ impl BarBoard {
             })
             .collect();
         BarChart::from_bars(&bars)
+            .background(self.fill())
             .direction(BarDirection::Horizontal)
             .bar_width(2)
             .bar_gap(1)
@@ -2167,6 +2173,7 @@ impl BarBoard {
             })
             .collect();
         BarChart::from_bars(&bars)
+            .background(self.fill())
             .bar_width(2)
             .bar_gap(1)
             .max(130)
@@ -2193,6 +2200,7 @@ impl BarBoard {
                 plot.height.saturating_sub(2),
             );
             BarChart::from_bars(&depth)
+                .background(self.fill())
                 .state(state)
                 .max(32)
                 .render(chart, cx);
