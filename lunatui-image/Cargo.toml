@@ -10,4 +10,9 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+decode = ["dep:image"]
+
 [dependencies]
+image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg", "gif", "webp"], optional = true }

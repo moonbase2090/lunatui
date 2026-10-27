@@ -19,6 +19,7 @@ calendar = ["widget-state"]
 sparkline = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
+image-decode = ["image", "lunatui-image/decode"]
 
 [dependencies]
 lunatui-core = { version = "0.1.12", path = "../lunatui-core" }

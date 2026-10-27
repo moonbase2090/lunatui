@@ -21,7 +21,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 `SpinnerPreset` is a catalog of named cycles on the existing `Spinner`: dots, line, arc, bounce, pulse, moon, ring, bars, quadrant, and half-moon. Each preset has its own frames and the interval between them. `Spinner::preset` selects one. The default spinner still draws Braille dots, and the caller still supplies the frame index.
 
-`Image` is behind the `image` feature. It accepts a validated immutable RGBA8 source and draws a half-block fallback using the source alpha composited over the `surface.0` theme token. A focused image gets a rounded `focus.ring` border; a disabled image is dimmed over the surface. `Fit::Contain`, `Cover`, `Stretch`, and `Native` share pixel-space geometry from `lunatui-image`. The runtime currently presents this cell fallback; terminal image protocol output is not wired yet.
+`Image`, `ImageSource`, and `ImageFit` are behind the `image` feature. `ImageSource::rgba8` accepts validated immutable RGBA8 data; `ImageSource::decode` is also available with `image-decode`, for PNG, JPEG, GIF, and WebP. The widget draws a half-block fallback with alpha composited over the `surface.0` theme token. A focused image gets a rounded `focus.ring` border; a disabled image is dimmed over the surface. `ImageFit::Contain`, `Cover`, `Stretch`, and `Native` share pixel-space geometry from `lunatui-image`. The runtime currently presents this cell fallback; terminal image protocol output is not wired yet.
 
 `Lightcycle::new(elapsed)` draws an eight-way Braille sub-cell trail for the supplied elapsed time. It does not own a clock; the application supplies each frame's time and schedules redraws.
 

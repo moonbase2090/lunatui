@@ -9,3 +9,8 @@ bottom. It checks dimensions and byte length before retaining the source.
 `Cover`, `Stretch`, or `Native` behavior. A geometry contains both the source
 crop and the destination rectangle so every output protocol can use the same
 fit result.
+
+The optional `decode` feature uses the `image` crate with only PNG, JPEG, GIF,
+and WebP codecs enabled. It decodes GIF and WebP inputs as their first frame;
+applications own animation scheduling. Encoded dimensions and decoded RGBA
+storage are bounded before the source is retained.
