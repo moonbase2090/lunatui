@@ -87,6 +87,7 @@ impl<S: RowSource> List<S> {
 
     /// An optional mark per row, right-aligned `padding` cells in from the right
     /// edge. It takes the row's background and keeps its own color and attributes.
+    /// On a row with a mark, the item text is clipped so it ends before the mark.
     #[must_use]
     pub fn marks(mut self, marks: Vec<Option<(String, Style)>>, padding: u16) -> Self {
         self.marks = marks;
@@ -130,15 +131,18 @@ impl<S: RowSource> Widget for List<S> {
                     .saturating_add(1)
                     .min(end);
             }
-            let text = row.cells.first().map_or("", String::as_str);
-            let draw = clip_display_prefix(text, end.saturating_sub(x));
-            cx.put_str(x, line, draw, style);
-            if let Some(Some((mark, mark_style))) = self.marks.get(index) {
-                let mark_width = cell_width(mark);
+            let mark = self.marks.get(index).and_then(Option::as_ref).map(|mark| {
                 let mark_x = end
                     .saturating_sub(self.mark_padding)
-                    .saturating_sub(mark_width)
+                    .saturating_sub(cell_width(&mark.0))
                     .max(area.x);
+                (mark_x, mark)
+            });
+            let text_end = mark.map_or(end, |(mark_x, _)| mark_x);
+            let text = row.cells.first().map_or("", String::as_str);
+            let draw = clip_display_prefix(text, text_end.saturating_sub(x));
+            cx.put_str(x, line, draw, style);
+            if let Some((mark_x, (mark, mark_style))) = mark {
                 let draw = clip_display_prefix(mark, end.saturating_sub(mark_x));
                 cx.put_str(mark_x, line, draw, decoration(style, *mark_style));
             }

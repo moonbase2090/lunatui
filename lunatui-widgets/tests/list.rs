@@ -89,6 +89,24 @@ fn icons_marks_and_the_highlight_symbol_lay_out_each_row() {
 }
 
 #[test]
+fn long_item_text_stops_before_its_mark() {
+    let mut source = VecSource::new();
+    for name in ["Calendar entries", "Gauge settings"] {
+        source.push_row(vec![name.to_owned()]);
+    }
+    let list = List::new(source).marks(
+        vec![Some(("✓".to_owned(), Style::new().fg(GREEN))), None],
+        1,
+    );
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(10, 2);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    list.render(Rect::new(0, 0, 10, 2), &mut cx);
+    assert_eq!(rows(&grid, &clusters), ["Calendar✓ ", "Gauge sett"]);
+}
+
+#[test]
 fn a_plain_list_still_draws_text_from_the_left_edge() {
     let list = List::new(source()).selected(Some(0));
     let (grid, clusters) = render(&list, 10, 3);
