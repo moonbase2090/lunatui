@@ -56,7 +56,7 @@ pub use spinner::{Spinner, SpinnerPattern};
 pub use state::WidgetState;
 pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
-pub use table::Table;
+pub use table::{CellStyle, Table};
 pub use tabs::Tabs;
 pub use text_input::TextInput;
 pub use widget::Widget;
