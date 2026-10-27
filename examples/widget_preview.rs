@@ -15,7 +15,8 @@ use lunatui_core::{
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
-    Block, BorderType, Date, DateStyle, Monthly, RenderCx, Sparkline, Widget, WidgetState,
+    Alignment, BigText, Block, BorderType, Date, DateStyle, Monthly, PixelSize, RenderCx,
+    Sparkline, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -38,6 +39,11 @@ const PREVIEWS: &[Preview] = &[
         name: "calendar",
         native: calendar_native,
         baseline: calendar_baseline,
+    },
+    Preview {
+        name: "bigtext",
+        native: bigtext_native,
+        baseline: bigtext_baseline,
     },
     Preview {
         name: "sparkline",
@@ -829,6 +835,405 @@ fn calendar_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u3
     );
 }
 
+#[derive(Clone, Copy)]
+struct CutInk {
+    text: Color,
+    accent: Color,
+    surface: Color,
+    raised: Color,
+    focus: Color,
+    ok: Color,
+    warn: Color,
+    fail: Color,
+}
+
+impl CutInk {
+    fn new(cx: &RenderCx<'_>) -> Self {
+        Self {
+            text: cx.token(Token::TextPrimary),
+            accent: cx.token(Token::Accent),
+            surface: cx.token(Token::Surface0),
+            raised: cx.token(Token::Surface1),
+            focus: cx.token(Token::FocusRing),
+            ok: cx.token(Token::Ok),
+            warn: cx.token(Token::Warn),
+            fail: cx.token(Token::Fail),
+        }
+    }
+}
+
+struct CutScene {
+    ink: CutInk,
+    tick: u32,
+    width: u16,
+    height: u16,
+}
+
+impl CutScene {
+    fn second(&self) -> u32 {
+        (self.tick / 30) % 60
+    }
+
+    fn remain(&self) -> u32 {
+        6_u32.saturating_sub(self.tick / 30)
+    }
+
+    fn live(&self) -> bool {
+        self.tick / 30 >= 6
+    }
+
+    fn metric(&self) -> usize {
+        let tick = self.tick;
+        if (72..120).contains(&tick) {
+            1
+        } else if (120..192).contains(&tick) {
+            2
+        } else {
+            0
+        }
+    }
+}
+
+fn requests(tick: u32) -> u32 {
+    1_480 + tick.saturating_mul(2)
+}
+
+fn latency(tick: u32) -> u32 {
+    60 + (tick / 3) % 30
+}
+
+fn error_count(tick: u32) -> u32 {
+    if tick < 120 {
+        1
+    } else if tick < 192 {
+        2 + ((tick - 120) / 3).min(12)
+    } else {
+        14_u32.saturating_sub((tick - 192) / 2).max(3)
+    }
+}
+
+fn live_count(tick: u32) -> u32 {
+    18_420 + tick.saturating_mul(17)
+}
+
+fn count_text(tick: u32) -> String {
+    let count = live_count(tick);
+    format!("{count:06}")
+}
+
+fn cut_hint(tick: u32) -> &'static str {
+    let into = tick % 48;
+    if tick > 0 && into < 8 {
+        "l  metric"
+    } else {
+        "h l metric"
+    }
+}
+
+fn draw_cut_chrome(cx: &mut RenderCx<'_>, scene: &CutScene) {
+    let bar = Style::new().fg(scene.ink.text).bg(scene.ink.raised);
+    cx.set_style(Rect::new(0, 0, scene.width, 1), bar);
+    paint(
+        cx,
+        1,
+        0,
+        6,
+        " live ",
+        bold(Style::new().fg(scene.ink.surface).bg(scene.ink.ok)),
+    );
+    paint(cx, 8, 0, 10, "cutover", bold(bar));
+    let clock = format!("14:02:{:02}", scene.second());
+    let clock_cols = u16::try_from(clock.len()).unwrap_or(0);
+    paint(
+        cx,
+        scene.width.saturating_sub(clock_cols.saturating_add(1)),
+        0,
+        clock_cols,
+        &clock,
+        Style::new().fg(scene.ink.accent).bg(scene.ink.raised),
+    );
+    paint(
+        cx,
+        1,
+        1,
+        32,
+        "prod     preview window",
+        Style::new().fg(scene.ink.text).bg(scene.ink.surface),
+    );
+    let footer_y = scene.height.saturating_sub(1);
+    cx.set_style(Rect::new(0, footer_y, scene.width, 1), bar);
+    let hint = cut_hint(scene.tick);
+    let hint_color = if hint.starts_with('l') {
+        scene.ink.focus
+    } else {
+        scene.ink.text
+    };
+    paint(
+        cx,
+        1,
+        footer_y,
+        16,
+        hint,
+        Style::new().fg(hint_color).bg(scene.ink.raised),
+    );
+    let stamp = if scene.live() { "live" } else { "waiting" };
+    let stamp_cols = u16::try_from(stamp.len()).unwrap_or(0);
+    let stamp_color = if scene.live() {
+        scene.ink.ok
+    } else {
+        scene.ink.warn
+    };
+    paint(
+        cx,
+        scene.width.saturating_sub(stamp_cols.saturating_add(1)),
+        footer_y,
+        stamp_cols,
+        stamp,
+        Style::new().fg(stamp_color).bg(scene.ink.raised),
+    );
+}
+
+fn hero_size(width: u16) -> PixelSize {
+    if width >= 100 {
+        PixelSize::HalfHeight
+    } else {
+        PixelSize::Quadrant
+    }
+}
+
+fn draw_clock(cx: &mut RenderCx<'_>, scene: &CutScene, y: u16) {
+    let clock = format!("14:02:{:02}", scene.second());
+    let size = hero_size(scene.width);
+    let (_width, height) = size.cells();
+    BigText::new(&clock)
+        .pixel_size(size)
+        .alignment(Alignment::Center)
+        .state(WidgetState::Focused)
+        .render(Rect::new(0, y, scene.width, height), cx);
+}
+
+fn draw_status(cx: &mut RenderCx<'_>, scene: &CutScene, y: u16) {
+    let word = if scene.live() { "LIVE" } else { "WAIT" };
+    let color = if scene.live() {
+        scene.ink.ok
+    } else {
+        scene.ink.warn
+    };
+    let size = hero_size(scene.width);
+    let (_width, height) = size.cells();
+    BigText::new(word)
+        .pixel_size(size)
+        .alignment(Alignment::Center)
+        .style(Style::new().fg(color))
+        .render(Rect::new(0, y, scene.width, height), cx);
+}
+
+fn draw_countdown(cx: &mut RenderCx<'_>, scene: &CutScene, y: u16) {
+    let left = format!("00:00:{:02}", scene.remain());
+    let color = if scene.live() {
+        scene.ink.ok
+    } else {
+        scene.ink.warn
+    };
+    let size = hero_size(scene.width);
+    let (_width, height) = size.cells();
+    BigText::new(&left)
+        .pixel_size(size)
+        .alignment(Alignment::Center)
+        .style(Style::new().fg(color))
+        .render(Rect::new(0, y, scene.width, height), cx);
+}
+
+fn draw_metric(
+    cx: &mut RenderCx<'_>,
+    scene: &CutScene,
+    area: Rect,
+    label: &str,
+    value: &str,
+    hot: bool,
+    picked: bool,
+) {
+    let (_width, glyph_h) = PixelSize::HalfHeight.cells();
+    if area.width < 8 || area.height < glyph_h.saturating_add(1) {
+        return;
+    }
+    let label_style = if picked {
+        bold(Style::new().fg(scene.ink.focus).bg(scene.ink.raised))
+    } else {
+        Style::new().fg(scene.ink.text).bg(scene.ink.surface)
+    };
+    if picked {
+        cx.set_style(area, Style::new().fg(scene.ink.text).bg(scene.ink.raised));
+    }
+    let label_cols = u16::try_from(label.len()).unwrap_or(0);
+    let label_x = area.x + area.width.saturating_sub(label_cols) / 2;
+    paint(cx, label_x, area.y, label_cols, label, label_style);
+    let mut text = BigText::new(value)
+        .pixel_size(PixelSize::HalfHeight)
+        .alignment(Alignment::Center);
+    text = if hot {
+        text.style(Style::new().fg(scene.ink.fail))
+    } else if picked {
+        text.state(WidgetState::Focused)
+    } else {
+        text.state(WidgetState::Normal)
+    };
+    text.render(
+        Rect::new(area.x, area.y.saturating_add(1), area.width, glyph_h),
+        cx,
+    );
+}
+
+fn draw_metrics(cx: &mut RenderCx<'_>, scene: &CutScene, y: u16) {
+    let gap = 2_u16;
+    let col_w = scene
+        .width
+        .saturating_sub(4)
+        .saturating_sub(gap.saturating_mul(2))
+        / 3;
+    let (glyph_w, _) = PixelSize::HalfHeight.cells();
+    if col_w < glyph_w.saturating_mul(4) {
+        return;
+    }
+    let values = [
+        ("req/s", format!("{:04}", requests(scene.tick)), false),
+        ("p99 ms", format!("{:03}", latency(scene.tick)), false),
+        (
+            "errors",
+            format!("{:03}", error_count(scene.tick)),
+            error_count(scene.tick) >= 8,
+        ),
+    ];
+    let picked = scene.metric();
+    for (index, (label, value, hot)) in values.iter().enumerate() {
+        let x = 2 + u16::try_from(index).unwrap_or(0) * (col_w + gap);
+        let (_width, glyph_h) = PixelSize::HalfHeight.cells();
+        draw_metric(
+            cx,
+            scene,
+            Rect::new(x, y, col_w, glyph_h.saturating_add(1)),
+            label,
+            value,
+            *hot,
+            index == picked,
+        );
+    }
+}
+
+fn readout(scene: &CutScene) -> String {
+    match scene.metric() {
+        0 => format!("requests  {} /s", requests(scene.tick)),
+        1 => format!("p99  {} ms", latency(scene.tick)),
+        _ => format!("errors  {}", error_count(scene.tick)),
+    }
+}
+
+fn draw_cut_board(cx: &mut RenderCx<'_>, scene: &CutScene) {
+    let clock_y = 2;
+    draw_clock(cx, scene, clock_y);
+    let (_width, clock_h) = hero_size(scene.width).cells();
+    let caption_y = clock_y.saturating_add(clock_h);
+    let caption = "local time";
+    let caption_cols = u16::try_from(caption.len()).unwrap_or(0);
+    paint(
+        cx,
+        scene.width.saturating_sub(caption_cols) / 2,
+        caption_y,
+        caption_cols,
+        caption,
+        Style::new().fg(scene.ink.text).bg(scene.ink.surface),
+    );
+    let status_y = caption_y.saturating_add(2);
+    draw_status(cx, scene, status_y);
+    let (_width, status_h) = hero_size(scene.width).cells();
+    let label_y = status_y.saturating_add(status_h);
+    let label = "cutover";
+    let label_cols = u16::try_from(label.len()).unwrap_or(0);
+    paint(
+        cx,
+        scene.width.saturating_sub(label_cols) / 2,
+        label_y,
+        label_cols,
+        label,
+        Style::new().fg(scene.ink.accent).bg(scene.ink.surface),
+    );
+    let count_y = label_y.saturating_add(1);
+    draw_countdown(cx, scene, count_y);
+    let (_width, count_h) = hero_size(scene.width).cells();
+    let metrics_y = count_y.saturating_add(count_h).saturating_add(1);
+    draw_metrics(cx, scene, metrics_y);
+    let (_width, metric_h) = PixelSize::HalfHeight.cells();
+    let note = readout(scene);
+    paint(
+        cx,
+        2,
+        metrics_y.saturating_add(metric_h).saturating_add(1),
+        scene.width.saturating_sub(4),
+        &note,
+        Style::new().fg(scene.ink.focus).bg(scene.ink.surface),
+    );
+}
+
+fn draw_compact(cx: &mut RenderCx<'_>, scene: &CutScene) {
+    let clock_y = 2;
+    draw_clock(cx, scene, clock_y);
+    let (_width, clock_h) = hero_size(scene.width).cells();
+    let count_y = clock_y.saturating_add(clock_h).saturating_add(1);
+    let (_width, count_h) = hero_size(scene.width).cells();
+    if count_y.saturating_add(count_h) < scene.height.saturating_sub(1) {
+        draw_countdown(cx, scene, count_y);
+    }
+}
+
+fn bigtext_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let scene = CutScene {
+        ink: CutInk::new(&cx),
+        tick,
+        width: area.width,
+        height: area.height,
+    };
+    draw_cut_chrome(&mut cx, &scene);
+    if scene.width < 100 || scene.height < 34 {
+        draw_compact(&mut cx, &scene);
+        return;
+    }
+    draw_cut_board(&mut cx, &scene);
+}
+
+fn bigtext_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
+    let count = count_text(tick);
+    let text = BigText::new(&count).pixel_size(PixelSize::Quadrant);
+    let color = match theme.resolve(Token::Accent) {
+        Color::Rgb(red, green, blue) => RatColor::Rgb(red, green, blue),
+        Color::Indexed(index) => RatColor::Indexed(index),
+        _ => RatColor::Reset,
+    };
+    let style = ratatui::style::Style::default().fg(color);
+    let (_width, height) = PixelSize::Quadrant.cells();
+    for row in 0..height.min(area.height) {
+        let mut glyphs = [' '; 64];
+        let columns = text.row_glyphs(row, &mut glyphs);
+        let y = area.y.saturating_add(row);
+        let limit = columns.min(glyphs.len()).min(usize::from(area.width));
+        for (col, glyph) in glyphs.iter().take(limit).enumerate() {
+            let x = area.x.saturating_add(u16::try_from(col).unwrap_or(0));
+            if x >= area.x.saturating_add(area.width) {
+                break;
+            }
+            buffer[(x, y)].set_char(*glyph).set_style(style);
+        }
+    }
+}
 fn wave(index: u32) -> u64 {
     let phase = index % 72;
     let rise = if phase < 36 { phase } else { 72 - phase };

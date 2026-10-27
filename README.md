@@ -50,3 +50,11 @@ A team schedule: the month beside that day's agenda, colored release, review, on
 ![Calendar widget: a team schedule in the dark theme](docs/media/calendar.gif)
 
 Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-showcase.sh` (`CASE=calendar`, 120×36, 8 s at 30 fps, dark).
+
+### BigText
+
+A cutover board: a live clock, a countdown that reaches zero, and ticking metrics. The selection moves, and the error count turns red while it is hot.
+
+![BigText widget: a cutover board in the dark theme](docs/media/bigtext.gif)
+
+Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36, dark, about 11 seconds).

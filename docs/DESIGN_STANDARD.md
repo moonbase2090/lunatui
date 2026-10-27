@@ -84,6 +84,8 @@ graphite-core state tokens: hover = `title_hover` fill + `hover_outline`; focus 
 
 **Sparkline** — eighth blocks by default, braille mode for 2× horizontal density. Single series color, last point emphasized in accent with fg-strong value label optional. Baseline at min unless `zero_baseline`. No border by default.
 
+**BigText** — large letters from an 8×8 bitmap, packed into full blocks (two columns per pixel), half blocks, quadrants, braille, sextants, or octants. Full blocks and half-height blocks keep square pixels on a cell about twice as tall as it is wide. Half-width and quadrant pixels do not. Sextants pad one blank pixel row. Sextants and octants pack as quadrants until the caller reports those glyphs. Digits, capitals, and `:.-%` are derived from Press Start 2P; the license text is `lunatui-widgets/assets/fonts/PressStart2P-OFL.txt`. Resting text is `text.primary`. Focused text is accent and bold. Disabled text is dimmed. No border by default. Top aligned; horizontal alignment is left, center, or right.
+
 **BarChart** — bars 1–3 cells wide with 1-cell gap; eighth-block tops for smooth heights. Value labels above bars in fg-muted; category labels below, truncated with `…`. Multi-series uses series-1..n, grouped not stacked by default. Hover/selected bar: accent-soft background column.
 
 **Chart** — braille canvas (octants when available) for lines; points as `•`. Axes in border, tick labels in fg-muted, max 5 ticks per axis with "nice" numbers. Gridlines optional, dotted (`┄`) in border at 50% visual weight. Legend top-right inside the plot, swatch `■` + label. Series colors fixed order series-1..6.

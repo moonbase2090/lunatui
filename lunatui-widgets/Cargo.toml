@@ -4,7 +4,7 @@ description = "Widgets for lunatui."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license.workspace = true
+license = "MIT AND OFL-1.1"
 repository.workspace = true
 
 [lints]
@@ -17,6 +17,7 @@ widget-state = []
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
+bigtext = ["widget-state", "lunatui-core/subcell"]
 
 [dependencies]
 lunatui-core = { version = "0.1.9", path = "../lunatui-core" }
@@ -63,6 +64,11 @@ required-features = ["calendar"]
 name = "status_dot_color_profiles"
 path = "tests/status_dot_color_profiles.rs"
 required-features = ["color-profiles"]
+
+[[test]]
+name = "bigtext"
+path = "tests/bigtext.rs"
+required-features = ["bigtext"]
 
 [[test]]
 name = "sparkline"

@@ -3,6 +3,8 @@
 
 #![doc = include_str!("../README.md")]
 
+#[cfg(feature = "bigtext")]
+mod big_text;
 mod block;
 mod borders;
 #[cfg(feature = "calendar")]
@@ -27,6 +29,8 @@ mod tabs;
 mod text_input;
 mod widget;
 
+#[cfg(feature = "bigtext")]
+pub use big_text::{BigText, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
