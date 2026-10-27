@@ -119,3 +119,26 @@ fn plain_tabs_keep_their_one_row_layout() {
         .render(Rect::new(0, 0, 20, 1), &mut cx);
     assert_eq!(grid.row_display(0, &clusters), "One Two             ");
 }
+
+#[test]
+fn boxed_tabs_clear_the_old_box_when_the_selection_moves() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(38, 3);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    boxed_tabs()
+        .indent(1)
+        .render(Rect::new(0, 0, 38, 3), &mut cx);
+    boxed_tabs()
+        .indent(1)
+        .select(0)
+        .render(Rect::new(0, 0, 38, 3), &mut cx);
+    assert_eq!(
+        rows(&grid, &clusters, 0, 3),
+        [
+            " ╭────────────╮                       ",
+            " │ 1 Overview │   2 Logs     3 Metrics",
+            "─╯            ╰───────────────────────",
+        ]
+    );
+}
