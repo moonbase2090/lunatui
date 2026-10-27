@@ -783,67 +783,22 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 (32, 7, "Events", "312", "/s", &events[14..], BLUE),
             ];
             for (x, y, title, value, unit, data, color) in tiles {
-                let accent = if title == "Frames / s" { LAV } else { MUTED };
+                let focused = title == "Frames / s";
                 Block::bordered()
                     .border_type(BorderType::Rounded)
                     .style(Style::new().bg(BG))
-                    .border_style(style(if title == "Frames / s" { LINE_HI } else { LINE }))
+                    .border_style(style(if focused { LINE_HI } else { LINE }))
+                    .title(format!(" {title} "))
+                    .title_style(bold(if focused { LAV } else { MUTED }))
+                    .title_inset(1)
                     .render(Rect::new(x, y, 30, 6), &mut cx);
-                put(
-                    &mut cx,
-                    x + 2,
-                    y,
-                    "─",
-                    if title == "Frames / s" { LINE_HI } else { LINE },
-                );
-                put(&mut cx, x + 2, y, " ", BG);
-                put_on_bold(&mut cx, x + 3, y, title, accent, BG);
-                put_on_bold(&mut cx, x + 2, y + 1, value, color, BG);
-                put_on(
-                    &mut cx,
-                    x + 2 + u16::try_from(value.len()).unwrap_or_default() + 1,
-                    y + 1,
-                    unit,
-                    DIM,
-                    BG,
-                );
+                label(&mut cx, x + 2, y + 1, value, bold(color));
+                let value_width = u16::try_from(text_display_width(value)).unwrap_or_default();
+                label(&mut cx, x + 3 + value_width, y + 1, unit, style(DIM));
                 Sparkline::new(data)
                     .max(1_000_000)
                     .style(style(color))
                     .render(Rect::new(x + 2, y + 2, 26, 3), &mut cx);
-                let exact_rows: [&str; 3] = match title {
-                    "Frames / s" => [
-                        "    ▂   ▂▂▁▁  █▁          ",
-                        "▄▅▄▇█▆▅▆████▇▇██▇▆▅▆▅▂▅▅▆▄",
-                        "██████████████████████████",
-                    ],
-                    "Render time" => [
-                        "                          ",
-                        " ▁▃▃▂▁█ ███▃▂▂█        ██▂",
-                        "▆██████▇███████▅▅▃▄▆▇▄▆███",
-                    ],
-                    "Memory" => [
-                        "      █                   ",
-                        "▅▄▅▇▇▇█▆▆▆▅▃▃▃▂▃▂▃▂▂▂▃▄▃▃▃",
-                        "██████████████████████████",
-                    ],
-                    _ => [
-                        "   ▂▃     █           ██▃▅",
-                        " ▄▇██▅▃▃▅▇█▁▂▂▂   ▁▅▅▃████",
-                        "▅██████████████▆▆▃████████",
-                    ],
-                };
-                for (row, cells) in exact_rows.iter().enumerate() {
-                    put(
-                        &mut cx,
-                        x + 2,
-                        y + 2 + u16::try_from(row).unwrap_or_default(),
-                        cells,
-                        color,
-                    );
-                }
-                let title_end = x + 3 + u16::try_from(title.chars().count()).unwrap_or_default();
-                put(&mut cx, title_end, y, " ", BG);
             }
             let throughput = [
                 575_988, 507_029, 608_622, 503_326, 563_269, 546_601, 433_340, 478_463, 358_150,
@@ -858,11 +813,10 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 .border_type(BorderType::Rounded)
                 .style(Style::new().bg(BG))
                 .border_style(style(LINE))
+                .title(" Throughput · last 60s ")
+                .title_style(bold(MUTED))
+                .title_inset(1)
                 .render(Rect::new(2, 13, 60, 10), &mut cx);
-            put(&mut cx, 3, 13, "─", LINE);
-            put(&mut cx, 4, 13, " ", BG);
-            put_on_bold(&mut cx, 5, 13, "Throughput · last 60s", MUTED, BG);
-            put(&mut cx, 26, 13, " ", BG);
             Sparkline::new(&throughput)
                 .max(1_000_000)
                 .style(style(LAV))
@@ -876,27 +830,9 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                     style(LAV2),
                 ])
                 .render(Rect::new(4, 14, 56, 7), &mut cx);
-            let exact_rows = [
-                "                                                        ",
-                "                                                █ ▄  █  ",
-                "█ ▂                 ▃ ▃    ▂ ▂▅▂▂              ▄█▃█▄▃█▂▂",
-                "█▄█▄▇▆█▂         ▃▄▂█▃█▇▃█▁█▆████▁        ▁▄█▃▅█████████",
-                "████████▄▅   ▆  ▂█████████████████▃█▆▅▂▅▄▂██████████████",
-                "██████████▇▃▅█▇▅████████████████████████████████████████",
-                "████████████████████████████████████████████████████████",
-            ];
-            for (row, cells) in exact_rows.iter().enumerate() {
-                put(
-                    &mut cx,
-                    4,
-                    14 + u16::try_from(row).unwrap_or_default(),
-                    cells,
-                    if row > 2 { LAV2 } else { LAV },
-                );
-            }
-            put_on(&mut cx, 4, 21, "min 0.62k", DIM, BG);
-            put_on(&mut cx, 26, 21, "avg 1.18k", DIM, BG);
-            put_on(&mut cx, 49, 21, "max 1.31k", MOON, BG);
+            label(&mut cx, 4, 21, "min 0.62k", style(DIM));
+            label(&mut cx, 26, 21, "avg 1.18k", style(DIM));
+            label(&mut cx, 49, 21, "max 1.31k", style(MOON));
         }
         "spinner" => {
             put_bold(&mut cx, 3, 2, "Styles", LAV);
