@@ -63,3 +63,35 @@ fn overlay_renders_modal_block() {
     Overlay::new(modal, Rect::new(4, 2, 12, 5)).render(Rect::new(0, 0, 20, 10), &mut cx);
     assert!(grid.row_display(2, &clusters).contains('┌'));
 }
+
+#[test]
+fn shadow_sits_one_cell_right_and_down_behind_the_modal() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(8, 5);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    for y in 0..5 {
+        cx.put_str(0, y, "........", Style::new());
+    }
+    let shadow = Color::Rgb(4, 5, 11);
+    let panel = Color::Rgb(22, 28, 61);
+    Overlay::new(
+        Block::new().style(Style::new().bg(panel)),
+        Rect::new(2, 1, 4, 2),
+    )
+    .backdrop(0.0, Color::Rgb(0, 0, 0))
+    .shadow(Style::new().bg(shadow))
+    .render(Rect::new(0, 0, 8, 5), &mut cx);
+    let rows: Vec<String> = (0..5).map(|y| grid.row_display(y, &clusters)).collect();
+    assert_eq!(
+        rows,
+        ["........", "..    ..", "..     .", "...    .", "........"]
+    );
+    let bg = |x, y| grid.get(x, y).map(|cell| cell.style().bg);
+    assert_eq!(bg(2, 1), Some(panel));
+    assert_eq!(bg(6, 2), Some(shadow), "right edge of the shadow");
+    assert_eq!(bg(3, 3), Some(shadow), "bottom edge of the shadow");
+    assert_eq!(bg(6, 3), Some(shadow), "shadow corner");
+    assert_ne!(bg(6, 1), Some(shadow), "no shadow above the offset");
+    assert_ne!(bg(2, 3), Some(shadow), "no shadow left of the offset");
+}
