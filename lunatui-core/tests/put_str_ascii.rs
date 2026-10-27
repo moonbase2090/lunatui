@@ -6,7 +6,7 @@
 use lunatui_core::{Attrs, Cell, ClusterTable, Color, Grid, Style};
 
 #[test]
-fn ascii_writes_cells_and_ignores_attributes() {
+fn ascii_writes_cells_and_preserves_attributes() {
     let mut clusters = ClusterTable::new();
     let mut grid = Grid::new(8, 1);
     let bold = Style::new()
@@ -18,7 +18,7 @@ fn ascii_writes_cells_and_ignores_attributes() {
         grid.get(3, 0)
             .map(Cell::style)
             .map(|style| (style.fg, style.attrs.bold())),
-        Some((Color::Indexed(2), false))
+        Some((Color::Indexed(2), true))
     );
     let dirty = grid.row_dirty(0);
     assert_eq!(
