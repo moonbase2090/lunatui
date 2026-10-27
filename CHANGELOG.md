@@ -26,6 +26,7 @@ Every PR adds its entry under **Unreleased**.
 - A `BarChart` widget behind the off-by-default `barchart` feature: bars of any width with eighth-block tops, a bar gap, per-bar styles, a track style, and labels under the bars.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
+- `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
 
 ### Changed
 

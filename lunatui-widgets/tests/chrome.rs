@@ -3,7 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
+use lunatui_core::{Attrs, Cell, ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Gauge, RenderCx, Spinner, SpinnerPattern, StatusBar, Tabs, TextInput, Widget,
@@ -255,4 +255,52 @@ fn tabs_highlight_style_bolds_only_the_selected_title() {
     assert_eq!(bold_at(0), Some(false));
     assert_eq!(bold_at(4), Some(true));
     assert_eq!(bold_at(6), Some(true));
+}
+
+#[test]
+fn status_bar_segments_fill_the_row_and_pin_right_segments_to_the_edge() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(26, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 0, "xxxxxxxxxxxxxxxxxxxxxxxxxx", Style::new());
+    let panel = Color::Rgb(17, 22, 49);
+    let mode = Style::new()
+        .fg(Color::Rgb(10, 13, 28))
+        .bg(Color::Rgb(185, 167, 240))
+        .with_attrs(Attrs::new().set_bold(true));
+    let percent = Style::new()
+        .fg(Color::Rgb(10, 13, 28))
+        .bg(Color::Rgb(243, 226, 176));
+    StatusBar::new("")
+        .style(Style::new().bg(panel))
+        .left([(" NORMAL ", mode), (" main ", Style::new().bg(panel))])
+        .right([(" rs ", Style::new().bg(panel)), (" 50% ", percent)])
+        .render(Rect::new(1, 0, 24, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "x NORMAL  main   rs  50% x");
+    let style = |x| grid.get(x, 0).map(Cell::style).unwrap_or_default();
+    assert!(style(2).attrs.bold());
+    assert_eq!(style(2).bg, Color::Rgb(185, 167, 240));
+    assert_eq!(
+        style(16).bg,
+        panel,
+        "the gap between groups takes the bar style"
+    );
+    assert_eq!(
+        style(22).bg,
+        Color::Rgb(243, 226, 176),
+        "right group ends at the edge"
+    );
+    assert_eq!(grid.row_display(0, &clusters).chars().last(), Some('x'));
+}
+
+#[test]
+fn status_bar_without_segments_is_unchanged() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(10, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 0, "xxxxxxxxxx", Style::new());
+    StatusBar::new("ok").render(Rect::new(0, 0, 10, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "okxxxxxxxx");
 }
