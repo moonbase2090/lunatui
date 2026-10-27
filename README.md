@@ -27,7 +27,7 @@ The dashboard draws 240 frames (about four seconds) and exits. Add `-- --bench` 
 
 See the [review policy](REVIEW_POLICY.md) for PR classification, proof and merge requirements.
 
-Porting notes: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI and manual sign-off: [docs/ci.md](docs/ci.md). Examples: [examples/README.md](examples/README.md).
+Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). CI and manual sign-off: [docs/ci.md](docs/ci.md). Examples: [examples/README.md](examples/README.md).
 
 ## Widget gallery
 
