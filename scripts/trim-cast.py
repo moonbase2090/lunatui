@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Moonbase 2090 LLC
 # SPDX-License-Identifier: MIT
-"""Drops the trailing alternate-screen exit from an asciicast so a recording ends on the drawn frame.
+"""Drops the leading blank and the trailing alternate-screen exit from an asciicast.
 
-The widget preview leaves the alternate screen after its last frame; that exit shows a blank screen
-in the GIF. Events from the first alternate-screen exit onward are removed.
+The wait before the first paint is a blank cursor frame. The widget preview also
+leaves the alternate screen after its last frame. The first event delay is cleared
+and events from the first alternate-screen exit onward are removed.
 """
 import json
 import sys
@@ -22,6 +23,10 @@ def main(path: str) -> None:
         if event[1] == "o" and EXIT in event[2]:
             break
         kept.append(line)
+    if kept:
+        first = json.loads(kept[0])
+        first[0] = 0
+        kept[0] = json.dumps(first, ensure_ascii=False)
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("\n".join([header] + kept) + "\n")
 
