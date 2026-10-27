@@ -9,7 +9,7 @@ use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, text_display_w
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Alignment, BigText, BigTextFont, Block, BorderType, Borders, Constraint, Date, Gauge,
+    Alignment, BarChart, BigText, BigTextFont, Block, BorderType, Borders, Constraint, Date, Gauge,
     Lightcycle, List, Monthly, Padding, Paragraph, RenderCx, Scrollbar, Sparkline, SparklineBar,
     Spinner, SpinnerPattern, StatusBar, StatusDot, StatusState, Table, Tabs, TextInput, TextWrap,
     TitlePosition, VecSource, WeekStart, Widget,
@@ -1077,23 +1077,25 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             }
         }
         "table" => {
-            let headers = [
-                (3, "Benchmark"),
-                (25, "Median ▾"),
-                (35, "p99"),
-                (44, "Δ"),
-                (52, "Status"),
+            let columns = vec![
+                Constraint::Length(22),
+                Constraint::Length(10),
+                Constraint::Length(9),
+                Constraint::Length(8),
+                Constraint::Length(9),
             ];
-            for (x, title) in headers {
-                put_bold(
-                    &mut cx,
-                    x,
-                    2,
-                    title,
-                    if title == "Median ▾" { LAV } else { MUTED },
-                );
-            }
-            put(&mut cx, 2, 3, &"─".repeat(60), LINE);
+            let marker = ("▌", fg(LAV).bg(FOCUS_BG));
+            Table::new(VecSource::new(), columns.clone())
+                .highlight_symbol(marker.0, marker.1)
+                .header([
+                    ("Benchmark", bold(MUTED)),
+                    ("Median ▾", bold(LAV)),
+                    ("p99", bold(MUTED)),
+                    ("Δ", bold(MUTED)),
+                    ("Status", bold(MUTED)),
+                ])
+                .render(Rect::new(2, 2, 60, 1), &mut cx);
+            rule(&mut cx, 2, 3, 60, LINE);
             let rows = [
                 ["full redraw 120×40", "0.81 ms", "1.02", "-12%", "● pass"],
                 ["diff render", "0.19 ms", "0.27", "-31%", "● pass"],
@@ -1105,89 +1107,64 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 ["image fallback", "2.31 ms", "3.05", "+11%", "○ slow"],
                 ["resize storm", "0.88 ms", "1.40", "-3%", "● pass"],
             ];
-            let table_rows: Vec<Vec<String>> = rows
-                .iter()
-                .map(|row| row.iter().map(|cell| (*cell).to_owned()).collect())
-                .collect();
-            fill(&mut cx, Rect::new(2, 5, 60, 1), FOCUS_BG);
-            Table::new(
-                VecSource::from_rows(table_rows),
-                vec![
-                    Constraint::Length(22),
-                    Constraint::Length(10),
-                    Constraint::Length(9),
-                    Constraint::Length(8),
-                    Constraint::Length(9),
-                ],
-            )
-            .selected(Some(1))
-            .style(style(MUTED))
-            .highlight_style(Style::new().fg(INK).bg(FOCUS_BG))
-            .render(Rect::new(3, 4, 58, 9), &mut cx);
-            put_on(&mut cx, 2, 5, "▌", LAV, FOCUS_BG);
-            for y in [7, 9, 11] {
-                fill(&mut cx, Rect::new(2, y, 60, 1), PANEL);
-            }
+            let mut source = VecSource::new();
+            let mut cells = Vec::new();
             for (index, row) in rows.iter().enumerate() {
-                let y = 4 + u16::try_from(index).unwrap_or_default();
-                let background = if index == 1 {
-                    FOCUS_BG
-                } else if [3, 5, 7].contains(&index) {
-                    PANEL
-                } else {
-                    BG
-                };
-                if index == 1 {
-                    put_on_bold(&mut cx, 3, y, row[0], INK, background);
-                } else {
-                    put_on(&mut cx, 3, y, row[0], INK, background);
-                }
-                put_on(
-                    &mut cx,
-                    25,
-                    y,
-                    row[1],
-                    if index == 1 { LAV } else { MUTED },
-                    background,
-                );
-                put_on(&mut cx, 35, y, row[2], MUTED, background);
-                let delta_color = if row[3].starts_with('-') { GREEN } else { RED };
-                put_on(&mut cx, 44, y, row[3], delta_color, background);
-                let status_color = match row[4] {
+                source.push_row(row.iter().map(|cell| (*cell).to_owned()).collect());
+                let selected = index == 1;
+                let delta = if row[3].starts_with('-') { GREEN } else { RED };
+                let status = match row[4] {
                     "● pass" => GREEN,
                     "◐ watch" => MOON,
                     _ => RED,
                 };
-                put_on(&mut cx, 52, y, row[4], status_color, background);
+                cells.push(vec![
+                    if selected {
+                        fg(INK).with_attrs(Attrs::new().set_bold(true))
+                    } else {
+                        fg(INK)
+                    },
+                    fg(if selected { LAV } else { MUTED }),
+                    fg(MUTED),
+                    fg(delta),
+                    fg(status),
+                ]);
             }
-            put(&mut cx, 2, 14, &"─".repeat(60), LINE);
-            put(&mut cx, 3, 15, "Selected", DIM);
-            put_bold(&mut cx, 12, 15, "diff render", LAV);
-            put(&mut cx, 3, 17, "Samples", MUTED);
-            put(&mut cx, 15, 17, "10,000", INK);
-            put(&mut cx, 3, 18, "Grid", MUTED);
-            put(&mut cx, 15, 18, "120 × 40", INK);
-            put(&mut cx, 3, 19, "Changed", MUTED);
-            put(&mut cx, 15, 19, "~6% of cells", INK);
-            put(&mut cx, 34, 16, "distribution", DIM);
-            let distribution = [0.1_f32, 0.3, 0.7, 1.0, 0.8, 0.45, 0.25, 0.12, 0.06, 0.03];
-            for (index, value) in distribution.into_iter().enumerate() {
-                let height = value * 4.0 * 8.0;
-                let x = 34 + u16::try_from(index).unwrap_or_default() * 2;
-                for row in 0..4 {
-                    let level = height - f32::from(3 - row) * 8.0;
-                    let glyph = spark_glyph(level);
-                    put(
-                        &mut cx,
-                        x,
-                        17 + row,
-                        &glyph.to_string().repeat(2),
-                        if index == 3 { LAV } else { LAV2 },
-                    );
-                }
+            Table::new(source, columns)
+                .style(style(INK))
+                .selected(Some(1))
+                .highlight_style(style(INK).bg(FOCUS_BG))
+                .highlight_symbol(marker.0, marker.1)
+                .odd_row_style(Style::new().bg(PANEL))
+                .cell_styles(cells)
+                .render(Rect::new(2, 4, 60, 9), &mut cx);
+            rule(&mut cx, 2, 14, 60, LINE);
+            label(&mut cx, 3, 15, "Selected", style(DIM));
+            label(&mut cx, 12, 15, "diff render", bold(LAV));
+            for (y, key, value) in [
+                (17, "Samples", "10,000"),
+                (18, "Grid", "120 × 40"),
+                (19, "Changed", "~6% of cells"),
+            ] {
+                label(&mut cx, 3, y, key, style(MUTED));
+                label(&mut cx, 15, y, value, style(INK));
             }
-            put(&mut cx, 3, 21, "9 rows", DIM);
-            put(&mut cx, 12, 21, "· sorted by median ↓", DIM);
+            label(&mut cx, 34, 16, "distribution", style(DIM));
+            let distribution = [
+                100_000, 300_000, 700_000, 1_000_000, 800_000, 450_000, 250_000, 120_000, 60_000,
+                30_000,
+            ];
+            let mut bar_styles = [fg(LAV2); 10];
+            bar_styles[3] = fg(LAV);
+            BarChart::new(&distribution)
+                .max(1_000_000)
+                .bar_width(2)
+                .bar_gap(0)
+                .style(fg(LAV2))
+                .bar_styles(&bar_styles)
+                .render(Rect::new(34, 17, 20, 4), &mut cx);
+            label(&mut cx, 3, 21, "9 rows", style(DIM));
+            label(&mut cx, 12, 21, "· sorted by median ↓", style(DIM));
         }
         "tabs" => {
             Tabs::new(["1 Overview", "2 Logs", "3 Metrics", "4 Settings"])
