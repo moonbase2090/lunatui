@@ -12,10 +12,14 @@ use lunatui_core::Rect;
 
 mod constraint;
 mod flex;
+#[cfg(feature = "size-limits")]
+mod limit;
 mod solve_fast;
 
 pub use constraint::Constraint;
 pub use flex::{Axis, Flex};
+#[cfg(feature = "size-limits")]
+pub use limit::{Limit, aspect_fit};
 
 /// Segments and the gaps around them.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -37,6 +41,8 @@ pub struct Layout {
     horizontal_margin: u16,
     vertical_margin: u16,
     constraints: Vec<Constraint>,
+    #[cfg(feature = "size-limits")]
+    limits: Vec<Limit>,
 }
 
 impl Layout {
@@ -74,6 +80,15 @@ impl Layout {
         self
     }
 
+    /// A floor and a cap for each segment, in constraint order. Segments past the end of `limits`
+    /// have none, and extra limits are ignored. See [`Limit`].
+    #[cfg(feature = "size-limits")]
+    #[must_use]
+    pub fn limits(mut self, limits: impl IntoIterator<Item = Limit>) -> Self {
+        self.limits = limits.into_iter().collect();
+        self
+    }
+
     /// Split `area` along this layout's axis.
     #[must_use]
     pub fn split(&self, area: Rect) -> Solved {
@@ -82,14 +97,36 @@ impl Layout {
             Axis::Horizontal => inner.width,
             Axis::Vertical => inner.height,
         };
-        let (sizes, gaps, needs_solver) =
-            solve_fast::axis_sizes(len, &self.constraints, self.spacing, self.flex);
+        let (sizes, gaps, needs_solver) = solve_fast::axis_sizes_bounded(
+            len,
+            &self.constraints,
+            &self.bounds(),
+            self.spacing,
+            self.flex,
+        );
         let (segments, spacers) = solve_fast::place(inner, self.axis, &sizes, &gaps);
         Solved {
             segments,
             spacers,
             needs_solver,
         }
+    }
+
+    #[cfg(feature = "size-limits")]
+    fn bounds(&self) -> Vec<(u16, u16)> {
+        self.limits
+            .iter()
+            .map(|limit| (limit.min(), limit.max()))
+            .collect()
+    }
+
+    #[cfg(not(feature = "size-limits"))]
+    #[expect(
+        clippy::unused_self,
+        reason = "matches the size-limits build, where the bounds come from self"
+    )]
+    fn bounds(&self) -> Vec<(u16, u16)> {
+        Vec::new()
     }
 
     fn new(axis: Axis, constraints: impl IntoIterator<Item = Constraint>) -> Self {
@@ -100,6 +137,8 @@ impl Layout {
             horizontal_margin: 0,
             vertical_margin: 0,
             constraints: constraints.into_iter().collect(),
+            #[cfg(feature = "size-limits")]
+            limits: Vec::new(),
         }
     }
 }
