@@ -40,8 +40,7 @@ a{color:inherit}
 /* hero */
 .hero{position:relative;min-height:760px;overflow:hidden;background:var(--night)}
 .sky-frame{position:absolute;inset:0;width:100%;height:100%;display:block}
-.sky{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;animation:drift 8s ease-in-out infinite}
-@keyframes drift{0%,100%{transform:scale(1.08) translateX(-1.5%)}50%{transform:scale(1.08) translateX(1.5%)}}
+.sky{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;transform:scale(1.08)}
 .moon-frame{position:absolute;right:8%;top:70px;width:340px;z-index:1}
 .moon{width:100%;mix-blend-mode:screen;animation:pulse 4s ease-in-out infinite}
 @keyframes pulse{0%,100%{filter:brightness(1) drop-shadow(0 0 0 rgba(243,226,176,0))}50%{filter:brightness(1.12) drop-shadow(0 0 28px rgba(243,226,176,.55))}}
@@ -157,7 +156,7 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
  .motion-toggle{right:18px;top:82px}
  .stars i:nth-child(n+7){display:none}
  .shoot{display:none}
- .sky,.moon{animation:none}
+ .moon{animation:none}
  .stars i{animation:none;opacity:.8}
  section.block{padding:48px 0}
  .gallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin:0 -20px;padding:0 20px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
