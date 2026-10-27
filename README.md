@@ -68,4 +68,4 @@ A live service health board rendered by Lunatui and Ratatui side by side. Each r
 | 80×24 | [Screenshot](docs/media/line-gauge-80x24-truecolor.png) · [Recording](docs/media/line-gauge-80x24-truecolor.mp4) | [Screenshot](docs/media/line-gauge-80x24-ansi16.png) · [Recording](docs/media/line-gauge-80x24-ansi16.mp4) |
 | 200×60 | [Screenshot](docs/media/line-gauge-200x60-truecolor.png) · [Recording](docs/media/line-gauge-200x60-truecolor.mp4) | [Screenshot](docs/media/line-gauge-200x60-ansi16.png) · [Recording](docs/media/line-gauge-200x60-ansi16.mp4) |
 
-Recorded from the real widget preview with `scripts/record-widget.sh` (`CASE=line-gauge`, dark theme, 180 frames at 30 fps). The screenshot is extracted from the side-by-side recording.
+Recorded from the real widget preview with `scripts/record-widget.sh` (`CASE=line-gauge`, dark theme, 180 frames at 30 fps). The screenshot is extracted from the side-by-side recording. Light theme spot-check at 80×24: [screenshot](docs/media/line-gauge-80x24-light-truecolor.png) · [recording](docs/media/line-gauge-80x24-light-truecolor.mp4).
