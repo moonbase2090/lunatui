@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Fixed
+
+- The website hero sky no longer drifts side to side; the sky image is static.
+
 ## [0.1.11] - 2026-10-27
 
 ### Added
