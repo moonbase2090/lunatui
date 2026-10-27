@@ -1,7 +1,15 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, UnderlineStyle};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+
+#[cfg(any(
+    feature = "bigtext",
+    feature = "calendar",
+    feature = "image",
+    feature = "sparkline"
+))]
+use lunatui_core::{Attrs, UnderlineStyle};
 
 use crate::overlay::blend_rgb;
 use lunatui_theme::{Theme, Token};
@@ -96,6 +104,12 @@ impl<'a> RenderCx<'a> {
         }
     }
 
+    #[cfg(any(
+        feature = "bigtext",
+        feature = "calendar",
+        feature = "image",
+        feature = "sparkline"
+    ))]
     pub(crate) fn put_char_patched(&mut self, x: u16, y: u16, glyph: char, style: Style) {
         let existing = self
             .grid
@@ -106,6 +120,7 @@ impl<'a> RenderCx<'a> {
         self.grid.put_char(x, y, patched, glyph, self.clusters);
     }
 
+    #[cfg(feature = "calendar")]
     pub(crate) fn patch_area(&mut self, area: Rect, style: Style) {
         let end_x = area.x.saturating_add(area.width);
         let end_y = area.y.saturating_add(area.height);
@@ -145,6 +160,12 @@ impl<'a> RenderCx<'a> {
     }
 }
 
+#[cfg(any(
+    feature = "bigtext",
+    feature = "calendar",
+    feature = "image",
+    feature = "sparkline"
+))]
 pub(crate) fn patch_style(base: Style, over: Style) -> Style {
     Style {
         fg: if over.fg == Color::Default {
@@ -161,6 +182,12 @@ pub(crate) fn patch_style(base: Style, over: Style) -> Style {
     }
 }
 
+#[cfg(any(
+    feature = "bigtext",
+    feature = "calendar",
+    feature = "image",
+    feature = "sparkline"
+))]
 fn merge_attrs(base: Attrs, over: Attrs) -> Attrs {
     if over.to_bits() == 0 {
         return base;

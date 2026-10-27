@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use std::sync::Arc;
+use std::{error, fmt};
 
 use crate::PixelSize;
 
@@ -40,6 +41,32 @@ pub enum ImageError {
         actual_bytes: usize,
     },
 }
+
+impl fmt::Display for ImageError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Empty => formatter.write_str("image dimensions must be non-zero"),
+            Self::DimensionsOverflow => {
+                formatter.write_str("image dimensions overflow RGBA8 storage")
+            }
+            Self::InvalidDataLength { expected, actual } => {
+                write!(
+                    formatter,
+                    "expected {expected} RGBA8 bytes, received {actual}"
+                )
+            }
+            Self::TooLarge {
+                max_bytes,
+                actual_bytes,
+            } => write!(
+                formatter,
+                "decoded image is {actual_bytes} bytes; maximum is {max_bytes}"
+            ),
+        }
+    }
+}
+
+impl error::Error for ImageError {}
 
 impl ImageSource {
     /// Creates a source from top-to-bottom RGBA8 pixel data.

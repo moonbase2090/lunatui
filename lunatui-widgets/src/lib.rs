@@ -10,6 +10,8 @@ mod borders;
 #[cfg(feature = "calendar")]
 mod calendar;
 mod gauge;
+#[cfg(feature = "image")]
+mod image;
 mod lightcycle;
 mod list;
 mod overlay;
@@ -37,6 +39,8 @@ pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use gauge::Gauge;
+#[cfg(feature = "image")]
+pub use image::Image;
 pub use lightcycle::Lightcycle;
 pub use list::List;
 pub use lunatui_core::Size;
