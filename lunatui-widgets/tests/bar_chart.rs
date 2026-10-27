@@ -110,6 +110,49 @@ fn a_second_render_clears_old_bars_gaps_and_labels() {
 }
 
 #[test]
+fn an_empty_render_clears_the_previous_bars() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(5, 2);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    BarChart::new(&[16, 16])
+        .max(16)
+        .bar_width(2)
+        .render(Rect::new(0, 0, 5, 2), &mut cx);
+    BarChart::new(&[]).render(Rect::new(0, 0, 5, 2), &mut cx);
+    assert_eq!(rows(&grid, &clusters), ["     ", "     "]);
+}
+
+#[test]
+fn a_render_without_a_track_drops_the_old_track_background() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(2, 2);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    BarChart::new(&[16])
+        .max(16)
+        .bar_width(2)
+        .track_style(Style::new().bg(TRACK))
+        .render(Rect::new(0, 0, 2, 2), &mut cx);
+    BarChart::new(&[8])
+        .max(16)
+        .bar_width(2)
+        .render(Rect::new(0, 0, 2, 2), &mut cx);
+    let style = |x, y| grid.get(x, y).map(Cell::style).unwrap_or_default();
+    assert_eq!(rows(&grid, &clusters), ["  ", "██"]);
+    assert_eq!(
+        style(0, 0),
+        Style::new(),
+        "the shrunk bar's old cell is reset"
+    );
+    assert_eq!(
+        style(0, 1).bg,
+        Color::Default,
+        "the bar keeps no track background"
+    );
+}
+
+#[test]
 fn labels_are_clipped_to_their_bar() {
     let chart = BarChart::new(&[16, 16])
         .max(16)
