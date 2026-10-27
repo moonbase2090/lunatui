@@ -13,6 +13,8 @@ mod borders;
 mod calendar;
 mod gauge;
 mod lightcycle;
+#[cfg(feature = "line-gauge")]
+mod line_gauge;
 mod list;
 mod overlay;
 mod padding;
@@ -41,6 +43,8 @@ pub use borders::{BorderType, Borders};
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use gauge::Gauge;
 pub use lightcycle::Lightcycle;
+#[cfg(feature = "line-gauge")]
+pub use line_gauge::LineGauge;
 pub use list::List;
 pub use lunatui_core::Size;
 pub use lunatui_layout::Constraint;

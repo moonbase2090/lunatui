@@ -65,6 +65,11 @@ name = "gauge"
 path = "tests/gauge.rs"
 
 [[test]]
+name = "line_gauge"
+path = "tests/line_gauge.rs"
+required-features = ["line-gauge"]
+
+[[test]]
 name = "bar_chart"
 path = "tests/bar_chart.rs"
 required-features = ["barchart"]
