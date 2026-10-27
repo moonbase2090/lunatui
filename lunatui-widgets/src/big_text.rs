@@ -62,7 +62,7 @@ impl PixelSize {
 
 /// Large text drawn from an 8×8 bitmap.
 ///
-/// Glyph bitmaps for digits, capitals, and `:.-%` are derived from Press Start 2P by CodeMan38,
+/// Glyph bitmaps for digits, capitals, and `:.-%` are derived from Press Start 2P by `CodeMan38`,
 /// SIL Open Font License 1.1 (`assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII is a
 /// hollow box.
 ///
@@ -365,7 +365,7 @@ fn glyph_cols(ch: char, size: PixelSize, cell_row: u16, out: &mut [char; GLYPH_C
     let mut index = 0_usize;
     for cell in 0..(GLYPH_PX / u16::from(px_w)) {
         let x0 = u8::try_from(cell).unwrap_or(0).saturating_mul(px_w);
-        let glyph = cell_glyph(bitmap, size, x0, y0);
+        let glyph = cell_glyph(*bitmap, size, x0, y0);
         for _ in 0..repeat {
             if let Some(slot) = out.get_mut(index) {
                 *slot = glyph;
@@ -376,7 +376,7 @@ fn glyph_cols(ch: char, size: PixelSize, cell_row: u16, out: &mut [char; GLYPH_C
     cols
 }
 
-fn pixel(rows: &[u8; 8], x: u8, y: u8) -> bool {
+fn pixel(rows: [u8; 8], x: u8, y: u8) -> bool {
     if x >= INK_COLUMNS {
         return false;
     }
@@ -387,7 +387,7 @@ fn pixel(rows: &[u8; 8], x: u8, y: u8) -> bool {
     (u32::from(*row) & (1_u32 << shift)) != 0
 }
 
-fn cell_glyph(rows: &[u8; 8], size: PixelSize, x0: u8, y0: u8) -> char {
+fn cell_glyph(rows: [u8; 8], size: PixelSize, x0: u8, y0: u8) -> char {
     match size {
         PixelSize::Full => {
             if pixel(rows, x0, y0) {
@@ -429,7 +429,7 @@ const fn half_width(left: bool, right: bool) -> char {
     }
 }
 
-fn sextant(rows: &[u8; 8], x0: u8, y0: u8) -> char {
+fn sextant(rows: [u8; 8], x0: u8, y0: u8) -> char {
     let spots: [(u8, u8, u8); 6] = [
         (0, 0, 0x01),
         (1, 0, 0x02),
@@ -448,7 +448,7 @@ fn sextant(rows: &[u8; 8], x0: u8, y0: u8) -> char {
     SEXTANT[usize::from(missing)]
 }
 
-fn octant(rows: &[u8; 8], x0: u8, y0: u8) -> char {
+fn octant(rows: [u8; 8], x0: u8, y0: u8) -> char {
     let mut mask = 0_u8;
     for dy in 0..4_u8 {
         for dx in 0..2_u8 {
@@ -461,7 +461,7 @@ fn octant(rows: &[u8; 8], x0: u8, y0: u8) -> char {
     GlyphSet::Octants.glyph(mask)
 }
 
-fn braille(rows: &[u8; 8], x0: u8, y0: u8) -> char {
+fn braille(rows: [u8; 8], x0: u8, y0: u8) -> char {
     const DOTS: [(u8, u8, u8); 8] = [
         (0, 0, 0x01),
         (0, 1, 0x02),
