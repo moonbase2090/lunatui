@@ -810,108 +810,89 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             label(&mut cx, 49, 21, "max 1.31k", style(MOON));
         }
         "spinner" => {
-            put_bold(&mut cx, 3, 2, "Styles", LAV);
-            let labels = [
-                "Braille dots",
-                "Half moon",
-                "Quadrant",
-                "Braille ring",
-                "Arc",
-                "Bars",
+            label(&mut cx, 3, 2, "Styles", bold(LAV));
+            let cards = [
+                ("Braille dots", SpinnerPattern::BrailleDots, LAV, 1),
+                ("Half moon", SpinnerPattern::HalfMoon, MOON, 1),
+                ("Quadrant", SpinnerPattern::Quadrant, GREEN, 1),
+                ("Braille ring", SpinnerPattern::BrailleRing, BLUE, 1),
+                ("Arc", SpinnerPattern::Arc, LAV, 1),
+                ("Bars", SpinnerPattern::Bars, MOON, 3),
             ];
-            for (index, label) in labels.into_iter().enumerate() {
+            for (index, (name, pattern, color, glyph_width)) in cards.into_iter().enumerate() {
                 let x = 3 + u16::try_from(index % 3).unwrap_or_default() * 20;
                 let y = 4 + u16::try_from(index / 3).unwrap_or_default() * 3;
+                let focused = index == 1;
                 Block::bordered()
                     .border_type(BorderType::Rounded)
                     .style(Style::new().bg(BG))
-                    .border_style(style(if index == 1 { LINE_HI } else { LINE }))
+                    .border_style(style(if focused { LINE_HI } else { LINE }))
                     .render(Rect::new(x, y, 18, 3), &mut cx);
                 Spinner::new(0)
-                    .pattern(
-                        [
-                            SpinnerPattern::BrailleDots,
-                            SpinnerPattern::HalfMoon,
-                            SpinnerPattern::Quadrant,
-                            SpinnerPattern::BrailleRing,
-                            SpinnerPattern::Arc,
-                            SpinnerPattern::Bars,
-                        ][index],
-                    )
-                    .style(style([LAV, MOON, GREEN, BLUE, LAV, MOON][index]))
-                    .render(
-                        Rect::new(x + 2, y + 1, if index == 5 { 3 } else { 1 }, 1),
-                        &mut cx,
-                    );
-                let glyph_width = if index == 5 { 3 } else { 1 };
-                cx.set_style(
-                    Rect::new(x + 2, y + 1, glyph_width, 1),
-                    bold([LAV, MOON, GREEN, BLUE, LAV, MOON][index]),
-                );
-                let label_x = if index == 5 { x + 6 } else { x + 4 };
-                put(
+                    .pattern(pattern)
+                    .style(bold(color))
+                    .render(Rect::new(x + 2, y + 1, glyph_width, 1), &mut cx);
+                label(
                     &mut cx,
-                    label_x,
+                    x + 3 + glyph_width,
                     y + 1,
-                    label,
-                    if index == 1 { INK } else { MUTED },
+                    name,
+                    style(if focused { INK } else { MUTED }),
                 );
             }
-            put(&mut cx, 2, 11, &"─".repeat(60), LINE);
-            put_bold(&mut cx, 3, 12, "Tasks", LAV);
+            rule(&mut cx, 2, 11, 60, LINE);
+            label(&mut cx, 3, 12, "Tasks", bold(LAV));
             let tasks = [
                 ("✓", "Resolve dependencies", GREEN, "0.4s"),
                 ("✓", "Compile lunatui-core", GREEN, "2.1s"),
-                ("⣽", "Compile lunatui-widgets", LAV, "1.3s"),
+                (
+                    Spinner::new(1).pattern(SpinnerPattern::BrailleRing).glyph(),
+                    "Compile lunatui-widgets",
+                    LAV,
+                    "1.3s",
+                ),
                 ("◐", "Generate docs", MOON, "…"),
                 ("·", "Run examples", DIM, "queued"),
                 ("·", "Package release", DIM, "queued"),
             ];
+            let mut rows = VecSource::new();
+            let mut cells = Vec::new();
             for (index, (icon, task, color, time)) in tasks.into_iter().enumerate() {
-                let y = 14 + u16::try_from(index).unwrap_or_default();
+                rows.push_row(vec![icon.to_owned(), task.to_owned(), time.to_owned()]);
                 let selected = index == 2;
-                if selected {
-                    fill(&mut cx, Rect::new(2, y, 60, 1), FOCUS_BG);
-                    put_on(&mut cx, 2, y, "▌", LAV, FOCUS_BG);
-                }
-                let background = if selected { FOCUS_BG } else { BG };
-                if selected {
-                    Spinner::new(1)
-                        .pattern(SpinnerPattern::BrailleRing)
-                        .style(Style::new().fg(color).bg(background))
-                        .render(Rect::new(4, y, 1, 1), &mut cx);
-                    cx.set_style(Rect::new(4, y, 1, 1), bold(color).bg(background));
-                } else {
-                    put_on_bold(&mut cx, 4, y, icon, color, background);
-                }
-                if selected {
-                    put_on_bold(&mut cx, 6, y, task, INK, background);
-                } else {
-                    put_on(
-                        &mut cx,
-                        6,
-                        y,
-                        task,
-                        if index < 4 { INK } else { DIM },
-                        background,
-                    );
-                }
-                let time_x = WIDTH
-                    .saturating_sub(4)
-                    .saturating_sub(u16::try_from(time.chars().count()).unwrap_or_default());
-                put_on(
-                    &mut cx,
-                    time_x,
-                    y,
-                    time,
-                    if selected { LAV } else { DIM },
-                    background,
-                );
+                let bold_fg = |color| fg(color).with_attrs(Attrs::new().set_bold(true));
+                cells.push(vec![
+                    bold_fg(color),
+                    if selected {
+                        bold_fg(INK)
+                    } else {
+                        fg(if index < 4 { INK } else { DIM })
+                    },
+                    fg(if selected { LAV } else { DIM }),
+                ]);
             }
-            put(&mut cx, 4, 21, "2 of 6 done", MUTED);
-            put(&mut cx, 17, 21, &"━".repeat(8), LAV);
-            put(&mut cx, 25, 21, &"─".repeat(16), LINE);
-            put(&mut cx, 42, 21, "elapsed 3.8s", DIM);
+            Table::new(
+                rows,
+                vec![
+                    Constraint::Length(2),
+                    Constraint::Fill(1),
+                    Constraint::Length(6),
+                    Constraint::Length(2),
+                ],
+            )
+            .style(style(INK))
+            .selected(Some(2))
+            .highlight_style(style(INK).bg(FOCUS_BG))
+            .highlight_symbol("▌ ", style(LAV).bg(FOCUS_BG))
+            .alignments(vec![Alignment::Left, Alignment::Left, Alignment::Right])
+            .cell_styles(cells)
+            .render(Rect::new(2, 14, 60, 6), &mut cx);
+            label(&mut cx, 4, 21, "2 of 6 done", style(MUTED));
+            LineGauge::new(2.0 / 6.0)
+                .filled_style(style(LAV))
+                .unfilled_style(style(LINE))
+                .render(Rect::new(17, 21, 24, 1), &mut cx);
+            label(&mut cx, 42, 21, "elapsed 3.8s", style(DIM));
         }
         "statusbar" => {
             let source = [
