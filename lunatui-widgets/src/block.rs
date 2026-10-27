@@ -34,6 +34,7 @@ struct TitleEntry {
     position: Option<TitlePosition>,
     text: String,
     alignment: Option<Alignment>,
+    style: Option<Style>,
 }
 
 /// Bordered container with optional titles (ratatui `Block` parity).
@@ -48,6 +49,7 @@ pub struct Block {
     border_set: border::Set<'static>,
     style: Style,
     padding: Padding,
+    title_inset: u16,
 }
 
 impl Default for Block {
@@ -70,6 +72,7 @@ impl Block {
             border_set: BorderType::Plain.border_set(),
             style: Style::new(),
             padding: Padding::ZERO,
+            title_inset: 0,
         }
     }
 
@@ -142,6 +145,7 @@ impl Block {
             position: None,
             text: title.into(),
             alignment: None,
+            style: None,
         });
         self
     }
@@ -153,7 +157,39 @@ impl Block {
             position: Some(TitlePosition::Top),
             text: title.into(),
             alignment: Some(alignment),
+            style: None,
         });
+        self
+    }
+
+    /// Adds a title at `position` with its own alignment and style.
+    ///
+    /// `style` replaces [`Block::title_style`] for this title only.
+    #[must_use]
+    pub fn title_at(
+        mut self,
+        title: impl Into<String>,
+        position: TitlePosition,
+        alignment: Alignment,
+        style: Style,
+    ) -> Self {
+        self.titles.push(TitleEntry {
+            position: Some(position),
+            text: title.into(),
+            alignment: Some(alignment),
+            style: Some(style),
+        });
+        self
+    }
+
+    /// Border cells kept between the left corner and left-aligned titles.
+    ///
+    /// The default of 0 starts the title right after the corner. With 1, a top
+    /// title renders as `╭─ Title ─╮`. Centered and right-aligned titles are
+    /// not moved.
+    #[must_use]
+    pub fn title_inset(mut self, cells: u16) -> Self {
+        self.title_inset = cells;
         self
     }
 
@@ -305,10 +341,10 @@ impl Block {
         if titles.is_empty() {
             return;
         }
-        let style = self.titles_style;
+        let style_of = |entry: &TitleEntry| entry.style.unwrap_or(self.titles_style);
         match alignment {
             Alignment::Left => {
-                let mut x = band.x;
+                let mut x = band.x.saturating_add(self.title_inset.min(band.width));
                 for (index, entry) in titles.iter().enumerate() {
                     if x >= band.x + band.width {
                         break;
@@ -319,7 +355,7 @@ impl Block {
                     if w == 0 {
                         break;
                     }
-                    put_symbol(cx, x, band.y, text, style);
+                    put_symbol(cx, x, band.y, text, style_of(entry));
                     x = x.saturating_add(w);
                     if index + 1 < titles.len() {
                         x = x.saturating_add(1);
@@ -344,7 +380,7 @@ impl Block {
                     if w == 0 {
                         break;
                     }
-                    put_symbol(cx, cursor, band.y, text, style);
+                    put_symbol(cx, cursor, band.y, text, style_of(entry));
                     cursor = cursor.saturating_add(w);
                     if index + 1 < titles.len() {
                         cursor = cursor.saturating_add(1);
@@ -368,7 +404,7 @@ impl Block {
                     if w == 0 {
                         break;
                     }
-                    put_symbol(cx, x, band.y, text, style);
+                    put_symbol(cx, x, band.y, text, style_of(entry));
                     x = x.saturating_add(w);
                     if index + 1 < titles.len() {
                         x = x.saturating_add(1);

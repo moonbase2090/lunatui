@@ -16,6 +16,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
 
+### Added
+
+- `Block::title_inset` keeps border cells between the left corner and a left-aligned title, and `Block::title_at` adds a title with its own position, alignment, and style.
+
 ## [0.1.11] - 2026-10-27
 
 ### Added
