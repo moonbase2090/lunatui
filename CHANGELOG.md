@@ -16,6 +16,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Chart` widget, behind the `chart` feature, with `Dataset`, `Axis`, `GraphType` (scatter, line, bar), `Marker` (braille, half block, dot, block), and `LegendPosition`. Axes carry bounds, labels, and titles; a legend lists named datasets and is hidden when it would take more than half the plot, which `hidden_legend_constraints` changes. Series colors cycle through theme tokens and the axes follow `WidgetState`.
 - `Layout::limits` and `aspect_fit` in `lunatui-layout`, behind the opt-in `size-limits` feature: each segment can have a floor and a cap (`Limit::at_least`, `at_most`, `between`) so panes keep a usable size on resize, and cells a capped segment cannot take go to the other growing segments. `aspect_fit` returns the largest rectangle of a given shape inside an area, centred.
 - `Layout::split_wrapped` in `lunatui-layout`, behind the opt-in `flex-wrap` feature: segments that do not fit move onto the next line (or column), each line is split with the layout's flex and spacing, and one `Constraint` sizes every line. `Layout::gap` sets the spacing between segments and between lines in one call.
 - Named spinner presets on the existing `Spinner`: dots, line, arc, bounce, pulse, moon, ring, bars, quadrant, and half-moon. Each preset has its own frames and interval. `Spinner::preset` selects one. The default spinner is unchanged, and the caller still supplies the frame index. The example is a production deploy board.

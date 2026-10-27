@@ -33,6 +33,14 @@ Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). C
 
 Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
 
+### Chart
+
+An operations dashboard with four charts: braille lines with a legend, a dot scatter, hourly bars, and a half-block line chart in the focused state. The series scroll and the points drift while the axes, labels, and titles stay put.
+
+![Chart widget: an operations dashboard in the dark theme](docs/media/chart.gif)
+
+Screenshot: [docs/media/chart.png](docs/media/chart.png). Recorded with `scripts/record-showcase.sh` (`CASE=chart`, 120×36, `FRAMES=200`, dark, about 11 seconds).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
