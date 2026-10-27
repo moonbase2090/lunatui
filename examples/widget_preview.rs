@@ -1544,6 +1544,7 @@ fn line_gauge_native(
     let memory = 0.61 + (f64::from(tick % 80) / 80.0) * 0.11;
     let network = 0.14 + (f64::from(tick % 50) / 50.0) * 0.16;
     let jobs = 0.76 + (f64::from(tick % 45) / 45.0) * 0.19;
+    let row_step = (area.height.saturating_sub(12) / 4).max(4);
     for (index, (title, label, ratio, state)) in [
         ("COMPILE", "CPU", cpu, WidgetState::Focused),
         ("PACKAGE", "MEMORY", memory, WidgetState::Normal),
@@ -1553,7 +1554,7 @@ fn line_gauge_native(
     .into_iter()
     .enumerate()
     {
-        let y = 7 + u16::try_from(index).unwrap_or(0) * 6;
+        let y = 6 + u16::try_from(index).unwrap_or(0) * row_step;
         LineGauge::new()
             .block(Block::bordered().title(title))
             .label(label)
@@ -1582,6 +1583,7 @@ fn line_gauge_native(
 
 #[cfg(feature = "line-gauge")]
 fn line_gauge_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    let row_step = (area.height.saturating_sub(12) / 4).max(4);
     for (index, (label, ratio)) in [
         ("CPU", 0.42 + f64::from(tick % 120) / 120.0 * 0.38),
         ("MEMORY", 0.61 + f64::from(tick % 80) / 80.0 * 0.11),
@@ -1591,7 +1593,7 @@ fn line_gauge_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick:
     .into_iter()
     .enumerate()
     {
-        let y = 7 + u16::try_from(index).unwrap_or(0) * 6;
+        let y = 6 + u16::try_from(index).unwrap_or(0) * row_step;
         ratatui::widgets::Widget::render(
             ratatui::widgets::Gauge::default()
                 .ratio(ratio)
