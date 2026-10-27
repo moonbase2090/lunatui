@@ -118,6 +118,7 @@ fn line_gauge_motion(
             .ratio(ratio)
             .line_set(set)
             .subcell(set != LineSet::Ascii)
+            .style(Style::new().bg(theme.resolve(Token::Surface0)))
             .state(state)
             .render(row, &mut RenderCx::new(grid, clusters, theme));
     }
