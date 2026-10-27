@@ -42,7 +42,8 @@ impl Gauge {
         self
     }
 
-    /// Style for the cells the fill has not reached.
+    /// Style for the cells the fill has not reached. Without it, those cells are
+    /// reset to blank default-style cells.
     #[must_use]
     pub fn track_style(mut self, style: Style) -> Self {
         self.track_style = Some(style);
@@ -115,11 +116,14 @@ impl Widget for Gauge {
                 next = filled + 1;
             }
         }
-        if let Some(track) = self.track_style
-            && next < inner.width
-        {
+        if next < inner.width {
             let rest = " ".repeat(usize::from(inner.width - next));
-            cx.put_str(inner.x + next, y, &rest, track);
+            cx.put_str(
+                inner.x + next,
+                y,
+                &rest,
+                self.track_style.unwrap_or_default(),
+            );
         }
     }
 
