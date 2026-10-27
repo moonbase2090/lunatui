@@ -14,6 +14,13 @@ fn row_string(text: &str, size: PixelSize, row: u16) -> String {
     glyphs.iter().take(count).collect()
 }
 
+fn clock_row_string(text: &str, row: u16) -> String {
+    let widget = BigText::new(text).font(BigTextFont::FiveBySeven);
+    let mut glyphs = ['?'; 64];
+    let count = widget.row_glyphs(row, &mut glyphs);
+    glyphs.iter().take(count).collect()
+}
+
 fn face(text: &str, size: PixelSize) -> String {
     let height = size.cells().1;
     (0..height)
@@ -50,7 +57,7 @@ fn five_by_seven_clock_font_measures_and_shades_rows() {
     let bottom = Style::new().fg(Color::Rgb(143, 124, 224));
     let widget = BigText::new("23:47")
         .font(BigTextFont::FiveBySeven)
-        .row_styles(&[top, top, top, top, top, top, bottom]);
+        .row_styles(&[top, bottom]);
     assert_eq!(widget.measure(Size::new(100, 20)), Size::new(52, 7));
 
     let mut glyphs = ['?'; 52];
@@ -68,7 +75,17 @@ fn five_by_seven_clock_font_measures_and_shades_rows() {
 
     let (grid, _) = render(&widget, 52, 7);
     assert_eq!(grid.get(2, 0).map(|cell| cell.style().fg), Some(top.fg));
+    assert_eq!(grid.get(0, 1).map(|cell| cell.style().fg), Some(bottom.fg));
     assert_eq!(grid.get(0, 6).map(|cell| cell.style().fg), Some(bottom.fg));
+}
+
+#[test]
+fn five_by_seven_unsupported_characters_are_blank_glyphs() {
+    let expected = "            ";
+    for row in 0..7 {
+        assert_eq!(clock_row_string("A", row), expected);
+        assert_eq!(clock_row_string("?", row), expected);
+    }
 }
 
 #[test]

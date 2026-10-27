@@ -24,6 +24,7 @@ pub enum BigTextFont {
     #[default]
     PressStart2P,
     /// A compact 5×7 clock font for `2`, `3`, `4`, `7`, and `:` made from full-cell blocks.
+    /// Other non-control characters render as blank glyphs with the standard inter-glyph gap.
     FiveBySeven,
 }
 
