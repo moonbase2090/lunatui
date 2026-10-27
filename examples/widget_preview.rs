@@ -1539,11 +1539,11 @@ fn line_gauge_native(
         Style::new().fg(ink.text).bg(ink.surface),
     );
 
-    let wave = (tick % 120) as f64 / 120.0;
+    let wave = f64::from(tick % 120) / 120.0;
     let cpu = 0.42 + wave * 0.38;
-    let memory = 0.61 + ((tick % 80) as f64 / 80.0) * 0.11;
-    let network = 0.14 + ((tick % 50) as f64 / 50.0) * 0.16;
-    let jobs = 0.76 + ((tick % 45) as f64 / 45.0) * 0.19;
+    let memory = 0.61 + (f64::from(tick % 80) / 80.0) * 0.11;
+    let network = 0.14 + (f64::from(tick % 50) / 50.0) * 0.16;
+    let jobs = 0.76 + (f64::from(tick % 45) / 45.0) * 0.19;
     for (index, (title, label, ratio, state)) in [
         ("COMPILE", "CPU", cpu, WidgetState::Focused),
         ("PACKAGE", "MEMORY", memory, WidgetState::Normal),
