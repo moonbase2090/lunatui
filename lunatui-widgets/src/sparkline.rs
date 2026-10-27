@@ -201,6 +201,7 @@ pub struct Sparkline<'a, T> {
     absent_symbol: &'a str,
     max: Option<u64>,
     bars: BarSet,
+    row_styles: Vec<Style>,
     direction: RenderDirection,
     baseline: Baseline,
     state: WidgetState,
@@ -236,6 +237,7 @@ impl<'a, T> Sparkline<'a, T> {
             absent_symbol: " ",
             max: None,
             bars: NINE_LEVELS,
+            row_styles: Vec::new(),
             direction: RenderDirection::LeftToRight,
             baseline: Baseline::Zero,
             state: WidgetState::Normal,
@@ -282,6 +284,14 @@ impl<'a, T> Sparkline<'a, T> {
     #[must_use]
     pub const fn bar_set(mut self, bars: BarSet) -> Self {
         self.bars = bars;
+        self
+    }
+
+    /// Styles each rendered row from top to bottom, overlaying bar and sparkline styles.
+    /// The final style repeats when the chart is taller than the provided slice.
+    #[must_use]
+    pub fn row_styles(mut self, styles: &[Style]) -> Self {
+        self.row_styles = styles.to_vec();
         self
     }
 
@@ -384,7 +394,18 @@ impl<T: SparklineValue> Sparkline<'_, T> {
             } else {
                 remaining = 0;
             }
-            cx.put_char_patched(x, area.y.saturating_add(row), first_char(glyph), style);
+            let row_style = self
+                .row_styles
+                .get(usize::from(row))
+                .or_else(|| self.row_styles.last())
+                .copied()
+                .unwrap_or_default();
+            cx.put_char_patched(
+                x,
+                area.y.saturating_add(row),
+                first_char(glyph),
+                patch_style(style, row_style),
+            );
         }
     }
 
