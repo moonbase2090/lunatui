@@ -22,8 +22,8 @@ name = "motion"
 required-features = ["motion"]
 
 [dependencies]
-lunatui-core = { version = "0.1.8", path = "../lunatui-core" }
-lunatui-term = { version = "0.1.8", path = "../lunatui-term" }
+lunatui-core = { version = "0.1.9", path = "../lunatui-core" }
+lunatui-term = { version = "0.1.9", path = "../lunatui-term" }
 
 [dev-dependencies]
 proptest = "1.9"

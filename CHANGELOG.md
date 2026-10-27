@@ -8,10 +8,12 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-10-26
+
 ### Added
 
-- `Monthly` calendar, behind the `calendar` feature. A Sunday-based month grid matches ratatui, including the month and weekday headers, surrounding days, event styles, and block padding. `state` paints the selected day, headers, and surrounding days from theme tokens.
-- `Sparkline` widget, behind the `sparkline` feature. Bar heights, direction, max, missing samples, and per-bar styles match ratatui when a style is set. Without one, bars use theme tokens for normal, focused, and disabled, and the latest sample is emphasized. `Baseline::Minimum` lifts the floor to the smallest sample.
+- `Monthly` calendar, behind the `calendar` feature: a Sunday-based month grid with month and weekday headers, surrounding days, event styles, block padding, and theme-token styling for the selected day.
+- `Sparkline` widget, behind the `sparkline` feature. Bar heights, direction, max, missing samples, and per-bar styles. Without a style, bars use theme tokens for normal, focused, and disabled, and the latest sample is emphasized. `Baseline::Minimum` lifts the floor to the smallest sample.
 - `Grid::put_char` writes one width-1 character, including its text attributes, without grapheme segmentation.
 
 ### Changed
