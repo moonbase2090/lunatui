@@ -3,7 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Gauge, RenderCx, Spinner, SpinnerPattern, StatusBar, Tabs, TextInput, Widget,
@@ -220,4 +220,39 @@ fn lightcycle_raster_colors_the_trail_and_handles_empty_areas() {
 
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
     Lightcycle::new(Duration::ZERO).render(Rect::new(0, 0, 0, 0), &mut cx);
+}
+
+#[test]
+fn put_str_keeps_text_attributes_across_wide_glyphs() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(8, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    let bold = Style::new()
+        .fg(Color::Rgb(185, 167, 240))
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(1, 0, "a界b", bold);
+    let bold_at = |x| grid.get(x, 0).map(|cell| cell.style().attrs.bold());
+    assert_eq!(bold_at(0), Some(false));
+    assert_eq!(bold_at(1), Some(true));
+    assert_eq!(bold_at(2), Some(true));
+    assert_eq!(bold_at(4), Some(true));
+    assert_eq!(bold_at(5), Some(false));
+    assert_eq!(grid.row_display(0, &clusters).trim_end(), " a界b");
+}
+
+#[test]
+fn tabs_highlight_style_bolds_only_the_selected_title() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(12, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Tabs::new(["One", "Two"])
+        .select(1)
+        .highlight_style(Style::new().with_attrs(Attrs::new().set_bold(true)))
+        .render(Rect::new(0, 0, 12, 1), &mut cx);
+    let bold_at = |x| grid.get(x, 0).map(|cell| cell.style().attrs.bold());
+    assert_eq!(bold_at(0), Some(false));
+    assert_eq!(bold_at(4), Some(true));
+    assert_eq!(bold_at(6), Some(true));
 }

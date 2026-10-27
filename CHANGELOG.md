@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `BigTextFont::FiveBySeven`, a compact 5×7 clock font for the digits `0`–`9` and `:`, drawn with full blocks.
 
+### Fixed
+
+- `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
+
 ## [0.1.11] - 2026-10-27
 
 ### Added
