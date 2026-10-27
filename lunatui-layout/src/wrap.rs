@@ -87,8 +87,6 @@ pub(crate) fn split(inner: Rect, spec: &WrapSpec<'_>, line: Constraint) -> Wrapp
     }
 }
 
-/// Greedy line breaking. A segment joins the current line when its natural size, and the spacing
-/// before it, still fit. The first segment on a line always stays, even when it is too long.
 fn break_lines(len: u16, constraints: &[Constraint], spacing: i16) -> Vec<Range<usize>> {
     let len = i64::from(len);
     let gap = i64::from(spacing);
@@ -115,8 +113,6 @@ fn break_lines(len: u16, constraints: &[Constraint], spacing: i16) -> Vec<Range<
     lines
 }
 
-/// The size a segment asks for before leftover is shared. `Fill` asks for nothing, so it never
-/// starts a new line on its own account, but it still needs one free cell to join a line.
 fn natural_size(constraint: Constraint, len: i64) -> i64 {
     match constraint {
         Constraint::Min(size) | Constraint::Max(size) | Constraint::Length(size) => i64::from(size),
