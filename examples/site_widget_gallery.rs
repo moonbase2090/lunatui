@@ -482,86 +482,79 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 "Overlay",
                 "Canvas",
                 "Scrollbar",
+                "Block",
+                "Paragraph",
+                "StatusDot",
+                "Lightcycle",
+                "Borders",
             ];
-            let source = VecSource::from_rows(
-                names
-                    .into_iter()
-                    .map(|name| vec![name.to_owned()])
-                    .collect(),
-            );
-            panel("Widgets", LINE_HI).render(Rect::new(2, 1, 28, 22), &mut cx);
-            for index in 0..names.len() {
-                let y = 3 + u16::try_from(index).unwrap_or_default();
-                if index == 3 {
-                    fill(&mut cx, Rect::new(3, y, 26, 1), FOCUS_BG);
-                    put_on(&mut cx, 3, y, "▌", LAV, FOCUS_BG);
-                }
+            let icon_colors = [LAV, LAV, MOON, GREEN, BLUE, LAV, MOON, GREEN, BLUE];
+            let mut items = VecSource::new();
+            let mut icons = Vec::new();
+            let mut marks = Vec::new();
+            for (index, name) in names.into_iter().enumerate() {
+                items.push_row(vec![name.to_owned()]);
+                let color = if index < 13 {
+                    [
+                        LAV, LAV, MOON, GREEN, BLUE, LAV, MOON, GREEN, BLUE, LAV, MOON, GREEN, BLUE,
+                    ][index]
+                } else {
+                    icon_colors[index % icon_colors.len()]
+                };
+                icons.push(("◆".to_owned(), fg(color)));
+                marks.push(matches!(index, 0 | 3 | 5).then(|| ("✓".to_owned(), fg(GREEN))));
             }
-            List::new(source)
-                .selected(Some(3))
+            Block::bordered()
+                .border_type(BorderType::Rounded)
+                .style(Style::new().bg(BG))
+                .border_style(style(LINE_HI))
+                .title(" Widgets ")
+                .title_style(bold(LAV))
+                .title_inset(1)
+                .render(Rect::new(2, 1, 28, 22), &mut cx);
+            List::new(items)
                 .style(style(MUTED))
-                .highlight_style(Style::new().fg(INK).bg(FOCUS_BG))
-                .render(Rect::new(7, 3, 18, 13), &mut cx);
-            let icons = [
-                LAV, LAV, MOON, GREEN, BLUE, LAV, MOON, GREEN, BLUE, LAV, MOON, GREEN, BLUE,
-            ];
-            for (index, color) in icons.into_iter().enumerate() {
-                let y = 3 + u16::try_from(index).unwrap_or_default();
-                let background = if index == 3 { FOCUS_BG } else { BG };
-                put_on(&mut cx, 5, y, "◆", color, background);
-                if matches!(index, 0 | 3 | 5) {
-                    put_on(&mut cx, 25, y, "✓", GREEN, background);
-                }
-                if index == 3 {
-                    cx.set_style(
-                        Rect::new(7, y, 5, 1),
-                        Style::new()
-                            .fg(INK)
-                            .bg(FOCUS_BG)
-                            .with_attrs(Attrs::new().set_bold(true)),
-                    );
-                }
-            }
-            put_bold(&mut cx, 5, 1, "Widgets", LAV);
-            put_bold(&mut cx, 34, 1, "Preview", MUTED);
-            put(&mut cx, 3, 1, "─", LINE_HI);
-            put(&mut cx, 32, 1, "─", LINE);
-            put(&mut cx, 12, 1, " ", BG);
-            put(&mut cx, 41, 1, " ", BG);
-            Scrollbar::vertical(13, 0, 0)
+                .selected(Some(3))
+                .highlight_style(bold(INK).bg(FOCUS_BG))
+                .highlight_symbol("▌ ", fg(LAV))
+                .icons(icons)
+                .marks(marks, 2)
+                .render(Rect::new(3, 3, 25, 13), &mut cx);
+            Scrollbar::vertical(names.len(), 13, 0)
                 .track_style(style(LINE))
                 .thumb_style(style(LAV2))
-                .render(Rect::new(28, 4, 1, 16), &mut cx);
-            cx.set_style(Rect::new(28, 6, 1, 1), Style::new().fg(LINE).bg(FOCUS_BG));
-            put(&mut cx, 32, 10, &"─".repeat(29), LINE);
-            put(&mut cx, 28, 20, "│", LINE);
-            put_on(&mut cx, 4, 20, "13 items · 3 selected", DIM, BG);
-            panel("Preview", LINE).render(Rect::new(31, 1, 31, 22), &mut cx);
-            put_on_bold(&mut cx, 33, 3, "Gauge", MOON, BG);
-            put_on(&mut cx, 33, 4, "Progress with sub-cell", MUTED, BG);
-            put_on(&mut cx, 33, 5, "precision (1/8 cell).", MUTED, BG);
-            fill(&mut cx, Rect::new(33, 7, 26, 1), PANEL_RAISED);
+                .render(Rect::new(28, 3, 1, 13), &mut cx);
+            label(&mut cx, 4, 20, "18 items · 3 selected", style(DIM));
+            Block::bordered()
+                .border_type(BorderType::Rounded)
+                .style(Style::new().bg(BG))
+                .border_style(style(LINE))
+                .title(" Preview ")
+                .title_style(bold(MUTED))
+                .title_inset(1)
+                .render(Rect::new(31, 1, 31, 22), &mut cx);
+            label(&mut cx, 33, 3, "Gauge", bold(MOON));
+            label(&mut cx, 33, 4, "Progress with sub-cell", style(MUTED));
+            label(&mut cx, 33, 5, "precision (1/8 cell).", style(MUTED));
             Gauge::new(0.66)
-                .gauge_style(style(LAV).bg(PANEL_RAISED))
+                .sub_cell(true)
+                .gauge_style(fg(LAV).bg(PANEL_RAISED))
+                .track_style(Style::new().bg(PANEL_RAISED))
                 .render(Rect::new(33, 7, 26, 1), &mut cx);
-            put_on(&mut cx, 50, 7, "▋", LAV, PANEL_RAISED);
-            put_on(&mut cx, 33, 8, "66%  ·  eased 250ms", DIM, BG);
-            put_on_bold(&mut cx, 33, 11, "Options", LAV, BG);
-            put_on(&mut cx, 33, 13, "label", MUTED, BG);
-            put_on(&mut cx, 46, 13, "\"Compiling\"", INK, BG);
-            put_on(&mut cx, 33, 14, "ratio", MUTED, BG);
-            put_on(&mut cx, 46, 14, "0.66", INK, BG);
-            put_on(&mut cx, 33, 15, "style", MUTED, BG);
-            put_on(&mut cx, 46, 15, "lav · bold", INK, BG);
-            put_on(&mut cx, 33, 16, "use_unicode", MUTED, BG);
-            put_on(&mut cx, 46, 16, "true", INK, BG);
-            put_on(&mut cx, 33, 18, "Since", MUTED, BG);
-            put_on(&mut cx, 46, 18, "v0.3", INK, BG);
-            put_on(&mut cx, 33, 20, "↵ open docs", DIM, BG);
-            put_bold(&mut cx, 34, 1, "Preview", MUTED);
-            cx.set_style(Rect::new(28, 6, 1, 1), Style::new().fg(LINE).bg(FOCUS_BG));
-            put(&mut cx, 32, 10, &"─".repeat(29), LINE);
-            put(&mut cx, 28, 20, "│", LINE);
+            label(&mut cx, 33, 8, "66%  ·  eased 250ms", style(DIM));
+            rule(&mut cx, 32, 10, 29, LINE);
+            label(&mut cx, 33, 11, "Options", bold(LAV));
+            for (y, key, value) in [
+                (13, "label", "\"Compiling\""),
+                (14, "ratio", "0.66"),
+                (15, "style", "lav · bold"),
+                (16, "use_unicode", "true"),
+                (18, "Since", "v0.3"),
+            ] {
+                label(&mut cx, 33, y, key, style(MUTED));
+                label(&mut cx, 46, y, value, style(INK));
+            }
+            label(&mut cx, 33, 20, "↵ open docs", style(DIM));
         }
         "overlay" => {
             put_bold(&mut cx, 3, 2, "Sessions", Color::Rgb(74, 79, 128));
