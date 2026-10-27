@@ -1,14 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Site widget captures must come straight from widget output.
-//!
-//! `scripts/gallery-manifest.sh` records, per scene, the hash of what the
-//! widgets render and the hash of the committed PNG made from it. This test
-//! renders every scene again and compares both, so a scene that changed
-//! without a fresh capture, or a PNG changed since the manifest was written,
-//! fails here. A PNG edited and then re-recorded with the manifest script still
-//! passes; only a deterministic re-rasterizer in CI would close that gap.
+#![doc = include_str!("../README.md")]
 
 use std::fmt::Write as _;
 use std::fs;

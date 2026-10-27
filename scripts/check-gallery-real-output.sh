@@ -64,7 +64,7 @@ for file in "${files[@]}"; do
     }gse;
     my $glyph = qr/[\x{2500}-\x{259F}\x{2800}-\x{28FF}]/;
     my @rules = (
-      [qr/\bput_str\b|\bput_cell\b|\bwrite_cell\b|\bset_string\b|\bset_stringn\b|\bset_cell\b|\bset_symbol\b|\bcell_mut\b/,
+      [qr/\bput_str\b|\bput_char\b|\bset_style\b|\bblend_backdrop\b|\bput_cell\b|\bwrite_cell\b|\bset_string\b|\bset_stringn\b|\bset_cell\b|\bset_symbol\b|\bcell_mut\b/,
         "writes cells directly; render a widget instead"],
       [qr/\.(?:put|fill|patch|paint)\s*\(/,
         "looks like painting cells; pass data and styles to a widget instead, or rename the call if it is not a cell write"],
