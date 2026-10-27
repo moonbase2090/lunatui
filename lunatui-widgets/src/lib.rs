@@ -30,7 +30,7 @@ mod text_input;
 mod widget;
 
 #[cfg(feature = "bigtext")]
-pub use big_text::{BigText, PixelSize};
+pub use big_text::{BigText, BigTextFont, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
