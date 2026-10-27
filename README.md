@@ -63,6 +63,10 @@ Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scr
 
 A live service health board rendered by Lunatui and Ratatui side by side. Each row uses a real LineGauge widget, with the selected row, disabled state, value label, threshold colors, and line styles visible in the recording.
 
+![LineGauge service health board](docs/media/line-gauge-120x36-truecolor-dark-lunatui.gif)
+
+Screenshot from the same 120×36 capture: [Lunatui and Ratatui side by side](docs/media/line-gauge-120x36-truecolor-dark-side-by-side.png). Recorded with `scripts/record-widget.sh` (`CASE=line-gauge`, 120×36, 240 frames at 30 fps, dark theme); the GIF is 699 KB and runs for about 11.8 seconds.
+
 | Terminal | Truecolor | ANSI-16 |
 |---|---|---|
 | 80×24 | [Screenshot](docs/media/line-gauge-80x24-truecolor.png) · [Recording](docs/media/line-gauge-80x24-truecolor.mp4) | [Screenshot](docs/media/line-gauge-80x24-ansi16.png) · [Recording](docs/media/line-gauge-80x24-ansi16.mp4) |
