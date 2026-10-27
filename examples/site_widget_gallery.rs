@@ -118,6 +118,10 @@ fn label(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, style: Style) {
         .render(Rect::new(x, y, width, 1), cx);
 }
 
+fn band(cx: &mut RenderCx<'_>, area: Rect, color: Color) {
+    Block::new().style(Style::new().bg(color)).render(area, cx);
+}
+
 fn rule(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, color: Color) {
     Block::new()
         .borders(Borders::TOP)
@@ -911,99 +915,77 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
         }
         "statusbar" => {
             let source = [
-                "use lunatui::prelude::*;",
-                "",
-                "fn main() -> Result<()> {",
-                "    let mut term = Terminal::new()?;",
-                "    term.draw(|f| ui(f))?;",
-                "    loop {",
-                "        if quit() { break; }",
-                "    }",
-                "    Ok(())",
-                "}",
+                ("", "use lunatui::prelude::*;", LAV),
+                ("", "", INK),
+                ("", "fn main() -> Result<()> {", LAV),
+                ("    ", "let mut term = Terminal::new()?;", LAV),
+                ("    ", "term.draw(|f| ui(f))?;", INK),
+                ("    ", "loop {", LAV),
+                ("        ", "if quit() { break; }", LAV),
+                ("    ", "}", INK),
+                ("    ", "Ok(())", MOON),
+                ("", "}", INK),
             ];
-            for (index, text) in source.into_iter().enumerate() {
+            band(&mut cx, Rect::new(1, 6, 62, 1), PANEL);
+            for (index, (indent, text, keyword_color)) in source.into_iter().enumerate() {
                 let y = 2 + u16::try_from(index).unwrap_or_default();
                 let current = index == 4;
-                if current {
-                    fill(&mut cx, Rect::new(1, y, 62, 1), PANEL);
-                }
-                put_on(
+                let background = if current { PANEL } else { BG };
+                label(
                     &mut cx,
                     2,
                     y,
                     &format!("{:>3}", index + 1),
-                    if current { LAV } else { DIM },
-                    if current { PANEL } else { BG },
+                    style(if current { LAV } else { DIM }).bg(background),
                 );
-                put_on(
-                    &mut cx,
-                    7,
-                    y,
-                    text,
-                    if current { INK } else { MUTED },
-                    if current { PANEL } else { BG },
-                );
-                let (prefix, prefix_color) = match index {
-                    0 => ("use", LAV),
-                    2 => ("fn", LAV),
-                    3 => ("    let", LAV),
-                    5 => ("    loop", LAV),
-                    6 => ("        if", LAV),
-                    7 => ("    }", INK),
-                    8 => ("    Ok", MOON),
-                    9 => ("}", INK),
-                    _ => ("", INK),
-                };
-                if !prefix.is_empty() {
-                    let background = if current { PANEL } else { BG };
-                    put_on(&mut cx, 7, y, prefix, prefix_color, background);
-                    put_on(
+                let rest_color = if current { INK } else { MUTED };
+                let keyword_width = text.find([' ', '.', '(']).unwrap_or(text.len());
+                let (keyword, rest) = text.split_at(keyword_width);
+                let x = 7 + u16::try_from(indent.len()).unwrap_or_default();
+                if !keyword.is_empty() {
+                    let color = if current { INK } else { keyword_color };
+                    label(&mut cx, x, y, keyword, style(color).bg(background));
+                }
+                if !rest.is_empty() {
+                    let keyword_cells =
+                        u16::try_from(text_display_width(keyword)).unwrap_or_default();
+                    label(
                         &mut cx,
-                        7 + u16::try_from(prefix.len()).unwrap_or_default(),
+                        x + keyword_cells,
                         y,
-                        &text[prefix.len()..],
-                        if current { INK } else { MUTED },
-                        background,
+                        rest,
+                        style(rest_color).bg(background),
                     );
                 }
             }
-            let cursor_x =
-                7 + u16::try_from("    term.draw(|f| ui(f))?;".len()).unwrap_or_default();
-            fill(&mut cx, Rect::new(cursor_x, 6, 1, 1), LAV);
-            put_on(&mut cx, cursor_x, 6, " ", BG, LAV);
+            label(&mut cx, 33, 6, " ", Style::new().fg(BG).bg(LAV));
             for y in 12..19 {
-                put(&mut cx, 2, y, "  ~", LINE);
+                label(&mut cx, 2, y, "  ~", style(LINE));
             }
-            fill(&mut cx, Rect::new(1, 20, 62, 1), PANEL);
-            StatusBar::new(" NORMAL ")
-                .style(bold(BG).bg(LAV))
-                .render(Rect::new(1, 20, 8, 1), &mut cx);
-            cx.set_style(Rect::new(2, 20, 6, 1), bold(BG).bg(LAV));
-            StatusBar::new(" ⎇ main ")
-                .style(style(INK).bg(FOCUS_BG))
-                .render(Rect::new(9, 20, 8, 1), &mut cx);
-            StatusBar::new(" src/main.rs ")
-                .style(style(INK).bg(PANEL))
-                .render(Rect::new(17, 20, 13, 1), &mut cx);
-            StatusBar::new(" ● ")
-                .style(style(MOON).bg(PANEL))
-                .render(Rect::new(30, 20, 3, 1), &mut cx);
-            StatusBar::new(" rust ")
-                .style(style(MUTED).bg(PANEL))
-                .render(Rect::new(39, 20, 6, 1), &mut cx);
-            StatusBar::new(" utf-8 ")
-                .style(style(MUTED).bg(PANEL))
-                .render(Rect::new(45, 20, 7, 1), &mut cx);
-            StatusBar::new(" 5:23 ")
-                .style(style(INK).bg(FOCUS_BG))
-                .render(Rect::new(52, 20, 6, 1), &mut cx);
-            StatusBar::new(" 50% ")
-                .style(style(BG).bg(MOON))
-                .render(Rect::new(58, 20, 5, 1), &mut cx);
-            put_on(&mut cx, 2, 21, "✓", GREEN, BG);
-            put(&mut cx, 4, 21, "cargo check: 0 errors, 0 warnings", MUTED);
-            put(&mut cx, 52, 21, "0.4s ago", DIM);
+            StatusBar::new("")
+                .style(Style::new().bg(PANEL))
+                .left([
+                    (" NORMAL ", bold(BG).bg(LAV)),
+                    (" ⎇ main ", fg(INK).bg(FOCUS_BG)),
+                    (" src/main.rs ", fg(INK).bg(PANEL)),
+                    (" ● ", fg(MOON).bg(PANEL)),
+                ])
+                .right([
+                    (" rust ", fg(MUTED).bg(PANEL)),
+                    (" utf-8 ", fg(MUTED).bg(PANEL)),
+                    (" 5:23 ", fg(INK).bg(FOCUS_BG)),
+                    (" 50% ", fg(BG).bg(MOON)),
+                ])
+                .render(Rect::new(1, 20, 62, 1), &mut cx);
+            label(&mut cx, 2, 21, "✓", style(GREEN));
+            label(
+                &mut cx,
+                4,
+                21,
+                "cargo check: 0 errors, 0 warnings",
+                style(MUTED),
+            );
+            label(&mut cx, 52, 21, "0.4s ago", style(DIM));
         }
         "statusdot" => {
             put_bold(&mut cx, 7, 5, "Service health", INK);
