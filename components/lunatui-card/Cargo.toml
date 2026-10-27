@@ -1,0 +1,25 @@
+[package]
+name = "lunatui-card"
+description = "A shadcn-style Card component for lunatui."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+graphite-tokens = ["lunatui-ui-tokens/graphite-tokens"]
+
+[dependencies]
+lunatui-core = { version = "0.1.11", path = "../../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.11", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.11", path = "../../lunatui-widgets" }
+
+[dev-dependencies]
+lunatui-test = { version = "0.1.11", path = "../../lunatui-test" }
+lunatui-theme = { version = "0.1.11", path = "../../lunatui-theme" }
