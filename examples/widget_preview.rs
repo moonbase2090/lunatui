@@ -56,7 +56,7 @@ fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)
 }
 
-const DAY_HOLD: u32 = 15;
+const DAY_HOLD: u32 = 11;
 const MONTHS: [&str; 12] = [
     "January",
     "February",
@@ -343,7 +343,7 @@ fn add_days(date: Date, days: i32) -> Date {
 }
 
 fn selected_on(tick: u32) -> Date {
-    let start = Date::from_ymd(2026, 10, 24).unwrap_or(Date::UNIX_EPOCH);
+    let start = Date::from_ymd(2026, 10, 22).unwrap_or(Date::UNIX_EPOCH);
     let steps = i32::try_from(tick / DAY_HOLD).unwrap_or(0);
     add_days(start, steps)
 }
@@ -615,8 +615,39 @@ fn draw_event_chip(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, entry: &Ent
     );
 }
 
+fn upcoming_count(selected: Date) -> u16 {
+    let mut count = 0_u16;
+    for step in 1..22 {
+        let date = add_days(selected, step);
+        for _entry in ENTRIES.iter().filter(|entry| on_day(entry, date)) {
+            count = count.saturating_add(1);
+        }
+    }
+    count
+}
+
+fn agenda_inner_height(scene: &Scene) -> u16 {
+    let count = ENTRIES
+        .iter()
+        .filter(|entry| on_day(entry, scene.selected))
+        .count();
+    let mut rows = 2_u16;
+    if count == 0 {
+        rows = rows.saturating_add(1);
+    } else {
+        rows = rows.saturating_add(u16::try_from(count).unwrap_or(0).saturating_mul(3));
+    }
+    let upcoming = upcoming_count(scene.selected);
+    if upcoming > 0 {
+        rows = rows.saturating_add(2).saturating_add(upcoming);
+    }
+    rows
+}
+
 fn draw_up_next(cx: &mut RenderCx<'_>, scene: &Scene, area: Rect, y: u16) {
-    if y.saturating_add(1) >= area.y.saturating_add(area.height) {
+    if upcoming_count(scene.selected) == 0
+        || y.saturating_add(1) >= area.y.saturating_add(area.height)
+    {
         return;
     }
     paint(
@@ -746,6 +777,11 @@ fn draw_board(cx: &mut RenderCx<'_>, scene: &Scene) {
         Rect::new(2, y, left_w.saturating_sub(2), bottom.saturating_sub(y)),
     );
     let agenda_x = left_w.saturating_add(2);
+    let available = bottom.saturating_sub(top);
+    let agenda_h = agenda_inner_height(scene)
+        .saturating_add(2)
+        .min(available)
+        .max(8.min(available));
     draw_agenda(
         cx,
         scene,
@@ -753,7 +789,7 @@ fn draw_board(cx: &mut RenderCx<'_>, scene: &Scene) {
             agenda_x,
             top,
             scene.width.saturating_sub(agenda_x).saturating_sub(1),
-            bottom.saturating_sub(top),
+            agenda_h,
         ),
     );
 }
