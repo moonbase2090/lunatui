@@ -10,6 +10,7 @@ Each example runs from the repository root with one command (PRD M13). The **v0.
 | `bigtext` | `cargo run --example bigtext -- --snapshot` | Three themed readings (normal, focused, disabled) of large half-height text. `--snapshot` prints the frame as text. | bigtext |
 | `calendar` | `cargo run --example calendar -- --snapshot` | Three themed months (normal, focused, disabled) for October, with styled event days. `--snapshot` prints the frame as text. | calendar |
 | `sparkline` | `cargo run --example sparkline -- --snapshot` | Three themed sparklines (normal, focused, disabled) over a sliding request-rate series. `--snapshot` prints the frame as text. | sparkline |
+| `spinner_presets` | `cargo run --example spinner_presets -- --snapshot` | Every named spinner preset in one framed screen. `--width`, `--height`, `--frames`, and `--fps` play the screen. `--snapshot` prints the first frame as text. | presets |
 | `port_ratatui_block` | `cargo run --example port_ratatui_block -- --snapshot` | Side-by-side lunatui `Block` and ratatui `Block` through `RatatuiWidget` (PR 46 porting guide). | PR 46 |
 | `port_ratatui_paragraph` | `cargo run --example port_ratatui_paragraph -- --snapshot` | ratatui `Paragraph` with styled spans inside lunatui chrome (PR 46). | PR 46 |
 | `port_ratatui_list` | `cargo run --example port_ratatui_list -- --snapshot` | Stateful ratatui `List` via `RatatuiStatefulWidget` (PR 46). | PR 46 |
@@ -29,6 +30,8 @@ Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cas
 
 `captures/gallery.cast` is `cargo run -q --example gallery -- --snapshot` (one rendered frame with overlay modal).
 
+`captures/spinner-presets.gif` is `cargo run --release --example spinner_presets -- --width 64 --height 12 --frames 48 --fps 12`.
+
 ![Capture of the hello box example](captures/hello_box.png)
 
 ![Capture of the cell dump example](captures/cell_dump.png)
@@ -40,6 +43,8 @@ Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cas
 ![Capture of the live dashboard example](captures/live_dashboard.png)
 
 ![Capture of the demo example](captures/demo.png)
+
+![Spinner presets](captures/spinner-presets.gif)
 
 Examples live in this directory and are registered as `[[example]]` targets of the `lunatui` facade crate (`lunatui/Cargo.toml`).
 

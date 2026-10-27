@@ -20,6 +20,7 @@ mod scrollbar;
 #[cfg(feature = "sparkline")]
 mod sparkline;
 mod spinner;
+mod spinner_preset;
 #[cfg(feature = "widget-state")]
 mod state;
 mod status_bar;
@@ -52,6 +53,7 @@ pub use sparkline::{
     THREE_LEVELS,
 };
 pub use spinner::{Spinner, SpinnerPattern};
+pub use spinner_preset::SpinnerPreset;
 #[cfg(feature = "widget-state")]
 pub use state::WidgetState;
 pub use status_bar::StatusBar;

@@ -82,3 +82,7 @@ required-features = ["bigtext"]
 name = "sparkline"
 path = "tests/sparkline.rs"
 required-features = ["sparkline"]
+
+[[test]]
+name = "spinner_presets"
+path = "tests/spinner_presets.rs"

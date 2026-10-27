@@ -159,3 +159,8 @@ test = true
 name = "sparkline"
 path = "../examples/sparkline.rs"
 test = true
+
+[[example]]
+name = "spinner_presets"
+path = "../examples/spinner_presets.rs"
+test = true
