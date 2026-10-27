@@ -471,6 +471,7 @@ impl Widget for BarChart<'_> {
         if area.width == 0 || area.height == 0 {
             return;
         }
+        cx.clear_area(area);
         let max = self.max.unwrap_or_else(|| self.largest());
         match self.direction {
             BarDirection::Vertical => self.render_vertical(area, cx, max),

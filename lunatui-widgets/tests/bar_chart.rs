@@ -527,3 +527,39 @@ fn horizontal_label_and_value_use_the_upper_middle_row() {
         .bar_width(3);
     assert_eq!(rows(&chart, 4, 3), ["  ██", "a 9█", "  ██"]);
 }
+
+#[test]
+fn a_second_render_leaves_nothing_of_the_first() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(24, 6);
+    let mut clusters = ClusterTable::new();
+    let area = Rect::new(0, 0, 24, 6);
+    let big = [Bar::new(100).label("ab").text_value("100"), Bar::new(60)];
+    let small = [Bar::new(10)];
+    for direction in [BarDirection::Vertical, BarDirection::Horizontal] {
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        BarChart::from_bars(&big)
+            .direction(direction)
+            .max(100)
+            .render(area, &mut cx);
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        BarChart::from_bars(&small)
+            .direction(direction)
+            .max(100)
+            .render(area, &mut cx);
+        let drawn: String = (0..6).map(|row| grid.row_display(row, &clusters)).collect();
+        let fresh = {
+            let mut grid = Grid::new(24, 6);
+            let mut clusters = ClusterTable::new();
+            let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+            BarChart::from_bars(&small)
+                .direction(direction)
+                .max(100)
+                .render(area, &mut cx);
+            (0..6)
+                .map(|row| grid.row_display(row, &clusters))
+                .collect::<String>()
+        };
+        assert_eq!(drawn, fresh, "{direction:?}");
+    }
+}
