@@ -10,9 +10,9 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Alignment, BarChart, BigText, BigTextFont, Block, BorderType, Borders, Constraint, Date, Gauge,
-    Lightcycle, List, Monthly, Padding, Paragraph, RenderCx, Scrollbar, Sparkline, SparklineBar,
-    Spinner, SpinnerPattern, StatusBar, StatusDot, StatusState, Table, Tabs, TextInput, TextWrap,
-    TitlePosition, VecSource, WeekStart, Widget,
+    Lightcycle, LineGauge, List, Monthly, Padding, Paragraph, RenderCx, Scrollbar, Sparkline,
+    SparklineBar, Spinner, SpinnerPattern, StatusBar, StatusDot, StatusState, Table, Tabs,
+    TextInput, TextWrap, TitlePosition, VecSource, WeekStart, Widget,
 };
 
 const WIDTH: u16 = 64;
@@ -89,28 +89,6 @@ fn fill(cx: &mut RenderCx<'_>, rect: Rect, color: Color) {
     let blank = " ".repeat(usize::from(rect.width));
     for y in rect.y..rect.y.saturating_add(rect.height) {
         cx.put_str(rect.x, y, &blank, Style::new().bg(color));
-    }
-}
-
-fn spark_glyph(level: f32) -> char {
-    if level >= 8.0 {
-        '█'
-    } else if level >= 7.0 {
-        '▇'
-    } else if level >= 6.0 {
-        '▆'
-    } else if level >= 5.0 {
-        '▅'
-    } else if level >= 4.0 {
-        '▄'
-    } else if level >= 3.0 {
-        '▃'
-    } else if level >= 2.0 {
-        '▂'
-    } else if level >= 1.0 {
-        '▁'
-    } else {
-        ' '
     }
 }
 
@@ -399,95 +377,60 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 ),
                 ("Tests passed", 0.96, GREEN, "482 of 502 · 20 remaining"),
             ];
-            for (index, (label, progress, color, detail)) in stages.into_iter().enumerate() {
+            for (index, (name, progress, color, detail)) in stages.into_iter().enumerate() {
                 let y = 2 + u16::try_from(index).unwrap_or_default() * 4;
-                if index == 0 {
-                    put(&mut cx, 2, y, "▌", LAV);
+                let focused = index == 0;
+                if focused {
+                    label(&mut cx, 2, y, "▌", style(LAV));
                 }
-                if index == 0 {
-                    put_bold(&mut cx, 4, y, label, INK);
-                } else {
-                    put(&mut cx, 4, y, label, MUTED);
-                }
-                put_bold(
+                label(
                     &mut cx,
-                    56,
+                    4,
                     y,
-                    &format!("{:>3.0}%", progress * 100.0),
-                    color,
+                    name,
+                    if focused { bold(INK) } else { style(MUTED) },
                 );
-                fill(&mut cx, Rect::new(4, y + 1, 56, 1), PANEL_RAISED);
+                let percent = format!("{:.0}%", progress * 100.0);
+                let width = u16::try_from(text_display_width(&percent)).unwrap_or_default();
+                label(&mut cx, WIDTH - 4 - width, y, &percent, bold(color));
                 Gauge::new(progress)
-                    .gauge_style(style(color).bg(PANEL_RAISED))
+                    .sub_cell(true)
+                    .gauge_style(fg(color).bg(PANEL_RAISED))
+                    .track_style(Style::new().bg(PANEL_RAISED))
                     .render(Rect::new(4, y + 1, 56, 1), &mut cx);
-                let ticks = progress * 56.0;
-                let whole = u16::try_from(
-                    (0_u16..56)
-                        .take_while(|cell| f32::from(*cell + 1) <= ticks)
-                        .count(),
-                )
-                .unwrap_or_default();
-                let partial = if ticks.fract() == 0.0 {
-                    0
-                } else {
-                    (1_u8..=7)
-                        .take_while(|eighth| f32::from(*eighth) / 8.0 <= ticks.fract())
-                        .last()
-                        .unwrap_or(1)
-                };
-                if partial > 0 {
-                    let glyphs = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
-                    put_on(
-                        &mut cx,
-                        4 + whole,
-                        y + 1,
-                        glyphs[usize::from(partial - 1)],
-                        color,
-                        PANEL_RAISED,
-                    );
-                }
-                put(&mut cx, 4, y + 2, detail, DIM);
+                label(&mut cx, 4, y + 2, detail, style(DIM));
             }
-            put(&mut cx, 2, 14, &"─".repeat(60), LINE);
+            rule(&mut cx, 2, 14, 60, LINE);
             let resources = [
                 ("CPU", LAV, 34_u16),
                 ("GPU", MOON, 18_u16),
                 ("Disk", GREEN, 61_u16),
                 ("Net", BLUE, 27_u16),
             ];
-            for (index, (label, color, percent)) in resources.into_iter().enumerate() {
+            for (index, (name, color, percent)) in resources.into_iter().enumerate() {
                 let y = 16 + u16::try_from(index).unwrap_or_default() * 2;
-                put(&mut cx, 4, y, &format!("{label:<5}"), MUTED);
-                let filled = usize::from((percent * 22).div_ceil(100));
-                put(&mut cx, 10, y, &"━".repeat(filled), color);
-                put(
-                    &mut cx,
-                    10 + u16::try_from(filled).unwrap_or_default(),
-                    y,
-                    &"─".repeat(22 - filled),
-                    LINE,
-                );
-                put(&mut cx, 33, y, &format!("{percent:>3}%"), DIM);
+                label(&mut cx, 4, y, name, style(MUTED));
+                LineGauge::new(f32::from(percent) / 100.0)
+                    .filled_style(style(color))
+                    .unfilled_style(style(LINE))
+                    .render(Rect::new(10, y, 22, 1), &mut cx);
+                label(&mut cx, 33, y, &format!("{percent:>3}%"), style(DIM));
             }
-            let week = [0.4_f32, 0.7, 0.55, 0.9, 0.65, 0.3, 0.8];
-            for (index, value) in week.into_iter().enumerate() {
-                let height = value * 6.0 * 8.0;
-                let x = 42 + u16::try_from(index).unwrap_or_default() * 3;
-                let color = if index == 3 { LAV } else { LINE_HI };
-                for row in 0..6 {
-                    let level = height - f32::from(5 - row) * 8.0;
-                    let glyph = spark_glyph(level);
-                    put_on(
-                        &mut cx,
-                        x,
-                        16 + row,
-                        &glyph.to_string().repeat(2),
-                        color,
-                        PANEL_RAISED,
-                    );
-                }
-            }
-            put(&mut cx, 42, 22, "M  T  W  T  F  S  S", DIM);
+            let week = [
+                400_000, 700_000, 550_000, 900_000, 650_000, 300_000, 800_000,
+            ];
+            let mut day_styles = [fg(LAV2); 7];
+            day_styles[3] = fg(LAV);
+            BarChart::new(&week)
+                .max(1_000_000)
+                .bar_width(2)
+                .bar_gap(1)
+                .style(fg(LAV2))
+                .bar_styles(&day_styles)
+                .track_style(Style::new().bg(PANEL_RAISED))
+                .labels(&["M", "T", "W", "T", "F", "S", "S"])
+                .label_style(style(DIM))
+                .render(Rect::new(42, 16, 20, 7), &mut cx);
         }
         "lightcycle" => {
             put_bold(&mut cx, 5, 3, "Signal trail", INK);
