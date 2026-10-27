@@ -304,3 +304,28 @@ fn status_bar_without_segments_is_unchanged() {
     StatusBar::new("ok").render(Rect::new(0, 0, 10, 1), &mut cx);
     assert_eq!(grid.row_display(0, &clusters), "okxxxxxxxx");
 }
+
+#[test]
+fn spinner_glyph_matches_the_rendered_frame_and_wraps() {
+    let theme = Theme::builtin(Variant::Dark);
+    for frame in [0_u32, 1, 9] {
+        let spinner = Spinner::new(frame).pattern(SpinnerPattern::BrailleRing);
+        let mut grid = Grid::new(1, 1);
+        let mut clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        spinner.render(Rect::new(0, 0, 1, 1), &mut cx);
+        assert_eq!(
+            grid.row_display(0, &clusters),
+            spinner.glyph(),
+            "frame {frame}"
+        );
+    }
+    assert_eq!(
+        Spinner::new(1).pattern(SpinnerPattern::BrailleRing).glyph(),
+        "⣽"
+    );
+    assert_eq!(
+        Spinner::new(9).pattern(SpinnerPattern::BrailleRing).glyph(),
+        "⣽"
+    );
+}

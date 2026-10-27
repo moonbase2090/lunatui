@@ -77,6 +77,15 @@ impl Spinner {
         self.style = style;
         self
     }
+
+    /// The glyph this spinner draws at its frame, for use inside text such as a table cell.
+    #[must_use]
+    pub fn glyph(&self) -> &'static str {
+        let frames = self.pattern.frames();
+        let index =
+            usize::try_from(self.frame % u32::try_from(frames.len()).unwrap_or(1)).unwrap_or(0);
+        frames[index]
+    }
 }
 
 impl Widget for Spinner {
@@ -84,10 +93,7 @@ impl Widget for Spinner {
         if area.width == 0 || area.height == 0 {
             return;
         }
-        let frames = self.pattern.frames();
-        let index =
-            usize::try_from(self.frame % u32::try_from(frames.len()).unwrap_or(1)).unwrap_or(0);
-        cx.put_str(area.x, area.y, frames[index], self.style);
+        cx.put_str(area.x, area.y, self.glyph(), self.style);
     }
 
     fn measure(&self, avail: Size) -> Size {
