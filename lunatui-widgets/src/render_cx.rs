@@ -87,8 +87,13 @@ impl<'a> RenderCx<'a> {
     /// Writes `text` at `(x, y)` with `style` (PRD argument order: text before style).
     ///
     /// Does not clip to a widget area; callers must stay inside their `Rect` (see ADR 0004).
+    /// Text attributes in `style`, such as bold, are kept on every written cell.
     pub fn put_str(&mut self, x: u16, y: u16, text: &str, style: Style) {
         self.grid.put_str(x, y, style, text, self.clusters);
+        if style.attrs != Attrs::new() {
+            let written = u16::try_from(lunatui_core::width(text)).unwrap_or(u16::MAX);
+            self.grid.set_style(Rect::new(x, y, written, 1), style);
+        }
     }
 
     pub(crate) fn put_char_patched(&mut self, x: u16, y: u16, glyph: char, style: Style) {
