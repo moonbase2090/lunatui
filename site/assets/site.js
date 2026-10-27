@@ -1,6 +1,5 @@
 const mobileViewport = window.matchMedia('(max-width: 767px)');
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-const hero = document.querySelector('.hero');
 let parallaxQueued = false;
 function updateParallax() {
   if (mobileViewport.matches || reducedMotionQuery.matches) {
@@ -20,40 +19,6 @@ function updateParallax() {
 window.addEventListener('scroll', updateParallax, { passive: true });
 mobileViewport.addEventListener('change', updateParallax);
 reducedMotionQuery.addEventListener('change', updateParallax);
-
-let heroVisible = true;
-const motionToggle = document.querySelector('.motion-toggle');
-let userPaused = localStorage.getItem('lunatui-motion-paused') === 'true';
-function motionPaused() { return userPaused || reducedMotionQuery.matches; }
-function updateMotionToggle() {
-  const paused = motionPaused();
-  motionToggle.setAttribute('aria-pressed', String(paused));
-  motionToggle.disabled = reducedMotionQuery.matches;
-  motionToggle.textContent = reducedMotionQuery.matches ? 'Motion reduced' : paused ? 'Play motion' : 'Pause motion';
-  document.documentElement.classList.toggle('motion-paused', paused);
-  galleryImages.forEach((image) => {
-    if (image.dataset.loaded === 'true') setGalleryImage(image);
-  });
-}
-
-function updateHeroMotion() {
-  const paused = !heroVisible || document.hidden || motionPaused();
-  hero.classList.toggle('motion-paused', paused);
-}
-
-new IntersectionObserver(([entry]) => {
-  heroVisible = entry.isIntersecting;
-  updateHeroMotion();
-}).observe(hero);
-document.addEventListener('visibilitychange', updateHeroMotion);
-reducedMotionQuery.addEventListener('change', updateHeroMotion);
-reducedMotionQuery.addEventListener('change', updateMotionToggle);
-motionToggle.addEventListener('click', () => {
-  userPaused = !userPaused;
-  localStorage.setItem('lunatui-motion-paused', String(userPaused));
-  updateMotionToggle();
-  updateHeroMotion();
-});
 
 const menuButton = document.querySelector('.menu');
 const mainNav = document.querySelector('#main-links');
@@ -80,32 +45,22 @@ document.addEventListener('keydown', (event) => {
 });
 mobileMenu.addEventListener('change', () => setMenuOpen(false));
 
-const galleryImages = [...document.querySelectorAll('.widget-demo[data-static]')];
-function setGalleryImage(image) {
-  const source = motionPaused() || !image.dataset.gif ? image.dataset.static : image.dataset.gif;
-  if (source && image.getAttribute('src') !== source) image.src = source;
-}
+const galleryImages = [...document.querySelectorAll('.widget-demo[data-src]')];
 const galleryLoader = new IntersectionObserver((entries, observer) => {
   if (!entries.some((entry) => entry.isIntersecting)) return;
   galleryImages.forEach((image) => {
-    image.dataset.loaded = 'true';
-    setGalleryImage(image);
+    image.src = image.dataset.src;
+    delete image.dataset.src;
   });
   observer.disconnect();
 }, { rootMargin: '0px 0px -250px 0px' });
 galleryLoader.observe(document.querySelector('#gallery'));
-document.querySelectorAll('.stars i:not(.static)').forEach((star) => {
-  star.style.animationDelay = `${-Math.random() * 6}s`;
-});
-updateMotionToggle();
-updateHeroMotion();
 
 const carousel = document.querySelector('#carousel');
 const dots = [...document.querySelectorAll('.dots button')];
 dots.forEach((button, index) => {
   button.addEventListener('click', () => {
-    const cardIndex = Math.round(index * (carousel.children.length - 1) / Math.max(1, dots.length - 1));
-    carousel.children[cardIndex].scrollIntoView({
+    carousel.children[index].scrollIntoView({
       behavior: reducedMotion.matches ? 'auto' : 'smooth',
       inline: 'center',
       block: 'nearest',
@@ -123,9 +78,8 @@ carousel.addEventListener('scroll', () => {
       const distance = Math.abs(card.getBoundingClientRect().left + card.offsetWidth / 2 - center);
       return distance < best.distance ? { index: i, distance } : best;
     }, { index: 0, distance: Infinity }).index;
-    const pageIndex = Math.round(index * (dots.length - 1) / Math.max(1, cards.length - 1));
     dots.forEach((dot, i) => {
-      if (i === pageIndex) dot.setAttribute('aria-current', 'true');
+      if (i === index) dot.setAttribute('aria-current', 'true');
       else dot.removeAttribute('aria-current');
     });
     scrollQueued = false;
@@ -141,3 +95,57 @@ copyButton.addEventListener('click', async () => {
     copyButton.setAttribute('aria-label', 'Install command: cargo add lunatui');
   }
 });
+
+const hero = document.querySelector('.hero');
+const fastMeteors = new URLSearchParams(location.search).has('fast');
+let heroVisible = true;
+new IntersectionObserver(([entry]) => { heroVisible = entry.isIntersecting; }).observe(hero);
+function meteor() {
+  if (!heroVisible || document.hidden || reducedMotionQuery.matches) return;
+  const box = hero.getBoundingClientRect();
+  const moon = document.querySelector('.moon').getBoundingClientRect();
+  const minX = box.width > 900 ? box.width * 0.45 : 0;
+  let x;
+  let y;
+  do {
+    x = minX + Math.random() * (box.width - minX - 80);
+    y = box.height * (0.04 + Math.random() * 0.31);
+  } while (Math.hypot(x - (moon.left - box.left + moon.width / 2), y - (moon.top - box.top + moon.height / 2)) < moon.width * 0.55 + 120);
+  const angle = 22 + Math.random() * 14;
+  const rad = angle * Math.PI / 180;
+  const travel = 260 + Math.random() * 260;
+  const el = document.createElement('i');
+  el.className = 'meteor';
+  el.setAttribute('aria-hidden', 'true');
+  el.style.cssText = `left:${x}px;top:${y}px;width:${100 + Math.random() * 120}px`;
+  hero.append(el);
+  el.animate([
+    { opacity: 0, transform: `translate(0,0) rotate(${angle}deg)` },
+    { opacity: 1, offset: 0.15 },
+    { opacity: 1, offset: 0.6 },
+    { opacity: 0, transform: `translate(${Math.cos(rad) * travel}px,${Math.sin(rad) * travel}px) rotate(${angle}deg)` },
+  ], { duration: 650 + Math.random() * 450, easing: 'cubic-bezier(.4,0,.9,.6)' })
+    .finished.then(() => el.remove(), () => el.remove());
+}
+window.__meteor = meteor;
+setTimeout(meteor, fastMeteors ? 2500 : 6000);
+(function next() {
+  setTimeout(() => { meteor(); next(); }, fastMeteors ? 3000 + Math.random() * 3000 : 25000 + Math.random() * 25000);
+}());
+
+const starEls = [...document.querySelectorAll('.stars i')];
+function twinkle() {
+  if (!heroVisible || document.hidden || reducedMotionQuery.matches) return;
+  const star = starEls[Math.floor(Math.random() * starEls.length)];
+  if (!star || star.offsetParent === null) return;
+  star.animate([
+    { offset: 0.3, opacity: 1, transform: 'scale(2.8)', boxShadow: '0 0 14px 3px rgba(255,255,255,.95)' },
+  ], { duration: 900 + Math.random() * 800, easing: 'ease-out' });
+}
+(function nextTwinkle() {
+  setTimeout(() => {
+    twinkle();
+    if (Math.random() < 0.25) setTimeout(twinkle, 150 + Math.random() * 350);
+    nextTwinkle();
+  }, 600 + Math.random() * 2200);
+}());

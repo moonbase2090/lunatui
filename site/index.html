@@ -40,35 +40,27 @@ a{color:inherit}
 /* hero */
 .hero{position:relative;min-height:760px;overflow:hidden;background:var(--night)}
 .sky-frame{position:absolute;inset:0;width:100%;height:100%;display:block}
-.sky{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:0;transform:scale(1.04);animation:sky-in 1.4s ease-out both,sky-push 90s ease-in-out 1.4s infinite alternate}
-@keyframes sky-in{to{opacity:1}}
-@keyframes sky-push{from{transform:scale(1.04)}to{transform:scale(1.055)}}
-.moon-frame{position:absolute;right:8%;top:70px;width:340px;z-index:1}
-.moon{width:100%;mix-blend-mode:screen;opacity:0;animation:moon-in .8s ease-out .3s both,pulse 12s ease-in-out 1.1s infinite}
-@keyframes moon-in{to{opacity:1}}
-@keyframes pulse{0%,100%{filter:brightness(1) drop-shadow(0 0 14px rgba(243,226,176,.2))}50%{filter:brightness(1.04) drop-shadow(0 0 14px rgba(243,226,176,.25))}}
+.sky{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;transform-origin:78% 28%;animation:sky-in 1.4s ease-out both,push 80s ease-in-out infinite alternate}
+@keyframes sky-in{from{opacity:0}to{opacity:1}}
+@keyframes push{from{transform:scale(1.04)}to{transform:scale(1.10)}}
+.moon{animation:moon-in 1.6s .3s ease-out both,pulse 16s 1.9s ease-in-out infinite}
+@keyframes moon-in{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{filter:brightness(1) drop-shadow(0 0 10px rgba(243,226,176,.14))}50%{filter:brightness(1.06) drop-shadow(0 0 22px rgba(243,226,176,.32))}}
 .hero::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(9,13,32,.78),rgba(9,13,32,.35) 45%,rgba(9,13,32,0) 70%)}
 .hero-copy h1,.tagline,.lede{text-shadow:0 2px 14px rgba(5,8,22,.9)}
 @media (max-width:767px){.hero::after{background:linear-gradient(180deg,rgba(9,13,32,0) 20%,rgba(9,13,32,.7) 45%,rgba(9,13,32,.6) 80%)}}
+.moon{position:absolute;right:8%;top:70px;width:340px;mix-blend-mode:screen;z-index:1}
 .hills{position:absolute;left:0;right:0;bottom:-2px;width:100%;height:340px;object-fit:cover;object-position:top;z-index:2;filter:brightness(1.35) saturate(1.1)}
 .hero-fade{position:absolute;left:0;right:0;bottom:0;height:120px;background:linear-gradient(transparent,var(--night));z-index:3}
 .stars{position:absolute;inset:0;z-index:1;pointer-events:none}
-.stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 4px rgba(255,255,255,.55);opacity:.55;animation:tw 6s ease-in-out infinite alternate;animation-delay:var(--star-delay,0s)}
-.stars i.static{animation:none;opacity:.7}
-
-@keyframes tw{from{opacity:.55}to{opacity:.9}}
-
-.motion-paused *,html.motion-paused *{animation-play-state:paused!important}
-.motion-paused .sky{opacity:1;transform:scale(1.04)}
-.motion-paused .moon{opacity:1}
-.motion-paused .hero-copy h1,.motion-paused .hero-copy .tagline,.motion-paused .hero-copy .brush,.motion-paused .hero-copy .lede,.motion-paused .hero-copy .install{opacity:1;transform:none}
-.hero-copy{position:relative;z-index:4;padding:150px 26px 28px;max-width:620px;width:fit-content;isolation:isolate}
-.hero-copy::before{content:"";position:absolute;z-index:-1;inset:-36px -52px -28px -38px;border-radius:48%;background:rgba(9,13,32,.62);filter:blur(22px);mask-image:radial-gradient(ellipse var(--fx,76%) var(--fy,66%) at 45% 48%,#000 24%,transparent 100%);pointer-events:none}
-.hero-copy h1,.hero-copy .tagline,.hero-copy .brush,.hero-copy .lede,.hero-copy .install{opacity:0;transform:translateY(10px);animation:copy-in 1.2s ease-out .7s both}
-.hero-copy .tagline{animation-delay:.82s}.hero-copy .brush{animation-delay:.94s}.hero-copy .lede{animation-delay:1.06s}.hero-copy .install{animation-delay:1.18s}
-@keyframes copy-in{to{opacity:1;transform:translateY(0)}}
-.skip-link{position:absolute;left:16px;top:12px;z-index:20;padding:10px 16px;background:var(--moon);color:var(--night);transform:translateY(-160%);border-radius:8px}.skip-link:focus{transform:none}
-.motion-toggle{position:absolute;z-index:6;right:24px;top:92px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:22px;background:rgba(14,19,44,.86);color:var(--ink);font:500 14px var(--sans);cursor:pointer}
+.stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 4px rgba(255,255,255,.55);animation:tw var(--d,5s) ease-in-out infinite alternate}
+.stars i:nth-child(3n){--d:3.4s}.stars i:nth-child(3n+1){--d:5.2s}.stars i:nth-child(3n+2){--d:7s}
+.stars i:nth-child(5n){animation:none;opacity:.6}
+@keyframes tw{from{opacity:.35}to{opacity:.9}}
+.meteor{position:absolute;height:2px;border-radius:2px;pointer-events:none;z-index:1;opacity:0;transform-origin:0 50%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85));filter:drop-shadow(0 0 4px rgba(190,210,255,.7))}
+.hero-copy{position:relative;z-index:4;padding-top:150px;max-width:620px;width:fit-content}
+.hero-copy::before{--fx:96px;--fy:80px;content:"";position:absolute;z-index:-1;top:70px;left:-112px;right:-112px;bottom:-100px;pointer-events:none;background:rgba(9,13,32,.66);-webkit-mask-image:linear-gradient(to right,transparent,#000 var(--fx),#000 calc(100% - var(--fx)),transparent),linear-gradient(to bottom,transparent,#000 var(--fy),#000 calc(100% - var(--fy)),transparent);-webkit-mask-composite:source-in;mask-image:linear-gradient(to right,transparent,#000 var(--fx),#000 calc(100% - var(--fx)),transparent),linear-gradient(to bottom,transparent,#000 var(--fy),#000 calc(100% - var(--fy)),transparent);mask-composite:intersect}
+@media (max-width:767px){.hero-copy::before{--fx:28px;--fy:60px;left:-28px;right:-28px;top:150px;bottom:-60px}}
 h1{font:600 clamp(64px,10vw,124px)/1 var(--serif);letter-spacing:-.01em}
 .tagline{font:500 clamp(24px,3vw,36px)/1.2 var(--serif);color:var(--lav);margin:14px 0 10px}
 .brush{width:110px;height:6px;border-radius:6px;background:linear-gradient(90deg,var(--lav),transparent);margin-bottom:22px}
@@ -87,7 +79,7 @@ section.block{padding:72px 0}
 .sec-h p{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink2);margin-top:4px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
 /* gallery */
-.gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
 .tile{padding:14px}
 .tile-h{display:flex;justify-content:space-between;font-weight:500;margin-bottom:10px}
 .tile-h span:last-child{letter-spacing:2px;color:var(--ink2)}
@@ -101,7 +93,7 @@ section.block{padding:72px 0}
 
 
 
-.dots{display:none;flex-wrap:wrap;max-width:100%}
+.dots{display:none}
 /* speed */
 .speed{display:grid;grid-template-columns:1fr 240px;gap:24px;align-items:center;padding:28px 32px}
 .speed-cap{font:12px var(--mono);letter-spacing:.12em;color:var(--ink2);text-transform:uppercase;margin-bottom:16px}
@@ -135,20 +127,18 @@ footer .container{display:flex;justify-content:space-between;align-items:center;
 footer nav{display:flex;flex-wrap:wrap}
 footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;text-decoration:none}
 /* motion */
-.reveal{animation:up 1.8s ease-out both}
-@keyframes up{from{opacity:.94;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (max-width:1000px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.tech{grid-template-columns:1fr 1fr}.speed{grid-template-columns:1fr}}
+.reveal{animation:up 1.2s .7s cubic-bezier(.2,.7,.2,1) both}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (max-width:1000px){.gallery{grid-template-columns:repeat(2,1fr)}.tech{grid-template-columns:1fr 1fr}.speed{grid-template-columns:1fr}}
 @media (max-width:767px){
  .container{padding:0 20px}
  .nav ul{display:none}
  .nav .menu{display:inline-flex}
  .hero{min-height:720px}
- .moon-frame{width:190px;right:-10px;top:70px}
+ .moon{width:190px;right:-10px;top:70px}
 
  .hills{height:200px}
- .hero-copy{padding:220px 18px 24px;max-width:100%;--fx:90%;--fy:72%}
- .hero-copy::before{inset:-26px -18px -24px;border-radius:42%;filter:blur(16px)}
- .motion-toggle{right:18px;top:82px}
+ .hero-copy{padding-top:220px}
  .stars i:nth-child(n+7){display:none}
  section.block{padding:48px 0}
  .gallery{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin:0 -20px;padding:0 20px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -167,7 +157,7 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
  footer .container{flex-direction:column;align-items:flex-start}
 }
 .menu{display:none;min-width:44px;min-height:44px;align-items:center;justify-content:center;background:transparent;border:1px solid var(--line);border-radius:10px;color:var(--ink)}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}.sky,.moon,.hero-copy h1,.hero-copy .tagline,.hero-copy .brush,.hero-copy .lede,.hero-copy .install{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
 
 /* Maker section */
 #maker{--bg:#101218;--line:#232837;--ink:#e6e8ee;--ink-2:#9aa1b2;--ink-3:#929bad;--blue:#62a8ff;--mono:"JetBrainsMono NFM","JetBrainsMono Nerd Font Mono","JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-family:var(--mono);color:var(--ink);font-size:16px;line-height:1.6;padding:104px 0}
@@ -216,7 +206,6 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
  html{scroll-behavior:auto!important}
  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
  .reveal{opacity:1;transform:none}
- .sky,.moon,.hero-copy h1,.hero-copy .tagline,.hero-copy .brush,.hero-copy .lede,.hero-copy .install{opacity:1;transform:none}
 }
 @media (max-width:767px){
  .install{backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -227,20 +216,18 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
 </style>
 </head>
 <body id="top">
-<a class="skip-link" href="#main-content">Skip to content</a>
 <header class="nav"><div class="container">
  <a class="logo" href="#top"><svg viewBox="0 0 24 24"><path d="M15 3a9 9 0 1 0 6 15A8 8 0 0 1 15 3z" fill="#ece7da"/></svg>Lunatui</a>
  <nav aria-label="Main" id="main-links"><ul><li><a href="#docs">Docs</a></li><li><a href="#gallery">Gallery</a></li><li><a href="#speed">Benchmarks</a></li><li><a href="#tech">Technical</a></li></ul></nav>
  <button class="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="main-links"><span aria-hidden="true">☰</span></button>
 </div></header>
-<main id="main-content" tabindex="-1">
+<main>
 <section class="hero">
  <picture class="sky-frame" aria-hidden="true"><source srcset="assets/sky-mobile.webp" media="(max-width: 767px)"><img class="sky" src="assets/sky.webp" alt="" fetchpriority="high" decoding="sync"></picture>
- <div class="moon-frame" data-depth="0.15"><img class="moon" src="assets/moon.webp" alt="" decoding="async"></div>
+ <img class="moon" src="assets/moon.webp" alt="" data-depth="0.15" decoding="async">
  <img class="hills" src="assets/hills.webp" alt="" data-depth="0.05" decoding="async">
- <div class="stars" aria-hidden="true"><i style="left:12%;top:18%"></i><i style="left:30%;top:9%"></i><i style="left:46%;top:24%"></i><i style="left:58%;top:12%"></i><i style="left:88%;top:52%"></i><i style="left:6%;top:44%"></i><i style="left:40%;top:40%"></i><i style="left:66%;top:36%"></i><i style="left:22%;top:30%"></i><i class="static" style="left:94%;top:14%"></i><i class="static" style="left:52%;top:6%"></i><i class="static" style="left:76%;top:46%"></i></div>
+ <div class="stars" aria-hidden="true"><i style="left:12%;top:18%;animation-delay:-1.5s"></i><i style="left:30%;top:9%;animation-delay:-3.2s"></i><i style="left:46%;top:24%;animation-delay:-5.1s"></i><i style="left:58%;top:12%;animation-delay:-2.1s"></i><i style="left:88%;top:52%;animation-delay:-4.4s"></i><i style="left:6%;top:44%;animation-delay:-6.2s"></i><i style="left:40%;top:40%;animation-delay:-.8s"></i><i style="left:66%;top:36%;animation-delay:-3.7s"></i><i style="left:22%;top:30%;animation-delay:-5.6s"></i><i style="left:94%;top:14%;animation-delay:-1s"></i><i style="left:52%;top:6%;animation-delay:-4.9s"></i><i style="left:76%;top:46%;animation-delay:-2.8s"></i></div>
  <div class="hero-fade"></div>
- <button class="motion-toggle" type="button" aria-pressed="false">Pause motion</button>
  <div class="container"><div class="hero-copy reveal">
   <h1>Lunatui</h1>
   <p class="tagline">Moonlit terminal UIs in Rust</p>
@@ -252,27 +239,12 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
 
 <section class="block" id="gallery"><div class="container">
  <div class="sec-h reveal"><h2>Widget Gallery</h2><p>Rich widgets. Beautiful terminal.</p></div>
- <div class="gallery" id="carousel" tabindex="0" role="region" aria-label="Widget gallery">
-  <article class="tile panel"><div class="tile-h"><span>BigText</span></div><img class="widget-demo" data-static="assets/media/bigtext.png" alt="BigText widget rendering large block lettering" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Block</span></div><img class="widget-demo" data-static="assets/media/block.png" alt="Block widget drawing a titled border around terminal content" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Calendar</span></div><img class="widget-demo" data-static="assets/media/calendar.png" alt="Calendar widget rendering a monthly schedule" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Gauge</span></div><img class="widget-demo" data-static="assets/media/gauge.png" alt="Gauge widget showing progress in a bordered bar" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Lightcycle</span></div><img class="widget-demo" data-static="assets/media/lightcycle.png" alt="Lightcycle widget drawing a colored Braille trail" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>List</span></div><img class="widget-demo" data-static="assets/media/list.png" alt="List widget displaying selectable terminal rows" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Overlay</span></div><img class="widget-demo" data-static="assets/media/overlay.png" alt="Overlay widget drawing a modal over background content" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Paragraph</span></div><img class="widget-demo" data-static="assets/media/paragraph.png" alt="Paragraph widget rendering wrapped terminal text" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Padding</span></div><img class="widget-demo" data-static="assets/media/padding.png" alt="Text input content inset inside a padded block" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Scrollbar</span></div><img class="widget-demo" data-static="assets/media/scrollbar.png" alt="Scrollbar widget showing a vertical thumb and track" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Sparkline</span></div><img class="widget-demo" data-static="assets/media/sparkline.png" alt="Sparkline widget drawing a live data trend" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Spinner</span></div><img class="widget-demo" data-static="assets/media/spinner.png" alt="Spinner widget showing one frame of its animated indicator" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>StatusBar</span></div><img class="widget-demo" data-static="assets/media/statusbar.png" alt="StatusBar widget displaying a status message along the bottom edge" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>StatusDot</span></div><img class="widget-demo" data-static="assets/media/statusdot.png" alt="StatusDot widget showing a successful ready state" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Table</span></div><img class="widget-demo" data-static="assets/media/table.png" alt="Table widget displaying check names and results in columns" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Tabs</span></div><img class="widget-demo" data-static="assets/media/tabs.png" alt="Tabs widget highlighting the selected Lints tab" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>TextInput</span></div><img class="widget-demo" data-static="assets/media/textinput.png" alt="TextInput widget with an editable filter value" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Borders</span></div><img class="widget-demo" data-static="assets/media/borders.png" alt="Rounded borders drawn around an overlay panel" loading="lazy" decoding="async" width="240" height="170"></article>
+ <div class="gallery" id="carousel">
+  <article class="tile panel"><div class="tile-h"><span>Calendar</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-src="assets/media/calendar.gif" alt="Calendar widget rendering a monthly schedule" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>BigText</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-src="assets/media/bigtext.gif" alt="BigText widget rendering large block lettering" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Sparkline</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-src="assets/media/sparkline.gif" alt="Sparkline widget drawing a live data trend" loading="lazy" decoding="async" width="240" height="170"></article>
  </div>
- <div class="dots" role="group" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show first gallery cards"></button><button type="button" aria-label="Show middle gallery cards"></button><button type="button" aria-label="Show final gallery cards"></button></div>
+ <div class="dots" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show Calendar"></button><button type="button" aria-label="Show BigText"></button><button type="button" aria-label="Show Sparkline"></button></div>
 </div></section>
 
 <section class="block" id="speed"><div class="container">
@@ -289,7 +261,7 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
 </div></section>
 
 <section class="block" id="tech"><div class="container">
- <div class="sec-h reveal"><h2>Technical details</h2><p>How Lunatui draws the night</p></div>
+ <div class="sec-h reveal"><h2>Technical details</h2><p>Rendering, input, widgets, performance, and build requirements</p></div>
  <div class="tech">
   <article class="panel"><h3>Rendering</h3><ul><li>16-byte packed cells</li><li>Damage-tracked diffing</li><li>ANSI output encoder writes once per frame</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Source: project overview</a></article>
   <article class="panel"><h3>Input &amp; runtime</h3><ul><li>Keyboard, mouse, and bracketed-paste input</li><li>Focus management and hit testing</li><li>Event-driven frame scheduling with animation</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Source: project overview</a></article>
