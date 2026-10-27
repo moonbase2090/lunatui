@@ -95,6 +95,21 @@ impl<'a> RenderCx<'a> {
         self.grid.put_char(x, y, patched, glyph, self.clusters);
     }
 
+    pub(crate) fn patch_area(&mut self, area: Rect, style: Style) {
+        let end_x = area.x.saturating_add(area.width);
+        let end_y = area.y.saturating_add(area.height);
+        for y in area.y..end_y {
+            for x in area.x..end_x {
+                let existing = self
+                    .grid
+                    .get(x, y)
+                    .map(lunatui_core::Cell::style)
+                    .unwrap_or_default();
+                self.set_style(Rect::new(x, y, 1, 1), patch_style(existing, style));
+            }
+        }
+    }
+
     /// Applies `style` to every cell in `area`, keeping glyphs unchanged.
     pub fn set_style(&mut self, area: Rect, style: Style) {
         self.grid.set_style(area, style);

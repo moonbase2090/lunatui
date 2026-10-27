@@ -42,3 +42,11 @@ Live service board. Ten series scroll in eighth-block bars, the highlight moves 
 ![Sparkline service board, still](docs/media/sparkline.png)
 
 Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120×36, 8 s at 30 fps, dark theme).
+
+### Calendar
+
+A team schedule: the month beside that day's agenda, colored release, review, on-call, and incident days, today held in a raised cell, and the selection walking from late October into November.
+
+![Calendar widget: a team schedule in the dark theme](docs/media/calendar.gif)
+
+Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-showcase.sh` (`CASE=calendar`, 120×36, 8 s at 30 fps, dark).

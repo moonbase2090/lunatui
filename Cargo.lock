@@ -872,6 +872,7 @@ dependencies = [
  "lunatui-theme",
  "lunatui-widgets",
  "ratatui",
+ "time",
 ]
 
 [[package]]
@@ -891,6 +892,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "ratatui",
+ "time",
 ]
 
 [[package]]
@@ -998,6 +1000,7 @@ dependencies = [
  "lunatui-text",
  "lunatui-theme",
  "ratatui",
+ "time",
  "unicode-segmentation",
 ]
 
