@@ -23,10 +23,41 @@ pub struct Theme {
     colors: [Color; Token::COUNT],
 }
 
+/// Token colors resolved once for a terminal color profile.
+#[cfg(feature = "color-profiles")]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreparedPalette {
+    colors: [Color; Token::COUNT],
+    profile: Profile,
+}
+
+#[cfg(feature = "color-profiles")]
+impl PreparedPalette {
+    /// Resolve a semantic token with one array lookup.
+    #[must_use]
+    pub fn resolve(&self, token: Token) -> Color {
+        self.colors[token.id() as usize]
+    }
+
+    /// Prepared colors in stable token-id order, for the terminal encoder.
+    #[must_use]
+    pub const fn colors(&self) -> &[Color; Token::COUNT] {
+        &self.colors
+    }
+
+    /// The terminal profile used at preparation time.
+    pub const fn profile(&self) -> Profile {
+        self.profile
+    }
+}
+
 impl Theme {
     /// Built-in palette for `variant`.
     #[must_use]
     pub fn builtin(variant: Variant) -> Self {
+        #[cfg(feature = "graphite-tokens")]
+        let colors = crate::graphite::colors(variant);
+        #[cfg(not(feature = "graphite-tokens"))]
         let colors = match variant {
             Variant::Light => [
                 Color::Rgb(0xf5, 0xf5, 0xf7),
@@ -89,10 +120,22 @@ impl Theme {
     #[cfg(feature = "color-profiles")]
     #[must_use]
     pub fn palette_for(&self, profile: Profile) -> Vec<Color> {
-        self.colors
-            .iter()
-            .map(|&color| profile.downsample(color))
-            .collect()
+        self.prepare(profile).colors.to_vec()
+    }
+
+    /// Prepare token colors at startup or when the theme/profile changes.
+    #[cfg(feature = "color-profiles")]
+    #[must_use]
+    pub fn prepare(&self, profile: Profile) -> PreparedPalette {
+        #[cfg(feature = "graphite-tokens")]
+        let colors = if profile == Profile::Ansi16 {
+            crate::graphite::ansi16(self.variant)
+        } else {
+            self.colors.map(|color| profile.downsample(color))
+        };
+        #[cfg(not(feature = "graphite-tokens"))]
+        let colors = self.colors.map(|color| profile.downsample(color));
+        PreparedPalette { colors, profile }
     }
 
     /// Overrides one token color.

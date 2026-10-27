@@ -3,58 +3,44 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{ClusterTable, Grid, Rect};
-use lunatui_test::styled_snapshot;
+use lunatui_core::{ClusterTable, Color, DecodedGlyph, Grid, Rect};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{RenderCx, StatusDot, StatusState, Widget};
 
-fn token_for(state: StatusState) -> Token {
-    if matches!(state, StatusState::Ok) {
-        Token::Ok
-    } else if matches!(state, StatusState::Fail) {
-        Token::Fail
-    } else {
-        Token::TextPrimary
-    }
-}
-
-fn snapshot_with_profile(
-    state: StatusState,
-    variant: Variant,
-    profile: Profile,
-    width: u16,
-    height: u16,
-    x: u16,
-    y: u16,
-) -> String {
-    let theme = Theme::builtin(variant);
-    let mut grid = Grid::new(width, height);
-    let mut clusters = ClusterTable::new();
-    let dot = StatusDot::new(state);
-    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).profile(profile);
-    dot.render(Rect::new(x, y, 1, 1), &mut cx);
-    styled_snapshot(&grid, &clusters)
-}
-
 #[test]
-fn status_dot_renders_ansi16_for_every_state_and_size() {
+fn status_dot_renders_prepared_ansi16_for_every_state_and_size() -> Result<(), &'static str> {
     for state in [StatusState::Ok, StatusState::Fail, StatusState::Idle] {
         for variant in [Variant::Dark, Variant::Light] {
-            let theme = Theme::builtin(variant);
-            let expected = format!(
-                "{:?}",
-                Profile::Ansi16.downsample(theme.resolve(token_for(state)))
-            );
-            for (width, height, x, y) in [(1_u16, 1_u16, 0, 0), (80, 24, 79, 23)] {
-                let snap =
-                    snapshot_with_profile(state, variant, Profile::Ansi16, width, height, x, y);
-                assert!(snap.contains('●'));
-                assert!(
-                    snap.contains(expected.as_str()),
-                    "state {state:?} variant {variant:?} at {width}x{height}"
-                );
-                assert!(snap.contains("Indexed("), "expected indexed fg in snapshot");
+            let mut theme = Theme::builtin(variant);
+            theme.set_token(Token::Ok, Color::Rgb(0, 205, 0));
+            theme.set_token(Token::Fail, Color::Rgb(205, 0, 0));
+            let text = if variant == Variant::Dark {
+                Color::Rgb(229, 229, 229)
+            } else {
+                Color::Rgb(0, 0, 0)
+            };
+            theme.set_token(Token::TextPrimary, text);
+            let index = if state == StatusState::Ok {
+                2
+            } else if state == StatusState::Fail {
+                1
+            } else if variant == Variant::Dark {
+                7
+            } else {
+                0
+            };
+            let palette = theme.prepare(Profile::Ansi16);
+            for (width, height, x, y) in [(1, 1, 0, 0), (80, 24, 79, 23)] {
+                let mut grid = Grid::new(width, height);
+                let mut clusters = ClusterTable::new();
+                let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).palette(&palette);
+                assert_eq!(cx.color_profile(), Some(Profile::Ansi16));
+                StatusDot::new(state).render(Rect::new(x, y, 1, 1), &mut cx);
+                let cell = grid.get(x, y).ok_or("missing dot")?;
+                assert_eq!(cell.style().fg, Color::Indexed(index));
+                assert_eq!(cell.glyph().decode(), DecodedGlyph::Inline('●'));
             }
         }
     }
+    Ok(())
 }

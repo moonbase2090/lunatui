@@ -48,3 +48,16 @@ fn variant_from_osc11_background_probe() {
         Variant::Light
     );
 }
+
+#[test]
+fn packed_base_token_ids_remain_stable() {
+    assert_eq!(Token::from_id(0), Some(Token::Surface0));
+    assert_eq!(Token::from_id(1), Some(Token::Surface1));
+    assert_eq!(Token::from_id(2), Some(Token::TextPrimary));
+    assert_eq!(Token::from_id(3), Some(Token::Accent));
+    assert_eq!(Token::from_id(4), Some(Token::Ok));
+    assert_eq!(Token::from_id(5), Some(Token::Warn));
+    assert_eq!(Token::from_id(6), Some(Token::Fail));
+    assert_eq!(Token::from_id(7), Some(Token::FocusRing));
+    assert_eq!(Token::from_id(u32::MAX), None);
+}

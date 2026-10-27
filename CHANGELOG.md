@@ -8,10 +8,16 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- Added twelve opt-in Graphite semantic tokens and semantic ANSI-16 palette mappings.
+
 ### Changed
 
 - The calendar gallery walks from the branch cut into the next month and ends on the on-call drill. The agenda and the week list fill the screen. The clip opens on the schedule.
 - Widget recordings pad the side-by-side frame so an odd height still encodes.
+- `RenderCx::profile(profile)` is replaced by prepared palettes: create a palette with `theme.prepare(profile)` when the theme or profile changes, then pass it to `RenderCx::palette(&palette)`. This avoids downsampling tokens during widget rendering.
+- The opt-in `graphite-tokens` feature changes the built-in light/dark palettes and the bundled `prismattyc` variants to canonical Graphite colors. Existing token ids 0–7 stay stable; twelve new ids are available when the feature is enabled. Cargo feature unification means enabling the feature through any dependency exposes the new variants across that build. `Token::COUNT` is therefore 8 or 20 according to the unified feature set, and should not be used as a persistent format size. `Token` is non-exhaustive; external matches must include a fallback arm.
 
 ## [0.1.10] - 2026-10-27
 
