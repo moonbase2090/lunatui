@@ -40,6 +40,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --workspace
       - run: cargo test --workspace
+      - run: cargo test --locked --workspace --all-features
+      - run: cargo test --locked -p lunatui-bench --features graphite-tokens --test graphite_token_allocs
       - run: cargo test --locked -p lunatui-core --features subcell
       - run: cargo test --locked -p lunatui-bench --features subcell --test subcell_allocs
       - run: cargo test --locked -p lunatui-core --features render-color
