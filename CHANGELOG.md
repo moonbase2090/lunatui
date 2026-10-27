@@ -42,11 +42,13 @@ Every PR adds its entry under **Unreleased**.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
 - `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
 - `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
+- `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
 
 ### Changed
 
 - The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
 - `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
+- `List` clears every row of its area and paints the selected row's highlight across the full width.
 ## [0.1.11] - 2026-10-27
 
 ### Added
