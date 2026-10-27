@@ -180,17 +180,21 @@ def shape(draw, ch, left, top, fg):
     if ch in corners:
         h, v = corners[ch]
         r = CW // 2
-        ex = left + CW - 1 if h == "r" else left
-        ey = top + CH - 1 if v == "d" else top
-        acx = cx + (r if h == "r" else -r)
-        acy = cy + (r if v == "d" else -r)
+        x0, x1 = cx - LW // 2, cx - LW // 2 + LW - 1
+        y0, y1 = cy - LW // 2, cy - LW // 2 + LW - 1
+        bx = x0 if h == "r" else x1 - 2 * r
+        by = y0 if v == "d" else y1 - 2 * r
+        acx, acy = bx + r, by + r
         if h == "r":
-            draw.line([(acx, cy), (ex, cy)], fill=fg, width=LW)
+            draw.rectangle([acx, y0, left + CW - 1, y1], fill=fg)
         else:
-            draw.line([(ex, cy), (acx, cy)], fill=fg, width=LW)
-        draw.line([(cx, acy), (cx, ey)], fill=fg, width=LW)
+            draw.rectangle([left, y0, acx, y1], fill=fg)
+        if v == "d":
+            draw.rectangle([x0, acy, x1, top + CH - 1], fill=fg)
+        else:
+            draw.rectangle([x0, top, x1, acy], fill=fg)
         start = {("r", "d"): 180, ("l", "d"): 270, ("r", "u"): 90, ("l", "u"): 0}[(h, v)]
-        draw.arc([acx - r, acy - r, acx + r, acy + r], start, start + 90, fill=fg, width=LW)
+        draw.arc([bx, by, bx + 2 * r, by + 2 * r], start, start + 90, fill=fg, width=LW)
         return True
     return False
 
