@@ -204,12 +204,18 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                     style(Color::Rgb(143, 124, 224)),
                 ])
                 .alignment(Alignment::Left)
-                .render(Rect::new(5, 2, 56, 7), &mut cx);
-            put_bold(&mut cx, 56, 8, ":12", MOON);
-            put_bold(&mut cx, 5, 11, "Tuesday", INK);
-            put(&mut cx, 13, 11, "· 27 October 2026", MUTED);
-            put(&mut cx, 5, 12, "Waning gibbous · 94% illuminated", DIM);
-            put(&mut cx, 2, 15, &"─".repeat(60), LINE);
+                .render(Rect::new(5, 2, 50, 7), &mut cx);
+            label(&mut cx, 56, 8, ":12", bold(MOON));
+            label(&mut cx, 5, 11, "Tuesday", bold(INK));
+            label(&mut cx, 13, 11, "· 27 October 2026", style(MUTED));
+            label(
+                &mut cx,
+                5,
+                12,
+                "Waning gibbous · 94% illuminated",
+                style(DIM),
+            );
+            rule(&mut cx, 2, 15, 60, LINE);
             let cities = [
                 ("UTC", "05:47", "+6h"),
                 ("Tokyo", "14:47", "+15h"),
@@ -219,15 +225,23 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             for (i, (city, time, offset)) in cities.into_iter().enumerate() {
                 let x = 4 + u16::try_from(i % 2).unwrap_or_default() * 30;
                 let y = 17 + u16::try_from(i / 2).unwrap_or_default() * 2;
-                put(&mut cx, x, y, city, MUTED);
-                put_bold(&mut cx, x + 15, y, time, if i == 0 { LAV } else { INK });
-                let offset_width = u16::try_from(offset.chars().count()).unwrap_or_default();
-                put(&mut cx, x + 25 - offset_width, y, offset, DIM);
+                label(&mut cx, x, y, city, style(MUTED));
+                label(
+                    &mut cx,
+                    x + 15,
+                    y,
+                    time,
+                    bold(if i == 0 { LAV } else { INK }),
+                );
+                let offset_width = u16::try_from(text_display_width(offset)).unwrap_or_default();
+                label(&mut cx, x + 25 - offset_width, y, offset, style(DIM));
             }
-            put(&mut cx, 4, 21, "▕", LINE);
-            put(&mut cx, 5, 21, &"━".repeat(35), LAV2);
-            put(&mut cx, 40, 21, &"─".repeat(13), LINE);
-            put(&mut cx, 54, 21, "74%", DIM);
+            label(&mut cx, 4, 21, "▕", style(LINE));
+            LineGauge::new(0.74)
+                .filled_style(style(LAV2))
+                .unfilled_style(style(LINE))
+                .render(Rect::new(5, 21, 48, 1), &mut cx);
+            label(&mut cx, 54, 21, "74%", style(DIM));
         }
         "block" => {
             put(&mut cx, 5, 3, "A calm frame for terminal content", MUTED);
