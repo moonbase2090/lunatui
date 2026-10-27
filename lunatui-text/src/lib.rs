@@ -6,6 +6,9 @@
 
 extern crate alloc;
 
+/// A Markdown parser.
+#[cfg(feature = "markdown")]
+pub mod markdown;
 /// Virtualized row access for lists and tables.
 pub mod source;
 /// Word wrap and [`WrapCache`](wrap::WrapCache).
