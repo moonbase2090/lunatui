@@ -10,9 +10,9 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Alignment, BarChart, BigText, BigTextFont, Block, BorderType, Borders, Constraint, Date, Gauge,
-    Lightcycle, LineGauge, List, Monthly, Padding, Paragraph, RenderCx, Scrollbar, Sparkline,
-    SparklineBar, Spinner, SpinnerPattern, StatusBar, StatusDot, StatusState, Table, Tabs,
-    TextInput, TextWrap, TitlePosition, VecSource, WeekStart, Widget,
+    Lightcycle, LineGauge, List, Monthly, Overlay, Padding, Paragraph, RenderCx, Scrollbar,
+    Sparkline, SparklineBar, Spinner, SpinnerPattern, StatusBar, StatusDot, StatusState, Table,
+    Tabs, TextInput, TextWrap, TitlePosition, VecSource, WeekStart, Widget,
 };
 
 const WIDTH: u16 = 64;
@@ -59,37 +59,6 @@ fn fg(color: Color) -> Style {
 
 fn bold(color: Color) -> Style {
     style(color).with_attrs(Attrs::new().set_bold(true))
-}
-
-fn put(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, color: Color) {
-    cx.put_str(x, y, text, style(color));
-}
-
-fn put_bold(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, color: Color) {
-    cx.put_str(x, y, text, bold(color));
-    let width = u16::try_from(text_display_width(text)).unwrap_or_default();
-    cx.set_style(Rect::new(x, y, width, 1), bold(color));
-}
-
-fn put_on(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, color: Color, background: Color) {
-    cx.put_str(x, y, text, Style::new().fg(color).bg(background));
-}
-
-fn put_on_bold(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, color: Color, background: Color) {
-    let style = Style::new()
-        .fg(color)
-        .bg(background)
-        .with_attrs(Attrs::new().set_bold(true));
-    cx.put_str(x, y, text, style);
-    let width = u16::try_from(text_display_width(text)).unwrap_or_default();
-    cx.set_style(Rect::new(x, y, width, 1), style);
-}
-
-fn fill(cx: &mut RenderCx<'_>, rect: Rect, color: Color) {
-    let blank = " ".repeat(usize::from(rect.width));
-    for y in rect.y..rect.y.saturating_add(rect.height) {
-        cx.put_str(rect.x, y, &blank, Style::new().bg(color));
-    }
 }
 
 fn frame(title: &str, hint: Option<&str>) -> Block {
@@ -248,7 +217,13 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             label(&mut cx, 54, 21, "74%", style(DIM));
         }
         "block" => {
-            put(&mut cx, 5, 3, "A calm frame for terminal content", MUTED);
+            label(
+                &mut cx,
+                5,
+                3,
+                "A calm frame for terminal content",
+                style(MUTED),
+            );
             let block = panel("Deployment", LAV).padding(Padding {
                 left: 2,
                 right: 2,
@@ -256,23 +231,27 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 bottom: 1,
             });
             block.render(Rect::new(5, 6, 54, 12), &mut cx);
-            put_on(
+            label(
                 &mut cx,
                 9,
                 9,
                 "lunatui-web  ·  production",
-                INK,
-                PANEL_RAISED,
+                fg(INK).bg(PANEL_RAISED),
             );
-            put_on(
+            label(
                 &mut cx,
                 9,
                 11,
                 "Build finished in 2.4 seconds",
-                MUTED,
-                PANEL_RAISED,
+                fg(MUTED).bg(PANEL_RAISED),
             );
-            put_on(&mut cx, 9, 13, "3 regions healthy", GREEN, PANEL_RAISED);
+            label(
+                &mut cx,
+                9,
+                13,
+                "3 regions healthy",
+                fg(GREEN).bg(PANEL_RAISED),
+            );
         }
         "calendar" => {
             let months = [
@@ -451,13 +430,13 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 .render(Rect::new(42, 16, 20, 7), &mut cx);
         }
         "lightcycle" => {
-            put_bold(&mut cx, 5, 3, "Signal trail", INK);
-            put(
+            label(&mut cx, 5, 3, "Signal trail", bold(INK));
+            label(
                 &mut cx,
                 5,
                 5,
                 "Braille detail · 60 frames per second",
-                MUTED,
+                style(MUTED),
             );
             for (elapsed, head, tail) in [(0, LAV, BLUE), (1_412, MOON, LAV), (2_824, GREEN, BLUE)]
             {
@@ -557,8 +536,10 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             label(&mut cx, 33, 20, "↵ open docs", style(DIM));
         }
         "overlay" => {
-            put_bold(&mut cx, 3, 2, "Sessions", Color::Rgb(74, 79, 128));
-            put_bold(&mut cx, 33, 2, "Activity", Color::Rgb(74, 79, 128));
+            let heading = Color::Rgb(74, 79, 128);
+            let quiet = Color::Rgb(47, 54, 92);
+            label(&mut cx, 3, 2, "Sessions", bold(heading));
+            label(&mut cx, 33, 2, "Activity", bold(heading));
             let sessions = [
                 ("render-bench", "0.81 ms"),
                 ("diff-bench", "0.19 ms"),
@@ -572,8 +553,8 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             ];
             for (index, (name, time)) in sessions.into_iter().enumerate() {
                 let y = 4 + u16::try_from(index).unwrap_or_default() * 2;
-                put(&mut cx, 3, y, name, Color::Rgb(47, 54, 92));
-                put(&mut cx, 20, y, time, Color::Rgb(47, 54, 92));
+                label(&mut cx, 3, y, name, style(quiet));
+                label(&mut cx, 20, y, time, style(quiet));
             }
             let activity = [
                 414_425, 475_604, 541_255, 633_338, 660_078, 732_902, 578_594, 582_700, 705_330,
@@ -585,46 +566,40 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 .max(1_000_000)
                 .style(style(Color::Rgb(36, 42, 76)))
                 .render(Rect::new(33, 10, 28, 8), &mut cx);
-            fill(&mut cx, Rect::new(12, 7, 40, 12), Color::Rgb(4, 5, 11));
-            Block::bordered()
-                .border_type(BorderType::Rounded)
-                .style(Style::new().bg(PANEL_RAISED))
-                .border_style(Style::new().fg(LINE_HI).bg(PANEL_RAISED))
-                .render(Rect::new(11, 6, 40, 12), &mut cx);
-            fill(&mut cx, Rect::new(12, 7, 38, 10), PANEL_RAISED);
-            put_on(&mut cx, 12, 6, "─", LINE_HI, PANEL_RAISED);
-            put_on_bold(&mut cx, 13, 6, " Quit Lunatui? ", MOON, PANEL_RAISED);
-            put_on(&mut cx, 14, 8, "⚠", MOON, PANEL_RAISED);
-            put_on(
-                &mut cx,
-                16,
-                8,
-                "You have 2 unsaved layouts.",
-                INK,
-                PANEL_RAISED,
-            );
-            put_on(
+            let dialog = Rect::new(11, 6, 40, 12);
+            Overlay::new(
+                Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .style(Style::new().bg(PANEL_RAISED))
+                    .border_style(fg(LINE_HI).bg(PANEL_RAISED))
+                    .title(" Quit Lunatui? ")
+                    .title_style(bold(MOON).bg(PANEL_RAISED))
+                    .title_inset(1),
+                dialog,
+            )
+            .backdrop(0.0, BG)
+            .shadow(Style::new().bg(Color::Rgb(4, 5, 11)))
+            .render(Rect::new(1, 1, WIDTH - 2, HEIGHT - 2), &mut cx);
+            let raised = |color| style(color).bg(PANEL_RAISED);
+            label(&mut cx, 14, 8, "⚠", raised(MOON));
+            label(&mut cx, 16, 8, "You have 2 unsaved layouts.", raised(INK));
+            label(
                 &mut cx,
                 16,
                 10,
                 "Changes since 05:31 will be lost",
-                MUTED,
-                PANEL_RAISED,
+                raised(MUTED),
             );
-            put_on(&mut cx, 16, 11, "if you quit now.", MUTED, PANEL_RAISED);
-            fill(&mut cx, Rect::new(14, 14, 15, 1), LAV);
-            put_on_bold(&mut cx, 14, 14, "  Save & quit  ", BG, LAV);
-            fill(&mut cx, Rect::new(31, 14, 8, 1), FOCUS_BG);
-            put_on(&mut cx, 31, 14, "  Quit  ", INK, FOCUS_BG);
-            fill(&mut cx, Rect::new(41, 14, 8, 1), PANEL);
-            put_on(&mut cx, 41, 14, " Cancel ", MUTED, PANEL);
-            put_on(
+            label(&mut cx, 16, 11, "if you quit now.", raised(MUTED));
+            label(&mut cx, 14, 14, "  Save & quit  ", bold(BG).bg(LAV));
+            label(&mut cx, 31, 14, "  Quit  ", style(INK).bg(FOCUS_BG));
+            label(&mut cx, 41, 14, " Cancel ", style(MUTED).bg(PANEL));
+            label(
                 &mut cx,
                 14,
                 16,
                 "tab cycle · ↵ confirm · esc close",
-                DIM,
-                PANEL_RAISED,
+                raised(DIM),
             );
         }
         "paragraph" => {
@@ -635,28 +610,33 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 bottom: 1,
             });
             story.render(Rect::new(5, 3, 54, 17), &mut cx);
-            put_on(
+            label(
                 &mut cx,
                 9,
                 6,
                 "A clear view of the work",
-                MOON,
-                PANEL_RAISED,
+                fg(MOON).bg(PANEL_RAISED),
             );
             Paragraph::new("Lunatui keeps terminal content readable as it changes. Wrap long notes, align the details, and leave enough room for the next useful thing. Each line keeps its place as the window grows, so long release notes remain easy to scan.")
                 .wrap(TextWrap { trim: true })
                 .style(style(INK).bg(PANEL_RAISED))
                 .render(Rect::new(9, 8, 46, 8), &mut cx);
-            put_on(&mut cx, 9, 17, "NOTES  /  v0.9.2", DIM, PANEL_RAISED);
-            put_on(&mut cx, 39, 17, "4 lines · 312 chars", DIM, PANEL_RAISED);
+            label(&mut cx, 9, 17, "NOTES  /  v0.9.2", fg(DIM).bg(PANEL_RAISED));
+            label(
+                &mut cx,
+                39,
+                17,
+                "4 lines · 312 chars",
+                fg(DIM).bg(PANEL_RAISED),
+            );
         }
         "padding" => {
-            put_bold(
+            label(
                 &mut cx,
                 5,
                 3,
                 "Comfortable spacing, without wasted space",
-                LAV,
+                bold(LAV),
             );
             let compact = panel("Compact · 1 cell", LAV).padding(Padding {
                 left: 1,
@@ -665,8 +645,14 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 bottom: 0,
             });
             compact.render(Rect::new(5, 7, 26, 7), &mut cx);
-            put_on(&mut cx, 8, 10, "moon-dash", INK, PANEL_RAISED);
-            put_on(&mut cx, 8, 12, "12 dependencies", MUTED, PANEL_RAISED);
+            label(&mut cx, 8, 10, "moon-dash", fg(INK).bg(PANEL_RAISED));
+            label(
+                &mut cx,
+                8,
+                12,
+                "12 dependencies",
+                fg(MUTED).bg(PANEL_RAISED),
+            );
             let roomy = panel("Roomy · 3 cells", LINE_HI).padding(Padding {
                 left: 3,
                 right: 3,
@@ -674,10 +660,22 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 bottom: 1,
             });
             roomy.render(Rect::new(33, 7, 26, 10), &mut cx);
-            put_on(&mut cx, 38, 11, "moon-dash", INK, PANEL_RAISED);
-            put_on(&mut cx, 38, 13, "Terminal dashboard", MUTED, PANEL_RAISED);
-            put_on(&mut cx, 38, 15, "12 dependencies", DIM, PANEL_RAISED);
-            put(&mut cx, 5, 19, "Same content, two useful rhythms.", DIM);
+            label(&mut cx, 38, 11, "moon-dash", fg(INK).bg(PANEL_RAISED));
+            label(
+                &mut cx,
+                38,
+                13,
+                "Terminal dashboard",
+                fg(MUTED).bg(PANEL_RAISED),
+            );
+            label(&mut cx, 38, 15, "12 dependencies", fg(DIM).bg(PANEL_RAISED));
+            label(
+                &mut cx,
+                5,
+                19,
+                "Same content, two useful rhythms.",
+                style(DIM),
+            );
         }
         "scrollbar" => {
             let rows = [
@@ -708,9 +706,15 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 .thumb_style(style(LAV))
                 .render(Rect::new(32, 6, 1, 14), &mut cx);
             panel("Selected · BigText", LAV).render(Rect::new(37, 4, 23, 16), &mut cx);
-            put_on(&mut cx, 40, 8, "23:47", LAV, PANEL_RAISED);
-            put_on(&mut cx, 40, 10, "Time, at a glance.", MUTED, PANEL_RAISED);
-            put_on(&mut cx, 40, 13, "Render size", DIM, PANEL_RAISED);
+            label(&mut cx, 40, 8, "23:47", fg(LAV).bg(PANEL_RAISED));
+            label(
+                &mut cx,
+                40,
+                10,
+                "Time, at a glance.",
+                fg(MUTED).bg(PANEL_RAISED),
+            );
+            label(&mut cx, 40, 13, "Render size", fg(DIM).bg(PANEL_RAISED));
             Gauge::new(0.66)
                 .gauge_style(style(LAV).bg(PANEL_RAISED))
                 .render(Rect::new(40, 15, 17, 1), &mut cx);
@@ -962,30 +966,29 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             label(&mut cx, 52, 21, "0.4s ago", style(DIM));
         }
         "statusdot" => {
-            put_bold(&mut cx, 7, 5, "Service health", INK);
-            put(
+            label(&mut cx, 7, 5, "Service health", bold(INK));
+            label(
                 &mut cx,
                 7,
                 7,
                 "Three regions are responding normally.",
-                MUTED,
+                style(MUTED),
             );
             let regions = [
                 ("us-west", StatusState::Ok, GREEN),
                 ("eu-central", StatusState::Ok, GREEN),
-                ("ap-south", StatusState::Idle, MOON),
+                ("ap-south", StatusState::Idle, INK),
             ];
             for (i, (name, state, color)) in regions.into_iter().enumerate() {
                 let y = 11 + u16::try_from(i).unwrap_or_default() * 3;
                 StatusDot::new(state).render(Rect::new(12, y, 1, 1), &mut cx);
-                cx.set_style(Rect::new(12, y, 1, 1), style(color));
-                put_bold(&mut cx, 16, y, name, color);
-                put(
+                label(&mut cx, 16, y, name, bold(color));
+                label(
                     &mut cx,
                     38,
                     y,
                     if i == 2 { "standby" } else { "healthy" },
-                    MUTED,
+                    style(MUTED),
                 );
             }
         }
@@ -1192,21 +1195,27 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             label(&mut cx, 47, 21, "  Create ↵  ", bold(BG).bg(LAV));
         }
         "borders" => {
-            put(&mut cx, 6, 4, "Soft corners keep structure quiet.", MUTED);
+            label(
+                &mut cx,
+                6,
+                4,
+                "Soft corners keep structure quiet.",
+                style(MUTED),
+            );
             let examples = [
                 ("Rounded", BorderType::Rounded, LAV),
                 ("Plain", BorderType::Plain, LINE),
                 ("Double", BorderType::Double, MOON),
             ];
-            for (i, (label, kind, color)) in examples.into_iter().enumerate() {
+            for (i, (name, kind, color)) in examples.into_iter().enumerate() {
                 let x = 5 + u16::try_from(i).unwrap_or_default() * 19;
                 let block = Block::bordered()
                     .border_type(kind)
                     .border_style(style(color))
-                    .title(label)
+                    .title(name)
                     .title_style(bold(color));
                 block.render(Rect::new(x, 9, 17, 8), &mut cx);
-                put_on(&mut cx, x + 3, 13, "Content", INK, PANEL_RAISED);
+                label(&mut cx, x + 3, 13, "Content", fg(INK).bg(PANEL_RAISED));
             }
         }
         _ => return false,
