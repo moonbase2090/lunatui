@@ -13,6 +13,7 @@ pub struct TextInput {
     block: Option<Block>,
     style: Style,
     cursor_style: Style,
+    cursor_glyph: &'static str,
 }
 
 impl TextInput {
@@ -25,6 +26,7 @@ impl TextInput {
             block: None,
             style: Style::new(),
             cursor_style: Style::new(),
+            cursor_glyph: "│",
         }
     }
 
@@ -46,6 +48,13 @@ impl TextInput {
     #[must_use]
     pub fn cursor_style(mut self, style: Style) -> Self {
         self.cursor_style = style;
+        self
+    }
+
+    /// Cursor glyph. The default is the one-cell vertical bar `│`.
+    #[must_use]
+    pub fn cursor_glyph(mut self, glyph: &'static str) -> Self {
+        self.cursor_glyph = glyph;
         self
     }
 }
@@ -75,7 +84,7 @@ impl Widget for TextInput {
         let rel = cursor_col.saturating_sub(window_col);
         let col = u16::try_from(rel).unwrap_or(0);
         if col < inner.width {
-            cx.put_str(inner.x + col, y, "│", self.cursor_style);
+            cx.put_str(inner.x + col, y, self.cursor_glyph, self.cursor_style);
         }
     }
 
