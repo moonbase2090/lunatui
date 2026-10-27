@@ -122,12 +122,11 @@ impl Tabs {
         if span_start >= span_end {
             return;
         }
-        cx.put_str(
-            span_start,
-            divider,
-            &"─".repeat(usize::from(span_end - span_start)),
-            boxed.divider,
-        );
+        let span = usize::from(span_end - span_start);
+        let blank = " ".repeat(span);
+        cx.put_str(span_start, top, &blank, self.style);
+        cx.put_str(span_start, labels, &blank, self.style);
+        cx.put_str(span_start, divider, &"─".repeat(span), boxed.divider);
         if edge == 1 {
             cx.put_str(area.x, divider, "├", boxed.divider);
             cx.put_str(span_end, divider, "┤", boxed.divider);
