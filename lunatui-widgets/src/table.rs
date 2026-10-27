@@ -32,8 +32,8 @@ impl CellStyle for Vec<Vec<Style>> {
 
 /// Column layout for [`Table`].
 ///
-/// Every row the table draws is cleared across its full width first, so a
-/// second render leaves nothing behind. The selected row's highlight style
+/// Every row of the area is cleared across its full width, including rows
+/// below the last data row, so a second render leaves nothing behind. The selected row's highlight style
 /// covers the whole row, gaps included.
 #[derive(Clone, Debug)]
 pub struct Table<S, C = ()> {
@@ -276,6 +276,10 @@ impl<S: RowSource, C: CellStyle> Widget for Table<S, C> {
                 y += 1;
             }
             index += 1;
+        }
+        while y < bottom {
+            cx.put_str(area.x, y, &blank_row, self.style);
+            y += 1;
         }
     }
 
