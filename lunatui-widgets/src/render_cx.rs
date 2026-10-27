@@ -159,6 +159,19 @@ impl<'a> RenderCx<'a> {
         self.grid.put_char(x, y, patched, glyph, self.clusters);
     }
 
+    pub(crate) fn clear_area(&mut self, area: Rect) {
+        let blank = lunatui_core::GlyphSlot::inline_scalar(' ');
+        for y in area.y..area.y.saturating_add(area.height) {
+            for x in area.x..area.x.saturating_add(area.width) {
+                if let Some(cell) = self.grid.get(x, y)
+                    && Some(cell.glyph()) != blank
+                {
+                    self.put_char_patched(x, y, ' ', Style::new());
+                }
+            }
+        }
+    }
+
     #[cfg(feature = "calendar")]
     pub(crate) fn patch_area(&mut self, area: Rect, style: Style) {
         let end_x = area.x.saturating_add(area.width);

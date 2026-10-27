@@ -862,6 +862,7 @@ impl Chart<'_> {
 
 impl Widget for Chart<'_> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        cx.clear_area(area);
         let y_labels = self
             .y_axis
             .labels

@@ -647,3 +647,48 @@ fn a_legend_wider_or_taller_than_the_plot_is_never_drawn() {
     assert_eq!(rows(&roomy, 12, 3)[0], "│           ");
     assert_eq!(rows(&roomy, 12, 4)[0], "│   ╭──────╮");
 }
+
+#[test]
+fn a_second_render_leaves_nothing_of_the_first() {
+    let theme = Theme::builtin(Variant::Dark);
+    let drawn = [(0.0, 0.0), (1.0, 1.0)];
+    let first = [
+        Dataset::new(&drawn).graph_type(GraphType::Line).name("old"),
+        Dataset::new(&drawn).marker(Marker::Block),
+    ];
+    let second = [Dataset::new(&NONE)];
+    let wide = Chart::new(&first)
+        .x_axis(
+            Axis::new()
+                .title("long title")
+                .labels(&["start", "middle", "finish"]),
+        )
+        .y_axis(Axis::new().title("another").labels(&["100", "50", "0"]));
+    let narrow = Chart::new(&second);
+    for (width, height) in [(30, 10), (3, 1), (30, 2)] {
+        let mut grid = Grid::new(30, 10);
+        let mut clusters = ClusterTable::new();
+        let area = Rect::new(0, 0, width, height);
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        wide.render(Rect::new(0, 0, 30, 10), &mut cx);
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        narrow.render(area, &mut cx);
+        let mut fresh = Grid::new(30, 10);
+        let mut fresh_clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut fresh, &mut fresh_clusters, &theme);
+        narrow.render(area, &mut cx);
+        for row in 0..height {
+            let kept: String = grid
+                .row_display(row, &clusters)
+                .chars()
+                .take(usize::from(width))
+                .collect();
+            let want: String = fresh
+                .row_display(row, &fresh_clusters)
+                .chars()
+                .take(usize::from(width))
+                .collect();
+            assert_eq!(kept, want, "row {row} at {width}x{height}");
+        }
+    }
+}
