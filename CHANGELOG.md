@@ -45,6 +45,7 @@ Every PR adds its entry under **Unreleased**.
 ### Changed
 
 - The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
+- `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
 ## [0.1.11] - 2026-10-27
 
 ### Added
