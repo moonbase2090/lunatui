@@ -23,6 +23,10 @@ Every PR adds its entry under **Unreleased**.
 - The PTY integration tests for `lunatui` and `lunatui-test` carry their crate docs on Windows, where the tests are compiled out, so `missing_docs` no longer fails the Windows build.
 - The website hero sky no longer drifts side to side; the sky image is static.
 
+### Fixed
+
+- `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
+
 ## [0.1.11] - 2026-10-27
 
 ### Added
