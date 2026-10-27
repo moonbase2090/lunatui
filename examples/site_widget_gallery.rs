@@ -53,6 +53,10 @@ fn style(color: Color) -> Style {
     Style::new().fg(color).bg(BG)
 }
 
+fn fg(color: Color) -> Style {
+    Style::new().fg(color)
+}
+
 fn bold(color: Color) -> Style {
     style(color).with_attrs(Attrs::new().set_bold(true))
 }
@@ -275,99 +279,109 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             put_on(&mut cx, 9, 13, "3 regions healthy", GREEN, PANEL_RAISED);
         }
         "calendar" => {
-            let october_style = bold(MOON);
-            let november_style = bold(MUTED);
-            let weekday_style = style(DIM);
-            let day_style = style(INK);
-            let october_events = [
-                (date(2_026, 10, 4), style(LAV2)),
-                (date(2_026, 10, 10), style(LAV2)),
-                (date(2_026, 10, 11), style(LAV2)),
-                (date(2_026, 10, 17), style(LAV2)),
-                (date(2_026, 10, 18), style(LAV2)),
-                (date(2_026, 10, 24), style(LAV2)),
-                (date(2_026, 10, 25), style(LAV2)),
-                (date(2_026, 10, 27), bold(BG).bg(LAV)),
-                (date(2_026, 10, 3), bold(LAV)),
-                (date(2_026, 10, 14), bold(LAV)),
-                (date(2_026, 10, 31), bold(LAV)),
+            let months = [
+                (
+                    date(2_026, 10, 27),
+                    "October 2026",
+                    bold(MOON),
+                    5,
+                    [3, 14, 31],
+                    true,
+                ),
+                (
+                    date(2_026, 11, 1),
+                    "November 2026",
+                    bold(MUTED),
+                    36,
+                    [5, 18, 24],
+                    false,
+                ),
             ];
-            Monthly::new(date(2_026, 10, 27), &october_events[..])
-                .week_start(WeekStart::Monday)
-                .event_markers(false)
-                .show_month_header(october_style)
-                .show_weekdays_header(weekday_style)
-                .default_style(day_style)
-                .render(Rect::new(5, 2, 21, 8), &mut cx);
-            let november_events = [
-                (date(2_026, 11, 1), style(LAV2)),
-                (date(2_026, 11, 7), style(LAV2)),
-                (date(2_026, 11, 8), style(LAV2)),
-                (date(2_026, 11, 14), style(LAV2)),
-                (date(2_026, 11, 15), style(LAV2)),
-                (date(2_026, 11, 21), style(LAV2)),
-                (date(2_026, 11, 22), style(LAV2)),
-                (date(2_026, 11, 28), style(LAV2)),
-                (date(2_026, 11, 29), style(LAV2)),
-                (date(2_026, 11, 5), bold(LAV)),
-                (date(2_026, 11, 18), bold(LAV)),
-                (date(2_026, 11, 24), bold(LAV)),
-            ];
-            Monthly::new(date(2_026, 11, 1), &november_events[..])
-                .week_start(WeekStart::Monday)
-                .event_markers(false)
-                .show_month_header(november_style)
-                .show_weekdays_header(weekday_style)
-                .default_style(day_style)
-                .render(Rect::new(36, 2, 21, 8), &mut cx);
-            put_bold(&mut cx, 10, 2, "October 2026", MOON);
-            put(&mut cx, 9, 2, " ", BG);
-            put_bold(&mut cx, 40, 2, "November 2026", MUTED);
-            put_on_bold(&mut cx, 9, 8, "27", BG, LAV);
-            fill(&mut cx, Rect::new(8, 8, 1, 1), LAV);
-            fill(&mut cx, Rect::new(11, 8, 1, 1), LAV);
-            put_bold(&mut cx, 40, 8, "24", LAV);
-            for y in 2..9 {
-                put(&mut cx, 31, y, "│", LINE);
+            for (day, title, title_style, x, event_days, today) in months {
+                let title_width = u16::try_from(text_display_width(title)).unwrap_or_default();
+                label(
+                    &mut cx,
+                    x + 1 + (20 - title_width) / 2,
+                    2,
+                    title,
+                    title_style,
+                );
+                let events: Vec<_> = event_days
+                    .iter()
+                    .map(|&event_day| (date(2_026, day.month(), event_day), bold(LAV)))
+                    .collect();
+                let monthly = Monthly::new(day, events.as_slice())
+                    .week_start(WeekStart::Monday)
+                    .event_markers(false)
+                    .show_weekdays_header(style(DIM))
+                    .default_style(style(INK))
+                    .weekend_style(style(LAV2));
+                let monthly = if today {
+                    monthly.selected_style(bold(BG).bg(LAV))
+                } else {
+                    monthly
+                };
+                monthly.render(Rect::new(x, 3, 21, 7), &mut cx);
             }
-            put(&mut cx, 2, 10, &"─".repeat(60), LINE);
-            put_bold(&mut cx, 3, 11, "Upcoming", LAV);
+            Block::new()
+                .borders(Borders::LEFT)
+                .border_style(style(LINE))
+                .render(Rect::new(31, 2, 1, 7), &mut cx);
+            rule(&mut cx, 2, 10, 60, LINE);
+            label(&mut cx, 3, 11, "Upcoming", bold(LAV));
             let events = [
                 ("Sat 31 Oct", "●", LAV, "Release v0.9 tagged", "20:00"),
                 ("Thu 05 Nov", "●", MOON, "Docs freeze", "09:30"),
                 ("Wed 18 Nov", "●", GREEN, "Community call", "17:00"),
                 ("Tue 24 Nov", "○", DIM, "Benchmark refresh", "—"),
             ];
+            let mut rows = VecSource::new();
+            let mut cells = Vec::new();
             for (index, (day, dot, color, title, time)) in events.into_iter().enumerate() {
-                let y = 13 + u16::try_from(index).unwrap_or_default() * 2;
+                rows.push_row(vec![
+                    day.to_owned(),
+                    dot.to_owned(),
+                    title.to_owned(),
+                    time.to_owned(),
+                ]);
                 let selected = index == 0;
-                if selected {
-                    fill(&mut cx, Rect::new(2, y, 60, 1), FOCUS_BG);
-                    put_on(&mut cx, 2, y, "▌", LAV, FOCUS_BG);
-                }
-                let background = if selected { FOCUS_BG } else { BG };
-                put_on(&mut cx, 4, y, day, MUTED, background);
-                put_on(&mut cx, 16, y, dot, color, background);
-                if selected {
-                    put_on_bold(&mut cx, 18, y, title, INK, background);
-                } else {
-                    put_on(&mut cx, 18, y, title, INK, background);
-                }
-                let time_x = WIDTH
-                    .saturating_sub(4)
-                    .saturating_sub(u16::try_from(time.chars().count()).unwrap_or_default());
-                put_on(
-                    &mut cx,
-                    time_x,
-                    y,
-                    time,
-                    if selected { LAV } else { DIM },
-                    background,
-                );
+                cells.push(vec![
+                    fg(MUTED),
+                    fg(color),
+                    if selected {
+                        fg(INK).with_attrs(Attrs::new().set_bold(true))
+                    } else {
+                        fg(INK)
+                    },
+                    fg(if selected { LAV } else { DIM }),
+                ]);
             }
-            put(&mut cx, 3, 21, "Today", DIM);
-            put_bold(&mut cx, 9, 21, "Tue 27 Oct", MOON);
-            put(&mut cx, 21, 21, "· 4 upcoming events", DIM);
+            Table::new(
+                rows,
+                vec![
+                    Constraint::Length(12),
+                    Constraint::Length(2),
+                    Constraint::Fill(1),
+                    Constraint::Length(5),
+                    Constraint::Length(2),
+                ],
+            )
+            .style(style(INK))
+            .selected(Some(0))
+            .highlight_style(style(INK).bg(FOCUS_BG))
+            .highlight_symbol("▌ ", style(LAV).bg(FOCUS_BG))
+            .alignments(vec![
+                Alignment::Left,
+                Alignment::Left,
+                Alignment::Left,
+                Alignment::Right,
+            ])
+            .cell_styles(cells)
+            .row_gap(1)
+            .render(Rect::new(2, 13, 60, 7), &mut cx);
+            label(&mut cx, 3, 21, "Today", style(DIM));
+            label(&mut cx, 9, 21, "Tue 27 Oct", bold(MOON));
+            label(&mut cx, 21, 21, "· 4 upcoming events", style(DIM));
         }
         "gauge" => {
             let stages = [
