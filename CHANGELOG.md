@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `BigTextFont::FiveBySeven`, a compact 5×7 clock font for the digits `0`–`9` and `:`, drawn with full blocks.
 
+### Changed
+
+- The website gallery shows the full-screen Calendar, BigText, Sparkline, Spinner, and TextInput recordings. The README recordings for Calendar, BigText, and Sparkline are those same clips.
+
 ### Fixed
 
 - The PTY integration tests for `lunatui` and `lunatui-test` carry their crate docs on Windows, where the tests are compiled out, so `missing_docs` no longer fails the Windows build.
