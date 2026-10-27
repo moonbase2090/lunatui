@@ -357,14 +357,17 @@ fn monday_start_renders_event_dot_in_date_gutter() -> Result<(), String> {
 }
 
 #[test]
-fn monday_start_counts_six_week_months() -> Result<(), String> {
-    let date = ymd(2021, 5, 1)?;
-    let plain = Monthly::new(date, ()).week_start(WeekStart::Monday);
-    assert_eq!(plain.height(), 6);
-    let decorated = plain
+fn monday_start_counts_four_week_february() -> Result<(), String> {
+    let date = ymd(2021, 2, 1)?;
+    let monday = Monthly::new(date, ()).week_start(WeekStart::Monday);
+    let sunday = Monthly::new(date, ()).week_start(WeekStart::Sunday);
+    assert_eq!(monday.height(), 4);
+    assert_eq!(sunday.height(), 5);
+
+    let decorated = monday
         .show_month_header(Style::new())
         .show_weekdays_header(Style::new());
-    assert_eq!(decorated.height(), 8);
+    assert_eq!(decorated.height(), 6);
     Ok(())
 }
 
