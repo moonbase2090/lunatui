@@ -5,7 +5,7 @@
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{Alignment, BigText, PixelSize, RenderCx, Widget, WidgetState};
+use lunatui_widgets::{Alignment, BigText, BigTextFont, PixelSize, RenderCx, Widget, WidgetState};
 
 fn row_string(text: &str, size: PixelSize, row: u16) -> String {
     let widget = BigText::new(text).pixel_size(size);
@@ -42,6 +42,33 @@ fn pixel_sizes_pack_the_hollow_box() {
         .into_iter()
         .collect();
     assert_eq!(braille, expected);
+}
+
+#[test]
+fn five_by_seven_clock_font_measures_and_shades_rows() {
+    let top = Style::new().fg(Color::Rgb(220, 210, 249));
+    let bottom = Style::new().fg(Color::Rgb(143, 124, 224));
+    let widget = BigText::new("23:47")
+        .font(BigTextFont::FiveBySeven)
+        .row_styles(&[top, top, top, top, top, top, bottom]);
+    assert_eq!(widget.measure(Size::new(100, 20)), Size::new(52, 7));
+
+    let mut glyphs = ['?'; 52];
+    assert_eq!(widget.row_glyphs(0, &mut glyphs), 52);
+    assert_eq!(
+        glyphs.iter().collect::<String>(),
+        concat!(
+            "  ██████    ",
+            "██████████  ",
+            "    ",
+            "      ██    ",
+            "██████████  "
+        )
+    );
+
+    let (grid, _) = render(&widget, 52, 7);
+    assert_eq!(grid.get(2, 0).map(|cell| cell.style().fg), Some(top.fg));
+    assert_eq!(grid.get(0, 6).map(|cell| cell.style().fg), Some(bottom.fg));
 }
 
 #[test]
