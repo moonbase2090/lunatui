@@ -77,7 +77,8 @@ impl PixelSize {
 ///
 /// Glyph bitmaps for digits, capitals, and `:.-%` are derived from Press Start 2P by `CodeMan38`,
 /// SIL Open Font License 1.1 (`assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII is a
-/// hollow box. The opt-in [`BigTextFont::FiveBySeven`] font supplies the target clock glyphs.
+/// hollow box. The opt-in [`BigTextFont::FiveBySeven`] font is a compact clock face for the
+/// digits and `:`.
 ///
 /// With [`style`](Self::style) set, that style is used as given. Otherwise the text follows theme
 /// tokens: primary text at rest, accent and bold when focused, and dimmed primary text when
