@@ -115,3 +115,22 @@ fn a_plain_list_still_draws_text_from_the_left_edge() {
         ["Calendar  ", "Gauge     ", "Table     "]
     );
 }
+
+#[test]
+fn a_shorter_second_render_clears_rows_from_the_previous_frame() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(10, 3);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    let area = Rect::new(0, 0, 10, 3);
+    List::new(source()).render(area, &mut cx);
+
+    let mut short = VecSource::new();
+    short.push_row(vec!["Only".to_owned()]);
+    List::new(short).render(area, &mut cx);
+
+    assert_eq!(
+        rows(&grid, &clusters),
+        ["Only      ", "          ", "          "]
+    );
+}

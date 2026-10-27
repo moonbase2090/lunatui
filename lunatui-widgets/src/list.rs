@@ -105,19 +105,18 @@ impl<S: RowSource> Widget for List<S> {
         let gutter = self
             .highlight_symbol
             .map_or(0, |(symbol, _)| cell_width(symbol).min(area.width));
-        let blank = " ".repeat(usize::from(area.width));
         let mut row = RowBuilder::default();
         for y in 0..area.height {
             let line = area.y + y;
             let index = self.offset + usize::from(y);
             if index >= self.source.len() {
-                cx.put_str(area.x, line, &blank, self.style);
+                cx.fill(Rect::new(area.x, line, area.width, 1), self.style, ' ');
                 continue;
             }
-            self.source.row(index, &mut row);
             let selected = self.selected == Some(index);
             let style = if selected { self.highlight } else { self.style };
-            cx.put_str(area.x, line, &blank, style);
+            cx.fill(Rect::new(area.x, line, area.width, 1), style, ' ');
+            self.source.row(index, &mut row);
             if let (true, Some((symbol, symbol_style))) = (selected, self.highlight_symbol) {
                 let draw = clip_display_prefix(symbol, gutter);
                 cx.put_str(area.x, line, draw, decoration(style, symbol_style));
