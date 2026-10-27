@@ -35,7 +35,7 @@ asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CA
   "$cast"
 gif="$OUT/${NAME}.gif"
 python3 "$ROOT/scripts/trim-cast.py" "$cast"
-agg --fps-cap 15 --font-size 14 "$cast" "$gif"
+agg --fps-cap 15 --last-frame-duration 0.5 --font-size 14 "$cast" "$gif"
 bytes=$(wc -c < "$gif" | awk '{print $1}')
 if [[ ! "$bytes" =~ ^[0-9]+$ ]]; then
   echo "record-showcase: could not read the size of ${gif}" >&2
