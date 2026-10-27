@@ -67,12 +67,7 @@ impl Widget for StatusBar {
         if area.width == 0 || area.height == 0 {
             return;
         }
-        cx.put_str(
-            area.x,
-            area.y,
-            &" ".repeat(usize::from(area.width)),
-            self.style,
-        );
+        cx.fill(Rect::new(area.x, area.y, area.width, 1), self.style, ' ');
         if self.left.is_empty() && self.right.is_empty() {
             let draw = clip_display_prefix(&self.text, area.width);
             cx.put_str(area.x, area.y, draw, self.style);
