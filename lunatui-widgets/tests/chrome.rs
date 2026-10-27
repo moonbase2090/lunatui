@@ -3,7 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{ClusterTable, Grid, Rect};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Gauge, RenderCx, Spinner, SpinnerPattern, StatusBar, Tabs, TextInput, Widget,
@@ -102,6 +102,33 @@ fn text_input_renders_cursor() {
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
     TextInput::new("hi", 2).render(Rect::new(0, 0, 10, 1), &mut cx);
     assert!(grid.row_display(0, &clusters).contains('│'));
+}
+
+#[test]
+fn text_input_supports_a_styled_block_cursor() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(12, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    let background = Color::Rgb(185, 167, 240);
+    TextInput::new("moon-dash", 9)
+        .cursor_glyph(" ")
+        .cursor_style(Style::new().fg(Color::Rgb(10, 13, 28)).bg(background))
+        .render(Rect::new(0, 0, 12, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "moon-dash   ");
+    assert_eq!(grid.get(9, 0).map(|cell| cell.style().bg), Some(background));
+}
+
+#[test]
+fn text_input_clips_a_wide_cursor_at_the_inner_edge() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(3, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    TextInput::new("a", 1)
+        .cursor_glyph("界")
+        .render(Rect::new(0, 0, 2, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "a  ");
 }
 
 #[test]
