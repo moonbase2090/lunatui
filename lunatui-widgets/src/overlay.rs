@@ -115,11 +115,11 @@ impl<W: Widget> Widget for Overlay<W> {
                 self.modal.width,
                 self.modal.height,
             );
-            fill_blank(cx, intersect(offset, area), shadow);
+            cx.fill(intersect(offset, area), shadow, ' ');
         }
         let modal = intersect(self.modal, area);
         if modal.width > 0 && modal.height > 0 {
-            fill_blank(cx, modal, Style::new());
+            cx.fill(modal, Style::new(), ' ');
             self.content.render(modal, cx);
         }
     }
@@ -129,13 +129,6 @@ impl<W: Widget> Widget for Overlay<W> {
             return Size::new(0, 0);
         }
         avail
-    }
-}
-
-fn fill_blank(cx: &mut RenderCx<'_>, area: Rect, style: Style) {
-    let blank = " ".repeat(usize::from(area.width));
-    for y in area.y..area.y.saturating_add(area.height) {
-        cx.put_str(area.x, y, &blank, style);
     }
 }
 
