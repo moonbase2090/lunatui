@@ -90,7 +90,13 @@ section.block{padding:72px 0}
 .gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
 .tile{padding:14px}
 .tile-h{display:flex;justify-content:space-between;font-weight:500;margin-bottom:10px}
-.tile-h span:last-child{letter-spacing:2px;color:var(--ink2)}
+.widget-demo{cursor:zoom-in}
+.zoom{border:0;padding:0;background:transparent;max-width:min(94vw,1280px);width:100%}
+.zoom::backdrop{background:rgba(5,8,22,.86)}
+.zoom figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.zoom img{display:block;width:100%;height:auto;border-radius:8px;image-rendering:pixelated}
+.zoom figcaption{display:flex;justify-content:space-between;align-items:center;color:var(--ink);font-weight:500;margin-bottom:12px}
+.zoom-close{min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font-size:20px;cursor:pointer}
 
 
 
@@ -253,11 +259,11 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
 <section class="block" id="gallery"><div class="container">
  <div class="sec-h reveal"><h2>Widget Gallery</h2><p>Rich widgets. Beautiful terminal.</p></div>
  <div class="gallery" id="carousel">
-  <article class="tile panel"><div class="tile-h"><span>Calendar</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-static="assets/media/calendar.gif" data-gif="assets/media/calendar.gif" alt="Calendar widget rendering a monthly schedule" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>BigText</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-static="assets/media/bigtext.gif" data-gif="assets/media/bigtext.gif" alt="BigText widget rendering large block lettering" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Sparkline</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-static="assets/media/sparkline.gif" data-gif="assets/media/sparkline.gif" alt="Sparkline widget drawing a live data trend" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Spinner</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-static="assets/media/spinner.gif" data-gif="assets/media/spinner.gif" alt="Spinner widget cycling its frame patterns" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>TextInput</span><span aria-hidden="true">•••</span></div><img class="widget-demo" data-static="assets/media/textinput.gif" data-gif="assets/media/textinput.gif" alt="TextInput widget with a block cursor and a bar cursor" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Calendar</span></div><img class="widget-demo" data-static="assets/media/calendar.gif" data-gif="assets/media/calendar.gif" alt="Calendar widget rendering a monthly schedule" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>BigText</span></div><img class="widget-demo" data-static="assets/media/bigtext.gif" data-gif="assets/media/bigtext.gif" alt="BigText widget rendering large block lettering" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Sparkline</span></div><img class="widget-demo" data-static="assets/media/sparkline.gif" data-gif="assets/media/sparkline.gif" alt="Sparkline widget drawing a live data trend" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Spinner</span></div><img class="widget-demo" data-static="assets/media/spinner.gif" data-gif="assets/media/spinner.gif" alt="Spinner widget cycling its frame patterns" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>TextInput</span></div><img class="widget-demo" data-static="assets/media/textinput.gif" data-gif="assets/media/textinput.gif" alt="TextInput widget with a block cursor and a bar cursor" loading="lazy" decoding="async" width="240" height="170"></article>
  </div>
  <div class="dots" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show Calendar"></button><button type="button" aria-label="Show BigText"></button><button type="button" aria-label="Show Sparkline"></button><button type="button" aria-label="Show Spinner"></button><button type="button" aria-label="Show TextInput"></button></div>
 </div></section>
@@ -314,5 +320,14 @@ footer nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 12
  <div><span class="logo" style="font-size:24px">☾ Lunatui</span>Rust terminal UI library · © Moonbase 2090 LLC · MIT License</div>
  <nav aria-label="Footer"><a href="#docs">Docs</a><a href="#gallery">Gallery</a><a href="#speed">Benchmarks</a><a href="https://moonbase2090.com">Moonbase 2090</a></nav>
 </div></footer>
+<dialog class="zoom" aria-label="Widget preview"><figure><figcaption><span class="zoom-title"></span><button class="zoom-close" type="button" aria-label="Close preview">×</button></figcaption><img alt=""></figure></dialog>
 <script src="assets/site.js" defer></script>
+<script>
+(()=>{const d=document.querySelector('.zoom'),im=d.querySelector('img'),t=d.querySelector('.zoom-title');
+document.querySelectorAll('.widget-demo').forEach(el=>{el.tabIndex=0;el.setAttribute('role','button');
+const open=()=>{im.src=el.dataset.gif||el.src;im.alt=el.alt;t.textContent=el.closest('.tile').querySelector('.tile-h span').textContent;d.showModal()};
+el.addEventListener('click',open);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}})});
+d.querySelector('.zoom-close').addEventListener('click',()=>d.close());
+d.addEventListener('click',e=>{if(e.target===d)d.close()});})();
+</script>
 </body></html>
