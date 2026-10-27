@@ -87,3 +87,34 @@ fn a_bar_at_the_edge_is_clipped_to_the_area() {
     let (grid, clusters) = render(&chart, 7, 1);
     assert_eq!(rows(&grid, &clusters), ["██ ██ █"]);
 }
+
+#[test]
+fn a_second_render_clears_old_bars_gaps_and_labels() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(5, 3);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    for y in 0..3 {
+        cx.put_str(0, y, "xxxxx", Style::new());
+    }
+    BarChart::new(&[16, 16])
+        .max(16)
+        .bar_width(2)
+        .labels(&["Mon", "Tue"])
+        .render(Rect::new(0, 0, 5, 3), &mut cx);
+    BarChart::new(&[8])
+        .max(16)
+        .bar_width(2)
+        .render(Rect::new(0, 0, 5, 3), &mut cx);
+    assert_eq!(rows(&grid, &clusters), ["     ", "▄▄   ", "██   "]);
+}
+
+#[test]
+fn labels_are_clipped_to_their_bar() {
+    let chart = BarChart::new(&[16, 16])
+        .max(16)
+        .bar_width(2)
+        .labels(&["Mon", "Tue"]);
+    let (grid, clusters) = render(&chart, 5, 2);
+    assert_eq!(rows(&grid, &clusters), ["██ ██", "Mo Tu"]);
+}
