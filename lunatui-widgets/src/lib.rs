@@ -34,6 +34,8 @@ mod status_dot;
 mod table;
 mod tabs;
 mod text_input;
+#[cfg(feature = "toast")]
+mod toast;
 mod widget;
 
 #[cfg(feature = "barchart")]
@@ -75,4 +77,6 @@ pub use status_dot::{StatusDot, StatusState};
 pub use table::{CellStyle, Table};
 pub use tabs::Tabs;
 pub use text_input::TextInput;
+#[cfg(feature = "toast")]
+pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};
 pub use widget::Widget;
