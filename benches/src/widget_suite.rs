@@ -5,6 +5,7 @@ use std::cell::Cell;
 use std::io::{self, LineWriter, Write};
 use std::rc::Rc;
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use crate::scenes::ratatui::{ColorOutput, set_color_output};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
@@ -13,9 +14,9 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Axis, Bar, BarChart, BigText, Block, BorderType, Canvas, Chart, Dataset, Date, Gauge,
-    GraphType, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline,
-    Table, Tabs, TextWrap, Widget,
+    Axis, Bar, BarChart, BigText, Block, BorderType, Canvas, Chart, Dataset, Date, Gauge, GraphType,
+    List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline, Table, Tabs,
+    TextWrap, ToastKind, ToastScope, ToastStack, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -26,8 +27,8 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
     Axis as RatAxis, Bar as RatBar, BarChart as RatBarChart, BarGroup as RatBarGroup,
-    Block as RatBlock, BorderType as RatBorderType, Chart as RatChart, Dataset as RatDataset,
-    Gauge as RatGauge, GraphType as RatGraphType, List as RatList, ListItem,
+    Block as RatBlock, BorderType as RatBorderType, Chart as RatChart, Clear as RatClear,
+    Dataset as RatDataset, Gauge as RatGauge, GraphType as RatGraphType, List as RatList, ListItem,
     Paragraph as RatParagraph, Row, Sparkline as RatSparkline, Table as RatTable, Tabs as RatTabs,
     Widget as RatWidget, Wrap,
 };
@@ -159,6 +160,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: canvas_lunatui,
         ratatui: canvas_ratatui,
+    },
+    Case {
+        name: "toast",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no toast widget; its side draws the same three boxes by hand, in plain colors where lunatui uses theme tokens",
+        ),
+        lunatui: toast_lunatui,
+        ratatui: toast_ratatui,
     },
     Case {
         name: "chart",
@@ -576,6 +586,51 @@ fn markdown_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .scroll((u16::try_from(tick % 20).unwrap_or(0), 0))
         .style(rat_text())
         .render(area, buf);
+}
+
+const TOAST_TEXTS: [&str; 3] = ["Saved", "Build finished", "Disk almost full"];
+
+fn toast_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let mut stack = ToastStack::new();
+    let now = Duration::from_millis(u64::from(tick) * 100);
+    for (index, text) in (0_u64..).zip(TOAST_TEXTS) {
+        stack.push(
+            now,
+            Some(Duration::from_secs(60 + index)),
+            ToastScope::Pane(0),
+            ToastKind::Info,
+            text,
+        );
+    }
+    stack.render(now, area, |_| Some(area), &mut cx);
+}
+
+fn toast_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
+    let bottom = area.y + area.height;
+    for (depth, text) in TOAST_TEXTS.iter().rev().enumerate() {
+        let wide = (u16::try_from(text.len()).unwrap_or(u16::MAX) + 4).min(area.width);
+        let lift = u16::try_from(depth).unwrap_or(0) * 3;
+        let Some(top) = bottom.checked_sub(3 + lift) else {
+            break;
+        };
+        let rect = RatRect::new(area.x + area.width - wide, top, wide, 3);
+        RatClear.render(rect, buf);
+        RatBlock::bordered()
+            .border_type(RatBorderType::Rounded)
+            .style(rat_text())
+            .render(rect, buf);
+        RatParagraph::new(*text).style(rat_text()).render(
+            RatRect::new(rect.x + 2, rect.y + 1, wide.saturating_sub(4), 1),
+            buf,
+        );
+    }
 }
 
 const BAR_COUNT: usize = 64;

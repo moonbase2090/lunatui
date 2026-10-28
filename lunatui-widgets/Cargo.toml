@@ -22,6 +22,7 @@ chart = ["widget-state"]
 canvas = ["widget-state"]
 
 barchart = ["widget-state"]
+toast = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -139,3 +140,8 @@ required-features = ["canvas"]
 name = "canvas_ratatui"
 path = "tests/canvas_ratatui.rs"
 required-features = ["canvas"]
+
+[[test]]
+name = "toast"
+path = "tests/toast.rs"
+required-features = ["toast"]
