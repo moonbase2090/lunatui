@@ -16,7 +16,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
-- Kitty `Fit::Cover` uploads retain the full-resolution source crop so the terminal scales image data to the placement instead of enlarging a cell-sized crop.
+- Kitty graphics detection sends a valid one-pixel query and recognizes its `i=31;OK` response, enabling the pixel presenter instead of falling back to cells.
 
 ## [0.1.13] - 2026-10-28
 

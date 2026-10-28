@@ -35,11 +35,28 @@ fn queries_batch_private_modes_and_end_with_device_attributes() {
         &b"\x1b[?2004$p"[..],
         &b"\x1b[?1004$p"[..],
         &b"\x1b[?u"[..],
-        &b"\x1b_Ga=q\x1b\\"[..],
+        &b"\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\"[..],
         &b"\x1b]10;?\x1b\\"[..],
         &b"\x1b]11;?\x1b\\"[..],
     ] {
         assert_eq!(count_slice(QUERIES, needle), 1);
+    }
+}
+
+#[test]
+fn graphics_reply_accepts_only_success_for_the_query_image() {
+    let reply = ProbeReply::from_replies(&env_256(), b"\x1b_Gi=31;OK\x1b\\\x1b[?62c");
+    assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Kitty);
+    for bytes in [
+        &b"\x1b_Gi=31;EINVAL:bad data\x1b\\\x1b[?62c"[..],
+        &b"\x1b_Gi=32;OK\x1b\\\x1b[?62c"[..],
+        &b"\x1b_Gi=0;OK\x1b\\\x1b[?62c"[..],
+        &b"\x1b_G;OK\x1b\\\x1b[?62c"[..],
+        &b"\x1b_Ga=q,i=31,OK\x1b\\\x1b[?62c"[..],
+        &b"\x1b_Gi=31;OK trailing text\x1b\\\x1b[?62c"[..],
+    ] {
+        let reply = ProbeReply::from_replies(&env_256(), bytes);
+        assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Unknown);
     }
 }
 

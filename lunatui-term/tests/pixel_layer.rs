@@ -6,7 +6,8 @@
 use lunatui_core::Rect;
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};
 use lunatui_term::{
-    Caps, GraphicsProtocol, Multiplexer, PixelImage, PixelLayer, PixelMode, Protocols, TermIdentity,
+    Caps, GraphicsProtocol, Multiplexer, PixelImage, PixelLayer, PixelMode, ProbeEnv, ProbeReply,
+    Protocols, TermIdentity,
 };
 
 const PIXEL: [u8; 4] = [1, 2, 3, 4];
@@ -343,7 +344,7 @@ fn cover_request_crops_the_source_and_keeps_the_centered_cell_rectangle()
 }
 
 #[test]
-fn cover_upload_keeps_enough_source_pixels_for_the_kitty_placement()
+fn kitty_probe_enables_native_resolution_upload_for_the_placement()
 -> Result<(), Box<dyn std::error::Error>> {
     let pixels = vec![255; 640 * 360 * 4];
     let source = ImageSource::rgba8(640, 360, pixels.into_boxed_slice())?;
@@ -356,7 +357,8 @@ fn cover_upload_keeps_enough_source_pixels_for_the_kitty_placement()
         0,
         u8::MAX,
     );
-    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    let reply = ProbeReply::from_replies(&ProbeEnv::default(), b"\x1b_Gi=31;OK\x1b\\\x1b[?62c");
+    let mut layer = PixelLayer::new(PixelMode::from_caps(&reply.caps));
     layer.begin_frame();
     assert!(layer.submit(request));
     let output = text(layer.finish_frame());

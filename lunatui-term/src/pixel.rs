@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::Rect;
-use lunatui_image::{
-    Fit, ImageGeometry, ImageRequest, ImageSink, PixelPoint, PixelRect, PixelSize,
-};
+use lunatui_image::{ImageGeometry, ImageRequest, ImageSink, PixelSize};
 
 use crate::caps::{Caps, GraphicsProtocol, Multiplexer};
 use crate::encode::write_cup;
@@ -348,11 +346,7 @@ impl ImageSink for PixelLayer {
             return false;
         };
         let geometry = ImageGeometry::fit(request.source().size(), viewport, request.fit());
-        let source = if request.fit() == Fit::Cover {
-            cover_source(request.source().size(), viewport)
-        } else {
-            geometry.source
-        };
+        let source = geometry.source;
         let destination = geometry.destination;
         let top = destination.origin.y / 2;
         let bottom = destination
@@ -388,38 +382,6 @@ impl ImageSink for PixelLayer {
             placement,
         )
     }
-}
-
-fn cover_source(source: PixelSize, viewport: PixelSize) -> PixelRect {
-    let source_is_wider = u64::from(source.width()) * u64::from(viewport.height())
-        > u64::from(source.height()) * u64::from(viewport.width());
-    if source_is_wider {
-        let width = rounded_ratio(source.height(), viewport.width(), viewport.height())
-            .clamp(1, source.width());
-        PixelRect {
-            origin: PixelPoint {
-                x: (source.width() - width) / 2,
-                y: 0,
-            },
-            size: PixelSize::new(width, source.height()).unwrap_or(source),
-        }
-    } else {
-        let height = rounded_ratio(source.width(), viewport.height(), viewport.width())
-            .clamp(1, source.height());
-        PixelRect {
-            origin: PixelPoint {
-                x: 0,
-                y: (source.height() - height) / 2,
-            },
-            size: PixelSize::new(source.width(), height).unwrap_or(source),
-        }
-    }
-}
-
-fn rounded_ratio(value: u32, numerator: u32, denominator: u32) -> u32 {
-    let product = u64::from(value) * u64::from(numerator);
-    let rounded = product + u64::from(denominator / 2);
-    u32::try_from(rounded / u64::from(denominator)).unwrap_or(u32::MAX)
 }
 
 fn write_transmit(out: &mut Vec<u8>, id: u32, image: &PixelImage<'_>) {
