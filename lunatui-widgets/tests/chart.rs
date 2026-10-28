@@ -709,3 +709,19 @@ fn a_second_render_leaves_nothing_of_the_first() {
         assert_eq!(inside(&grid), inside(&fresh), "{width}x{height}");
     }
 }
+
+#[test]
+fn quadrant_and_sextant_markers_draw_their_glyphs() {
+    let corners = [(0.0, 0.0), (1.0, 1.0)];
+    for (marker, low, high) in [
+        (Marker::Quadrant, "▖", "▝"),
+        (Marker::Sextant, "\u{1FB0F}", "\u{1FB01}"),
+    ] {
+        let sets = [Dataset::new(&corners).marker(marker)];
+        assert_eq!(
+            rows(&unit_axes(Chart::new(&sets)), 4, 3),
+            [format!("│  {high}"), format!("│{low}  "), "└───".to_owned()],
+            "{marker:?}"
+        );
+    }
+}

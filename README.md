@@ -57,6 +57,14 @@ A docs reader: a page list beside a scrolling Markdown view, with headings and r
 
 Screenshot: [docs/media/markdown.png](docs/media/markdown.png). Recorded with `scripts/record-showcase.sh` (`CASE=markdown`, 120×36, `FRAMES=200`, dark, about 11 seconds).
 
+### Canvas
+
+A monitoring wall drawn from shapes: a radar sweep with a fading trail and labeled blips, two moving signal traces, and the same circle and hand drawn with each marker (braille, sextant, quadrant, half block, block, and dot) so the grain of each is visible.
+
+<img src="docs/media/canvas.webp" alt="Canvas widget: a radar, signal traces, and every marker in the dark theme" width="1028">
+
+Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
 ### Toast
 
 A timed toast stack over an operations console: boxed toasts stack up in the corner of the pane they belong to, one-row status toasts stack on the bottom rows, and each goes away when its time is up, so a newer message sits above an older one and a status message sits above them all.
