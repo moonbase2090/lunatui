@@ -115,6 +115,22 @@ A cutover board: a live clock, a countdown that reaches zero, and ticking metric
 
 Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36, dark, about 11 seconds).
 
+### LineGauge
+
+A live service health board rendered by Lunatui. Each row uses a real LineGauge widget, with the selected row, disabled state, value label, threshold colors, and line styles visible in the recording.
+
+![LineGauge service health board](docs/media/line-gauge-120x36-truecolor-dark-lunatui.gif)
+
+Screenshot from the same Lunatui capture: [docs/media/line-gauge-120x36-truecolor-dark-lunatui.png](docs/media/line-gauge-120x36-truecolor-dark-lunatui.png). Recorded with `scripts/record-widget.sh` (`CASE=line-gauge`, 120×36, 240 frames at 30 fps, dark theme); the GIF is 699 KB and runs for about 11.8 seconds.
+
+### Release control screen
+
+A realistic Lunatui app screen combines the Monday-first calendar with selected-day and weekend styles, a highlighted deployment table, sub-cell Gauge, LineGauge, segmented StatusBar, animated Spinner, marked on-call List, and a dimmed approval Overlay with shadow. Every region is rendered by its widget; the capture does not overwrite widget cells.
+
+![Night shift release control screen](docs/media/nightshift-board-120x36-dark.gif)
+
+Screenshot from the same recording: [docs/media/nightshift-board-120x36-dark.png](docs/media/nightshift-board-120x36-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=nightshift-board`, 120×36, 180 frames at 30 fps, dark truecolor); the GIF is 237 KB and runs for 10.0 seconds.
+
 ### Image
 
 A media library for an observatory archive. Each thumbnail is an `Image` with `ImageFit::Cover`. The selected one is drawn focused, and the two imports are drawn disabled until they finish. The preview switches between `ImageFit::Contain` and `ImageFit::Cover`, and the details panel shows each frame's tone bands. The pictures are the website's sky, hills and moon art, resized, tinted and layered by the example.

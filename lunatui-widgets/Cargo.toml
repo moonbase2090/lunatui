@@ -15,7 +15,12 @@ default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 markdown = ["widget-state", "lunatui-text/markdown"]
-line-gauge = ["widget-state"]
+line-gauge = [
+    "widget-state",
+    "color-profiles",
+    "lunatui-core/subcell",
+    "lunatui-theme/graphite-tokens",
+]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
 chart = ["widget-state"]

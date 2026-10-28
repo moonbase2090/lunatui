@@ -67,7 +67,7 @@ pub use gauge::Gauge;
 pub use image::Image;
 pub use lightcycle::Lightcycle;
 #[cfg(feature = "line-gauge")]
-pub use line_gauge::LineGauge;
+pub use line_gauge::{LineGauge, LineSet};
 pub use list::List;
 pub use lunatui_core::Size;
 #[cfg(feature = "image")]
