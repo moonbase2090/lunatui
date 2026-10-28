@@ -33,6 +33,14 @@ Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). C
 
 Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
 
+### Chart
+
+An operations dashboard with four charts: braille lines with a legend, a dot scatter, hourly bars, and a half-block line chart in the focused state. The series scroll and the points drift while the axes, labels, and titles stay put.
+
+![Chart widget: an operations dashboard in the dark theme](docs/media/chart.gif)
+
+Screenshot: [docs/media/chart.png](docs/media/chart.png). Recorded with `scripts/record-showcase.sh` (`CASE=chart`, 120×36, `FRAMES=200`, dark, about 11 seconds).
+
 ### BarChart
 
 A deploy dashboard made of five bar charts: grouped vertical bars with value text and group labels, horizontal bars with region labels, a series of build times with the latest run highlighted, and the same data in the normal, focused, and disabled states.
@@ -48,6 +56,22 @@ A docs reader: a page list beside a scrolling Markdown view, with headings and r
 ![MarkdownView widget: a docs reader in the dark theme](docs/media/markdown.gif)
 
 Screenshot: [docs/media/markdown.png](docs/media/markdown.png). Recorded with `scripts/record-showcase.sh` (`CASE=markdown`, 120×36, `FRAMES=200`, dark, about 11 seconds).
+
+### Canvas
+
+A monitoring wall drawn from shapes: a radar sweep with a fading trail and labeled blips, two moving signal traces, and the same circle and hand drawn with each marker (braille, sextant, quadrant, half block, block, and dot) so the grain of each is visible.
+
+<img src="docs/media/canvas.webp" alt="Canvas widget: a radar, signal traces, and every marker in the dark theme" width="1028">
+
+Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
+### Toast
+
+A timed toast stack over an operations console: boxed toasts stack up in the corner of the pane they belong to, one-row status toasts stack on the bottom rows, and each goes away when its time is up, so a newer message sits above an older one and a status message sits above them all.
+
+<img src="docs/media/toast.webp" alt="Toast stack: pane toasts and status toasts appearing and expiring over an operations console in the dark theme" width="1028">
+
+Screenshot: [docs/media/toast.png](docs/media/toast.png). Recorded with `scripts/record-showcase.sh` (`CASE=toast`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
 ### Sparkline
 
