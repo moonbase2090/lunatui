@@ -156,7 +156,19 @@ impl<W: Write> Session<W> {
     ///
     /// Returns [`SessionError::Io`] when the frame write or flush fails.
     pub fn present_frame(&mut self, payload: &[u8]) -> Result<(), SessionError> {
-        compose_frame(&mut self.frame_buf, payload, self.sync_output);
+        self.present_frame_parts(&[payload])
+    }
+
+    /// Writes ordered payload parts as one synchronized frame and one flush.
+    ///
+    /// This lets cell output and pixel overlays share the same frame boundary
+    /// without joining them into a temporary buffer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SessionError::Io`] when the frame write or flush fails.
+    pub fn present_frame_parts(&mut self, payloads: &[&[u8]]) -> Result<(), SessionError> {
+        compose_frame_parts(&mut self.frame_buf, payloads, self.sync_output);
         self.writer
             .write_all(&self.frame_buf)
             .and_then(|()| self.writer.flush())
@@ -274,12 +286,19 @@ fn map_errno(err: Errno) -> SessionError {
     SessionError::Io(err.into())
 }
 
+#[cfg(test)]
 pub(crate) fn compose_frame(buffer: &mut Vec<u8>, payload: &[u8], sync: SyncOutput) {
+    compose_frame_parts(buffer, &[payload], sync);
+}
+
+fn compose_frame_parts(buffer: &mut Vec<u8>, payloads: &[&[u8]], sync: SyncOutput) {
     buffer.clear();
     if sync == SyncOutput::Enabled {
         buffer.extend_from_slice(SYNC_BEGIN);
     }
-    buffer.extend_from_slice(payload);
+    for payload in payloads {
+        buffer.extend_from_slice(payload);
+    }
     if sync == SyncOutput::Enabled {
         buffer.extend_from_slice(SYNC_END);
     }
@@ -292,7 +311,7 @@ mod tests {
     use lunatui_bench::CountingWriter;
     use rustix::termios::isatty;
 
-    use super::{SyncOutput, compose_frame};
+    use super::{SyncOutput, compose_frame, compose_frame_parts};
 
     #[test]
     fn compose_frame_wraps_sync_when_enabled() {
@@ -308,6 +327,17 @@ mod tests {
         let mut buf = Vec::new();
         compose_frame(&mut buf, b"XY", SyncOutput::Disabled);
         assert_eq!(buf, b"XY");
+    }
+
+    #[test]
+    fn compose_frame_parts_keeps_order_inside_one_sync_wrapper() {
+        let mut buf = Vec::new();
+        compose_frame_parts(
+            &mut buf,
+            &[&b"cells"[..], &b"pixels"[..]],
+            SyncOutput::Enabled,
+        );
+        assert_eq!(buf, b"\x1b[?2026hcellspixels\x1b[?2026l");
     }
 
     #[test]

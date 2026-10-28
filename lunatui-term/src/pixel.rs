@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::Rect;
+use lunatui_image::{ImageGeometry, ImageRequest, ImageSink, PixelSize};
 
 use crate::caps::{Caps, GraphicsProtocol, Multiplexer};
 use crate::encode::write_cup;
@@ -85,8 +86,13 @@ impl<'a> PixelImage<'a> {
 struct Uploaded {
     id: u32,
     generation: u64,
+    source_width: u32,
+    source_height: u32,
+    crop_x: u32,
+    crop_y: u32,
     width: u32,
     height: u32,
+    opacity: u8,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -111,6 +117,7 @@ pub struct PixelLayer {
     placed: Vec<Placed>,
     frame: Vec<Placed>,
     out: Vec<u8>,
+    scratch: Vec<u8>,
 }
 
 impl PixelLayer {
@@ -123,6 +130,7 @@ impl PixelLayer {
             placed: Vec::new(),
             frame: Vec::new(),
             out: Vec::new(),
+            scratch: Vec::new(),
         }
     }
 
@@ -153,24 +161,17 @@ impl PixelLayer {
         {
             return;
         }
-        let current = Uploaded {
+        let fresh = self.update_upload(Uploaded {
             id,
             generation,
+            source_width: image.width,
+            source_height: image.height,
+            crop_x: 0,
+            crop_y: 0,
             width: image.width,
             height: image.height,
-        };
-        let fresh = match self.uploaded.iter_mut().find(|known| known.id == id) {
-            Some(known) if *known == current => false,
-            Some(known) => {
-                write_delete(&mut self.out, id);
-                *known = current;
-                true
-            }
-            None => {
-                self.uploaded.push(current);
-                true
-            }
-        };
+            opacity: u8::MAX,
+        });
         if fresh {
             write_transmit(&mut self.out, id, image);
         }
@@ -215,6 +216,171 @@ impl PixelLayer {
         self.frame.clear();
         self.uploaded.clear();
         &self.out
+    }
+}
+
+impl PixelLayer {
+    fn update_upload(&mut self, current: Uploaded) -> bool {
+        match self
+            .uploaded
+            .iter_mut()
+            .find(|known| known.id == current.id)
+        {
+            Some(known) if *known == current => false,
+            Some(known) => {
+                write_delete(&mut self.out, current.id);
+                *known = current;
+                true
+            }
+            None => {
+                self.uploaded.push(current);
+                true
+            }
+        }
+    }
+
+    fn submit_cropped(
+        &mut self,
+        request: ImageRequest<'_>,
+        crop_x: u32,
+        crop_y: u32,
+        crop_width: u32,
+        crop_height: u32,
+        destination: Rect,
+    ) -> bool {
+        let source = request.source();
+        let Some(crop_len) = usize::try_from(crop_width)
+            .ok()
+            .and_then(|width| {
+                usize::try_from(crop_height)
+                    .ok()
+                    .and_then(|height| width.checked_mul(height))
+            })
+            .and_then(|pixels| pixels.checked_mul(4))
+        else {
+            return false;
+        };
+        let Some(row_len) = usize::try_from(crop_width)
+            .ok()
+            .and_then(|width| width.checked_mul(4))
+        else {
+            return false;
+        };
+        let source_width = source.size().width();
+        let source_bytes = source.rgba8_pixels();
+        let row_offset = |row: u32| {
+            usize::try_from(row)
+                .ok()?
+                .checked_mul(usize::try_from(source_width).ok()?)?
+                .checked_mul(4)
+        };
+        let current = Uploaded {
+            id: request.id().get(),
+            generation: request.generation(),
+            source_width,
+            source_height: source.size().height(),
+            crop_x,
+            crop_y,
+            width: crop_width,
+            height: crop_height,
+            opacity: request.opacity(),
+        };
+        let fresh = self.update_upload(current);
+        if fresh {
+            self.scratch.clear();
+            if self.scratch.capacity() < crop_len {
+                self.scratch.reserve(crop_len);
+            }
+            for row in crop_y..crop_y.saturating_add(crop_height) {
+                let Some(offset) = row_offset(row).and_then(|offset| {
+                    offset.checked_add(usize::try_from(crop_x).ok()?.checked_mul(4)?)
+                }) else {
+                    return false;
+                };
+                let Some(end) = offset.checked_add(row_len) else {
+                    return false;
+                };
+                let Some(bytes) = source_bytes.get(offset..end) else {
+                    return false;
+                };
+                self.scratch.extend_from_slice(bytes);
+            }
+            if request.opacity() != u8::MAX {
+                for alpha in self.scratch.iter_mut().skip(3).step_by(4) {
+                    *alpha = u8::try_from(
+                        u16::from(*alpha) * u16::from(request.opacity()) / u16::from(u8::MAX),
+                    )
+                    .unwrap_or(u8::MAX);
+                }
+            }
+            let Some(image) = PixelImage::new(crop_width, crop_height, &self.scratch) else {
+                return false;
+            };
+            write_transmit(&mut self.out, request.id().get(), &image);
+        }
+        self.frame.push(Placed {
+            id: request.id().get(),
+            rect: destination,
+            z: request.depth(),
+            fresh,
+        });
+        true
+    }
+}
+
+impl ImageSink for PixelLayer {
+    fn supports_pixels(&self) -> bool {
+        self.mode.is_pixels()
+    }
+
+    fn submit(&mut self, request: ImageRequest<'_>) -> bool {
+        let area = request.area();
+        if !self.mode.is_pixels() || area.width == 0 || area.height == 0 {
+            return false;
+        }
+        self.frame.retain(|placed| placed.id != request.id().get());
+        let Some(viewport_height) = u32::from(area.height).checked_mul(2) else {
+            return false;
+        };
+        let Some(viewport) = PixelSize::new(u32::from(area.width), viewport_height) else {
+            return false;
+        };
+        let geometry = ImageGeometry::fit(request.source().size(), viewport, request.fit());
+        let source = geometry.source;
+        let destination = geometry.destination;
+        let top = destination.origin.y / 2;
+        let bottom = destination
+            .origin
+            .y
+            .saturating_add(destination.size.height())
+            .saturating_add(1)
+            / 2;
+        let Ok(x) = u16::try_from(destination.origin.x) else {
+            return false;
+        };
+        let Ok(y) = u16::try_from(top) else {
+            return false;
+        };
+        let Ok(width) = u16::try_from(destination.size.width()) else {
+            return false;
+        };
+        let Ok(height) = u16::try_from(bottom.saturating_sub(top)) else {
+            return false;
+        };
+        let placement = Rect::new(
+            area.x.saturating_add(x),
+            area.y.saturating_add(y),
+            width,
+            height,
+        );
+        self.submit_cropped(
+            request,
+            source.origin.x,
+            source.origin.y,
+            source.size.width(),
+            source.size.height(),
+            placement,
+        )
     }
 }
 
