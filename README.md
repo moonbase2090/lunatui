@@ -81,6 +81,14 @@ A timed toast stack over an operations console: boxed toasts stack up in the cor
 
 Screenshot: [docs/media/toast.png](docs/media/toast.png). Recorded with `scripts/record-showcase.sh` (`CASE=toast`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Tab reordering
+
+A boxed tab strip whose tabs are dragged with the pointer: a marker shows where the grabbed tab would land, releasing moves it there, and the selected tab (Logs) stays selected wherever it ends up, whether the dragged tab passes it or not.
+
+<img src="docs/media/tabs-drag.webp" alt="TabsDrag: tabs dragged into a new order while the selected tab stays selected, in the dark theme" width="1028">
+
+Screenshot: [docs/media/tabs-drag.png](docs/media/tabs-drag.png). Recorded with `scripts/record-showcase.sh` (`CASE=tabs-drag`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.

@@ -19,7 +19,8 @@ use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Canvas,
     Chart, Dataset, Date, DateStyle, DividerId, GraphType, LegendPosition, List, MarkdownView,
     Marker, Monthly, PaneId, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, SplitAxis,
-    SplitDrag, SplitTree, StatusBar, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
+    SplitDrag, SplitTree, StatusBar, Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Widget,
+    WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -50,6 +51,11 @@ const PREVIEWS: &[Preview] = &[
         name: "split",
         native: split_native,
         baseline: split_baseline,
+    },
+    Preview {
+        name: "tabs-drag",
+        native: tabs_drag_native,
+        baseline: tabs_drag_baseline,
     },
     Preview {
         name: "calendar",
@@ -2498,6 +2504,163 @@ fn split_native(
 
 fn split_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "split") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+struct TabDragStep {
+    from: u32,
+    to: u32,
+    grab: usize,
+    drop: usize,
+}
+
+const TAB_STEPS: [TabDragStep; 3] = [
+    TabDragStep {
+        from: 20,
+        to: 70,
+        grab: 0,
+        drop: 3,
+    },
+    TabDragStep {
+        from: 100,
+        to: 150,
+        grab: 4,
+        drop: 0,
+    },
+    TabDragStep {
+        from: 180,
+        to: 225,
+        grab: 1,
+        drop: 3,
+    },
+];
+
+fn tab_drag_state(strip: Rect, tick: u32) -> (Vec<&'static str>, usize, TabsDrag, u16) {
+    let mut titles = vec!["Overview", "Builds", "Logs", "Deploys", "Settings"];
+    let mut selected = 2_usize;
+    let mut drag = TabsDrag::new();
+    let mut column = 0_u16;
+    for now in 0..=tick {
+        for step in &TAB_STEPS {
+            let tabs = Tabs::new(titles.clone()).boxed(Style::new(), Style::new());
+            let areas = tabs.tab_areas(strip);
+            let center = |index: usize| {
+                areas
+                    .iter()
+                    .find(|(i, _)| *i == index)
+                    .map_or(0, |(_, rect)| rect.x + rect.width / 2)
+            };
+            if now == step.from {
+                column = center(step.grab);
+                drag.press(&areas, column, strip.y);
+            } else if now > step.from && now <= step.to {
+                let start = i32::from(center(step.grab));
+                let end = i32::from(center(step.drop));
+                let spent = i32::try_from(now - step.from).unwrap_or(0);
+                let span = i32::try_from(step.to - step.from).unwrap_or(1);
+                column = u16::try_from(start + (end - start) * spent / span).unwrap_or(0);
+                drag.drag(&areas, column, strip.y);
+                let released = if now == step.to { drag.release() } else { None };
+                if let Some(reorder) = released {
+                    reorder.apply(&mut titles);
+                    selected = reorder.selection(selected);
+                }
+            }
+        }
+    }
+    (titles, selected, drag, column)
+}
+
+fn tabs_drag_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let strip = Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), 3);
+    let (titles, selected, drag, column) = tab_drag_state(strip, tick);
+    let tabs = Tabs::new(titles.clone())
+        .select(selected)
+        .style(dim)
+        .highlight_style(
+            Style::new()
+                .fg(accent)
+                .bg(surface)
+                .with_attrs(Attrs::new().set_bold(true)),
+        )
+        .boxed(Style::new().fg(accent).bg(surface), dim);
+    tabs.render(strip, &mut cx);
+    let areas = tabs.tab_areas(strip);
+    let target_area = drag
+        .target()
+        .and_then(|target| areas.iter().find(|(index, _)| *index == target));
+    if let Some((_, rect)) = target_area {
+        cx.put_str(
+            rect.x + rect.width / 2,
+            strip.y.saturating_sub(1),
+            "▼",
+            Style::new().fg(accent).bg(surface),
+        );
+    }
+    if drag.is_dragging() {
+        cx.put_str(
+            column,
+            strip.y + 1,
+            "◆",
+            Style::new().fg(accent).bg(surface),
+        );
+    }
+    let body = Rect::new(
+        area.x + 2,
+        strip.y + 3,
+        area.width.saturating_sub(4),
+        area.height.saturating_sub(7),
+    );
+    let name = titles.get(selected).copied().unwrap_or("");
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(format!(" {name} "))
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(body, &mut cx);
+    for (row, line) in (0_u16..).zip([
+        "last run   passing",
+        "queued     2",
+        "owner      platform team",
+    ]) {
+        cx.put_str(body.x + 2, body.y + 1 + row, line, fill);
+    }
+    let hint = if drag.is_dragging() {
+        " release to drop the tab here"
+    } else {
+        " drag a tab to reorder"
+    };
+    StatusBar::new(hint)
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn tabs_drag_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "tabs") {
         (case.ratatui)(buffer, area, tick);
     }
 }
