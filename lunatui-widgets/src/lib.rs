@@ -41,6 +41,8 @@ mod padding;
 mod paragraph;
 #[cfg(feature = "popup")]
 mod popup;
+#[cfg(feature = "progress")]
+mod progress_bar;
 #[cfg(feature = "radio")]
 mod radio_group;
 #[cfg(any(feature = "chart", feature = "canvas"))]
@@ -113,6 +115,8 @@ pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
 #[cfg(feature = "popup")]
 pub use popup::{Placement, Popup, PopupState};
+#[cfg(feature = "progress")]
+pub use progress_bar::{ProgressBar, ProgressTone};
 #[cfg(feature = "radio")]
 pub use radio_group::{RadioFlow, RadioGroup};
 #[cfg(any(feature = "chart", feature = "canvas"))]
