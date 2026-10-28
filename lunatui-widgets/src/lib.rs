@@ -3,6 +3,8 @@
 
 #![doc = include_str!("../README.md")]
 
+#[cfg(feature = "accordion")]
+mod accordion;
 #[cfg(feature = "tooltip")]
 mod anchor;
 #[cfg(feature = "barchart")]
@@ -65,6 +67,8 @@ mod toggle;
 mod tooltip;
 mod widget;
 
+#[cfg(feature = "accordion")]
+pub use accordion::{Accordion, AccordionSection, SectionArea};
 #[cfg(feature = "tooltip")]
 pub use anchor::AnchorSide;
 #[cfg(feature = "barchart")]
