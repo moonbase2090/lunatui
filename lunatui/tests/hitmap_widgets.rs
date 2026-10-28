@@ -49,7 +49,6 @@ fn a_click_on_a_tab_title_reaches_that_tab() {
     let area = Rect::new(2, 1, 20, 1);
     let mut map = HitMap::new();
     map.push_indexed(TABS, tabs().tab_areas(area), 0);
-    // One at 3..6, Two at 7..10, Three at 11..16.
     for (column, expected) in [
         (3, Some(0)),
         (5, Some(0)),
@@ -78,7 +77,6 @@ fn a_click_on_a_boxed_tab_reaches_its_slot_but_not_the_divider() {
     let boxed = Tabs::new(["A", "BB", "C"]).boxed(Style::new(), Style::new());
     let mut map = HitMap::new();
     map.push_indexed(TABS, boxed.tab_areas(area), 0);
-    // Slots: A 0..5, BB 6..12, C 13..18.
     for (column, row, expected) in [
         (0, 0, Some(0)),
         (4, 1, Some(0)),
@@ -120,7 +118,6 @@ fn a_click_on_a_list_row_reaches_the_item_under_it() {
     let area = Rect::new(4, 2, 6, 3);
     let mut map = HitMap::new();
     map.push_indexed(ROWS, list().row_areas(area), 0);
-    // Offset 1: screen row 2 is item 1, then 2 and 3.
     for (column, row, expected) in [
         (4, 2, Some(1)),
         (9, 2, Some(1)),
@@ -159,7 +156,6 @@ fn a_higher_layer_over_the_widgets_takes_the_click() {
     assert_eq!(tab_hit(&map, &click(4, 0)), None);
     assert_eq!(map.pick(4, 2), Some(POPUP));
     assert_eq!(row_hit(&map, &click(4, 2)), None);
-    // Outside the popup the widgets answer again.
     assert_eq!(tab_hit(&map, &click(12, 0)), Some(2));
     assert_eq!(row_hit(&map, &click(4, 3)), Some(3));
     assert_eq!(map.pick(9, 1), Some(HitId(201)));
@@ -197,12 +193,10 @@ fn a_plain_strip_clips_titles_at_the_right_edge() {
         plain.tab_areas(Rect::new(3, 2, 7, 1)),
         [(0, Rect::new(3, 2, 3, 1)), (1, Rect::new(7, 2, 3, 1))]
     );
-    // A title that ends exactly on the edge leaves nothing for the next one.
     assert_eq!(
         plain.tab_areas(Rect::new(3, 2, 3, 1)),
         [(0, Rect::new(3, 2, 3, 1))]
     );
-    // Wide characters count by display width and never straddle the edge.
     assert_eq!(
         Tabs::new(["日本"]).tab_areas(Rect::new(0, 0, 3, 1)),
         [(0, Rect::new(0, 0, 2, 1))]
@@ -228,7 +222,6 @@ fn a_boxed_strip_keeps_clear_of_joined_parent_borders() {
         boxed.tab_areas(Rect::new(4, 1, 20, 3)),
         [(0, Rect::new(5, 1, 5, 2)), (1, Rect::new(11, 1, 6, 2))]
     );
-    // The last slot may use every cell up to the inner edge, and no more.
     assert_eq!(
         boxed.tab_areas(Rect::new(4, 1, 13, 3)),
         [(0, Rect::new(5, 1, 5, 2)), (1, Rect::new(11, 1, 5, 2))]
@@ -253,7 +246,6 @@ fn a_boxed_strip_honors_indent_and_an_exact_fit() {
         boxed.tab_areas(Rect::new(1, 0, 14, 3)),
         [(0, Rect::new(3, 0, 5, 2)), (1, Rect::new(9, 0, 5, 2))]
     );
-    // The first slot fits exactly: all five cells, nothing left for a second tab.
     assert_eq!(
         boxed.tab_areas(Rect::new(1, 0, 7, 3)),
         [(0, Rect::new(3, 0, 5, 2))]

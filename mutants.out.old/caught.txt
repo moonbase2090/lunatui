@@ -1,7 +1,0 @@
-lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with None
-lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with Some(0)
-lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with Some(1)
-lunatui-runtime/src/hit.rs:19:17: replace < with == in HitId::index_in
-lunatui-runtime/src/hit.rs:19:17: replace < with > in HitId::index_in
-lunatui-runtime/src/hit.rs:19:17: replace < with <= in HitId::index_in
-lunatui-runtime/src/hit.rs:62:9: replace HitMap::push_indexed with ()
