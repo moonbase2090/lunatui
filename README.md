@@ -58,3 +58,11 @@ A cutover board: a live clock, a countdown that reaches zero, and ticking metric
 ![BigText widget: a cutover board in the dark theme](docs/media/bigtext.gif)
 
 Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36, dark, about 11 seconds).
+
+### Image
+
+A live observatory console renders a deep-sky image through the Image widget's cell fallback. Frame count, exposure, tracking drift, and integration progress update while the image stays in view.
+
+![Image widget observatory console](docs/media/image-120x36-truecolor-dark.gif)
+
+Screenshot from the same recording: [docs/media/image-120x36-truecolor-dark.png](docs/media/image-120x36-truecolor-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=image`, 120×36, 200 frames at 30 fps, dark theme).
