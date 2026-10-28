@@ -10,17 +10,18 @@ use std::time::{Duration, Instant};
 
 use lunatui_bench::widget_suite::{CASES, Case, pin_color_output};
 use lunatui_core::{
-    Attrs, ClusterTable, Color, Grid, Rect, Style, clip_display_prefix, width as cols,
+    Attrs, ClusterTable, Color, Grid, Rect, Style, UnderlineStyle, clip_display_prefix,
+    width as cols,
 };
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::canvas::{Circle, Line};
 use lunatui_widgets::{
-    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Canvas,
-    Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType, LegendPosition, List,
-    MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline,
-    SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, ToastKind,
-    ToastScope, ToastStack, Widget, WidgetState,
+    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
+    Breadcrumbs, Canvas, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
+    LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize, RenderCx,
+    Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs,
+    TabsDrag, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -56,6 +57,11 @@ const PREVIEWS: &[Preview] = &[
         name: "tabs-drag",
         native: tabs_drag_native,
         baseline: tabs_drag_baseline,
+    },
+    Preview {
+        name: "breadcrumbs",
+        native: breadcrumbs_native,
+        baseline: breadcrumbs_baseline,
     },
     Preview {
         name: "calendar",
@@ -2052,15 +2058,15 @@ fn sparkline_baseline(
 const MD_PAGES: [(&str, &str); 3] = [
     (
         "Getting started",
-        "# Getting started\n\nLunatui draws terminal interfaces from small **widgets**. Each widget takes an area and a `RenderCx` and writes cells; nothing else is needed to get a frame on screen.\n\n## Install\n\n1. Add the crate with the features you use.\n2. Create a `Grid` and a `ClusterTable`.\n3. Render a widget into the grid.\n4. Diff the grid and write the changes.\n\n```toml\n[dependencies]\nlunatui = \"0.1\"\nlunatui-widgets = { version = \"0.1\", features = [\"markdown\"] }\n```\n\n## Your first frame\n\n> Every widget redraws the whole of its own area, so a frame never shows leftovers from the one before it.\n\n- [x] Block and Paragraph\n- [x] List and Table\n- [ ] Your own widget\n  - implement `Widget`\n  - keep `render` free of side effects\n\n---\n\nRead the *architecture overview* next, or jump to the [widget gallery](https://example.com/gallery).\n",
+        "# Getting started\n\nLunatui draws terminal interfaces from small **widgets**. Each widget takes an area and a `RenderCx` and writes cells; nothing else is needed to get a frame on screen.\n\n## Install\n\n1. Add the crate with the features you use.\n2. Create a `Grid` and a `ClusterTable`.\n3. Render a widget into the grid.\n4. Diff the grid and write the changes.\n\n```toml\n[dependencies]\nlunatui = \"0.1\"\nlunatui-widgets = { version = \"0.1\", features = [\"markdown\"] }\n```\n\n## Your first frame\n\n> Every widget redraws the whole of its own area, so a frame never shows leftovers from the one before it.\n\n- [x] Block and Paragraph\n- [x] List and Table\n- [ ] Your own widget\n  - implement `Widget`\n  - keep `render` free of side effects\n\n## Themes\n\nColors come from semantic tokens, so a theme change recolors every widget without touching the widget code. The built-in dark and light themes cover the common terminals, and a prepared palette downsamples once instead of on every cell.\n\n| token | used for |\n|:--|:--|\n| `Accent` | headings and highlights |\n| `FocusRing` | links and focus |\n| `Surface1` | raised panels and code |\n\n## Input\n\nKeys, mouse, and paste events arrive as plain values. The runtime maps them to focus changes and hit tests, and keeps a small keymap so shortcuts stay discoverable.\n\n1. Parse bytes into events.\n2. Route the event to the focused widget.\n3. Redraw only what changed.\n\n---\n\nRead the *architecture overview* next, or jump to the [widget gallery](https://example.com/gallery).\n",
     ),
     (
         "Layout",
-        "# Layout\n\nA layout splits an area into rectangles from a list of **constraints**. The solver is exact for the common cases and falls back to a general solver only when it must.\n\n## Constraints\n\n| constraint | meaning |\n|:--|--:|\n| `Length(n)` | exactly n cells |\n| `Min(n)` | at least n cells |\n| `Percentage(p)` | p percent of the axis |\n| `Fill(w)` | a weighted share of the rest |\n\n## Flex\n\n- `Start`, `Center`, and `End` place the group\n- `SpaceBetween` spreads the gaps\n  - a lone segment sits at the start\n- `Legacy` keeps the older rules\n\n```rust\nlet [left, right] = Layout::horizontal([Length(24), Fill(1)])\n    .split(area)\n    .into_array();\n```\n\n> Floors and caps are opt in: turn on the `size-limits` feature to bound a segment.\n",
+        "# Layout\n\nA layout splits an area into rectangles from a list of **constraints**. The solver is exact for the common cases and falls back to a general solver only when it must.\n\n## Constraints\n\n| constraint | meaning |\n|:--|--:|\n| `Length(n)` | exactly n cells |\n| `Min(n)` | at least n cells |\n| `Percentage(p)` | p percent of the axis |\n| `Fill(w)` | a weighted share of the rest |\n\n## Flex\n\n- `Start`, `Center`, and `End` place the group\n- `SpaceBetween` spreads the gaps\n  - a lone segment sits at the start\n- `Legacy` keeps the older rules\n\n```rust\nlet [left, right] = Layout::horizontal([Length(24), Fill(1)])\n    .split(area)\n    .into_array();\n```\n\n> Floors and caps are opt in: turn on the `size-limits` feature to bound a segment.\n\n## Wrapping\n\nSegments that do not fit move onto the next line, so a row of tags or buttons reflows when the window narrows. Lines break greedily: a segment joins the current line when its natural size plus the spacing fits in what is left.\n\n1. Measure each segment.\n2. Break the list into lines.\n3. Split every line with the same solver.\n\n## Spacing\n\nOne `gap` setting spaces segments and lines alike, which keeps grids and toolbars consistent. Negative spacing overlaps neighbours by a cell, which is how bordered panels share an edge.\n\n- [x] horizontal and vertical splits\n- [x] wrapped lines\n- [ ] nested constraints in one pass\n\n---\n\nThe solver never allocates on the fast path.\n",
     ),
     (
         "Widgets",
-        "# Widgets\n\nThe widget set covers text, lists, tables, gauges, charts, and now **Markdown**.\n\n## Markdown\n\nThe view lays a parsed document out at the width it is given: headings get rules, lists keep a hanging indent, quotes keep their bar, and tables are boxed. ~~Raw source~~ is never shown.\n\n1. Parse once with `markdown::parse`.\n2. Render with `MarkdownView::new(&document)`.\n3. Scroll with `.scroll(rows)` and size a scrollbar from `content_height`.\n\n### Inline styles\n\nText can be *emphasised*, **strong**, ***both***, ~~struck~~, or `code`, and a [link](https://example.com) is underlined.\n\n| widget | feature |\n|:--|:-:|\n| `Sparkline` | sparkline |\n| `BarChart` | barchart |\n| `Chart` | chart |\n| `MarkdownView` | markdown |\n\n- [x] headings, lists, quotes\n- [x] code blocks and tables\n- [x] task items\n\n---\n\nThat is the whole tour.\n",
+        "# Widgets\n\nThe widget set covers text, lists, tables, gauges, charts, and now **Markdown**.\n\n## Markdown\n\nThe view lays a parsed document out at the width it is given: headings get rules, lists keep a hanging indent, quotes keep their bar, and tables are boxed. ~~Raw source~~ is never shown.\n\n1. Parse once with `markdown::parse`.\n2. Render with `MarkdownView::new(&document)`.\n3. Scroll with `.scroll(rows)` and size a scrollbar from `content_height`.\n\n### Inline styles\n\nText can be *emphasised*, **strong**, ***both***, ~~struck~~, or `code`, and a [link](https://example.com) is underlined.\n\n| widget | feature |\n|:--|:-:|\n| `Sparkline` | sparkline |\n| `BarChart` | barchart |\n| `Chart` | chart |\n| `MarkdownView` | markdown |\n\n## Lists and tasks\n\n- [x] headings, lists, quotes\n- [x] code blocks and tables\n- [x] task items\n  - nested items indent\n    - and nest again\n\n## Quotes\n\n> A quote keeps its bar on every row, even when the text wraps to a second or a third line.\n>\n> > Quotes nest as deep as the text needs.\n\n## Code\n\n```rust\nlet document = markdown::parse(source, Options::gfm());\nMarkdownView::new(&document)\n    .scroll(offset)\n    .render(area, &mut cx);\n```\n\n---\n\nThat is the whole tour.\n",
     ),
 ];
 
@@ -2091,7 +2097,7 @@ fn markdown_native(
     let raised = cx.token(Token::Surface1);
     let accent = cx.token(Token::Accent);
     let fill = Style::new().fg(text).bg(surface);
-    let page = usize::try_from(tick / 70).unwrap_or(0) % MD_PAGES.len();
+    let page = usize::try_from(tick / 80).unwrap_or(0) % MD_PAGES.len();
     let (title, _) = MD_PAGES[page];
     let document = &md_documents()[page];
     StatusBar::new(format!(" Docs  ›  {title}"))
@@ -2146,11 +2152,11 @@ fn markdown_native(
     );
     let content = MarkdownView::new(document).content_height(view.width);
     let travel = content.saturating_sub(usize::from(view.height));
-    let phase = usize::try_from(tick % 70)
+    let phase = usize::try_from(tick % 80)
         .unwrap_or(0)
-        .saturating_sub(8)
-        .min(54);
-    let scroll = travel * phase / 54;
+        .saturating_sub(6)
+        .min(68);
+    let scroll = travel * phase / 68;
     MarkdownView::new(document)
         .background(fill)
         .scroll(scroll)
@@ -3212,6 +3218,358 @@ fn tabs_drag_native(
 
 fn tabs_drag_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "tabs") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+const CRUMB_PATH: [&str; 6] = [
+    "Home",
+    "Projects",
+    "Moonbase2090",
+    "lunatui",
+    "lunatui-widgets",
+    "src",
+];
+
+type CrumbEntry = (&'static str, u32, &'static str);
+
+const CRUMB_DIRS: [&[CrumbEntry]; 6] = [
+    &[
+        ("Documents/", 0, "Oct 12"),
+        ("Downloads/", 0, "Oct 27"),
+        ("Pictures/", 0, "Sep 30"),
+        ("Projects/", 0, "Oct 28"),
+        ("notes.txt", 2_400, "Oct 21"),
+        ("todo.md", 1_100, "Oct 26"),
+    ],
+    &[
+        ("Moonbase2090/", 0, "Oct 28"),
+        ("Scratch/", 0, "Oct 03"),
+        ("archive/", 0, "Aug 19"),
+        ("README.md", 3_900, "Oct 14"),
+    ],
+    &[
+        ("lunatui/", 0, "Oct 28"),
+        ("prismattyc/", 0, "Oct 27"),
+        ("rookrunner/", 0, "Oct 28"),
+        ("scorecard/", 0, "Oct 25"),
+        ("waypoint/", 0, "Oct 26"),
+        ("NOTES.md", 8_200, "Oct 24"),
+    ],
+    &[
+        ("benches/", 0, "Oct 27"),
+        ("examples/", 0, "Oct 28"),
+        ("lunatui-core/", 0, "Oct 26"),
+        ("lunatui-text/", 0, "Oct 26"),
+        ("lunatui-theme/", 0, "Oct 20"),
+        ("lunatui-widgets/", 0, "Oct 28"),
+        ("CHANGELOG.md", 21_700, "Oct 28"),
+        ("Cargo.toml", 1_900, "Oct 27"),
+        ("README.md", 15_300, "Oct 28"),
+    ],
+    &[
+        ("src/", 0, "Oct 28"),
+        ("tests/", 0, "Oct 28"),
+        ("Cargo.toml", 4_100, "Oct 28"),
+        ("README.md", 6_800, "Oct 28"),
+    ],
+    &[
+        ("block.rs", 18_400, "Oct 24"),
+        ("borders.rs", 4_900, "Oct 20"),
+        ("breadcrumbs.rs", 8_600, "Oct 28"),
+        ("gauge.rs", 12_100, "Oct 26"),
+        ("lib.rs", 5_300, "Oct 28"),
+        ("list.rs", 3_200, "Oct 26"),
+        ("table.rs", 21_900, "Oct 27"),
+        ("tabs.rs", 9_700, "Oct 28"),
+    ],
+];
+
+fn crumb_size(bytes: u32) -> String {
+    if bytes == 0 {
+        String::from("--")
+    } else if bytes < 1_000 {
+        format!("{bytes} B")
+    } else {
+        format!("{}.{} KB", bytes / 1_000, bytes % 1_000 / 100)
+    }
+}
+
+fn crumb_preview(name: &str, bytes: u32, level: usize) -> Vec<String> {
+    let extension = std::path::Path::new(name)
+        .extension()
+        .and_then(|ext| ext.to_str());
+    let kind = match extension {
+        _ if name.ends_with('/') => "Folder",
+        Some("rs") => "Rust source",
+        Some("toml") => "TOML",
+        Some("md") => "Markdown",
+        _ => "Text",
+    };
+    let mut lines = vec![
+        name.trim_end_matches('/').to_owned(),
+        format!("{kind}  ·  {}", crumb_size(bytes)),
+        String::new(),
+    ];
+    if name.ends_with('/') {
+        let inside = CRUMB_DIRS.get(level + 1).map_or(0, |dir| dir.len());
+        lines.push(format!("{inside} items"));
+        lines.push(String::from("Press Enter to open"));
+    } else if extension == Some("rs") {
+        for line in [
+            "// Copyright (c) 2026 Moonbase 2090 LLC",
+            "// SPDX-License-Identifier: MIT",
+            "",
+            "use lunatui_core::{Rect, Size, Style};",
+            "",
+            "use crate::{RenderCx, Widget};",
+            "",
+            "#[derive(Clone, Debug, PartialEq, Eq)]",
+        ] {
+            lines.push(line.to_owned());
+        }
+    } else if extension == Some("toml") {
+        for line in [
+            "[package]",
+            "name = \"lunatui-widgets\"",
+            "version.workspace = true",
+            "",
+            "[features]",
+            "default = []",
+            "widget-state = []",
+        ] {
+            lines.push(line.to_owned());
+        }
+    } else {
+        for line in [
+            "# Notes",
+            "",
+            "- check the release PRs",
+            "- review the showcase media",
+            "- retarget the stacked branches",
+        ] {
+            lines.push(line.to_owned());
+        }
+    }
+    lines
+}
+
+fn crumb_panes(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    level: usize,
+    tick: u32,
+    styles: [Style; 2],
+    colors: [Color; 2],
+) {
+    let [fill, dim] = styles;
+    let [accent, raised] = colors;
+    let (text, surface) = (fill.fg, fill.bg);
+    let entries = CRUMB_DIRS[level];
+    let body_top = area.y;
+    let body_height = area.height.min(18);
+    let list = Rect::new(area.x + 2, body_top, 72, body_height);
+    let side = Rect::new(
+        list.x + list.width + 1,
+        body_top,
+        area.width.saturating_sub(list.width + 5),
+        body_height,
+    );
+    let selected = usize::try_from(tick / 14).unwrap_or(0) % entries.len();
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(format!(" {} ", CRUMB_PATH[level]))
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(list, cx);
+    let columns = [list.x + 2, list.x + 44, list.x + 58];
+    cx.put_str(columns[0], list.y + 1, "Name", dim);
+    cx.put_str(columns[1], list.y + 1, "Size", dim);
+    cx.put_str(columns[2], list.y + 1, "Modified", dim);
+    for (row, (name, bytes, modified)) in (0_u16..).zip(entries.iter()) {
+        let y = list.y + 3 + row;
+        if y + 1 >= list.y + list.height {
+            break;
+        }
+        let picked = usize::from(row) == selected;
+        let style = if picked {
+            Style::new().fg(text).bg(raised)
+        } else if name.ends_with('/') {
+            Style::new().fg(accent).bg(surface)
+        } else {
+            fill
+        };
+        cx.put_str(
+            list.x + 1,
+            y,
+            &" ".repeat(usize::from(list.width.saturating_sub(2))),
+            style,
+        );
+        cx.put_str(columns[0], y, name, style);
+        cx.put_str(columns[1], y, &crumb_size(*bytes), style);
+        cx.put_str(columns[2], y, modified, style);
+    }
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Preview ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(side, cx);
+    let (name, bytes, _) = entries[selected];
+    for (row, line) in (0_u16..).zip(crumb_preview(name, bytes, level)) {
+        let y = side.y + 1 + row;
+        if y + 1 >= side.y + side.height {
+            break;
+        }
+        let style = if row == 0 {
+            fill.fg(accent)
+        } else if row == 1 {
+            dim
+        } else {
+            fill
+        };
+        cx.put_str(
+            side.x + 2,
+            y,
+            clip_display_prefix(&line, side.width.saturating_sub(4)),
+            style,
+        );
+    }
+    let recent = Rect::new(
+        area.x + 2,
+        body_top + body_height,
+        area.width.saturating_sub(4),
+        area.height.saturating_sub(body_height),
+    );
+    crumb_visited(cx, recent, level, styles, colors);
+}
+
+fn crumb_visited(
+    cx: &mut RenderCx<'_>,
+    recent: Rect,
+    level: usize,
+    styles: [Style; 2],
+    colors: [Color; 2],
+) {
+    let [fill, dim] = styles;
+    let [accent, _] = colors;
+    let surface = fill.bg;
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Visited ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(recent, cx);
+    for (row, depth) in (0_u16..).zip(1..=level + 1) {
+        let y = recent.y + 1 + row;
+        if y + 1 >= recent.y + recent.height {
+            break;
+        }
+        let path = CRUMB_PATH[..depth].join("/");
+        let count = CRUMB_DIRS[depth - 1].len();
+        let here = depth == level + 1;
+        let marker = if here { "▶" } else { " " };
+        let line = format!(" {marker} {path:<52}{count:>3} items");
+        let style = if here { fill.fg(accent) } else { dim };
+        cx.put_str(
+            recent.x + 1,
+            y,
+            clip_display_prefix(&line, recent.width.saturating_sub(2)),
+            style,
+        );
+    }
+}
+
+fn breadcrumbs_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let header = Style::new().fg(text).bg(raised);
+
+    let depth = if tick < 190 {
+        (1 + usize::try_from(tick / 28).unwrap_or(0)).min(CRUMB_PATH.len())
+    } else {
+        2
+    };
+    let span = area.width.saturating_sub(4);
+    let squeeze = if (96..176).contains(&tick) {
+        u64::from(span) - tri(tick - 96, 80, 0, u64::from(span.saturating_sub(26)))
+    } else {
+        u64::from(span)
+    };
+    let wide = u16::try_from(squeeze).unwrap_or(span).min(span);
+    let bar = Rect::new(area.x + 2, area.y + 1, wide, 1);
+    let mut crumbs = Breadcrumbs::new(CRUMB_PATH[..depth].iter().copied())
+        .style(header)
+        .current_style(header.fg(accent).with_attrs(Attrs::new().set_bold(true)))
+        .separator_style(header.with_attrs(Attrs::new().set_dim(true)));
+    let areas = crumbs.segment_areas(bar);
+    let hover = if (150..190).contains(&tick) {
+        areas
+            .iter()
+            .map(|(index, _)| *index)
+            .find(|index| *index == 1)
+    } else if tick < 150 && tick % 40 >= 24 && !areas.is_empty() {
+        let pick = usize::try_from(tick / 40).unwrap_or(0) % areas.len();
+        areas.get(pick).map(|(index, _)| *index)
+    } else {
+        None
+    };
+    crumbs = crumbs.hover(
+        hover,
+        Style::new().with_attrs(Attrs::new().set_underline(UnderlineStyle::Single)),
+    );
+    cx.put_str(
+        area.x,
+        area.y + 1,
+        &" ".repeat(usize::from(area.width)),
+        header,
+    );
+    crumbs.render(bar, &mut cx);
+    cx.put_str(area.x + 1, area.y, " Files", fill.fg(accent));
+
+    let level = depth - 1;
+    let entries = CRUMB_DIRS[level];
+    let panes = Rect::new(
+        area.x,
+        area.y + 3,
+        area.width,
+        area.height.saturating_sub(5),
+    );
+    crumb_panes(&mut cx, panes, level, tick, [fill, dim], [accent, raised]);
+    StatusBar::new(format!(
+        " {} items  ●  {}  ●  click a path segment to jump back",
+        entries.len(),
+        CRUMB_PATH[..depth].join("/")
+    ))
+    .style(Style::new().fg(text).bg(raised))
+    .render(
+        Rect::new(
+            area.x,
+            area.y + area.height.saturating_sub(1),
+            area.width,
+            1,
+        ),
+        &mut cx,
+    );
+}
+
+fn breadcrumbs_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "breadcrumbs") {
         (case.ratatui)(buffer, area, tick);
     }
 }
