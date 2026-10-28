@@ -21,12 +21,13 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint as RatConstraint, Rect as RatRect};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
+use ratatui::symbols::Marker as RatMarker;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
     Axis as RatAxis, Bar as RatBar, BarChart as RatBarChart, BarGroup as RatBarGroup,
     Block as RatBlock, BorderType as RatBorderType, Chart as RatChart, Dataset as RatDataset,
-    Gauge as RatGauge, GraphType as RatGraphType, List as RatList, ListItem, Marker as RatMarker,
+    Gauge as RatGauge, GraphType as RatGraphType, List as RatList, ListItem,
     Paragraph as RatParagraph, Row, Sparkline as RatSparkline, Table as RatTable, Tabs as RatTabs,
     Widget as RatWidget, Wrap,
 };
