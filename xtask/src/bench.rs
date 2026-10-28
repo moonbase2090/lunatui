@@ -63,8 +63,13 @@ fn bench_plan(valgrind: bool) -> Vec<BenchStep> {
         },
         BenchStep {
             target: "widget_suite",
-            feature: None,
+            feature: Some("line-gauge"),
             after: &["--gate"],
+        },
+        BenchStep {
+            target: "criterion_widgets",
+            feature: Some("line-gauge"),
+            after: &["widget_line-gauge_"],
         },
     ];
     if valgrind {
@@ -117,8 +122,13 @@ mod tests {
     };
     const WIDGETS: BenchStep = BenchStep {
         target: "widget_suite",
-        feature: None,
+        feature: Some("line-gauge"),
         after: &["--gate"],
+    };
+    const LINE_GAUGE_CRITERION: BenchStep = BenchStep {
+        target: "criterion_widgets",
+        feature: Some("line-gauge"),
+        after: &["widget_line-gauge_"],
     };
     const GUNGRAUN: BenchStep = BenchStep {
         target: "gungraun_calibration",
@@ -128,14 +138,24 @@ mod tests {
 
     #[test]
     fn plan_without_valgrind_skips_gungraun() {
-        assert_eq!(bench_plan(false), [METRICS, CEILING, CRITERION, WIDGETS]);
+        assert_eq!(
+            bench_plan(false),
+            [METRICS, CEILING, CRITERION, WIDGETS, LINE_GAUGE_CRITERION]
+        );
     }
 
     #[test]
     fn plan_with_valgrind_ends_with_gungraun() {
         assert_eq!(
             bench_plan(true),
-            [METRICS, CEILING, CRITERION, WIDGETS, GUNGRAUN]
+            [
+                METRICS,
+                CEILING,
+                CRITERION,
+                WIDGETS,
+                LINE_GAUGE_CRITERION,
+                GUNGRAUN
+            ]
         );
     }
 
@@ -147,10 +167,30 @@ mod tests {
                 "bench",
                 "--package",
                 "lunatui-bench",
+                "--features",
+                "line-gauge",
                 "--bench",
                 "widget_suite",
                 "--",
                 "--gate",
+            ]
+        );
+    }
+
+    #[test]
+    fn line_gauge_criterion_compares_both_sizes() {
+        assert_eq!(
+            LINE_GAUGE_CRITERION.cargo_args(),
+            [
+                "bench",
+                "--package",
+                "lunatui-bench",
+                "--features",
+                "line-gauge",
+                "--bench",
+                "criterion_widgets",
+                "--",
+                "widget_line-gauge_",
             ]
         );
     }

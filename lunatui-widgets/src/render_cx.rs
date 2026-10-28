@@ -140,6 +140,9 @@ impl<'a> RenderCx<'a> {
     /// Fills `area` with `ch` and `style` without building an intermediate string.
     pub fn fill(&mut self, area: Rect, style: Style, ch: char) {
         self.grid.fill(area, style, ch, self.clusters);
+        if style.attrs != Attrs::new() {
+            self.grid.set_style(area, style);
+        }
     }
 
     #[cfg(any(

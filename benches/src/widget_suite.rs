@@ -10,14 +10,17 @@ use std::time::Duration;
 use crate::scenes::ratatui::{ColorOutput, set_color_output};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_layout::Constraint;
-use lunatui_term::{ColorMode, Encoder};
+use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
+use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
+#[cfg(feature = "line-gauge")]
+use lunatui_widgets::LineGauge;
 use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
-    Gauge, GraphType, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx,
-    Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack,
-    Widget,
+    Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize,
+    RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope,
+    ToastStack, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -25,6 +28,8 @@ use ratatui::layout::{Constraint as RatConstraint, Layout as RatLayout, Rect as 
 use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::symbols::Marker as RatMarker;
 use ratatui::text::{Line, Span};
+#[cfg(feature = "line-gauge")]
+use ratatui::widgets::LineGauge as RatLineGauge;
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
     Axis as RatAxis, Bar as RatBar, BarChart as RatBarChart, BarGroup as RatBarGroup,
@@ -46,6 +51,19 @@ const ACCENT: (u8, u8, u8) = (0x7a, 0xa2, 0xf7);
 const ROWS: usize = 500;
 const LOG_LINES: usize = 200;
 const TABS: [&str; 4] = ["Overview", "Lints", "Tests", "Deps"];
+
+const HELP: &[KeyChord] = &[KeyChord::new(KeyCode::Char('?'), Modifiers::new())];
+const QUIT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('q'), Modifiers::new())];
+
+fn key_hint_map() -> &'static Keymap {
+    static KEYMAP: OnceLock<Keymap> = OnceLock::new();
+    KEYMAP.get_or_init(|| {
+        let mut keymap = Keymap::new();
+        keymap.register(Command::new("help", "Help", HELP));
+        keymap.register(Command::new("quit", "Quit", QUIT));
+        keymap
+    })
+}
 
 /// Whether a case's two sides draw the same cells.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -133,6 +151,13 @@ pub static CASES: &[Case] = &[
         ratatui: breadcrumbs_ratatui,
     },
     Case {
+        name: "key-hints",
+        gated: false,
+        parity: Parity::Exact,
+        lunatui: key_hints_lunatui,
+        ratatui: key_hints_ratatui,
+    },
+    Case {
         name: "calendar",
         gated: true,
         parity: Parity::Exact,
@@ -147,6 +172,14 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: gauge_lunatui,
         ratatui: gauge_ratatui,
+    },
+    #[cfg(feature = "line-gauge")]
+    Case {
+        name: "line-gauge",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: line_gauge_lunatui,
+        ratatui: line_gauge_ratatui,
     },
     Case {
         name: "sparkline",
@@ -499,6 +532,79 @@ fn breadcrumbs_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
         .render(RatRect::new(area.x, area.y, area.width, 1), buf);
 }
 
+fn rat_color(color: Color) -> RatColor {
+    match color {
+        Color::Default | Color::Token(_) => RatColor::Reset,
+        Color::Indexed(index) => RatColor::Indexed(index),
+        Color::Rgb(red, green, blue) => RatColor::Rgb(red, green, blue),
+    }
+}
+
+fn key_hints_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    _tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    cx.set_style(area, base_style());
+    cx.put_str(area.x, area.y, "RELEASE CONSOLE", text_style());
+    cx.put_str(
+        area.x,
+        area.y.saturating_add(2),
+        "Deployment v0.1.12 is ready. Review the checks before publishing.",
+        dim_style(),
+    );
+    let hint_area = Rect::new(
+        area.x,
+        area.y.saturating_add(area.height).saturating_sub(1),
+        area.width,
+        1,
+    );
+    KeyHintBar::new(key_hint_map()).render(hint_area, &mut cx);
+}
+
+fn key_hints_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let key = RatStyle::new()
+        .fg(rat_color(theme.resolve(lunatui_theme::Token::Accent)))
+        .bg(RatColor::Reset);
+    let title = RatStyle::new()
+        .fg(rat_color(theme.resolve(lunatui_theme::Token::TextPrimary)))
+        .bg(RatColor::Reset);
+    let header = rat_text();
+    let dim = rat_dim();
+    RatParagraph::new(Line::from(Span::styled("RELEASE CONSOLE", header)))
+        .style(rat_base())
+        .render(RatRect::new(area.x, area.y, area.width, 1), buf);
+    RatParagraph::new(Line::from(Span::styled(
+        "Deployment v0.1.12 is ready. Review the checks before publishing.",
+        dim,
+    )))
+    .style(rat_base())
+    .render(
+        RatRect::new(area.x, area.y.saturating_add(2), area.width, 1),
+        buf,
+    );
+    RatParagraph::new(Line::from(vec![
+        Span::styled("[?]", key),
+        Span::styled(" Help  ", title),
+        Span::styled("[Q]", key),
+        Span::styled(" Quit", title),
+    ]))
+    .style(rat_base())
+    .render(
+        RatRect::new(
+            area.x,
+            area.y.saturating_add(area.height).saturating_sub(1),
+            area.width,
+            1,
+        ),
+        buf,
+    );
+}
+
 fn tabs_lunatui(
     grid: &mut Grid,
     clusters: &mut ClusterTable,
@@ -624,6 +730,27 @@ fn gauge_lunatui(
         Rect::new(area.x + 1, area.y + 1, area.width.saturating_sub(2), 1),
         accent_style(),
     );
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    LineGauge::new()
+        .label("")
+        .value_label("")
+        .ratio(f64::from(ratio(area.width, tick)))
+        .subcell(false)
+        .filled_symbol("━")
+        .unfilled_symbol("─")
+        .style(base_style())
+        .filled_style(accent_style())
+        .unfilled_style(dim_style())
+        .render(area, &mut RenderCx::new(grid, clusters, theme));
 }
 
 const SPARK_LEN: usize = 256;
@@ -1012,6 +1139,19 @@ fn gauge_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
                 .border_style(rat_dim()),
         )
         .render(RatRect::new(area.x, area.y, area.width, 3), buf);
+}
+
+#[cfg(feature = "line-gauge")]
+fn line_gauge_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    RatLineGauge::default()
+        .ratio(f64::from(ratio(area.width, tick)))
+        .label("")
+        .filled_symbol("━")
+        .unfilled_symbol("─")
+        .style(rat_base())
+        .filled_style(rat_accent())
+        .unfilled_style(rat_dim())
+        .render(area, buf);
 }
 
 fn big_label(tick: u32) -> &'static str {

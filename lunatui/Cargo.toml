@@ -18,6 +18,7 @@ app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
 image-presenter = ["app", "lunatui-runtime/image-presenter"]
 image-decode = ["lunatui-widgets/image-decode"]
 keymap = ["app", "lunatui-runtime/keymap"]
+line-gauge = ["lunatui-widgets/line-gauge", "lunatui-bench/line-gauge"]
 
 [dependencies]
 lunatui-runtime = { version = "0.1.13", path = "../lunatui-runtime", optional = true }
@@ -27,11 +28,12 @@ lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-image = { path = "../lunatui-image" }
 lunatui-term = { path = "../lunatui-term" }
+lunatui-layout = { path = "../lunatui-layout" }
 lunatui-text = { path = "../lunatui-text", features = ["markdown"] }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.13", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "canvas", "chart", "image", "line-gauge", "markdown", "sparkline", "toast"] }
+lunatui-widgets = { version = "0.1.13", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "canvas", "chart", "image", "key-hints", "line-gauge", "markdown", "sparkline", "toast"] }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
 lunatui-prismattyc = { version = "0.1.13", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"
@@ -152,13 +154,25 @@ test = true
 name = "widget_preview"
 path = "../examples/widget_preview.rs"
 test = false
-required-features = ["color-profiles"]
+required-features = ["color-profiles", "line-gauge"]
+
+[[example]]
+name = "nightshift_board"
+path = "../examples/nightshift_board.rs"
+test = false
+required-features = ["color-profiles", "line-gauge"]
 
 [[example]]
 name = "image_showcase"
 path = "../examples/image_showcase.rs"
 test = false
 required-features = ["image-decode"]
+
+[[example]]
+name = "kitty_image"
+path = "../examples/kitty_image.rs"
+test = false
+required-features = ["image-presenter", "image-decode"]
 
 [[example]]
 name = "bigtext"
