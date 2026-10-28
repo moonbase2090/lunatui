@@ -341,3 +341,49 @@ fn cover_request_crops_the_source_and_keeps_the_centered_cell_rectangle()
     assert!(output_text.contains("\x1b[4;3H"));
     Ok(())
 }
+
+#[test]
+fn cover_upload_keeps_enough_source_pixels_for_the_kitty_placement()
+-> Result<(), Box<dyn std::error::Error>> {
+    let pixels = vec![255; 640 * 360 * 4];
+    let source = ImageSource::rgba8(640, 360, pixels.into_boxed_slice())?;
+    let request = ImageRequest::new(
+        ImageId::new(15).ok_or("invalid image id")?,
+        1,
+        &source,
+        Rect::new(2, 3, 30, 10),
+        Fit::Cover,
+        0,
+        u8::MAX,
+    );
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    layer.begin_frame();
+    assert!(layer.submit(request));
+    let output = text(layer.finish_frame());
+    let commands: Vec<_> = output
+        .split("\x1b\\")
+        .filter(|command| !command.is_empty())
+        .collect();
+    let transmitted = *commands.first().ok_or("missing image upload")?;
+    let placed = *commands
+        .iter()
+        .find(|command| command.contains("a=p"))
+        .ok_or("missing placement")?;
+    let dimension = |command: &str, key: &str| {
+        command
+            .split(',')
+            .find_map(|field| field.strip_prefix(key))
+            .and_then(|value| value.split([';', ',']).next())
+            .and_then(|value| value.parse::<u32>().ok())
+    };
+    let sent_width = dimension(transmitted, "s=").ok_or("missing transmitted width")?;
+    let sent_height = dimension(transmitted, "v=").ok_or("missing transmitted height")?;
+    let placed_columns = dimension(placed, "c=").ok_or("missing placement columns")?;
+    let placed_rows = dimension(placed, "r=").ok_or("missing placement rows")?;
+    let placement_width_pixels = placed_columns * 10;
+    let placement_height_pixels = placed_rows * 20;
+    assert!(sent_width >= placement_width_pixels);
+    assert!(sent_height >= placement_height_pixels);
+    assert_eq!((sent_width, sent_height), (540, 360));
+    Ok(())
+}
