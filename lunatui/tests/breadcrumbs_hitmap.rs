@@ -28,7 +28,8 @@ fn a_click_on_a_segment_reaches_its_path_index() {
     assert_eq!(segment_at(&map, 5, 1), Some(0));
     assert_eq!(segment_at(&map, 6, 1), None);
     assert_eq!(segment_at(&map, 9, 1), Some(1));
-    assert_eq!(segment_at(&map, 16, 1), None);
+    assert_eq!(segment_at(&map, 16, 1), Some(1));
+    assert_eq!(segment_at(&map, 17, 1), None);
     assert_eq!(segment_at(&map, 20, 1), Some(2));
     assert_eq!(segment_at(&map, 30, 1), Some(3));
     assert_eq!(segment_at(&map, 33, 1), None);

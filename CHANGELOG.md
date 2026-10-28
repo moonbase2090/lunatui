@@ -10,7 +10,9 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Breadcrumbs` widget: a one-row path of segments with a separator, styles for the segments, the last segment, the separators, and a hovered segment. A path wider than the area collapses its middle to `…`, keeping the first segment and as many of the last as fit. `Breadcrumbs::segment_areas` reports where each shown segment sits, for `HitMap`.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
+- `Tabs::tab_areas` and `List::row_areas` report where each visible tab or row sits in an area, and `HitMap::push_indexed` with `HitId::index_in` registers those regions as a group and maps a click back to the item index, so what is drawn is what a click reaches. Z-order follows the `HitMap`: a higher layer over the widget takes the click, and a later registration wins at the same layer.
 - `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
 - `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - `MarkdownView` widget, behind the `markdown` feature: it draws a parsed Markdown `Document` wrapped to the area's width, with headings and rules, lists and task items, block quotes, code blocks, boxed tables, and styled inline text, scrolls by rows, reports its `content_height` for a scrollbar, and follows `WidgetState` and an optional background style.

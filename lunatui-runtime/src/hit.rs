@@ -10,6 +10,16 @@ pub struct HitId(
     pub u32,
 );
 
+impl HitId {
+    /// The item index of this id in a group registered with
+    /// [`HitMap::push_indexed`] from `first` for `count` items, or `None` for any other id.
+    #[must_use]
+    pub fn index_in(self, first: Self, count: usize) -> Option<usize> {
+        let offset = usize::try_from(self.0.checked_sub(first.0)?).ok()?;
+        (offset < count).then_some(offset)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct HitRegion {
     id: HitId,
@@ -38,6 +48,21 @@ impl HitMap {
     /// Records `id` at `area`. Higher `z` wins when regions overlap.
     pub fn push(&mut self, id: HitId, area: Rect, z: u16) {
         self.regions.push(HitRegion { id, area, z });
+    }
+
+    /// Records one region per `(index, area)` pair, with ids counting up from `first`: item
+    /// `index` gets `HitId(first.0 + index)`. Pairs come from a widget's own geometry, such as
+    /// `Tabs::tab_areas` or `List::row_areas`, so what is drawn is what a click reaches.
+    pub fn push_indexed(
+        &mut self,
+        first: HitId,
+        areas: impl IntoIterator<Item = (usize, Rect)>,
+        z: u16,
+    ) {
+        for (index, area) in areas {
+            let offset = u32::try_from(index).unwrap_or(u32::MAX);
+            self.push(HitId(first.0.saturating_add(offset)), area, z);
+        }
     }
 
     /// Returns the topmost hit at `(column, row)`, if any.

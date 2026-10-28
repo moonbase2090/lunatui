@@ -49,6 +49,14 @@ A docs reader: a page list beside a scrolling Markdown view, with headings and r
 
 Screenshot: [docs/media/markdown.png](docs/media/markdown.png). Recorded with `scripts/record-showcase.sh` (`CASE=markdown`, 120×36, `FRAMES=200`, dark, about 11 seconds).
 
+### Breadcrumbs
+
+A file browser whose path bar shrinks and grows: the path descends one directory at a time, the middle collapses to `…` as the bar narrows while the first segment and the last few stay, the current directory is bold, and the segment under the pointer is underlined.
+
+<img src="docs/media/breadcrumbs.webp" alt="Breadcrumbs widget: a path bar collapsing and expanding over a file browser in the dark theme" width="1028">
+
+Screenshot: [docs/media/breadcrumbs.png](docs/media/breadcrumbs.png). Recorded with `scripts/record-showcase.sh` (`CASE=breadcrumbs`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
