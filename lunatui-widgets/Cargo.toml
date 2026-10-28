@@ -34,6 +34,7 @@ bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["dep:lunatui-runtime"]
+all-widgets = ["barchart", "bigtext", "calendar", "canvas", "chart", "form", "key-hints", "line-gauge", "markdown", "number-input", "radio", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
