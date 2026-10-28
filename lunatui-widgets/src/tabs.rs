@@ -90,6 +90,65 @@ impl Tabs {
         self
     }
 
+    /// Where each visible tab sits when the strip is rendered into `area`, as `(index, rect)`
+    /// pairs in tab order, for hit testing.
+    ///
+    /// A plain strip gives each title's own cells in the title row. A boxed strip gives each tab's
+    /// slot (title, padding, and box edges) over the box row and the title row. Tabs that do not
+    /// fit are left out, and the last tab that is cut off by the edge gets only the cells that show.
+    #[must_use]
+    pub fn tab_areas(&self, area: Rect) -> Vec<(usize, Rect)> {
+        if area.width == 0 || area.height == 0 {
+            return Vec::new();
+        }
+        match self.boxed {
+            Some(_) if area.height >= 3 => self.boxed_areas(area),
+            _ => self.plain_areas(area),
+        }
+    }
+
+    fn plain_areas(&self, area: Rect) -> Vec<(usize, Rect)> {
+        let end = area.x + area.width;
+        let mut x = area.x.saturating_add(self.indent).min(end);
+        let mut areas = Vec::new();
+        for (index, title) in self.titles.iter().enumerate() {
+            let remaining = end - x;
+            let draw = clip_display_prefix(title, remaining);
+            let w = u16::try_from(width(draw)).unwrap_or(remaining);
+            if w > 0 {
+                areas.push((index, Rect::new(x, area.y, w, 1)));
+            }
+            x = x.saturating_add(w).saturating_add(1).min(end);
+        }
+        areas
+    }
+
+    fn boxed_areas(&self, area: Rect) -> Vec<(usize, Rect)> {
+        let edge = u16::from(self.join_parent_border && area.width >= 2);
+        let span_start = area.x + edge;
+        let span_end = area.x + area.width - edge;
+        let mut areas = Vec::new();
+        if span_start >= span_end {
+            return areas;
+        }
+        let mut x = span_start.saturating_add(self.indent);
+        for (index, title) in self.titles.iter().enumerate() {
+            if x >= span_end {
+                break;
+            }
+            let title_width = u16::try_from(width(title)).unwrap_or(u16::MAX);
+            let slot = title_width.saturating_add(4);
+            let room = span_end - x;
+            if slot > room {
+                areas.push((index, Rect::new(x, area.y, room, 2)));
+                break;
+            }
+            areas.push((index, Rect::new(x, area.y, slot, 2)));
+            x = (x + slot - 1).saturating_add(2);
+        }
+        areas
+    }
+
     fn render_plain(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let end = area.x + area.width;
         let mut x = area.x.saturating_add(self.indent).min(end);
