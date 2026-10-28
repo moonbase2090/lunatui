@@ -24,6 +24,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `Block` draws its titles without allocating on each render; a titled block renders exactly as before.
 
+### Fixed
+
+- The `lunatui-widgets` README now lists `progress` among the features that forward `widget-state`, matching the feature list.
+
 ## [0.1.14] - 2026-10-28
 
 ### Added
