@@ -233,8 +233,13 @@ fn nothing_is_drawn_outside_the_area() {
     let group = sizes().select(Some(0));
     let (grid, clusters) = grid_for(&group, Rect::new(2, 1, 6, 2), 12, 5);
     assert_eq!(grid.row_display(0, &clusters).trim(), "");
-    assert_eq!(grid.row_display(1, &clusters), "  ◉ Smal    ");
-    assert_eq!(grid.row_display(2, &clusters), "  ○ Medi    ");
+    let full = ["  ◉ Small   ", "  ○ Medium  "];
+    for (row, line) in (1_u16..).zip(full) {
+        let shown: String = line.chars().take(8).collect();
+        let drawn = grid.row_display(row, &clusters);
+        assert_eq!(drawn.chars().take(8).collect::<String>(), shown);
+        assert_eq!(drawn.chars().skip(8).collect::<String>().trim(), "");
+    }
     assert_eq!(grid.row_display(3, &clusters).trim(), "");
 }
 
