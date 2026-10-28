@@ -8,7 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-10-28
+
 ### Added
+
 - `Breadcrumbs` widget: a one-row path of segments with a separator, styles for the segments, the last segment, the separators, and a hovered segment. A path wider than the area collapses its middle to `…`, keeping the first segment and as many of the last as fit. `Breadcrumbs::segment_areas` reports where each shown segment sits, for `HitMap`.
 - `SplitTree` for resizable, nestable split panes with a zoomed pane: `split` and `close` change the tree, `layout` gives every pane's cells and every divider's line, `SplitDrag` resizes a divider cell by cell from pointer events (stopping at minimum sizes, with cancel), and `SplitLayout::render_dividers` draws the lines.
 - `ToastStack` widget, behind the `toast` feature: timed toasts scoped to a pane (boxed, stacked up from the pane's bottom-right corner) or to the status rows (one line each), with `ToastKind` colors from theme tokens. The caller supplies the time, so expiry follows a virtual clock exactly; `placements` gives each shown toast's rectangle and layer so clicks can be routed through `HitMap`, with newer toasts above older ones and status toasts above pane toasts.
@@ -24,10 +27,12 @@ Every PR adds its entry under **Unreleased**.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
 ### Changed
-- The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
+
+- The `Table` highlight style now covers the selected row's full width, gaps included.
 - `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
 
 ### Fixed
+
 - `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
 - `lunatui-widgets` builds with no features enabled; `Table` styling no longer depends on a widget feature being on.
 - A focused `Image` draws its focus ring over the background already in its area instead of the terminal default.
