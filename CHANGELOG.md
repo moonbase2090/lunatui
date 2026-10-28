@@ -12,6 +12,7 @@ Every PR adds its entry under **Unreleased**.
 
 - `TabsDrag` turns pointer press, drag, and release over the regions from `Tabs::tab_areas` into a `TabMove` that reorders tabs: dropping on another tab moves the dragged tab there, a press that stays on its own tab is a click, and leaving the strip or `cancel` drops nothing. `TabMove::apply` reorders a `Vec` and `TabMove::selection` keeps the selection on the same tab.
 - `KeyHintBar`, behind the `key-hints` feature, renders the first registered shortcut for each command in the active `Keymap`.
+- `kitty_image` example runs the `Image` widget through Kitty graphics when available and uses its cell fallback in other terminals.
 - `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
 - `Overlay::shadow` draws a drop shadow one cell right and down behind the modal.
 
