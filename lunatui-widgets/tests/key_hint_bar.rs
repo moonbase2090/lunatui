@@ -9,10 +9,10 @@ use lunatui_term::{KeyCode, Modifiers};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{KeyHintBar, RenderCx, Widget};
 
-const SAVE: &[KeyChord] = &[KeyChord::new(
-    KeyCode::Char('s'),
-    Modifiers::new().control(),
-)];
+const SAVE: &[KeyChord] = &[
+    KeyChord::new(KeyCode::Char('s'), Modifiers::new().control()),
+    KeyChord::new(KeyCode::Char('s'), Modifiers::new()),
+];
 const QUIT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('q'), Modifiers::new())];
 
 fn map() -> Keymap {
