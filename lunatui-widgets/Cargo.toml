@@ -70,6 +70,11 @@ name = "gauge"
 path = "tests/gauge.rs"
 
 [[test]]
+name = "line_gauge"
+path = "tests/line_gauge.rs"
+required-features = ["line-gauge"]
+
+[[test]]
 name = "overlay"
 path = "tests/overlay.rs"
 
