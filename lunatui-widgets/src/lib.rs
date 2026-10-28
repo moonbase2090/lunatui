@@ -20,6 +20,8 @@ mod chart;
 mod gauge;
 #[cfg(feature = "image")]
 mod image;
+#[cfg(feature = "key-hints")]
+mod key_hint_bar;
 mod lightcycle;
 #[cfg(feature = "line-gauge")]
 mod line_gauge;
@@ -65,6 +67,8 @@ pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
 pub use gauge::Gauge;
 #[cfg(feature = "image")]
 pub use image::Image;
+#[cfg(feature = "key-hints")]
+pub use key_hint_bar::KeyHintBar;
 pub use lightcycle::Lightcycle;
 #[cfg(feature = "line-gauge")]
 pub use line_gauge::{LineGauge, LineSet};
@@ -98,7 +102,7 @@ pub use state::WidgetState;
 pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
 pub use table::{CellStyle, Table};
-pub use tabs::Tabs;
+pub use tabs::{TabMove, Tabs, TabsDrag};
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]
 pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};

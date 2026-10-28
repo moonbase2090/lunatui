@@ -13,15 +13,16 @@ use lunatui_core::{
     Attrs, ClusterTable, Color, Grid, Rect, Style, UnderlineStyle, clip_display_prefix,
     width as cols,
 };
-use lunatui_term::{ColorMode, Encoder};
+use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
+use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::canvas::{Circle, Line};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
-    Breadcrumbs, Canvas, Chart, Dataset, Date, DateStyle, DividerId, GraphType, LegendPosition,
-    List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize, RenderCx, Scrollbar,
-    Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, ToastKind, ToastScope, ToastStack,
-    Widget, WidgetState,
+    Breadcrumbs, Canvas, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
+    KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
+    RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
+    Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
 };
 #[path = "deploy_board.rs"]
 mod deploy_board;
@@ -62,9 +63,19 @@ const PREVIEWS: &[Preview] = &[
         baseline: split_baseline,
     },
     Preview {
+        name: "tabs-drag",
+        native: tabs_drag_native,
+        baseline: tabs_drag_baseline,
+    },
+    Preview {
         name: "breadcrumbs",
         native: breadcrumbs_native,
         baseline: breadcrumbs_baseline,
+    },
+    Preview {
+        name: "key-hints",
+        native: key_hints_native,
+        baseline: key_hints_baseline,
     },
     Preview {
         name: "calendar",
@@ -2679,6 +2690,714 @@ fn split_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32)
     }
 }
 
+const TAB_TITLES: [&str; 5] = ["Overview", "Builds", "Deploys", "Logs", "Settings"];
+const TAB_HOVER: u32 = 10;
+const TAB_LIFT: u32 = 6;
+const TAB_HOLD: u32 = 8;
+const TAB_SETTLE: u32 = 9;
+
+struct TabDragStep {
+    from: u32,
+    to: u32,
+    grab: usize,
+    drop: usize,
+}
+
+const TAB_STEPS: [TabDragStep; 3] = [
+    TabDragStep {
+        from: 24,
+        to: 80,
+        grab: 1,
+        drop: 3,
+    },
+    TabDragStep {
+        from: 105,
+        to: 155,
+        grab: 1,
+        drop: 0,
+    },
+    TabDragStep {
+        from: 180,
+        to: 228,
+        grab: 2,
+        drop: 4,
+    },
+];
+
+const BUILDS: [(&str, &str, &str, &str, &str, u32); 10] = [
+    (
+        "4820",
+        "feature/split-tree",
+        "9be2d71",
+        "Resize panes with the pointer",
+        "passed",
+        252,
+    ),
+    (
+        "4819",
+        "main",
+        "5f03a8c",
+        "Clip list text before its mark",
+        "passed",
+        198,
+    ),
+    (
+        "4818",
+        "fix/toast-expiry",
+        "c47e10b",
+        "Expire toasts on the virtual clock",
+        "failed",
+        87,
+    ),
+    (
+        "4817",
+        "main",
+        "e81a4f2",
+        "Add Canvas quadrant markers",
+        "passed",
+        231,
+    ),
+    (
+        "4816",
+        "feature/canvas",
+        "02d6b9e",
+        "Draw circles with sextants",
+        "passed",
+        244,
+    ),
+    (
+        "4815",
+        "docs/porting",
+        "7ac3e51",
+        "Explain the theme tokens",
+        "passed",
+        64,
+    ),
+    (
+        "4814",
+        "main",
+        "b3f90d7",
+        "Keep the image ring background",
+        "passed",
+        205,
+    ),
+    (
+        "4813",
+        "fix/scroll-edge",
+        "4d2c8a6",
+        "Clip popups at the grid edge",
+        "canceled",
+        31,
+    ),
+    (
+        "4812",
+        "main",
+        "f17e0c3",
+        "Add the BarChart widget",
+        "passed",
+        219,
+    ),
+    (
+        "4811",
+        "feature/barchart",
+        "6e5b2d4",
+        "Label grouped bars",
+        "passed",
+        226,
+    ),
+];
+
+const BUILD_STEPS: [&str; 6] = ["checkout", "build", "clippy", "test", "bench", "package"];
+
+const DEPLOYS: [(&str, &str, &str, u32, &str); 9] = [
+    ("web", "prod", "v2.14.0", 4, "14m"),
+    ("worker", "prod", "v2.13.2", 8, "3h"),
+    ("edge", "prod", "v2.14.0", 12, "16m"),
+    ("scheduler", "prod", "v1.9.4", 2, "2d"),
+    ("billing", "prod", "v3.2.1", 3, "5d"),
+    ("api", "staging", "v2.15.0-rc.1", 2, "41m"),
+    ("web", "staging", "v2.15.0-rc.1", 2, "41m"),
+    ("worker", "staging", "v2.15.0-rc.1", 4, "40m"),
+    ("edge", "staging", "v2.15.0-rc.1", 3, "39m"),
+];
+
+const LOG_SOURCES: [&str; 5] = ["api", "worker-2", "edge", "scheduler", "billing"];
+
+struct TabInk {
+    fill: Style,
+    dim: Style,
+    muted: Style,
+    header: Style,
+    active: Style,
+    frame: Style,
+    marker: Style,
+    lifted: Style,
+    lifted_title: Style,
+    pointer: Style,
+    status: Style,
+    status_key: Style,
+    ok: Style,
+    warn: Style,
+    fail: Style,
+    gauge: Style,
+    track: Style,
+    soft: Style,
+    lead: Style,
+}
+
+impl TabInk {
+    fn new(theme: &Theme) -> Self {
+        let surface = theme.resolve(Token::Surface0);
+        let raised = theme.resolve(Token::Surface1);
+        let text = theme.resolve(Token::TextPrimary);
+        let accent = theme.resolve(Token::Accent);
+        let bold = Attrs::new().set_bold(true);
+        let fill = Style::new().fg(text).bg(surface);
+        Self {
+            fill,
+            dim: fill.with_attrs(Attrs::new().set_dim(true)),
+            muted: fill.with_attrs(Attrs::new().set_dim(true)),
+            header: fill.with_attrs(Attrs::new().set_dim(true)),
+            active: Style::new().fg(accent).bg(surface).with_attrs(bold),
+            frame: Style::new().fg(accent).bg(surface),
+            marker: Style::new()
+                .fg(accent)
+                .bg(surface)
+                .with_attrs(Attrs::new().set_dim(true)),
+            lifted: Style::new().fg(accent).bg(raised).with_attrs(bold),
+            lifted_title: Style::new().fg(text).bg(raised).with_attrs(bold),
+            pointer: Style::new().fg(text).bg(surface).with_attrs(bold),
+            status: Style::new().fg(text).bg(raised),
+            status_key: Style::new().fg(accent).bg(raised).with_attrs(bold),
+            ok: Style::new().fg(theme.resolve(Token::Ok)),
+            warn: Style::new().fg(theme.resolve(Token::Warn)),
+            fail: Style::new().fg(theme.resolve(Token::Fail)),
+            gauge: Style::new().fg(accent).bg(raised),
+            track: Style::new().bg(raised),
+            soft: Style::new().with_attrs(Attrs::new().set_dim(true)),
+            lead: Style::new().fg(accent).with_attrs(bold),
+        }
+    }
+}
+
+struct TabGhost {
+    title: &'static str,
+    x: u16,
+    lift: u16,
+}
+
+struct TabDragFrame {
+    titles: Vec<&'static str>,
+    shown: Vec<&'static str>,
+    selected: usize,
+    hole: Option<usize>,
+    drag: TabsDrag,
+    ghost: Option<TabGhost>,
+    pointer: Option<u16>,
+    moved: Option<(&'static str, usize)>,
+}
+
+fn tab_slot_width(title: &str) -> u16 {
+    u16::try_from(cols(title)).unwrap_or(0).saturating_add(4)
+}
+
+fn tab_strip_areas(titles: &[&'static str], strip: Rect) -> Vec<(usize, Rect)> {
+    Tabs::new(titles.iter().copied())
+        .boxed(Style::new(), Style::new())
+        .tab_areas(strip)
+}
+
+fn tab_slot(areas: &[(usize, Rect)], index: usize) -> Rect {
+    areas
+        .iter()
+        .find(|(i, _)| *i == index)
+        .map_or(Rect::new(0, 0, 0, 0), |(_, rect)| *rect)
+}
+
+fn tab_center(areas: &[(usize, Rect)], index: usize) -> u16 {
+    let slot = tab_slot(areas, index);
+    slot.x + slot.width / 2
+}
+
+fn eased(start: u16, end: u16, spent: u32, span: u32) -> u16 {
+    let span = i64::from(span.max(1));
+    let spent = i64::from(spent).min(span);
+    let curve = spent * spent * (3 * span - 2 * spent);
+    let (start, end) = (i64::from(start), i64::from(end));
+    u16::try_from(start + (end - start) * curve / (span * span * span)).unwrap_or(0)
+}
+
+fn tab_drag_frame(strip: Rect, tick: u32) -> TabDragFrame {
+    let row = strip.y + 1;
+    let mut titles = TAB_TITLES.to_vec();
+    let mut selected = 3_usize;
+    let mut drag = TabsDrag::new();
+    let mut column = 0_u16;
+    let mut pressed = 0_u32;
+    let mut released: Option<(u32, usize, u16)> = None;
+    for now in 0..=tick {
+        for step in &TAB_STEPS {
+            let areas = tab_strip_areas(&titles, strip);
+            if now == step.from {
+                column = tab_center(&areas, step.grab);
+                drag.press(&areas, column, row);
+                selected = step.grab;
+                pressed = now;
+                released = None;
+            } else if now > step.from && now <= step.to {
+                let travel = step.from + TAB_LIFT;
+                let span = (step.to - TAB_HOLD).saturating_sub(travel);
+                column = eased(
+                    tab_center(&areas, step.grab),
+                    tab_center(&areas, step.drop),
+                    now.saturating_sub(travel),
+                    span,
+                );
+                drag.drag(&areas, column, row);
+                if now == step.to
+                    && let Some(reorder) = drag.release()
+                {
+                    reorder.apply(&mut titles);
+                    selected = reorder.selection(selected);
+                    released = Some((now, reorder.to, column));
+                }
+            }
+        }
+    }
+    let mut frame = TabDragFrame {
+        shown: titles.clone(),
+        titles,
+        selected,
+        hole: None,
+        drag,
+        ghost: None,
+        pointer: None,
+        moved: None,
+    };
+    if let Some(from) = drag.from() {
+        let to = drag.target().unwrap_or(from);
+        TabMove { from, to }.apply(&mut frame.shown);
+        let title = frame.titles.get(from).copied().unwrap_or("");
+        frame.hole = Some(to);
+        frame.ghost = Some(TabGhost {
+            title,
+            x: column.saturating_sub(tab_slot_width(title) / 2),
+            lift: u16::from(tick >= pressed + 2),
+        });
+        frame.pointer = Some(column);
+        return frame;
+    }
+    if let Some((at, to, from_column)) = released {
+        let title = frame.titles.get(to).copied().unwrap_or("");
+        frame.moved = Some((title, to));
+        let spent = tick - at;
+        if spent < TAB_SETTLE {
+            let rest = tab_slot(&tab_strip_areas(&frame.titles, strip), to).x;
+            let start = from_column.saturating_sub(tab_slot_width(title) / 2);
+            frame.hole = Some(to);
+            frame.ghost = Some(TabGhost {
+                title,
+                x: eased(start, rest, spent, TAB_SETTLE - 3),
+                lift: u16::from(spent < TAB_SETTLE - 3),
+            });
+        }
+    }
+    let next = TAB_STEPS
+        .iter()
+        .find(|step| step.from > tick && step.from - tick <= TAB_HOVER);
+    if let Some(step) = next {
+        frame.pointer = Some(tab_center(
+            &tab_strip_areas(&frame.titles, strip),
+            step.grab,
+        ));
+    }
+    frame
+}
+
+fn draw_tab_strip(frame: &TabDragFrame, strip: Rect, ink: &TabInk, cx: &mut RenderCx<'_>) {
+    let labels = frame.shown.iter().enumerate().map(|(index, title)| {
+        if frame.hole == Some(index) {
+            " ".repeat(cols(title))
+        } else {
+            (*title).to_string()
+        }
+    });
+    let (select, box_style) = match frame.hole {
+        Some(hole) => (hole, ink.marker),
+        None => (frame.selected, ink.frame),
+    };
+    Tabs::new(labels)
+        .select(select)
+        .style(ink.dim)
+        .highlight_style(ink.active)
+        .boxed(box_style, ink.dim)
+        .render(strip, cx);
+    if let Some(ghost) = &frame.ghost {
+        let width = tab_slot_width(ghost.title);
+        let y = strip.y.saturating_sub(ghost.lift);
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .style(ink.lifted_title)
+            .border_style(ink.lifted)
+            .render(Rect::new(ghost.x, y, width, 3), cx);
+        Paragraph::new(format!(" {} ", ghost.title))
+            .style(ink.lifted_title)
+            .render(Rect::new(ghost.x + 1, y + 1, width - 2, 1), cx);
+    }
+    if let Some(column) = frame.pointer {
+        Paragraph::new("↖")
+            .style(ink.pointer)
+            .render(Rect::new(column, strip.y + 2, 1, 1), cx);
+    }
+}
+
+fn duration_label(seconds: u32) -> String {
+    format!("{}m{:02}s", seconds / 60, seconds % 60)
+}
+
+fn status_style(status: &str, ink: &TabInk) -> Style {
+    match status {
+        "passed" | "healthy" => ink.ok,
+        "failed" | "degraded" => ink.fail,
+        "running" | "rolling" => ink.warn,
+        _ => ink.soft,
+    }
+}
+
+fn tick_ratio(tick: u32, start: u32, span: u32) -> f32 {
+    let spent = u16::try_from(tick.saturating_sub(start).min(span)).unwrap_or(0);
+    f32::from(spent) / f32::from(u16::try_from(span.max(1)).unwrap_or(u16::MAX))
+}
+
+fn progress_gauge(title: String, ratio: f32, area: Rect, ink: &TabInk, cx: &mut RenderCx<'_>) {
+    Gauge::new(ratio)
+        .block(
+            Block::bordered()
+                .border_type(BorderType::Rounded)
+                .title(title)
+                .style(ink.fill)
+                .border_style(ink.dim)
+                .title_style(ink.header),
+        )
+        .gauge_style(ink.gauge)
+        .track_style(ink.track)
+        .sub_cell(true)
+        .render(area, cx);
+}
+
+fn builds_body(area: Rect, tick: u32, ink: &TabInk, cx: &mut RenderCx<'_>) {
+    let ratio = 0.3 + 0.7 * tick_ratio(tick, 0, 240);
+    let done = ratio >= 1.0;
+    let step = BUILD_STEPS
+        .get(usize::try_from(tick * 6 / 241).unwrap_or(0))
+        .copied()
+        .unwrap_or("package");
+    let running_status = if done { "passed" } else { "running" };
+    let mut rows = vec![vec![
+        "#4821".to_string(),
+        "feature/tabs-drag".to_string(),
+        "882be46".to_string(),
+        "Reorder tabs with the pointer".to_string(),
+        running_status.to_string(),
+        duration_label(151 + tick.min(240) / 2),
+    ]];
+    let mut styles = vec![vec![
+        ink.lead,
+        Style::new(),
+        ink.soft,
+        Style::new(),
+        status_style(running_status, ink),
+        Style::new(),
+    ]];
+    for (build, branch, commit, message, status, seconds) in BUILDS {
+        rows.push(vec![
+            format!("#{build}"),
+            branch.to_string(),
+            commit.to_string(),
+            message.to_string(),
+            status.to_string(),
+            duration_label(seconds),
+        ]);
+        styles.push(vec![
+            Style::new(),
+            Style::new(),
+            ink.soft,
+            Style::new(),
+            status_style(status, ink),
+            Style::new(),
+        ]);
+    }
+    let table_area = Rect::new(area.x, area.y, area.width, area.height.saturating_sub(4));
+    Table::new(
+        lunatui_widgets::VecSource::from_rows(rows),
+        vec![
+            Constraint::Length(7),
+            Constraint::Length(20),
+            Constraint::Length(9),
+            Constraint::Fill(1),
+            Constraint::Length(9),
+            Constraint::Length(7),
+        ],
+    )
+    .header(
+        ["Build", "Branch", "Commit", "Message", "Status", "Time"].map(|title| (title, ink.header)),
+    )
+    .style(ink.fill)
+    .alignments(vec![
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Right,
+    ])
+    .odd_row_style(ink.track)
+    .cell_styles(styles)
+    .render(table_area, cx);
+    let percent = u32::from(u16::try_from(tick.min(240) * 70 / 240).unwrap_or(0)) + 30;
+    let label = if done {
+        " #4821 feature/tabs-drag  passed ".to_string()
+    } else {
+        format!(" #4821 feature/tabs-drag  {step}  {percent}% ")
+    };
+    let gauge_area = Rect::new(
+        area.x,
+        area.y + area.height.saturating_sub(3),
+        area.width,
+        3,
+    );
+    progress_gauge(label, ratio, gauge_area, ink, cx);
+}
+
+fn deploys_body(area: Rect, tick: u32, ink: &TabInk, cx: &mut RenderCx<'_>) {
+    let ready = (1 + tick.saturating_sub(80) / 14).min(6);
+    let rolling = if ready < 6 { "rolling" } else { "healthy" };
+    let mut rows = vec![vec![
+        "api".to_string(),
+        "prod".to_string(),
+        "v2.14.0".to_string(),
+        format!("{ready}/6"),
+        rolling.to_string(),
+        format!("{}s", 20 + tick / 3),
+    ]];
+    let mut styles = vec![vec![
+        ink.lead,
+        Style::new(),
+        Style::new(),
+        Style::new(),
+        status_style(rolling, ink),
+        Style::new(),
+    ]];
+    for (index, (service, env, version, replicas, age)) in (0_u32..).zip(DEPLOYS) {
+        let up = if index == 1 { replicas - 1 } else { replicas };
+        let status = if up < replicas { "degraded" } else { "healthy" };
+        rows.push(vec![
+            service.to_string(),
+            env.to_string(),
+            version.to_string(),
+            format!("{up}/{replicas}"),
+            status.to_string(),
+            age.to_string(),
+        ]);
+        styles.push(vec![
+            Style::new(),
+            if env == "prod" {
+                Style::new()
+            } else {
+                ink.soft
+            },
+            Style::new(),
+            Style::new(),
+            status_style(status, ink),
+            Style::new(),
+        ]);
+    }
+    let table_area = Rect::new(area.x, area.y, area.width, area.height.saturating_sub(4));
+    Table::new(
+        lunatui_widgets::VecSource::from_rows(rows),
+        vec![
+            Constraint::Length(12),
+            Constraint::Length(10),
+            Constraint::Length(15),
+            Constraint::Length(9),
+            Constraint::Length(10),
+            Constraint::Fill(1),
+        ],
+    )
+    .header(
+        ["Service", "Env", "Version", "Ready", "Status", "Age"].map(|title| (title, ink.header)),
+    )
+    .style(ink.fill)
+    .alignments(vec![
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Left,
+        Alignment::Right,
+    ])
+    .odd_row_style(ink.track)
+    .cell_styles(styles)
+    .render(table_area, cx);
+    let label = format!(" api prod  v2.13.2 → v2.14.0  {ready}/6 ready ");
+    let ratio = f32::from(u16::try_from(ready).unwrap_or(0)) / 6.0;
+    let gauge_area = Rect::new(
+        area.x,
+        area.y + area.height.saturating_sub(3),
+        area.width,
+        3,
+    );
+    progress_gauge(label, ratio, gauge_area, ink, cx);
+}
+
+fn log_line(index: u32) -> (String, &'static str, &'static str, String) {
+    let tenths = 24_000 + index * 37 / 10;
+    let time = format!(
+        "12:{:02}:{:02}.{}",
+        tenths / 600,
+        tenths / 10 % 60,
+        tenths % 10
+    );
+    let source = LOG_SOURCES[usize::try_from(index % 5).unwrap_or(0)];
+    let (level, message) = if index % 19 == 11 {
+        (
+            "ERROR",
+            format!(
+                "deploy hook timed out after 30s (attempt {})",
+                index % 3 + 1
+            ),
+        )
+    } else if index % 7 == 3 {
+        (
+            "WARN",
+            format!("slow query on builds: {}ms", 240 + index % 9 * 31),
+        )
+    } else {
+        let message = match index % 6 {
+            0 => format!("GET /v1/builds 200 {}ms", 12 + index % 23),
+            1 => format!(
+                "job {} finished in {}.{}s",
+                8800 + index,
+                1 + index % 4,
+                index % 10
+            ),
+            2 => format!("cache hit ratio 0.9{}", index % 10),
+            3 => format!("POST /v1/deploys 201 {}ms", 40 + index % 37),
+            4 => format!("pool connections {}/32", 10 + index % 17),
+            _ => format!("health check ok in {}ms", 2 + index % 7),
+        };
+        ("INFO", message)
+    };
+    (time, level, source, message)
+}
+
+fn logs_body(area: Rect, tick: u32, ink: &TabInk, cx: &mut RenderCx<'_>) {
+    let count = 60 + tick / 5;
+    let visible = u32::from(area.height.saturating_sub(1));
+    let mut rows = Vec::new();
+    let mut styles = Vec::new();
+    for index in count.saturating_sub(visible)..count {
+        let (time, level, source, message) = log_line(index);
+        let level_style = match level {
+            "ERROR" => ink.fail,
+            "WARN" => ink.warn,
+            _ => ink.ok,
+        };
+        rows.push(vec![time, level.to_string(), source.to_string(), message]);
+        styles.push(vec![ink.soft, level_style, ink.soft, Style::new()]);
+    }
+    Table::new(
+        lunatui_widgets::VecSource::from_rows(rows),
+        vec![
+            Constraint::Length(12),
+            Constraint::Length(7),
+            Constraint::Length(11),
+            Constraint::Fill(1),
+        ],
+    )
+    .header(["Time", "Level", "Source", "Message"].map(|title| (title, ink.header)))
+    .style(ink.fill)
+    .cell_styles(styles)
+    .render(area, cx);
+}
+
+fn tabs_drag_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let ink = TabInk::new(theme);
+    grid.fill(area, ink.fill, ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    Paragraph::new(" Release pipelines")
+        .style(ink.header)
+        .render(Rect::new(area.x, area.y, area.width, 1), &mut cx);
+    let strip = Rect::new(area.x + 2, area.y + 2, area.width.saturating_sub(4), 3);
+    let frame = tab_drag_frame(strip, tick);
+    let body = Rect::new(
+        area.x + 2,
+        strip.y + 3,
+        area.width.saturating_sub(4),
+        area.height.saturating_sub(strip.y + 3 - area.y + 1),
+    );
+    let name = frame.titles.get(frame.selected).copied().unwrap_or("");
+    let block = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(format!(" {name} "))
+        .style(ink.fill)
+        .border_style(ink.dim)
+        .title_style(ink.active);
+    let inner = block.inner(body);
+    block.render(body, &mut cx);
+    let content = Rect::new(
+        inner.x + 1,
+        inner.y,
+        inner.width.saturating_sub(2),
+        inner.height,
+    );
+    match name {
+        "Builds" => builds_body(content, tick, &ink, &mut cx),
+        "Deploys" => deploys_body(content, tick, &ink, &mut cx),
+        "Logs" => logs_body(content, tick, &ink, &mut cx),
+        _ => Paragraph::new("5 services healthy, 1 rolling out")
+            .style(ink.muted)
+            .render(content, &mut cx),
+    }
+    draw_tab_strip(&frame, strip, &ink, &mut cx);
+    let hint = match (frame.drag.from(), frame.drag.target(), frame.moved) {
+        (Some(from), Some(target), _) => format!(
+            " moving {} to position {} of {}   release to drop",
+            frame.titles.get(from).copied().unwrap_or(""),
+            target + 1,
+            frame.titles.len()
+        ),
+        (Some(_), None, _) => " release to cancel".to_string(),
+        (None, _, Some((title, to))) => format!(" moved {title} to position {}", to + 1),
+        (None, _, None) => " drag a tab to reorder".to_string(),
+    };
+    StatusBar::new(hint)
+        .style(ink.status)
+        .left([(" main ", ink.status_key)])
+        .right([(" 6 services  3 workers ", ink.status)])
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn tabs_drag_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "tabs") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
 const CRUMB_PATH: [&str; 6] = [
     "Home",
     "Projects",
@@ -3027,6 +3746,304 @@ fn breadcrumbs_native(
 
 fn breadcrumbs_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "breadcrumbs") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+const KH_MOVE: &[KeyChord] = &[KeyChord::new(KeyCode::Down, Modifiers::new())];
+const KH_OPEN: &[KeyChord] = &[KeyChord::new(KeyCode::Enter, Modifiers::new())];
+const KH_SEARCH: &[KeyChord] = &[KeyChord::new(KeyCode::Char('/'), Modifiers::new())];
+const KH_PUBLISH: &[KeyChord] = &[KeyChord::new(KeyCode::Char('p'), Modifiers::new())];
+const KH_QUIT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('q'), Modifiers::new())];
+const KH_ESC: &[KeyChord] = &[KeyChord::new(KeyCode::Esc, Modifiers::new())];
+const KH_CLEAR: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('u'),
+    Modifiers::new().control(),
+)];
+const KH_YES: &[KeyChord] = &[KeyChord::new(KeyCode::Char('y'), Modifiers::new())];
+const KH_NO: &[KeyChord] = &[KeyChord::new(KeyCode::Char('n'), Modifiers::new())];
+
+fn kh_keymap(mode: usize) -> Keymap {
+    let mut keymap = Keymap::new();
+    let commands: &[Command] = match mode {
+        0 => &[
+            Command::new("move", "Move", KH_MOVE),
+            Command::new("open", "Open log", KH_OPEN),
+            Command::new("search", "Search checks", KH_SEARCH),
+            Command::new("publish", "Publish", KH_PUBLISH),
+            Command::new("quit", "Quit", KH_QUIT),
+        ],
+        1 => &[
+            Command::new("apply", "Apply filter", KH_OPEN),
+            Command::new("clear", "Clear", KH_CLEAR),
+            Command::new("cancel", "Cancel", KH_ESC),
+        ],
+        _ => &[
+            Command::new("yes", "Publish v0.1.13", KH_YES),
+            Command::new("no", "Go back", KH_NO),
+            Command::new("cancel", "Cancel", KH_ESC),
+        ],
+    };
+    for command in commands {
+        keymap.register(*command);
+    }
+    keymap
+}
+
+const KH_CHECKS: [(&str, &str); 8] = [
+    ("fmt", "18 s"),
+    ("clippy", "41 s"),
+    ("test", "2 m 12 s"),
+    ("msrv", "49 s"),
+    ("deny", "2 m 22 s"),
+    ("docs", "25 s"),
+    ("bench", "3 m 32 s"),
+    ("scorecard", "1 m 54 s"),
+];
+
+fn kh_state(tick: u32) -> (usize, String, usize) {
+    let mode = if (150..200).contains(&tick) {
+        2
+    } else {
+        usize::from((60..130).contains(&tick))
+    };
+    let query = if mode == 1 {
+        let typed = usize::try_from((tick - 60) / 14).unwrap_or(0).min(4);
+        "test".chars().take(typed.min(4)).collect()
+    } else if (130..150).contains(&tick) {
+        String::from("test")
+    } else {
+        String::new()
+    };
+    (mode, query, usize::try_from(tick / 12).unwrap_or(0))
+}
+
+fn key_hints_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let (mode, query, step) = kh_state(tick);
+    let header = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), header);
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Release console  ·  lunatui v0.1.13",
+        header,
+    );
+    let shown: Vec<(&str, &str)> = KH_CHECKS
+        .iter()
+        .copied()
+        .filter(|(name, _)| query.is_empty() || name.contains(query.as_str()))
+        .collect();
+    let panes = Rect::new(area.x + 2, area.y + 2, area.width.saturating_sub(4), 15);
+    kh_log(
+        &mut cx,
+        Rect::new(
+            area.x + 2,
+            area.y + 17,
+            area.width.saturating_sub(4),
+            area.height.saturating_sub(19),
+        ),
+        tick,
+        [fill, dim],
+        [accent, raised],
+    );
+    kh_panes(
+        &mut cx,
+        panes,
+        &shown,
+        (mode, &query, step),
+        [fill, dim],
+        [accent, raised],
+    );
+    if mode == 2 {
+        kh_confirm(&mut cx, area, [fill, dim], accent);
+    }
+    let bar = Rect::new(
+        area.x,
+        area.y + area.height.saturating_sub(1),
+        area.width,
+        1,
+    );
+    cx.put_str(
+        bar.x,
+        bar.y,
+        &" ".repeat(usize::from(bar.width)),
+        Style::new().fg(text).bg(raised),
+    );
+    KeyHintBar::new(&kh_keymap(mode)).gap(3).render(
+        Rect::new(bar.x + 1, bar.y, bar.width.saturating_sub(2), 1),
+        &mut cx,
+    );
+}
+
+fn kh_panes(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    shown: &[(&str, &str)],
+    state: (usize, &str, usize),
+    styles: [Style; 2],
+    colors: [Color; 2],
+) {
+    let (mode, query, step) = state;
+    let [fill, dim] = styles;
+    let [accent, raised] = colors;
+    let left = Rect::new(area.x, area.y, 46, area.height);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        area.y,
+        area.width.saturating_sub(left.width + 1),
+        area.height,
+    );
+    let title = if mode == 1 {
+        format!(" Checks  /{query}▏ ")
+    } else {
+        String::from(" Checks ")
+    };
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(title)
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(left, cx);
+    let selected = if shown.is_empty() {
+        0
+    } else {
+        step % shown.len()
+    };
+    for (row, (name, took)) in (0_u16..).zip(shown) {
+        let y = left.y + 2 + row;
+        let picked = usize::from(row) == selected && mode != 1;
+        let style = if picked {
+            Style::new().fg(fill.fg).bg(raised)
+        } else {
+            fill
+        };
+        cx.put_str(
+            left.x + 1,
+            y,
+            &" ".repeat(usize::from(left.width - 2)),
+            style,
+        );
+        cx.put_str(left.x + 2, y, &format!("✔ {name:<14}{took:>20}"), style);
+    }
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Release notes ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(right, cx);
+    let (name, took) = shown.get(selected).copied().unwrap_or(("none", ""));
+    for (row, line) in (0_u16..).zip([
+        format!("check      {name}"),
+        format!("duration   {took}"),
+        String::from("branch     main"),
+        String::from("head       9c2b269"),
+        String::new(),
+        String::from("Changes since v0.1.12"),
+        String::from("  • ToastStack, Canvas, SplitTree widgets"),
+        String::from("  • Breadcrumbs and TabsDrag"),
+        String::from("  • No-feature build fixed"),
+    ]) {
+        cx.put_str(
+            right.x + 2,
+            right.y + 2 + row,
+            clip_display_prefix(&line, right.width.saturating_sub(4)),
+            if row == 5 { fill.fg(accent) } else { fill },
+        );
+    }
+}
+
+fn kh_log(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2], colors: [Color; 2]) {
+    let [fill, dim] = styles;
+    let [accent, _] = colors;
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Run log ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(area, cx);
+    let steps = [
+        "checkout main",
+        "cargo fmt --check",
+        "cargo clippy -D warnings",
+        "cargo test --locked",
+        "cargo deny check",
+        "cargo xtask bench",
+        "build release artifacts",
+        "sign checksums",
+    ];
+    let rows = usize::from(area.height.saturating_sub(2));
+    let count = usize::try_from(tick / 6).unwrap_or(0) + 1;
+    let start = count.saturating_sub(rows);
+    for (row, index) in (0_u16..).zip(start..count) {
+        let step = steps[index % steps.len()];
+        let line = format!(
+            "12:{:02}:{:02}  ok   {step}",
+            (index * 7 / 60) % 60,
+            index * 7 % 60
+        );
+        cx.put_str(
+            area.x + 2,
+            area.y + 1 + row,
+            clip_display_prefix(&line, area.width.saturating_sub(4)),
+            if index + 1 == count { fill } else { dim },
+        );
+    }
+}
+
+fn kh_confirm(cx: &mut RenderCx<'_>, area: Rect, styles: [Style; 2], accent: Color) {
+    let [fill, dim] = styles;
+    let modal = Rect::new(
+        area.x + area.width / 2 - 22,
+        area.y + area.height / 2 - 3,
+        44,
+        6,
+    );
+    for row in 0..modal.height {
+        cx.put_str(modal.x, modal.y + row, &" ".repeat(44), fill);
+    }
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Publish ")
+        .style(fill)
+        .border_style(Style::new().fg(accent).bg(fill.bg))
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(modal, cx);
+    cx.put_str(
+        modal.x + 2,
+        modal.y + 2,
+        "Tag and publish lunatui v0.1.13?",
+        fill,
+    );
+    cx.put_str(
+        modal.x + 2,
+        modal.y + 3,
+        "All eight checks are passing.",
+        dim,
+    );
+}
+
+fn key_hints_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "key-hints") {
         (case.ratatui)(buffer, area, tick);
     }
 }

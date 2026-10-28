@@ -10,6 +10,8 @@ use lunatui_core::{ClusterTable, Grid, Rect, Style};
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap, render_overlay, render_palette};
 use lunatui_runtime::{App, ControlFlow, RunOptions, render_once, run};
 use lunatui_term::{Event, KeyCode, KeyEvent, KeyKind, Modifiers};
+use lunatui_theme::{Theme, Variant};
+use lunatui_widgets::{KeyHintBar, RenderCx, Widget};
 
 const OVERLAY: &str = "overlay.toggle";
 const PALETTE: &str = "palette.open";
@@ -139,6 +141,17 @@ impl App for Demo {
             let style = Style::new();
             grid.fill(area, style, ' ', clusters);
             grid.put_str(area.x, area.y, style, "Press F1 for shortcuts", clusters);
+            let theme = Theme::builtin(Variant::Dark);
+            let mut cx = RenderCx::new(grid, clusters, &theme);
+            KeyHintBar::new(&self.keymap).render(
+                Rect::new(
+                    area.x,
+                    area.y.saturating_add(area.height).saturating_sub(1),
+                    area.width,
+                    1,
+                ),
+                &mut cx,
+            );
         }
     }
 }
