@@ -24,6 +24,7 @@ canvas = ["widget-state"]
 barchart = ["widget-state"]
 toast = ["widget-state"]
 slider = ["widget-state"]
+number-input = ["widget-state"]
 search-box = ["widget-state"]
 form = ["widget-state"]
 radio = ["widget-state"]
@@ -188,6 +189,11 @@ required-features = ["tooltip"]
 name = "slider"
 path = "tests/slider.rs"
 required-features = ["slider"]
+
+[[test]]
+name = "number_input"
+path = "tests/number_input.rs"
+required-features = ["number-input"]
 
 [[test]]
 name = "search_box"
