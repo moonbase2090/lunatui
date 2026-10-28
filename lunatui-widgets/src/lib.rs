@@ -53,6 +53,8 @@ mod text_input;
 mod toast;
 #[cfg(feature = "toggle")]
 mod toggle;
+#[cfg(feature = "tooltip")]
+mod tooltip;
 mod widget;
 
 #[cfg(feature = "barchart")]
@@ -114,4 +116,6 @@ pub use text_input::TextInput;
 pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};
 #[cfg(feature = "toggle")]
 pub use toggle::Toggle;
+#[cfg(feature = "tooltip")]
+pub use tooltip::{Tooltip, TooltipSide, TooltipState};
 pub use widget::Widget;

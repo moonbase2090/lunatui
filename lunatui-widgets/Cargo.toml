@@ -25,6 +25,7 @@ barchart = ["widget-state"]
 toast = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
+tooltip = []
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -159,3 +160,8 @@ required-features = ["toast"]
 name = "key_hint_bar"
 path = "tests/key_hint_bar.rs"
 required-features = ["key-hints"]
+
+[[test]]
+name = "tooltip"
+path = "tests/tooltip.rs"
+required-features = ["tooltip"]

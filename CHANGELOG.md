@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Tooltip` widget, behind the `tooltip` feature: a short hint beside an anchor rectangle that never covers it, opening on a chosen side and flipping or sliding to stay inside the area, with text wrapped to a maximum width, theme-token colors, `area` for hit testing, and `TooltipState` for the hover delay and dismissal with caller-supplied time.
 - `RadioGroup` widget, behind the `radio` feature: single-choice options drawn as `◉`/`○` one per row or side by side, with focus, per-option and whole-group disabling, theme-token colors, `option_areas` for hit testing, and `step` for keyboard movement that wraps and skips disabled options.
 - `Toggle` widget, behind the `toggle` feature: an on/off switch with an optional label and a configurable track width, painted from theme tokens for the normal, focused, and disabled states, with `hit_area` for hit testing.
 - Canvas Braille lines use a thin, centered sub-cell raster so ties stay in one stroke; `Context::marker` lets a paint closure switch to block markers for straight guides and outlines.
