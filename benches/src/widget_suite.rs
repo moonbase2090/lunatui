@@ -9,12 +9,14 @@ use std::sync::OnceLock;
 use crate::scenes::ratatui::{ColorOutput, set_color_output};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_layout::Constraint;
+use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder};
+use lunatui_term::{KeyCode, Modifiers};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Bar, BarChart, BigText, Block, BorderType, Date, Gauge, List, MarkdownView, Monthly, Paragraph,
-    PixelSize, RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
+    Bar, BarChart, BigText, Block, BorderType, Date, Gauge, KeyHintBar, List, MarkdownView,
+    Monthly, Paragraph, PixelSize, RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -41,6 +43,18 @@ const ACCENT: (u8, u8, u8) = (0x7a, 0xa2, 0xf7);
 const ROWS: usize = 500;
 const LOG_LINES: usize = 200;
 const TABS: [&str; 4] = ["Overview", "Lints", "Tests", "Deps"];
+const HELP: &[KeyChord] = &[KeyChord::new(KeyCode::Char('?'), Modifiers::new())];
+const QUIT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('q'), Modifiers::new())];
+
+fn key_hint_map() -> &'static Keymap {
+    static KEYMAP: OnceLock<Keymap> = OnceLock::new();
+    KEYMAP.get_or_init(|| {
+        let mut keymap = Keymap::new();
+        keymap.register(Command::new("help", "Help", HELP));
+        keymap.register(Command::new("quit", "Quit", QUIT));
+        keymap
+    })
+}
 
 /// Whether a case's two sides draw the same cells.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -108,6 +122,13 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: tabs_lunatui,
         ratatui: tabs_ratatui,
+    },
+    Case {
+        name: "key-hints",
+        gated: false,
+        parity: Parity::Exact,
+        lunatui: key_hints_lunatui,
+        ratatui: key_hints_ratatui,
     },
     Case {
         name: "calendar",
@@ -381,6 +402,65 @@ fn tabs_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .padding("", "")
         .divider(" ")
         .render(RatRect::new(area.x, area.y, area.width, 1), buf);
+}
+
+fn key_hints_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    _tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    cx.set_style(area, base_style());
+    cx.put_str(area.x, area.y, "RELEASE CONSOLE", text_style());
+    cx.put_str(
+        area.x,
+        area.y.saturating_add(2),
+        "Deployment v0.1.12 is ready. Review the checks before publishing.",
+        dim_style(),
+    );
+    let hint_area = Rect::new(
+        area.x,
+        area.y.saturating_add(area.height).saturating_sub(1),
+        area.width,
+        1,
+    );
+    KeyHintBar::new(key_hint_map()).render(hint_area, &mut cx);
+}
+
+fn key_hints_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
+    let key = rat_base().fg(rat_rgb(ACCENT));
+    let title = rat_base().fg(rat_rgb(TEXT));
+    let dim = rat_dim();
+    RatParagraph::new(Line::from(Span::styled("RELEASE CONSOLE", title)))
+        .style(rat_base())
+        .render(RatRect::new(area.x, area.y, area.width, 1), buf);
+    RatParagraph::new(Line::from(Span::styled(
+        "Deployment v0.1.12 is ready. Review the checks before publishing.",
+        dim,
+    )))
+    .style(rat_base())
+    .render(
+        RatRect::new(area.x, area.y.saturating_add(2), area.width, 1),
+        buf,
+    );
+    RatParagraph::new(Line::from(vec![
+        Span::styled("[?]", key),
+        Span::styled(" Help  ", title),
+        Span::styled("[Q]", key),
+        Span::styled(" Quit", title),
+    ]))
+    .style(rat_base())
+    .render(
+        RatRect::new(
+            area.x,
+            area.y.saturating_add(area.height).saturating_sub(1),
+            area.width,
+            1,
+        ),
+        buf,
+    );
 }
 
 fn calendar_month(tick: u32) -> u8 {

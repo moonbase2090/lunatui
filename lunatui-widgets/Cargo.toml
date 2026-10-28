@@ -22,6 +22,7 @@ barchart = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
+key-hints = ["dep:lunatui-runtime"]
 
 [dependencies]
 lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
@@ -29,6 +30,7 @@ lunatui-layout = { version = "0.1.12", path = "../lunatui-layout" }
 lunatui-image = { version = "0.1.12", path = "../lunatui-image", optional = true }
 lunatui-text = { version = "0.1.12", path = "../lunatui-text" }
 lunatui-theme = { version = "0.1.12", path = "../lunatui-theme" }
+lunatui-runtime = { version = "0.1.12", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
@@ -107,3 +109,8 @@ required-features = ["barchart"]
 name = "markdown_view"
 path = "tests/markdown_view.rs"
 required-features = ["markdown"]
+
+[[test]]
+name = "key_hint_bar"
+path = "tests/key_hint_bar.rs"
+required-features = ["key-hints"]

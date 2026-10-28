@@ -14,6 +14,8 @@ mod calendar;
 mod gauge;
 #[cfg(feature = "image")]
 mod image;
+#[cfg(feature = "key-hints")]
+mod key_hint_bar;
 mod lightcycle;
 mod list;
 #[cfg(feature = "markdown")]
@@ -47,6 +49,8 @@ pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use gauge::Gauge;
 #[cfg(feature = "image")]
 pub use image::Image;
+#[cfg(feature = "key-hints")]
+pub use key_hint_bar::KeyHintBar;
 pub use lightcycle::Lightcycle;
 pub use list::List;
 pub use lunatui_core::Size;
