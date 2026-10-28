@@ -37,6 +37,7 @@ mod scrollbar;
 mod sparkline;
 mod spinner;
 mod spinner_preset;
+mod split;
 #[cfg(feature = "widget-state")]
 mod state;
 mod status_bar;
@@ -89,6 +90,9 @@ pub use sparkline::{
 };
 pub use spinner::{Spinner, SpinnerPattern};
 pub use spinner_preset::SpinnerPreset;
+pub use split::{
+    Divider, DividerId, PaneArea, PaneId, SplitAxis, SplitDrag, SplitLayout, SplitTree,
+};
 #[cfg(feature = "widget-state")]
 pub use state::WidgetState;
 pub use status_bar::StatusBar;
