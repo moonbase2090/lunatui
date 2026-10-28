@@ -11,6 +11,9 @@ use lunatui_term::{
     SyncOutput,
 };
 
+#[cfg(feature = "image-presenter")]
+use lunatui_term::{PixelLayer, PixelMode};
+
 use crate::app::{App, ControlFlow};
 use crate::input::Input;
 use crate::options::RunOptions;
@@ -22,6 +25,8 @@ struct FrameState {
     clusters: ClusterTable,
     encoder: Encoder,
     last_palette: Option<Vec<Color>>,
+    #[cfg(feature = "image-presenter")]
+    images: PixelLayer,
 }
 
 /// Runs `app` in the alternate screen until it returns [`ControlFlow::Break`] or input ends.
@@ -39,6 +44,8 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
             "lunatui_runtime::run requires an interactive terminal",
         ));
     }
+    #[cfg(feature = "image-presenter")]
+    let pixel_mode = probe_pixel_mode();
     let mut input = Input::open()?;
     let mut session = Session::enter_with_options(
         io::stdout(),
@@ -54,6 +61,8 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         clusters: ClusterTable::new(),
         encoder: Encoder::new(),
         last_palette: None,
+        #[cfg(feature = "image-presenter")]
+        images: PixelLayer::new(pixel_mode),
     };
     let mut sched = Scheduler::idle();
     sched.on_input();
@@ -101,6 +110,13 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
             }
         }
     }
+    #[cfg(feature = "image-presenter")]
+    {
+        let clear = frames.images.clear();
+        if !clear.is_empty() {
+            session.present_frame(clear)?;
+        }
+    }
     Ok(())
 }
 
@@ -135,6 +151,17 @@ fn render_present<A: App>(
         ' ',
         &mut frames.clusters,
     );
+    #[cfg(feature = "image-presenter")]
+    {
+        frames.images.begin_frame();
+        let mut render_frame = crate::frame::RenderFrame::new(
+            &mut frames.next,
+            &mut frames.clusters,
+            &mut frames.images,
+        );
+        app.render_frame(&mut render_frame, area);
+    }
+    #[cfg(not(feature = "image-presenter"))]
     app.render(&mut frames.next, area, &mut frames.clusters);
     let palette = app.token_palette().map(<[Color]>::to_vec);
     if palette != frames.last_palette {
@@ -147,14 +174,25 @@ fn render_present<A: App>(
     } else {
         frames.encoder.set_token_palette(Vec::new());
     }
-    let payload = frames.encoder.encode_diff(
+    let cell_bytes = frames.encoder.encode_diff(
         &frames.prev,
         &frames.next,
         &frames.clusters,
         ColorMode::TrueColor,
     );
-    if !runs.is_empty() {
-        session.present_frame(payload)?;
+    #[cfg(feature = "image-presenter")]
+    let image_bytes = frames.images.finish_frame();
+    #[cfg(feature = "image-presenter")]
+    let has_images = !image_bytes.is_empty();
+    #[cfg(feature = "image-presenter")]
+    let payloads = [cell_bytes, image_bytes];
+    #[cfg(not(feature = "image-presenter"))]
+    let has_images = false;
+    if !runs.is_empty() || has_images {
+        #[cfg(feature = "image-presenter")]
+        session.present_frame_parts(&payloads)?;
+        #[cfg(not(feature = "image-presenter"))]
+        session.present_frame(cell_bytes)?;
     }
     frames.prev = frames.next.clone();
     frames.next = Grid::new(area.width, area.height);
@@ -176,8 +214,36 @@ pub fn render_once<A: App>(app: &mut A, width: u16, height: u16) -> (Grid, Clust
     let mut grid = Grid::new(width, height);
     let mut clusters = ClusterTable::new();
     grid.fill(area, Style::new().bg(Color::Default), ' ', &mut clusters);
+    #[cfg(feature = "image-presenter")]
+    {
+        let mut images = PixelLayer::new(PixelMode::Cells);
+        images.begin_frame();
+        let mut frame = crate::frame::RenderFrame::new(&mut grid, &mut clusters, &mut images);
+        app.render_frame(&mut frame, area);
+    }
+    #[cfg(not(feature = "image-presenter"))]
     app.render(&mut grid, area, &mut clusters);
     (grid, clusters)
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+fn probe_pixel_mode() -> PixelMode {
+    use std::fs::OpenOptions;
+    use std::os::fd::AsFd;
+
+    use lunatui_term::{ProbeEnv, probe_fd};
+
+    let Ok(tty) = OpenOptions::new().read(true).write(true).open("/dev/tty") else {
+        return PixelMode::Cells;
+    };
+    let environment = ProbeEnv::from_process();
+    probe_fd(tty.as_fd(), &environment)
+        .map_or(PixelMode::Cells, |reply| PixelMode::from_caps(&reply.caps))
+}
+
+#[cfg(all(feature = "image-presenter", not(unix)))]
+fn probe_pixel_mode() -> PixelMode {
+    PixelMode::Cells
 }
 
 #[cfg(test)]

@@ -8,6 +8,8 @@ mod anim;
 mod app;
 #[cfg(feature = "app")]
 mod focus;
+#[cfg(feature = "image-presenter")]
+mod frame;
 #[cfg(feature = "app")]
 mod hit;
 mod input;
@@ -29,6 +31,8 @@ pub use anim::{
 pub use app::{App, ControlFlow};
 #[cfg(feature = "app")]
 pub use focus::{FocusDirection, FocusManager};
+#[cfg(feature = "image-presenter")]
+pub use frame::RenderFrame;
 #[cfg(feature = "app")]
 pub use hit::{HitId, HitMap};
 pub use input::Input;
