@@ -1,8 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Runtime frame handoff tests for the Image widget.
-
 use lunatui_core::{ClusterTable, Color, DecodedGlyph, Grid, Rect};
 use lunatui_image::{ImageId, ImageSource};
 use lunatui_runtime::{App, ControlFlow, RenderFrame, render_once};
