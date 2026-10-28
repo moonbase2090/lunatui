@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+#![doc = include_str!("../README.md")]
+
 use lunatui_core::{ClusterTable, Grid, Rect, Size, Style};
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{KeyCode, Modifiers};
@@ -44,7 +46,10 @@ fn clips_to_area_and_measures_one_row() {
     KeyHintBar::new(&map()).render(Rect::new(2, 1, 6, 1), &mut cx);
 
     assert_eq!(grid.row_display(1, &clusters), "  [Ctrl+ ");
-    assert_eq!(grid.get(0, 1).map(|cell| cell.style()), Some(Style::new()));
+    assert_eq!(
+        grid.get(0, 1).map(lunatui_core::Cell::style),
+        Some(Style::new())
+    );
     assert_eq!(
         KeyHintBar::new(&map()).measure(Size::new(20, 2)),
         Size::new(20, 1)
