@@ -16,9 +16,9 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
-    Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph,
-    PixelSize, RadioGroup, RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap,
-    ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly,
+    NumberInput, Paragraph, PixelSize, RadioGroup, RenderCx, Sparkline, SplitAxis, SplitTree,
+    Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -188,6 +188,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: form_lunatui,
         ratatui: form_ratatui,
+    },
+    Case {
+        name: "number-input",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no number field with step buttons, range clamping, or typed-text validation; its side draws the buttons and the right-aligned value by hand as styled spans",
+        ),
+        lunatui: number_input_lunatui,
+        ratatui: number_input_ratatui,
     },
     Case {
         name: "calendar",
@@ -693,6 +702,56 @@ fn toggle_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             RatStyle::new().fg(color(lunatui_theme::Token::TextPrimary)),
         ));
         RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
+}
+
+const NUMBER_ROWS: usize = 4;
+
+fn number_input_value(tick: u32, row: usize) -> f64 {
+    f64::from((tick * 7 + u32::try_from(row).unwrap_or(0) * 13) % 1000) / 10.0
+}
+
+fn number_input_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for row in 0..NUMBER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        NumberInput::new(number_input_value(tick, row))
+            .range(0.0, 100.0)
+            .decimals(1)
+            .suffix(" %")
+            .render(Rect::new(area.x, y, area.width.min(24), 1), &mut cx);
+    }
+}
+
+fn number_input_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let field = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let button = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Accent))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let width = usize::from(area.width.min(24));
+    for row in 0..NUMBER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let text = format!("{:.1} %", number_input_value(tick, row));
+        let inner = width.saturating_sub(8);
+        let line = Line::from(vec![
+            Span::styled(" − ", button),
+            Span::styled(format!(" {text:>inner$} "), field),
+            Span::styled(" + ", button),
+        ]);
+        RatParagraph::new(line).render(
+            RatRect::new(area.x, y, u16::try_from(width).unwrap_or(0), 1),
+            buf,
+        );
     }
 }
 
