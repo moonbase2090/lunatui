@@ -3,6 +3,8 @@
 
 #![doc = include_str!("../README.md")]
 
+#[cfg(feature = "barchart")]
+mod bar_chart;
 #[cfg(feature = "bigtext")]
 mod big_text;
 mod block;
@@ -32,6 +34,8 @@ mod tabs;
 mod text_input;
 mod widget;
 
+#[cfg(feature = "barchart")]
+pub use bar_chart::{Bar, BarChart, BarDirection, BarGroup};
 #[cfg(feature = "bigtext")]
 pub use big_text::{BigText, BigTextFont, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
