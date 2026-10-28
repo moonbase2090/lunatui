@@ -30,6 +30,7 @@ Every PR adds its entry under **Unreleased**.
 
 - The `Table` highlight style now covers the selected row's full width, gaps included.
 - `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
+- The MarkdownView README demo is recorded at 2x as a lossless animated WebP, and `scripts/record-showcase.sh` now records at 2x and writes WebP.
 
 ### Fixed
 
