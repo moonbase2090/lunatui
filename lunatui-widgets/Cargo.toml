@@ -56,6 +56,10 @@ name = "tabs"
 path = "tests/tabs.rs"
 
 [[test]]
+name = "text_input"
+path = "tests/text_input.rs"
+
+[[test]]
 name = "overlay"
 path = "tests/overlay.rs"
 
