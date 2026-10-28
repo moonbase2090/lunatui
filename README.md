@@ -45,9 +45,9 @@ Screenshot: [docs/media/barchart.png](docs/media/barchart.png). Recorded with `s
 
 A docs reader: a page list beside a scrolling Markdown view, with headings and rules, hanging-indent lists, task items, quotes, code blocks, boxed tables, inline emphasis, code, and underlined links, and a scrollbar sized from the document. The reader moves through three pages.
 
-![MarkdownView widget: a docs reader in the dark theme](docs/media/markdown.gif)
+![MarkdownView widget: a docs reader in the dark theme](docs/media/markdown.webp)
 
-Screenshot: [docs/media/markdown.png](docs/media/markdown.png). Recorded with `scripts/record-showcase.sh` (`CASE=markdown`, 120×36, `FRAMES=200`, dark, about 11 seconds).
+Screenshot: [docs/media/markdown.png](docs/media/markdown.png). Recorded with `scripts/record-showcase.sh` (`CASE=markdown`, 120×36 at 2x scale, `FRAMES=218`, dark, lossless animated WebP, about 11 seconds).
 
 ### Sparkline
 
