@@ -69,8 +69,8 @@ Screenshot from the same Lunatui capture: [docs/media/line-gauge-120x36-truecolo
 
 ### Release control screen
 
-A realistic Lunatui app screen combines the Monday-first calendar with selected-day and weekend styles, a styled deployment table, sub-cell Gauge, LineGauge, segmented StatusBar, marked on-call List, and a dimmed approval Overlay with shadow. Every region is rendered by its widget; the capture does not overwrite widget cells.
+A realistic Lunatui app screen combines the Monday-first calendar with selected-day and weekend styles, a highlighted deployment table, sub-cell Gauge, LineGauge, segmented StatusBar, animated Spinner, marked on-call List, and a dimmed approval Overlay with shadow. Every region is rendered by its widget; the capture does not overwrite widget cells.
 
 ![Night shift release control screen](docs/media/nightshift-board-120x36-dark.gif)
 
-Screenshot from the same recording: [docs/media/nightshift-board-120x36-dark.png](docs/media/nightshift-board-120x36-dark.png). Recorded with `scripts/record-app-screen.sh` at 120×36 for about 10 seconds in the dark theme.
+Screenshot from the same recording: [docs/media/nightshift-board-120x36-dark.png](docs/media/nightshift-board-120x36-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=nightshift-board`, 120×36, 180 frames at 30 fps, dark truecolor); the GIF is 237 KB and runs for 10.0 seconds.

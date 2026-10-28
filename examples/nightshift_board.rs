@@ -13,8 +13,8 @@ use lunatui_layout::Constraint;
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Block, Date, Gauge, LineGauge, List, Monthly, Overlay, Paragraph, RenderCx, StatusBar, Table,
-    VecSource, WeekStart, Widget,
+    Block, Date, Gauge, LineGauge, List, Monthly, Overlay, Paragraph, RenderCx, Spinner,
+    SpinnerPreset, StatusBar, Table, VecSource, WeekStart, Widget,
 };
 
 struct Options {
@@ -103,7 +103,7 @@ fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, tick: u32) 
 
     let width = area.width;
     let height = area.height;
-    draw_header(&mut cx, width, palette);
+    draw_header(&mut cx, width, tick, palette);
     draw_calendar(&mut cx, tick, palette);
     draw_regions(&mut cx, tick, palette);
     draw_deployments(&mut cx, width, tick, palette);
@@ -113,7 +113,7 @@ fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, tick: u32) 
     draw_overlay(&mut cx, area, width, height, palette);
 }
 
-fn draw_header(cx: &mut RenderCx<'_>, width: u16, palette: Palette) {
+fn draw_header(cx: &mut RenderCx<'_>, width: u16, tick: u32, palette: Palette) {
     StatusBar::new("")
         .style(Style::new().bg(palette.raised))
         .left([
@@ -137,6 +137,13 @@ fn draw_header(cx: &mut RenderCx<'_>, width: u16, palette: Palette) {
             ),
         ])
         .render(Rect::new(1, 1, width.saturating_sub(2), 1), cx);
+    Spinner::new(tick / 4)
+        .preset(SpinnerPreset::BARS)
+        .style(Style::new().fg(palette.success).bg(palette.raised))
+        .render(Rect::new(52, 1, 3, 1), cx);
+    Paragraph::new("deploying")
+        .style(Style::new().fg(palette.text).bg(palette.raised))
+        .render(Rect::new(56, 1, 9, 1), cx);
 }
 
 fn draw_calendar(cx: &mut RenderCx<'_>, tick: u32, palette: Palette) {
@@ -326,17 +333,13 @@ fn draw_events(cx: &mut RenderCx<'_>, width: u16, palette: Palette) {
         ("14:09  rollout paused", palette.failure),
     ];
     for (row, (line, color)) in event_lines.into_iter().enumerate() {
+        let y = incidents_block
+            .y
+            .saturating_add(u16::try_from(row).unwrap_or(0));
         Paragraph::new(line)
             .style(Style::new().fg(color).bg(palette.surface))
             .render(
-                Rect::new(
-                    incidents_block.x,
-                    incidents_block
-                        .y
-                        .saturating_add(u16::try_from(row).unwrap_or(0)),
-                    incidents_block.width,
-                    1,
-                ),
+                Rect::new(incidents_block.x, y, incidents_block.width, 1),
                 cx,
             );
     }
