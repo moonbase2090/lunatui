@@ -6,7 +6,7 @@ use core::time::Duration;
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Token};
 use lunatui_widgets::{
-    Block, BorderType, Paragraph, RenderCx, StatusBar, Tabs, Tooltip, TooltipSide, TooltipState,
+    AnchorSide, Block, BorderType, Paragraph, RenderCx, StatusBar, Tabs, Tooltip, TooltipState,
     Widget,
 };
 
@@ -95,7 +95,7 @@ const CODE: [&str; 28] = [
 struct Target {
     anchor: Rect,
     text: &'static str,
-    side: TooltipSide,
+    side: AnchorSide,
     max_width: u16,
     point: (u16, u16),
 }
@@ -150,7 +150,7 @@ fn targets(area: Rect) -> Vec<Target> {
     out.push(Target {
         anchor: gutter,
         text: WARNING,
-        side: TooltipSide::Right,
+        side: AnchorSide::Right,
         max_width: 44,
         point: (gutter.x, gutter.y),
     });
@@ -173,7 +173,7 @@ fn toolbar_target(anchor: Rect, text: &'static str) -> Target {
     Target {
         anchor,
         text,
-        side: TooltipSide::Below,
+        side: AnchorSide::Below,
         max_width: 40,
         point: (anchor.x + anchor.width - 1, anchor.y),
     }
@@ -183,7 +183,7 @@ fn status_target(anchor: Rect, text: &'static str) -> Target {
     Target {
         anchor,
         text,
-        side: TooltipSide::Below,
+        side: AnchorSide::Below,
         max_width: 44,
         point: (anchor.x + anchor.width - 1, anchor.y),
     }

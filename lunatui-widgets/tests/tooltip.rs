@@ -7,7 +7,7 @@ use core::time::Duration;
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{RenderCx, Tooltip, TooltipSide, TooltipState, Widget};
+use lunatui_widgets::{AnchorSide, RenderCx, Tooltip, TooltipState, Widget};
 
 fn draw(tooltip: &Tooltip, width: u16, height: u16) -> (Grid, ClusterTable) {
     let theme = Theme::builtin(Variant::Dark);
@@ -97,12 +97,12 @@ fn flips_above_when_there_is_no_room_below() {
 
 #[test]
 fn prefers_above_when_asked_and_falls_back_below() {
-    let tooltip = Tooltip::new("Hi", Rect::new(2, 2, 4, 1)).side(TooltipSide::Above);
+    let tooltip = Tooltip::new("Hi", Rect::new(2, 2, 4, 1)).side(AnchorSide::Above);
     assert_eq!(
         tooltip.area(Rect::new(0, 0, 20, 6)),
         Some(Rect::new(2, 1, 4, 1))
     );
-    let top = Tooltip::new("Hi", Rect::new(2, 0, 4, 1)).side(TooltipSide::Above);
+    let top = Tooltip::new("Hi", Rect::new(2, 0, 4, 1)).side(AnchorSide::Above);
     assert_eq!(
         top.area(Rect::new(0, 0, 20, 6)),
         Some(Rect::new(2, 1, 4, 1))
@@ -128,12 +128,12 @@ fn goes_right_then_left_when_neither_row_has_room() {
 
 #[test]
 fn a_side_first_tooltip_slides_along_the_anchor_to_stay_inside() {
-    let tooltip = Tooltip::new("A\nB\nC", Rect::new(10, 3, 2, 1)).side(TooltipSide::Left);
+    let tooltip = Tooltip::new("A\nB\nC", Rect::new(10, 3, 2, 1)).side(AnchorSide::Left);
     assert_eq!(
         tooltip.area(Rect::new(0, 0, 20, 4)),
         Some(Rect::new(7, 1, 3, 3))
     );
-    let right = Tooltip::new("A", Rect::new(10, 3, 2, 1)).side(TooltipSide::Right);
+    let right = Tooltip::new("A", Rect::new(10, 3, 2, 1)).side(AnchorSide::Right);
     assert_eq!(
         right.area(Rect::new(0, 0, 20, 4)),
         Some(Rect::new(12, 3, 3, 1))
@@ -161,10 +161,10 @@ fn is_not_drawn_when_no_side_has_room() {
 fn never_covers_its_anchor_and_stays_inside_the_area() {
     let area = Rect::new(0, 0, 20, 6);
     let sides = [
-        TooltipSide::Below,
-        TooltipSide::Above,
-        TooltipSide::Right,
-        TooltipSide::Left,
+        AnchorSide::Below,
+        AnchorSide::Above,
+        AnchorSide::Right,
+        AnchorSide::Left,
     ];
     let mut drawn = 0;
     for side in sides {

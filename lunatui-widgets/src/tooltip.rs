@@ -6,37 +6,12 @@ use core::time::Duration;
 use lunatui_core::{Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 
+use crate::anchor::{AnchorSide, place};
 use crate::{RenderCx, Widget};
 
 const DEFAULT_MAX_WIDTH: u16 = 40;
 const MIN_WIDTH: u16 = 3;
 const DEFAULT_DELAY: Duration = Duration::from_millis(500);
-
-/// The side of its anchor a [`Tooltip`] tries first.
-#[non_exhaustive]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum TooltipSide {
-    /// Under the anchor, then over it, then right, then left.
-    #[default]
-    Below,
-    /// Over the anchor, then under it, then right, then left.
-    Above,
-    /// Right of the anchor, then left, then under, then over.
-    Right,
-    /// Left of the anchor, then right, then under, then over.
-    Left,
-}
-
-impl TooltipSide {
-    const fn order(self) -> [Self; 4] {
-        match self {
-            Self::Below => [Self::Below, Self::Above, Self::Right, Self::Left],
-            Self::Above => [Self::Above, Self::Below, Self::Right, Self::Left],
-            Self::Right => [Self::Right, Self::Left, Self::Below, Self::Above],
-            Self::Left => [Self::Left, Self::Right, Self::Below, Self::Above],
-        }
-    }
-}
 
 /// A short hint drawn beside the cells it explains, its anchor.
 ///
@@ -56,7 +31,7 @@ impl TooltipSide {
 pub struct Tooltip {
     text: String,
     anchor: Rect,
-    side: TooltipSide,
+    side: AnchorSide,
     max_width: u16,
     style: Option<Style>,
 }
@@ -68,7 +43,7 @@ impl Tooltip {
         Self {
             text: text.into(),
             anchor,
-            side: TooltipSide::Below,
+            side: AnchorSide::Below,
             max_width: DEFAULT_MAX_WIDTH,
             style: None,
         }
@@ -76,7 +51,7 @@ impl Tooltip {
 
     /// The side tried first.
     #[must_use]
-    pub const fn side(mut self, side: TooltipSide) -> Self {
+    pub const fn side(mut self, side: AnchorSide) -> Self {
         self.side = side;
         self
     }
@@ -105,10 +80,7 @@ impl Tooltip {
     #[must_use]
     pub fn area(&self, area: Rect) -> Option<Rect> {
         let size = self.size(area.width.min(self.max_width), area.height)?;
-        self.side
-            .order()
-            .into_iter()
-            .find_map(|side| beside(self.anchor, size, area, side))
+        place(self.anchor, size, area, self.side)
     }
 
     fn size(&self, width_limit: u16, height_limit: u16) -> Option<Size> {
@@ -120,25 +92,6 @@ impl Tooltip {
         }
         (rows > 0 && rows <= height_limit).then(|| Size::new(widest.saturating_add(2), rows))
     }
-}
-
-fn beside(anchor: Rect, size: Size, area: Rect, edge: TooltipSide) -> Option<Rect> {
-    let right = area.x.saturating_add(area.width);
-    let bottom = area.y.saturating_add(area.height);
-    let last_x = right.checked_sub(size.width).filter(|x| *x >= area.x)?;
-    let last_y = bottom.checked_sub(size.height).filter(|y| *y >= area.y)?;
-    let along_x = anchor.x.clamp(area.x, last_x);
-    let along_y = anchor.y.clamp(area.y, last_y);
-    let after_x = anchor.x.saturating_add(anchor.width);
-    let after_y = anchor.y.saturating_add(anchor.height);
-    let (x, y) = match edge {
-        TooltipSide::Below => (along_x, after_y),
-        TooltipSide::Above => (along_x, anchor.y.checked_sub(size.height)?),
-        TooltipSide::Right => (after_x, along_y),
-        TooltipSide::Left => (anchor.x.checked_sub(size.width)?, along_y),
-    };
-    (x >= area.x && x <= last_x && y >= area.y && y <= last_y)
-        .then(|| Rect::new(x, y, size.width, size.height))
 }
 
 impl Widget for Tooltip {

@@ -8,7 +8,7 @@ use std::hint::black_box;
 use lunatui_bench::CountingAllocator;
 use lunatui_core::{ClusterTable, Grid, Rect};
 use lunatui_theme::{Theme, Variant};
-use lunatui_widgets::{RenderCx, Tooltip, TooltipSide, Widget};
+use lunatui_widgets::{AnchorSide, RenderCx, Tooltip, Widget};
 
 #[global_allocator]
 static ALLOC: CountingAllocator = CountingAllocator::system();
@@ -23,7 +23,7 @@ fn rendering_a_wrapped_tooltip_allocates_nothing() {
         "unused variable `tag`\nPrefix it with an underscore to silence this warning.",
         Rect::new(2, 6, 6, 1),
     )
-    .side(TooltipSide::Below)
+    .side(AnchorSide::Below)
     .max_width(30);
     tooltip.render(screen, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
     let (drawn, stats) = ALLOC.measure(|| {

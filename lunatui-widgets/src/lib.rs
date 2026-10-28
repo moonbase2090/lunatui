@@ -3,6 +3,8 @@
 
 #![doc = include_str!("../README.md")]
 
+#[cfg(feature = "tooltip")]
+mod anchor;
 #[cfg(feature = "barchart")]
 mod bar_chart;
 #[cfg(feature = "bigtext")]
@@ -57,6 +59,8 @@ mod toggle;
 mod tooltip;
 mod widget;
 
+#[cfg(feature = "tooltip")]
+pub use anchor::AnchorSide;
 #[cfg(feature = "barchart")]
 pub use bar_chart::{Bar, BarChart, BarDirection, BarGroup};
 #[cfg(feature = "bigtext")]
@@ -117,5 +121,5 @@ pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStac
 #[cfg(feature = "toggle")]
 pub use toggle::Toggle;
 #[cfg(feature = "tooltip")]
-pub use tooltip::{Tooltip, TooltipSide, TooltipState};
+pub use tooltip::{Tooltip, TooltipState};
 pub use widget::Widget;
