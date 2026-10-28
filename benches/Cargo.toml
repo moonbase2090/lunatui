@@ -34,6 +34,8 @@ num-traits = "0.2"
 ratatui = "=0.30.2"
 time = { version = "=0.3.55", default-features = false }
 libc = "0.2.190"
+tui-popup = "=0.7.7"
+tui-scrollview = "=0.6.8"
 
 [dev-dependencies]
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
