@@ -26,6 +26,7 @@ toast = ["widget-state"]
 slider = ["widget-state"]
 number-input = ["widget-state"]
 accordion = ["widget-state"]
+hex-viewer = ["widget-state"]
 form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
@@ -36,7 +37,7 @@ image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "form", "key-hints", "line-gauge", "markdown", "number-input", "popup", "radio", "scroll-view", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "form", "hex-viewer", "key-hints", "line-gauge", "markdown", "number-input", "popup", "radio", "scroll-view", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
@@ -212,3 +213,8 @@ required-features = ["number-input"]
 name = "accordion"
 path = "tests/accordion.rs"
 required-features = ["accordion"]
+
+[[test]]
+name = "hex_viewer"
+path = "tests/hex_viewer.rs"
+required-features = ["hex-viewer"]

@@ -19,10 +19,11 @@ use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText,
     Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId,
-    FieldArea, Form, FormField, Gauge, GraphType, KeyHintBar, LegendPosition, List, MarkdownView,
-    Marker, Monthly, NumberInput, PaneId, Paragraph, PixelSize, RadioFlow, RadioGroup, RenderCx,
-    Scrollbar, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs,
-    TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState, KeyHintBar,
+    LegendPosition, List, MarkdownView, Marker, Monthly, NumberInput, PaneId, Paragraph, PixelSize,
+    RadioFlow, RadioGroup, RenderCx, Scrollbar, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
+    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
+    Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -104,6 +105,11 @@ const PREVIEWS: &[Preview] = &[
         name: "accordion",
         native: accordion_native,
         baseline: accordion_baseline,
+    },
+    Preview {
+        name: "hex-viewer",
+        native: hex_viewer_native,
+        baseline: hex_viewer_baseline,
     },
     Preview {
         name: "slider",
@@ -5320,6 +5326,264 @@ fn ac_summary(cx: &mut RenderCx<'_>, right: Rect, tick: u32, theme: &Theme, styl
 }
 
 fn accordion_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const HX_LEN: usize = 4096;
+const HX_SECTIONS: [(&str, u32, u32); 4] = [
+    ("boot", 0x0400, 0x0400),
+    ("kernel", 0x0800, 0x0600),
+    ("strings", 0x0100, 0x0200),
+    ("rootfs", 0x0e00, 0x0200),
+];
+const HX_REGIONS: [(&str, usize, usize); 8] = [
+    ("Header", 0x000, 0x040),
+    ("Section table", 0x040, 0x080),
+    ("Reserved", 0x080, 0x100),
+    ("Strings", 0x100, 0x300),
+    ("Erased flash", 0x300, 0x400),
+    ("boot", 0x400, 0x800),
+    ("kernel", 0x800, 0xe00),
+    ("rootfs", 0xe00, 0x1000),
+];
+const HX_FIELDS: [(&str, usize, usize); 8] = [
+    ("magic", 0x00, 0x08),
+    ("version", 0x08, 0x0c),
+    ("header size", 0x0c, 0x10),
+    ("entry point", 0x10, 0x14),
+    ("crc32", 0x14, 0x18),
+    ("board", 0x18, 0x28),
+    ("built", 0x28, 0x38),
+    ("reserved", 0x38, 0x40),
+];
+const HX_LOG: [&str; 9] = [
+    "boot: clocks at 480 MHz\n",
+    "boot: loading kernel\n",
+    "kernel: 2 cores online\n",
+    "fs: mounted rootfs read-only\n",
+    "net: link up 1000 Mb/s\n",
+    "usb: device attached\n",
+    "panic: watchdog timeout\n",
+    "cfg: using defaults\n",
+    "update: image verified\n",
+];
+
+fn hx_image() -> Vec<u8> {
+    let mut image = vec![0xff_u8; HX_LEN];
+    let mut put = |at: usize, bytes: &[u8]| image[at..at + bytes.len()].copy_from_slice(bytes);
+    put(0x00, b"LUNAFW\0\x01");
+    put(0x08, &0x0002_0e00_u32.to_le_bytes());
+    put(0x0c, &0x40_u32.to_le_bytes());
+    put(0x10, &0x0800_04c1_u32.to_le_bytes());
+    put(0x14, &0x9a3c_51e7_u32.to_le_bytes());
+    put(0x18, b"devkit-rev-c\0\0\0\0");
+    put(0x28, b"2026-10-28\0\0\0\0\0\0");
+    put(0x38, &[0; 8]);
+    for (index, (name, offset, size)) in HX_SECTIONS.iter().enumerate() {
+        let at = 0x40 + index * 16;
+        let mut label = [0_u8; 8];
+        label[..name.len()].copy_from_slice(name.as_bytes());
+        put(at, &label);
+        put(at + 8, &offset.to_le_bytes());
+        put(at + 12, &size.to_le_bytes());
+    }
+    put(0x80, &[0; 0x80]);
+    let mut at = 0x100;
+    for line in HX_LOG.iter().cycle().take(18) {
+        if at + line.len() + 1 > 0x300 {
+            break;
+        }
+        put(at, line.as_bytes());
+        put(at + line.len(), &[0]);
+        at += line.len() + 1;
+    }
+    put(at, &vec![0; 0x300 - at]);
+    put(0x400, &0x2002_0000_u32.to_le_bytes());
+    for vector in 1..16_u32 {
+        let at = 0x400 + usize::try_from(vector).unwrap_or(0) * 4;
+        put(at, &(0x0800_04c1 + vector * 8).to_le_bytes());
+    }
+    let mut seed = 0x2545_f491_u32;
+    for at in 0x440..HX_LEN {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        put(at, &seed.to_le_bytes()[..1]);
+    }
+    image
+}
+
+fn hx_step(state: &mut HexViewerState, frame: u32) {
+    let every = |start: u32, end: u32, step: u32| {
+        (start..=end).contains(&frame) && (frame - start).is_multiple_of(step)
+    };
+    if every(12, 33, 3) || frame == 215 {
+        state.move_right(false);
+    } else if every(44, 52, 4) || every(116, 140, 4) || every(228, 236, 4) {
+        state.move_right(true);
+    } else if every(76, 106, 6) {
+        state.move_down(false);
+    } else if frame == 112 || frame == 154 {
+        state.row_start(false);
+    } else if frame == 150 || frame == 175 {
+        state.page_down(false);
+    } else if frame == 160 {
+        state.row_end(true);
+    } else if every(185, 200, 1) {
+        state.scroll_up(1);
+    }
+}
+
+fn hex_viewer_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Firmware inspector  ·  devkit-rev-c.bin  ·  4096 bytes",
+        head,
+    );
+    let left = Rect::new(area.x + 2, area.y + 2, 81, 32);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        32,
+    );
+    for (title, pane) in [(" Image ", left), (" Inspector ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let image = hx_image();
+    let view = Rect::new(left.x + 2, left.y + 1, 77, left.height - 2);
+    let viewer = HexViewer::new(&image)
+        .header(true)
+        .state(WidgetState::Focused);
+    let mut state = HexViewerState::new();
+    viewer.sync(view, &mut state);
+    for frame in 1..=tick {
+        hx_step(&mut state, frame);
+        viewer.sync(view, &mut state);
+    }
+    viewer.clone().view(&state).render(view, &mut cx);
+    hx_inspector(&mut cx, right, &image, &state, theme, [fill, dim]);
+    StatusBar::new(" ←→↑↓ move  ●  shift select  ●  pgup pgdn page  ●  wheel scroll  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn hx_inspector(
+    cx: &mut RenderCx<'_>,
+    right: Rect,
+    image: &[u8],
+    state: &HexViewerState,
+    theme: &Theme,
+    styles: [Style; 2],
+) {
+    let [fill, dim] = styles;
+    let surface = theme.resolve(Token::Surface0);
+    let heading = Style::new()
+        .fg(theme.resolve(Token::Accent))
+        .bg(surface)
+        .with_attrs(Attrs::new().set_bold(true));
+    let at = state.cursor();
+    let read = |len: usize| {
+        let mut word = [0_u8; 4];
+        let end = (at + len).min(image.len());
+        word[..end - at].copy_from_slice(&image[at..end]);
+        u32::from_le_bytes(word)
+    };
+    let byte = image[at];
+    let region = HX_REGIONS
+        .iter()
+        .find(|(_, start, end)| (*start..*end).contains(&at))
+        .map_or("", |(name, _, _)| name);
+    let field = HX_FIELDS
+        .iter()
+        .find(|(_, start, end)| (*start..*end).contains(&at))
+        .map_or("-", |(name, _, _)| name);
+    let shown = if (0x20..=0x7e).contains(&byte) {
+        format!("'{}'", char::from(byte))
+    } else {
+        "-".to_owned()
+    };
+    let selection = state.selection().map_or_else(
+        || "none".to_owned(),
+        |range| {
+            format!(
+                "{} bytes  {:#05x}..{:#05x}",
+                range.len(),
+                range.start,
+                range.end
+            )
+        },
+    );
+    let x = right.x + 2;
+    cx.put_str(x, right.y + 2, "Cursor", heading);
+    let rows = [
+        ("offset", format!("{at:#010x}")),
+        ("region", region.to_owned()),
+        ("field", field.to_owned()),
+        ("u8", format!("{byte:#04x}  {byte}")),
+        ("u16 le", format!("{:#06x}  {}", read(2), read(2))),
+        ("u32 le", format!("{:#010x}", read(4))),
+        ("ascii", shown),
+        ("bits", format!("{:04b} {:04b}", byte >> 4, byte & 0xf)),
+    ];
+    for (row, (label, value)) in (0_u16..).zip(rows) {
+        cx.put_str(x, right.y + 4 + row, label, dim);
+        cx.put_str(x + 9, right.y + 4 + row, &value, fill);
+    }
+    cx.put_str(x, right.y + 13, "Selection", heading);
+    cx.put_str(x, right.y + 15, &selection, fill);
+    cx.put_str(x, right.y + 18, "Sections", heading);
+    cx.put_str(x, right.y + 20, "name      offset  size", dim);
+    for (row, (name, offset, size)) in (0_u16..).zip(HX_SECTIONS) {
+        let start = usize::try_from(offset).unwrap_or(0);
+        let end = start + usize::try_from(size).unwrap_or(0);
+        let style = if (start..end).contains(&at) {
+            heading
+        } else {
+            fill
+        };
+        cx.put_str(
+            x,
+            right.y + 21 + row,
+            &format!("{name:<9} {offset:#06x}  {size:#06x}"),
+            style,
+        );
+    }
+}
+
+fn hex_viewer_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];

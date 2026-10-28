@@ -145,6 +145,14 @@ An editor screen with a toolbar, a file tree, source with a warning in the gutte
 
 Screenshot: [docs/media/tooltip.png](docs/media/tooltip.png). Recorded with `scripts/record-showcase.sh` (`CASE=tooltip`, 120×36 at 2x scale, `FRAMES=270`, dark, lossless animated WebP, about 9 seconds plus a 2-second hold).
 
+### HexViewer
+
+A firmware inspector: the cursor walks the image header byte by byte, a shift-selection takes the four-byte version and then a section name, pages jump into the boot log strings and the vector table, and a mouse-wheel scroll moves the view while the cursor stays put. The viewer draws only the visible rows of a 4 KB image, colors bytes by kind, and the inspector pane reads the values under the cursor.
+
+<img src="docs/media/hex-viewer.webp" alt="HexViewer: a cursor and selection moving through a firmware image in the dark theme" width="1028">
+
+Screenshot: [docs/media/hex-viewer.png](docs/media/hex-viewer.png). Recorded with `scripts/record-showcase.sh` (`CASE=hex-viewer`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
 ### Accordion
 
 A pipeline settings screen: sections with a caret, a title, and a badge open and close one after another, each body growing and shrinking through a reveal fraction the app raises and lowers every tick. The accordion draws the headers and gives back the body rectangles, so the app fills them with its own content, and the summary pane follows the focused section.
