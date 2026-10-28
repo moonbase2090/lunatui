@@ -10,7 +10,8 @@ use std::time::{Duration, Instant};
 
 use lunatui_bench::widget_suite::{CASES, Case, pin_color_output};
 use lunatui_core::{
-    Attrs, ClusterTable, Color, Grid, Rect, Style, clip_display_prefix, width as cols,
+    Attrs, ClusterTable, Color, Grid, Rect, Style, UnderlineStyle, clip_display_prefix,
+    width as cols,
 };
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
