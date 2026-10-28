@@ -6,7 +6,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 - [`Widget`](src/widget.rs): `render(&self, area, &mut RenderCx)` and `measure(&self, avail: Size) -> Size`.
 - [`RenderCx`](src/render_cx.rs): grid, cluster table, and theme for token-aware drawing. Optional `color-profiles` feature adds `profile` for ANSI16/256 downsampling in `token`.
-- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `markdown`, `sparkline`, and `toast` forward it. `line-gauge` reserves the same feature.
+- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `markdown`, `sparkline`, and `radio`, `toast` forward it. `line-gauge` reserves the same feature.
 - `KeyHintBar` is behind the `key-hints` feature. Construct it from the keymap active for the current screen or mode; it renders the first chord registered for each command.
 - [`Size`](https://docs.rs/lunatui-core/latest/lunatui_core/struct.Size.html) lives in `lunatui-core` and is re-exported here.
 
@@ -31,6 +31,8 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 `SplitTree` holds nested splits: each divides its area between two panes or further splits at a ratio (in thousandths) with optional minimum sizes, and one pane can be zoomed to fill everything. `layout` returns each pane's cells and each divider's one-cell line for drawing and hit testing, `SplitDrag` turns pointer press, drag, and release on a divider into cell-exact resizing that stops at the minimums (and can cancel), and `SplitLayout::render_dividers` draws the lines.
 
 `Canvas` is behind the `canvas` feature. It is a free-form drawing surface: a paint closure draws `canvas::Line`, `Rectangle`, `Circle`, and `Points` shapes (or its own `Shape`) in coordinates of your choosing, starts new layers with `Context::layer`, and prints labels with `Context::print`. Lines use braille's 2×4 sub-cell grid by default for fine detail; `Context::marker` switches individual shapes to another marker, such as half blocks or blocks for filled regions. Other markers are sextant, quadrant, and dot. Shapes are clipped to the bounds, every cell of the area is rewritten, and a `background` keeps a panel color.
+
+`RadioGroup` is behind the `radio` feature. It draws a group of options of which at most one is selected (`◉` and `○`), one per row or side by side with a gap, with the focused option in the focus ring color with a bold label, per-option and whole-group disabling, and `option_areas` for hit testing. `RadioGroup::step` moves the selection with the keyboard, wrapping around and skipping disabled options.
 
 `ToastStack` is behind the `toast` feature. It holds timed messages and takes the time from the caller (a `Duration`, such as a virtual clock's `now`), so expiry is deterministic. A toast is scoped to a pane (a boxed message in the pane's bottom-right corner, newest nearest the corner) or to the status rows (one line each, right aligned). `placements` returns each shown toast's cells and layer for `HitMap`, and `render` draws them with theme colors for the kind.
 

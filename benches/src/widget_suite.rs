@@ -17,8 +17,8 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
     Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize,
-    RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope,
-    ToastStack, Widget,
+    RadioGroup, RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
+    ToastScope, ToastStack, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -152,6 +152,15 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: key_hints_lunatui,
         ratatui: key_hints_ratatui,
+    },
+    Case {
+        name: "radio-group",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no radio group; its side draws the same glyphs and labels by hand, one paragraph line per option",
+        ),
+        lunatui: radio_lunatui,
+        ratatui: radio_ratatui,
     },
     Case {
         name: "calendar",
@@ -591,6 +600,44 @@ fn key_hints_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
         ),
         buf,
     );
+}
+
+const RADIO_OPTIONS: [&str; 4] = ["Small", "Medium", "Large", "Extra large"];
+
+fn radio_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    RadioGroup::new(RADIO_OPTIONS)
+        .select(Some(usize::try_from(tick / 4 % 4).unwrap_or(0)))
+        .render(area, &mut cx);
+}
+
+fn radio_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let selected = usize::try_from(tick / 4 % 4).unwrap_or(0);
+    for (index, label) in RADIO_OPTIONS.iter().enumerate() {
+        let y = area.y.saturating_add(u16::try_from(index).unwrap_or(0));
+        let (glyph, token) = if index == selected {
+            ("◉", lunatui_theme::Token::Accent)
+        } else {
+            ("○", lunatui_theme::Token::TextPrimary)
+        };
+        let line = Line::from(vec![
+            Span::styled(glyph, RatStyle::new().fg(color(token))),
+            Span::raw(" "),
+            Span::styled(
+                *label,
+                RatStyle::new().fg(color(lunatui_theme::Token::TextPrimary)),
+            ),
+        ]);
+        RatParagraph::new(line).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
 }
 
 fn tabs_lunatui(

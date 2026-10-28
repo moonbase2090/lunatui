@@ -20,8 +20,9 @@ use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
     Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
     KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
-    RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
-    Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, VecSource, Widget, WidgetState,
+    RadioFlow, RadioGroup, RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree,
+    StatusBar, TabMove, Table, Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, VecSource,
+    Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -74,6 +75,11 @@ const PREVIEWS: &[Preview] = &[
         name: "list-icons",
         native: list_icons_native,
         baseline: list_icons_baseline,
+    },
+    Preview {
+        name: "radio-group",
+        native: radio_native,
+        baseline: radio_baseline,
     },
     Preview {
         name: "calendar",
@@ -4089,6 +4095,181 @@ fn ls_detail(
 }
 
 fn list_icons_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const RD_THEME: [&str; 3] = ["Light", "Dark", "Match system"];
+const RD_SIZES: [&str; 4] = ["Small", "Medium", "Large", "Extra large"];
+const RD_CHANNELS: [&str; 3] = ["Stable", "Beta", "Nightly (unavailable)"];
+
+fn rd_groups() -> [RadioGroup; 3] {
+    [
+        RadioGroup::new(RD_THEME),
+        RadioGroup::new(RD_SIZES).flow(RadioFlow::Horizontal).gap(3),
+        RadioGroup::new(RD_CHANNELS).disabled_options([2]),
+    ]
+}
+
+fn rd_state(tick: u32) -> ([Option<usize>; 3], Option<usize>) {
+    let groups = rd_groups();
+    let mut selected = [Some(2), Some(1), Some(0)];
+    let mut focus = None;
+    for event in 0..24_u32 {
+        let at = event * 10 + 8;
+        if tick < at {
+            break;
+        }
+        let which = usize::try_from(event % 3).unwrap_or(0);
+        let forward = event % 7 != 4;
+        selected[which] = groups[which].step(selected[which], forward);
+        focus = Some(which);
+    }
+    (selected, focus)
+}
+
+fn radio_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Preferences", head);
+    let (selected, focus) = rd_state(tick);
+    let left = Rect::new(area.x + 2, area.y + 2, 60, 24);
+    rd_prefs(&mut cx, left, selected, focus, [fill, dim], accent);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        24,
+    );
+    rd_preview(&mut cx, right, selected, [fill, dim], accent);
+    StatusBar::new(" Tab next group  ●  Up/Down change option  ●  Esc close")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn rd_prefs(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    selected: [Option<usize>; 3],
+    focus: Option<usize>,
+    styles: [Style; 2],
+    accent: Color,
+) {
+    let [fill, dim] = styles;
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Appearance and updates ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(area, cx);
+    let groups = rd_groups();
+    let titles = ["Theme", "Text size", "Update channel"];
+    let notes = [
+        "Applies to every window",
+        "Used by the editor and the terminal",
+        "Nightly builds are not available on this plan",
+    ];
+    let tops = [area.y + 2, area.y + 10, area.y + 16];
+    for (index, group) in groups.into_iter().enumerate() {
+        let y = tops[index];
+        let title_style = if focus == Some(index) {
+            fill.fg(accent)
+        } else {
+            fill
+        };
+        cx.put_str(area.x + 3, y, titles[index], title_style);
+        cx.put_str(area.x + 3, y + 1, notes[index], dim);
+        let bounds = Rect::new(area.x + 3, y + 3, area.width.saturating_sub(6), 4);
+        group
+            .select(selected[index])
+            .focus(if focus == Some(index) {
+                selected[index]
+            } else {
+                None
+            })
+            .render(bounds, cx);
+    }
+}
+
+fn rd_pick(selected: [Option<usize>; 3], group: usize, names: &[&'static str]) -> &'static str {
+    selected[group]
+        .and_then(|index| names.get(index).copied())
+        .unwrap_or("none")
+}
+
+fn rd_preview(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    selected: [Option<usize>; 3],
+    styles: [Style; 2],
+    accent: Color,
+) {
+    let [fill, dim] = styles;
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Preview ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(area, cx);
+    let lines = [
+        format!("theme     {}", rd_pick(selected, 0, &RD_THEME)),
+        format!("size      {}", rd_pick(selected, 1, &RD_SIZES)),
+        format!("channel   {}", rd_pick(selected, 2, &RD_CHANNELS)),
+        String::new(),
+        String::from("use std::collections::HashMap;"),
+        String::new(),
+        String::from("fn main() {"),
+        String::from("    let greeting = \"hello\";"),
+        String::from("    let mut counts: HashMap<char, u32> = HashMap::new();"),
+        String::from("    for letter in greeting.chars() {"),
+        String::from("        *counts.entry(letter).or_insert(0) += 1;"),
+        String::from("    }"),
+        String::new(),
+        String::from("    let mut pairs: Vec<_> = counts.into_iter().collect();"),
+        String::from("    pairs.sort();"),
+        String::from("    println!(\"{pairs:?}\");"),
+        String::from("}"),
+    ];
+    for (row, line) in (0_u16..).zip(lines) {
+        let style = if row < 3 { fill } else { dim };
+        cx.put_str(
+            area.x + 2,
+            area.y + 2 + row,
+            clip_display_prefix(&line, area.width.saturating_sub(4)),
+            style,
+        );
+    }
+}
+
+fn radio_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "radio-group") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
