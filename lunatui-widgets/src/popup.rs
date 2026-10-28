@@ -281,13 +281,7 @@ impl<W: Widget> Popup<W> {
     #[must_use]
     pub fn area(&self, area: Rect) -> Rect {
         let area = clip_to_coordinates(area);
-        let inner = Size::new(area.width.saturating_sub(2), area.height.saturating_sub(2));
-        let wanted = self.size.unwrap_or_else(|| self.content.measure(inner));
-        let size = Size::new(
-            wanted.width.saturating_add(2),
-            wanted.height.saturating_add(2),
-        )
-        .clamp(Size::new(area.width, area.height));
+        let size = self.outer(area);
         let (x, y) = match self.moved {
             Some(at) => at,
             None => place(self.placement, area, size),
@@ -300,6 +294,33 @@ impl<W: Widget> Popup<W> {
             size.width,
             size.height,
         )
+    }
+
+    pub(crate) fn outer(&self, area: Rect) -> Size {
+        let inner = Size::new(area.width.saturating_sub(2), area.height.saturating_sub(2));
+        let wanted = self.size.unwrap_or_else(|| self.content.measure(inner));
+        Size::new(
+            wanted.width.saturating_add(2),
+            wanted.height.saturating_add(2),
+        )
+        .clamp(Size::new(area.width, area.height))
+    }
+
+    pub(crate) fn draw(&self, area: Rect, modal: Rect, cx: &mut RenderCx<'_>) {
+        let panel = Panel {
+            popup: self,
+            styles: self.styles(cx),
+        };
+        if self.backdrop > 0.0 {
+            let toward: Color = cx.token(Token::Surface0);
+            cx.fade_fg(area, self.backdrop, toward);
+            Overlay::new(panel, modal)
+                .backdrop(self.backdrop, toward)
+                .focus_trap(self.trap)
+                .render(area, cx);
+        } else {
+            panel.render(modal, cx);
+        }
     }
 
     /// Records where the popup is drawn inside `area` in `popup`, for dragging and moving.
@@ -384,21 +405,7 @@ impl<W: Widget> Widget for Popup<W> {
         if area.width == 0 || area.height == 0 {
             return;
         }
-        let modal = self.area(area);
-        let panel = Panel {
-            popup: self,
-            styles: self.styles(cx),
-        };
-        if self.backdrop > 0.0 {
-            let toward: Color = cx.token(Token::Surface0);
-            cx.fade_fg(area, self.backdrop, toward);
-            Overlay::new(panel, modal)
-                .backdrop(self.backdrop, toward)
-                .focus_trap(self.trap)
-                .render(area, cx);
-        } else {
-            panel.render(modal, cx);
-        }
+        self.draw(area, self.area(area), cx);
     }
 
     fn measure(&self, avail: Size) -> Size {

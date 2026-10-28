@@ -191,6 +191,14 @@ A widget catalog with live filtering: the query is typed one character at a time
 
 Screenshot: [docs/media/search-box.png](docs/media/search-box.png). Recorded with `scripts/record-showcase.sh` (`CASE=search-box`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
 
+### Popover
+
+A deploy console with a toolbar, a table of deploys and an activity log. Filter opens a status list under its button, and unticking queued drops those rows. A click on the table closes it. Sort, at the right edge, opens slid left to stay on screen, and choosing By service re-sorts the table. Columns hides the Version column, and Escape closes it. No popover covers its button.
+
+<img src="docs/media/popover.webp" alt="Popover: filter, sort and column panels opening under toolbar buttons in a deploy console, in the dark theme" width="1028">
+
+Screenshot: [docs/media/popover.png](docs/media/popover.png). Recorded with `scripts/record-showcase.sh` (`CASE=popover`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds plus a 2-second hold).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
