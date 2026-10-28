@@ -186,6 +186,14 @@ fn rat_rgb((red, green, blue): (u8, u8, u8)) -> RatColor {
     RatColor::Rgb(red, green, blue)
 }
 
+fn rat_color(color: Color) -> RatColor {
+    match color {
+        Color::Default | Color::Token(_) => RatColor::Reset,
+        Color::Indexed(index) => RatColor::Indexed(index),
+        Color::Rgb(red, green, blue) => RatColor::Rgb(red, green, blue),
+    }
+}
+
 /// Background style both sides paint the whole area with before drawing.
 #[must_use]
 pub fn base_style() -> Style {
@@ -430,8 +438,9 @@ fn key_hints_lunatui(
 }
 
 fn key_hints_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
-    let key = rat_base().fg(rat_rgb(ACCENT));
-    let title = rat_base().fg(rat_rgb(TEXT));
+    let theme = Theme::builtin(Variant::Dark);
+    let key = rat_base().fg(rat_color(theme.resolve(lunatui_theme::Token::Accent)));
+    let title = rat_base().fg(rat_color(theme.resolve(lunatui_theme::Token::TextPrimary)));
     let dim = rat_dim();
     RatParagraph::new(Line::from(Span::styled("RELEASE CONSOLE", title)))
         .style(rat_base())
