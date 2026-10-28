@@ -3,7 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{ClusterTable, Color, DecodedGlyph, Grid, Rect};
+use lunatui_core::{ClusterTable, Color, DecodedGlyph, Grid, Rect, Style};
 use lunatui_image::{Fit, ImageError, ImageId, ImageRequest, ImageSink, ImageSource};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{Image, RenderCx, Widget, WidgetState};
@@ -202,5 +202,51 @@ fn pixel_sink_receives_stable_identity_geometry_and_disabled_opacity() -> Result
         grid.get(1, 1).map(|cell| cell.glyph().decode()),
         Some(DecodedGlyph::Inline(' '))
     );
+    Ok(())
+}
+
+#[test]
+fn focused_ring_keeps_the_background_under_it() -> Result<(), ImageError> {
+    let source = ImageSource::rgba8(
+        1,
+        2,
+        vec![0, 255, 0, 255, 0, 255, 0, 255].into_boxed_slice(),
+    )?;
+    let theme = Theme::builtin(Variant::Dark);
+    let focus_ring = theme.resolve(lunatui_theme::Token::FocusRing);
+    let panel = Color::Rgb(17, 22, 49);
+    let mut grid = Grid::new(5, 4);
+    let mut clusters = ClusterTable::new();
+    grid.fill(
+        Rect::new(0, 0, 5, 4),
+        Style::new().bg(panel),
+        ' ',
+        &mut clusters,
+    );
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Image::new(source)
+        .state(WidgetState::Focused)
+        .render(Rect::new(1, 0, 3, 4), &mut cx);
+
+    for (x, y) in [
+        (1, 0),
+        (2, 0),
+        (3, 0),
+        (1, 1),
+        (3, 2),
+        (1, 3),
+        (2, 3),
+        (3, 3),
+    ] {
+        let cell = grid.get(x, y).ok_or(ImageError::Empty)?;
+        assert_eq!(cell.style().fg, focus_ring, "ring cell ({x}, {y})");
+        assert_eq!(cell.style().bg, panel, "ring cell ({x}, {y})");
+    }
+    for (x, y) in [(0, 0), (4, 3)] {
+        assert_eq!(grid.get(x, y).ok_or(ImageError::Empty)?.style().bg, panel);
+    }
+    let pixel = grid.get(2, 1).ok_or(ImageError::Empty)?;
+    assert_eq!(pixel.glyph().decode(), DecodedGlyph::Inline('▀'));
+    assert_eq!(pixel.style().bg, Color::Rgb(0, 255, 0));
     Ok(())
 }
