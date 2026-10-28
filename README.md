@@ -75,11 +75,11 @@ Screenshot: [docs/media/split.png](docs/media/split.png). Recorded with `scripts
 
 ### Canvas
 
-A monitoring wall drawn with Canvas: one radar ring and a smoothly rotating sweep, a live signal chart over a half-block filled area, and a route map with corridor rectangles, labeled waypoints, points, and a continuously moving marker. Lines and curves use braille's 2×4 sub-cell grid.
+A monitoring wall drawn with Canvas: a radar sweep over sparse half-block guides with labeled contacts, a single live signal curve, and a route map with smooth paths, outlined corridors, labeled waypoints, and a moving marker. Braille's 2×4 sub-cell grid draws curves; half-blocks keep straight guides and rectangles solid.
 
-<img src="docs/media/canvas.webp" alt="Canvas widget: a radar sweep, filled signal chart, and labeled route map in the dark theme" width="1028">
+<img src="docs/media/canvas.webp" alt="Canvas widget: a radar sweep, one signal curve, and a labeled route map in the dark theme" width="1028">
 
-Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas`, 120×36, 240-frame request at 30 fps, dark, 2× scale, lossless animated WebP, about 10 seconds; captured frames are retained).
+Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas`, 120×36, 240-frame request at 30 fps, dark, 2× scale, lossless animated WebP, about 8 seconds; captured frames are retained).
 
 ### Toast
 

@@ -50,7 +50,7 @@ impl Painter<'_> {
             return;
         }
         let tag = self.tag(style);
-        if self.marker == Marker::Braille {
+        if matches!(self.marker, Marker::Braille | Marker::Sextant) {
             self.raster
                 .segment_centered(self.window, self.marker, from, to, tag);
         } else {

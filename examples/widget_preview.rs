@@ -16,7 +16,7 @@ use lunatui_core::{
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
-use lunatui_widgets::canvas::{Circle, Line, Points, Rectangle};
+use lunatui_widgets::canvas::{Line, Points, Rectangle};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
     Breadcrumbs, Canvas, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
@@ -4349,9 +4349,7 @@ struct CanvasBoard {
     surface: Color,
     edge: Color,
     accent: Color,
-    ok: Color,
     warn: Color,
-    focus: Color,
     tick: u32,
 }
 
@@ -4362,9 +4360,7 @@ impl CanvasBoard {
             surface: cx.token(Token::Surface0),
             edge: cx.token(Token::Surface1),
             accent: cx.token(Token::Accent),
-            ok: cx.token(Token::Ok),
             warn: cx.token(Token::Warn),
-            focus: cx.token(Token::FocusRing),
             tick,
         }
     }
@@ -4388,7 +4384,7 @@ impl CanvasBoard {
         let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
         let radius = half_w.min(half_h) - 3.0;
         let sweep = f64::from(self.tick) * 0.022;
-        let (text, accent, ok, warn) = (self.text, self.accent, self.ok, self.warn);
+        let (text, accent, warn) = (self.text, self.accent, self.warn);
         let contacts: [(f64, f64, &str); 5] = [
             (0.62, 0.9, "ALPHA"),
             (0.35, 2.2, "BRAVO"),
@@ -4398,12 +4394,7 @@ impl CanvasBoard {
         ];
         Canvas::new(move |ctx| {
             let guide = Style::new().fg(text).with_attrs(Attrs::new().set_dim(true));
-            ctx.draw(&Circle {
-                x: 0.0,
-                y: 0.0,
-                radius,
-                style: guide,
-            });
+            ctx.marker(Marker::HalfBlock);
             ctx.draw(&Line {
                 x1: -radius,
                 y1: 0.0,
@@ -4419,26 +4410,17 @@ impl CanvasBoard {
                 style: guide,
             });
             ctx.layer();
-            let trail = [
-                Style::new().fg(ok).with_attrs(Attrs::new().set_dim(true)),
-                Style::new().fg(ok).with_attrs(Attrs::new().set_dim(true)),
-                Style::new()
-                    .fg(accent)
-                    .with_attrs(Attrs::new().set_dim(true)),
-                Style::new().fg(accent),
-            ];
-            for (step, style) in trail.iter().enumerate() {
-                let behind = f64::from(3_u8 - u8::try_from(step).unwrap_or(0));
-                let angle = sweep - 0.07 * behind;
-                ctx.draw(&Line {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: radius * angle.cos(),
-                    y2: radius * angle.sin(),
-                    style: *style,
-                });
-            }
+            let angle = sweep.rem_euclid(core::f64::consts::TAU);
+            ctx.marker(Marker::Sextant);
+            ctx.draw(&Line {
+                x1: 0.0,
+                y1: 0.0,
+                x2: radius * angle.cos(),
+                y2: radius * angle.sin(),
+                style: Style::new().fg(accent),
+            });
             ctx.layer();
+            ctx.marker(Marker::Dot);
             for &(distance, bearing, name) in &contacts {
                 let (x, y) = (
                     radius * distance * bearing.cos(),
@@ -4465,51 +4447,26 @@ impl CanvasBoard {
     }
 
     fn scope(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Signal / area", area, cx);
+        let inner = self.panel("Signal / live", area, cx);
         let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
         let phase = f64::from(self.tick) * 0.025;
-        let (accent, focus, edge, ok) = (self.accent, self.focus, self.edge, self.ok);
+        let accent = self.accent;
         Canvas::new(move |ctx| {
-            let wave = |x: f64, k: f64, shift: f64| (x * k + shift).sin() * half_h * 0.62;
-            let baseline = -half_h * 0.76;
-            ctx.marker(Marker::HalfBlock);
-            let mut x = -half_w;
+            let wave = |x: f64| (x * 0.11 + phase).sin() * half_h * 0.64;
+            ctx.marker(Marker::Sextant);
+            let mut previous = (-half_w, wave(-half_w));
+            let mut x = -half_w + 0.5;
             while x <= half_w {
+                let point = (x, wave(x));
                 ctx.draw(&Line {
-                    x1: x,
-                    y1: baseline,
-                    x2: x,
-                    y2: wave(x, 0.11, phase),
-                    style: Style::new().fg(ok).with_attrs(Attrs::new().set_dim(true)),
+                    x1: previous.0,
+                    y1: previous.1,
+                    x2: point.0,
+                    y2: point.1,
+                    style: Style::new().fg(accent),
                 });
-                x += 1.0;
-            }
-            ctx.marker(Marker::Braille);
-            ctx.draw(&Line {
-                x1: -half_w,
-                y1: baseline,
-                x2: half_w,
-                y2: baseline,
-                style: Style::new().fg(edge),
-            });
-            for (frequency, shift, gain, color) in [
-                (0.11, phase, 1.0, accent),
-                (0.19, -phase * 1.4, 0.55, focus),
-            ] {
-                let mut previous = (-half_w, wave(-half_w, frequency, shift) * gain);
-                let mut x = -half_w + 0.5;
-                while x <= half_w {
-                    let point = (x, wave(x, frequency, shift) * gain);
-                    ctx.draw(&Line {
-                        x1: previous.0,
-                        y1: previous.1,
-                        x2: point.0,
-                        y2: point.1,
-                        style: Style::new().fg(color),
-                    });
-                    previous = point;
-                    x += 0.5;
-                }
+                previous = point;
+                x += 0.5;
             }
             ctx.print(
                 -half_w + 1.0,
@@ -4552,6 +4509,7 @@ impl CanvasBoard {
             route[segment].1 + (route[segment + 1].1 - route[segment].1) * fraction,
         );
         Canvas::new(move |ctx| {
+            ctx.marker(Marker::HalfBlock);
             ctx.draw(&Rectangle {
                 x: -half_w * 0.92,
                 y: -half_h * 0.82,
@@ -4573,6 +4531,8 @@ impl CanvasBoard {
                 height: half_h * 0.30,
                 style: Style::new().fg(edge),
             });
+            ctx.layer();
+            ctx.marker(Marker::Sextant);
             for pair in route.windows(2) {
                 ctx.draw(&Line {
                     x1: pair[0].0,
@@ -4582,6 +4542,8 @@ impl CanvasBoard {
                     style: Style::new().fg(accent),
                 });
             }
+            ctx.layer();
+            ctx.marker(Marker::Dot);
             for (index, &(x, y)) in route.iter().enumerate() {
                 ctx.draw(&Points {
                     coords: &[(x, y)],

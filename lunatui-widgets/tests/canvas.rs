@@ -69,7 +69,39 @@ fn braille_line_ties_stay_centered_on_a_shallow_slope() {
         });
     });
 
-    assert_eq!(rows, ["⠙⠲⠄", "   "]);
+    assert_eq!(rows, ["⠉⠢⠄", "   "]);
+}
+
+#[test]
+fn braille_lines_keep_one_dot_per_major_tick_when_reversed() {
+    let render = |reverse: bool| {
+        show(Marker::Braille, ([0.0, 4.0], [0.0, 2.0]), (5, 2), |ctx| {
+            let (from, to) = if reverse {
+                ((4.0, 2.0), (0.0, 0.0))
+            } else {
+                ((0.0, 0.0), (4.0, 2.0))
+            };
+            ctx.draw(&Line {
+                x1: from.0,
+                y1: from.1,
+                x2: to.0,
+                y2: to.1,
+                style: Style::new(),
+            });
+        })
+    };
+    let dots = |rows: &[String]| {
+        rows.iter()
+            .flat_map(|row| row.chars())
+            .filter(|glyph| *glyph >= '\u{2800}' && *glyph <= '\u{28ff}')
+            .map(|glyph| (u32::from(glyph) - 0x2800).count_ones())
+            .sum::<u32>()
+    };
+
+    let forward = render(false);
+    let backward = render(true);
+    assert_eq!(forward, backward);
+    assert_eq!(dots(&forward), 10);
 }
 
 #[test]

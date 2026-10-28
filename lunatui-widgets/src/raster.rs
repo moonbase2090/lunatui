@@ -202,19 +202,9 @@ impl Raster {
             };
             let sy = if y0 < y1 { 1 } else { -1 };
             for offset in 0..=dx {
-                let numerator = offset * dy;
-                let minor = numerator / dx;
-                let remainder = numerator % dx;
                 let x = x0 + offset;
-                let y = y0 + sy * minor;
-                match (2 * remainder).cmp(&dx) {
-                    core::cmp::Ordering::Less => self.mark(marker, x, y, series),
-                    core::cmp::Ordering::Equal => {
-                        self.mark(marker, x, y, series);
-                        self.mark(marker, x, y + sy, series);
-                    }
-                    core::cmp::Ordering::Greater => self.mark(marker, x, y + sy, series),
-                }
+                let minor = round_ratio_to_even(offset * dy, dx);
+                self.mark(marker, x, y0 + sy * minor, series);
             }
         } else {
             let ((x0, y0), (x1, _y1)) = if y0 > y1 {
@@ -224,19 +214,10 @@ impl Raster {
             };
             let sx = if x0 < x1 { 1 } else { -1 };
             for offset in 0..=dy {
-                let numerator = offset * dx;
-                let minor = numerator / dy;
-                let remainder = numerator % dy;
+                let minor = round_ratio_to_even(offset * dx, dy);
                 let x = x0 + sx * minor;
                 let y = y0 + offset;
-                match (2 * remainder).cmp(&dy) {
-                    core::cmp::Ordering::Less => self.mark(marker, x, y, series),
-                    core::cmp::Ordering::Equal => {
-                        self.mark(marker, x, y, series);
-                        self.mark(marker, x + sx, y, series);
-                    }
-                    core::cmp::Ordering::Greater => self.mark(marker, x + sx, y, series),
-                }
+                self.mark(marker, x, y, series);
             }
         }
     }
@@ -290,6 +271,17 @@ impl Raster {
                 error += 2 * dx;
             }
         }
+    }
+}
+
+#[cfg(feature = "canvas")]
+fn round_ratio_to_even(numerator: i64, denominator: i64) -> i64 {
+    let quotient = numerator / denominator;
+    let remainder = numerator % denominator;
+    match (remainder * 2).cmp(&denominator) {
+        core::cmp::Ordering::Less => quotient,
+        core::cmp::Ordering::Greater => quotient + 1,
+        core::cmp::Ordering::Equal => quotient + (quotient % 2),
     }
 }
 

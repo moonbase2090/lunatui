@@ -80,7 +80,7 @@ fn non_braille_shapes_match_the_reference_canvas() {
         for bounds in [([0.0, 20.0], [0.0, 10.0]), ([-10.0, 10.0], [-5.0, 5.0])] {
             for (marker, rat_marker) in markers()
                 .into_iter()
-                .filter(|(marker, _)| *marker != Marker::Braille)
+                .filter(|(marker, _)| !matches!(marker, Marker::Braille | Marker::Sextant))
             {
                 let ours_rows = ours(marker, bounds, size, |ctx| {
                     ctx.draw(&Rectangle {
