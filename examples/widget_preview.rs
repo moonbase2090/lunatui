@@ -31,6 +31,8 @@ mod canvas_showcase;
 mod deploy_board;
 #[path = "release_console.rs"]
 mod release_console;
+#[path = "tooltip_showcase.rs"]
+mod tooltip_showcase;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
@@ -82,6 +84,11 @@ const PREVIEWS: &[Preview] = &[
         name: "toggle",
         native: toggle_native,
         baseline: toggle_baseline,
+    },
+    Preview {
+        name: "tooltip",
+        native: tooltip_showcase::render,
+        baseline: tooltip_baseline,
     },
     Preview {
         name: "radio-group",
@@ -4300,6 +4307,12 @@ fn toggle_native(
             ),
             &mut cx,
         );
+}
+
+fn tooltip_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "tooltip") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn toggle_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {

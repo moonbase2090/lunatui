@@ -18,7 +18,7 @@ use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
     Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph,
     PixelSize, Popup, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, Sparkline, SplitAxis,
-    SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Widget,
+    SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -176,6 +176,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: toggle_lunatui,
         ratatui: toggle_ratatui,
+    },
+    Case {
+        name: "tooltip",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no tooltip; its side fills the rectangle Tooltip::area picks and prints the padded hint with a Paragraph",
+        ),
+        lunatui: tooltip_lunatui,
+        ratatui: tooltip_ratatui,
     },
     Case {
         name: "radio-group",
@@ -814,6 +823,79 @@ fn form_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             ),
             buf,
         );
+    }
+}
+
+const TOOLBAR: [(&str, &str); 4] = [
+    ("Save", "Save the open file"),
+    ("Open", "Open a file from disk"),
+    ("Find", "Search every open file"),
+    ("Close", "Close the current tab"),
+];
+
+fn toolbar_slots(area: Rect) -> impl Iterator<Item = (Rect, &'static str, &'static str)> {
+    let mut x = area.x;
+    TOOLBAR.iter().map(move |&(label, tip)| {
+        let width = u16::try_from(label.len()).unwrap_or(0).saturating_add(2);
+        let slot = Rect::new(x, area.y, width, 1);
+        x = x.saturating_add(width).saturating_add(1);
+        (slot, label, tip)
+    })
+}
+
+fn toolbar_hovered(tick: u32) -> usize {
+    usize::try_from(tick / 6).unwrap_or(0) % TOOLBAR.len()
+}
+
+fn tooltip_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let hovered = toolbar_hovered(tick);
+    let mut shown = None;
+    for (index, (slot, label, tip)) in toolbar_slots(area).enumerate() {
+        Paragraph::new(label).render(
+            Rect::new(slot.x.saturating_add(1), slot.y, slot.width - 2, 1),
+            &mut cx,
+        );
+        if index == hovered {
+            shown = Some(Tooltip::new(tip, slot));
+        }
+    }
+    if let Some(tooltip) = shown {
+        tooltip.render(area, &mut cx);
+    }
+}
+
+fn tooltip_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let screen = Rect::new(area.x, area.y, area.width, area.height);
+    let hovered = toolbar_hovered(tick);
+    for (index, (slot, label, tip)) in toolbar_slots(screen).enumerate() {
+        RatParagraph::new(label).render(
+            RatRect::new(slot.x.saturating_add(1), slot.y, slot.width - 2, 1),
+            buf,
+        );
+        if index != hovered {
+            continue;
+        }
+        if let Some(bubble) = Tooltip::new(tip, slot).area(screen) {
+            RatParagraph::new(format!(" {tip}"))
+                .style(
+                    RatStyle::new()
+                        .fg(color(lunatui_theme::Token::TextPrimary))
+                        .bg(color(lunatui_theme::Token::Surface1)),
+                )
+                .render(
+                    RatRect::new(bubble.x, bubble.y, bubble.width, bubble.height),
+                    buf,
+                );
+        }
     }
 }
 
