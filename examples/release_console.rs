@@ -4,8 +4,8 @@
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Size, Style, clip_display_prefix};
 use lunatui_theme::{Theme, Token};
 use lunatui_widgets::{
-    Block, BorderType, Placement, Popup, PopupState, RenderCx, ScrollView, ScrollViewState, Widget,
-    WidgetState,
+    Alignment, Block, BorderType, Placement, Popup, PopupState, RenderCx, ScrollView,
+    ScrollViewState, Spinner, SpinnerPreset, StatusBar, TitlePosition, Widget, WidgetState,
 };
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Position as RatPosition, Rect as RatRect, Size as RatSize};
@@ -32,7 +32,6 @@ const CONFIRM: u32 = 204;
 const ALERTS_OPEN: u32 = 228;
 const ALERTS_SCROLL: u32 = 244;
 const ALERTS_CLOSE: u32 = 288;
-const SPIN: [&str; 8] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
 
 const COMPONENTS: [&str; 6] = ["api", "web", "worker", "edge", "db", "queue"];
 const MESSAGES: [&str; 9] = [
@@ -238,19 +237,22 @@ impl Widget for LogPage {
             let (stamp, level, component, text) = log_line(row);
             let y = area.y + row;
             let fresh = row >= BASE_LINES;
-            cx.put_str(
+            styled(
+                cx,
                 area.x,
                 y,
                 &stamp,
                 Style::new().fg(ink.text).with_attrs(dim()),
             );
-            cx.put_str(
+            styled(
+                cx,
                 area.x + 13,
                 y,
                 level,
                 Style::new().fg(ink.level(level)).with_attrs(bold()),
             );
-            cx.put_str(
+            styled(
+                cx,
                 area.x + 18,
                 y,
                 &format!("{component:<6}"),
@@ -261,7 +263,7 @@ impl Widget for LogPage {
             } else {
                 Style::new().fg(ink.text)
             };
-            cx.put_str(area.x + 25, y, &text, style);
+            styled(cx, area.x + 25, y, &text, style);
         }
     }
 
@@ -339,15 +341,16 @@ impl Widget for AlertList {
         let ink = self.ink;
         for (row, (level, service, text)) in (0_u16..).zip(ALERTS).take(usize::from(area.height)) {
             let y = area.y + row;
-            cx.put_str(area.x + 1, y, "●", Style::new().fg(ink.level(level)));
-            cx.put_str(
+            styled(cx, area.x + 1, y, "●", Style::new().fg(ink.level(level)));
+            styled(
+                cx,
                 area.x + 3,
                 y,
                 level,
                 Style::new().fg(ink.level(level)).with_attrs(bold()),
             );
-            cx.put_str(area.x + 8, y, service, Style::new().fg(ink.accent));
-            cx.put_str(area.x + 15, y, text, Style::new().fg(ink.text));
+            styled(cx, area.x + 8, y, service, Style::new().fg(ink.accent));
+            styled(cx, area.x + 15, y, text, Style::new().fg(ink.text));
         }
     }
 
@@ -356,12 +359,24 @@ impl Widget for AlertList {
     }
 }
 
+fn styled(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, style: Style) {
+    let columns = u16::try_from(lunatui_core::width(text)).unwrap_or(u16::MAX);
+    StatusBar::new(text)
+        .style(style)
+        .render(Rect::new(x, y, columns, 1), cx);
+}
+
+fn paint(cx: &mut RenderCx<'_>, area: Rect, style: Style) {
+    Block::new().style(style).render(area, cx);
+}
+
 fn put(cx: &mut RenderCx<'_>, area: Rect, row: u16, col: u16, text: &str, style: Style) {
     if row >= area.height || col >= area.width {
         return;
     }
     let room = area.width - col;
-    cx.put_str(
+    styled(
+        cx,
         area.x + col,
         area.y + row,
         clip_display_prefix(text, room),
@@ -386,7 +401,7 @@ fn key_for(tick: u32) -> Option<&'static str> {
 
 fn draw_header(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32) {
     let bar = Style::new().fg(ink.text).bg(ink.raised);
-    cx.set_style(Rect::new(area.x, area.y, area.width, 1), bar);
+    paint(cx, Rect::new(area.x, area.y, area.width, 1), bar);
     let shipping = tick >= CONFIRM;
     let (badge, color) = if shipping && appended(tick) < DEPLOY_LINES {
         (" rolling ", ink.warn)
@@ -395,15 +410,17 @@ fn draw_header(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32) {
     } else {
         (" staged ", ink.accent)
     };
-    cx.put_str(
+    styled(
+        cx,
         area.x + 1,
         area.y,
         badge,
         Style::new().fg(ink.surface).bg(color).with_attrs(bold()),
     );
     let after = area.x + 2 + u16::try_from(badge.len()).unwrap_or(0);
-    cx.put_str(after, area.y, "release console", bar.with_attrs(bold()));
-    cx.put_str(
+    styled(cx, after, area.y, "release console", bar.with_attrs(bold()));
+    styled(
+        cx,
         after + 16,
         area.y,
         "build 4812 / prod",
@@ -413,7 +430,8 @@ fn draw_header(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32) {
     let clock = format!("12:04:{seconds:02}");
     let x = area.x + area.width.saturating_sub(10);
     if x > after + 40 {
-        cx.put_str(
+        styled(
+            cx,
             x,
             area.y,
             &clock,
@@ -435,7 +453,7 @@ fn chip_rect(area: Rect) -> Rect {
 fn draw_keys(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32) {
     let y = area.y + area.height - 1;
     let bar = Style::new().fg(ink.text).bg(ink.raised);
-    cx.set_style(Rect::new(area.x, y, area.width, 1), bar);
+    paint(cx, Rect::new(area.x, y, area.width, 1), bar);
     let keys = [
         ("j", "scroll"),
         ("l", "pan"),
@@ -465,9 +483,9 @@ fn draw_keys(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32) {
                 .bg(ink.raised)
                 .with_attrs(bold())
         };
-        cx.put_str(x, y, &format!(" {key} "), style);
+        styled(cx, x, y, &format!(" {key} "), style);
         let at = x + u16::try_from(key.len() + 2).unwrap_or(0);
-        cx.put_str(at, y, label, bar.with_attrs(dim()));
+        styled(cx, at, y, label, bar.with_attrs(dim()));
         x += used + 1;
     }
     let open = (ALERTS_OPEN..ALERTS_CLOSE).contains(&tick);
@@ -476,7 +494,7 @@ fn draw_keys(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32) {
     } else {
         Style::new().fg(ink.warn).bg(ink.raised).with_attrs(bold())
     };
-    cx.put_str(chip.x, chip.y, " ▲ 12 alerts", style);
+    styled(cx, chip.x, chip.y, " ▲ 12 alerts", style);
 }
 
 fn draw_services(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32) {
@@ -495,20 +513,26 @@ fn draw_services(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32) {
             break;
         }
         let ready_at = 3 + index * 3;
-        let (glyph, color, version) = if tick < CONFIRM || service.from == "4812" {
-            (
-                "●",
-                if index == 4 { ink.accent } else { ink.ok },
-                service.from,
-            )
-        } else if done >= ready_at {
-            ("●", ink.ok, "4812")
-        } else {
-            let frame = usize::try_from(tick / 2).unwrap_or(0) % SPIN.len();
-            (SPIN[frame], ink.warn, "4812")
-        };
         let base = Style::new().bg(ink.surface);
-        put(cx, inner, row, 1, glyph, base.fg(color));
+        let rolling = tick >= CONFIRM && service.from != "4812" && done < ready_at;
+        let version = if tick < CONFIRM || service.from == "4812" {
+            service.from
+        } else {
+            "4812"
+        };
+        if rolling {
+            Spinner::new(tick / 2)
+                .preset(SpinnerPreset::DOTS)
+                .style(base.fg(ink.warn))
+                .render(Rect::new(inner.x + 1, inner.y + row, 1, 1), cx);
+        } else {
+            let color = if tick < CONFIRM && index == 4 {
+                ink.accent
+            } else {
+                ink.ok
+            };
+            put(cx, inner, row, 1, "●", base.fg(color));
+        }
         put(
             cx,
             inner,
@@ -559,7 +583,6 @@ fn draw_log(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32, focused: boo
         .style(Style::new().fg(ink.text).bg(ink.surface))
         .border_style(line)
         .title_style(line.with_attrs(bold()));
-    block.render(area, cx);
     let inner = block.inner(area);
     let view = ScrollView::new(LogPage { ink, lines, shown }, Size::new(LOG_WIDTH, lines)).state(
         if focused {
@@ -573,13 +596,9 @@ fn draw_log(cx: &mut RenderCx<'_>, ink: Ink, area: Rect, tick: u32, focused: boo
     let total = BASE_LINES + shown;
     let last = (y + inner.height).min(total);
     let position = format!(" {}-{last} of {total}  col {x} ", y + 1);
-    let at = area.x
-        + area
-            .width
-            .saturating_sub(u16::try_from(position.len()).unwrap_or(0) + 2);
-    if at > area.x + 16 {
-        cx.put_str(at, area.y, &position, line);
-    }
+    block
+        .title_at(position, TitlePosition::Top, Alignment::Right, line)
+        .render(area, cx);
     view.scroll(&scroll).render(inner, cx);
 }
 

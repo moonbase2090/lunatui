@@ -150,8 +150,9 @@ impl ScrollViewState {
 ///
 /// The content widget draws into an offscreen grid of `size` cells, and the visible part is
 /// copied into the area. Cells the content leaves without a background show the background
-/// under the view. Only the rows and columns up to the bottom right of the visible part are
-/// kept, so a tall document costs memory for what has been scrolled past, not for all of it.
+/// under the view, and the part of the viewport past the content is cleared to blanks the same
+/// way. Only the rows and columns up to the bottom right of the visible part are kept, so a tall
+/// document costs memory for what has been scrolled past, not for all of it.
 ///
 /// Scrollbars take the right column and the bottom row. Their colors come from theme tokens and
 /// the [`WidgetState`]: the track is `surface.1`, and the thumb is `accent`, `focus.ring` when
@@ -317,16 +318,14 @@ impl<W: Widget> Widget for ScrollView<W> {
         let viewport = self.viewport(area);
         let x = self.x.min(self.size.width.saturating_sub(viewport.width));
         let y = self.y.min(self.size.height.saturating_sub(viewport.height));
-        let shown = Rect::new(
-            x,
-            y,
-            viewport.width.min(self.size.width - x),
-            viewport.height.min(self.size.height - y),
-        );
-        if shown.width > 0 && shown.height > 0 {
-            let mut canvas = Grid::new(x + shown.width, y + shown.height);
+        if viewport.width > 0 && viewport.height > 0 {
+            let mut canvas = Grid::new(
+                x.saturating_add(viewport.width),
+                y.saturating_add(viewport.height),
+            );
             let full = Rect::new(0, 0, self.size.width, self.size.height);
             cx.offscreen(&mut canvas, |inner| self.content.render(full, inner));
+            let shown = Rect::new(x, y, viewport.width, viewport.height);
             cx.blit(&canvas, shown, area.x, area.y);
         }
         let (track, thumb) = self.bar_styles(cx, (area.x + area.width - 1, area.y));

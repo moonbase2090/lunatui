@@ -343,3 +343,25 @@ fn content_exactly_as_wide_as_the_area_needs_no_horizontal_scrollbar() {
     let view = ScrollView::new(Letters, Size::new(4, 3));
     assert_eq!(rows(&view, 4, 4), ["ABCD", "EFGH", "IJKL", "    "]);
 }
+
+#[test]
+fn a_viewport_past_the_content_is_cleared_and_keeps_its_background() -> Result<(), &'static str> {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(6, 3);
+    let mut clusters = ClusterTable::new();
+    let surface = Style::new().bg(Color::Rgb(40, 50, 60));
+    grid.fill(Rect::new(0, 0, 6, 3), surface, ' ', &mut clusters);
+    let area = Rect::new(0, 0, 6, 3);
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    letters()
+        .scrollbars(ScrollbarVisibility::Never)
+        .render(area, &mut cx);
+    ScrollView::new(Letters, Size::new(2, 1)).render(area, &mut cx);
+    let shown: Vec<String> = (0..3).map(|row| grid.row_display(row, &clusters)).collect();
+    assert_eq!(shown, ["AB    ", "      ", "      "]);
+    assert_eq!(
+        grid.get(4, 2).ok_or("missing cell")?.style().bg,
+        Color::Rgb(40, 50, 60)
+    );
+    Ok(())
+}
