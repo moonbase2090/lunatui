@@ -12,6 +12,8 @@ mod borders;
 mod breadcrumbs;
 #[cfg(feature = "calendar")]
 mod calendar;
+#[cfg(feature = "chart")]
+mod chart;
 mod gauge;
 #[cfg(feature = "image")]
 mod image;
@@ -48,6 +50,8 @@ pub use borders::{BorderType, Borders};
 pub use breadcrumbs::Breadcrumbs;
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
+#[cfg(feature = "chart")]
+pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition, Marker};
 pub use gauge::Gauge;
 #[cfg(feature = "image")]
 pub use image::Image;
