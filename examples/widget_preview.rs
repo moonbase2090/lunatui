@@ -21,9 +21,9 @@ use lunatui_widgets::{
     Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId,
     FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState, KeyHintBar,
     LegendPosition, List, MarkdownView, Marker, Monthly, NumberInput, PaneId, Paragraph, PixelSize,
-    RadioFlow, RadioGroup, RenderCx, Scrollbar, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
-    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
-    Toggle, VecSource, Widget, WidgetState,
+    ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch,
+    Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag,
+    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -102,6 +102,11 @@ const PREVIEWS: &[Preview] = &[
         baseline: form_baseline,
     },
     Preview {
+        name: "progress-bar",
+        native: progress_native,
+        baseline: progress_baseline,
+    },
+    Preview {
         name: "accordion",
         native: accordion_native,
         baseline: accordion_baseline,
@@ -120,6 +125,11 @@ const PREVIEWS: &[Preview] = &[
         name: "number-input",
         native: number_native,
         baseline: number_baseline,
+    },
+    Preview {
+        name: "search-box",
+        native: search_native,
+        baseline: search_baseline,
     },
     Preview {
         name: "calendar",
@@ -5326,6 +5336,389 @@ fn ac_summary(cx: &mut RenderCx<'_>, right: Rect, tick: u32, theme: &Theme, styl
 }
 
 fn accordion_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const PG_STAGES: [(&str, u32, u32); 5] = [
+    ("Checkout", 0, 40),
+    ("Compile", 30, 110),
+    ("Test suites", 100, 80),
+    ("Package", 170, 30),
+    ("Upload", 195, 45),
+];
+
+fn pg_progress(tick: u32, start: u32, span: u32) -> f64 {
+    if tick <= start {
+        0.0
+    } else {
+        f64::from((tick - start).min(span)) / f64::from(span)
+    }
+}
+
+fn pg_bar(index: usize, tick: u32) -> ProgressBar<'static> {
+    let (_, start, span) = PG_STAGES[index];
+    let done = pg_progress(tick, start, span);
+    match index {
+        1 => ProgressBar::new()
+            .segment(0.5_f64.min(done), ProgressTone::Accent)
+            .segment((done - 0.5).max(0.0) * 0.9, ProgressTone::Ok)
+            .segment(if done >= 1.0 { 0.04 } else { 0.0 }, ProgressTone::Fail),
+        2 => ProgressBar::new()
+            .segment(done * 0.78, ProgressTone::Ok)
+            .segment(done * 0.15, ProgressTone::Warn)
+            .segment(
+                if done > 0.6 { (done - 0.6) * 0.1 } else { 0.0 },
+                ProgressTone::Fail,
+            ),
+        4 if done > 0.0 && done < 1.0 => ProgressBar::new().indeterminate(tick),
+        4 if done >= 1.0 => ProgressBar::new().segment(1.0, ProgressTone::Ok),
+        _ => ProgressBar::new().segment(done, ProgressTone::Ok),
+    }
+}
+
+fn progress_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Release pipeline  ·  lunatui v0.1.15",
+        head,
+    );
+    let left = Rect::new(area.x + 2, area.y + 2, 74, 24);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        24,
+    );
+    for (title, pane) in [(" Stages ", left), (" Log ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    pg_stages(&mut cx, left, tick, [fill, dim]);
+    pg_log(&mut cx, right, tick, [fill, dim]);
+    let total: f64 = (0..PG_STAGES.len())
+        .map(|i| pg_progress(tick, PG_STAGES[i].1, PG_STAGES[i].2))
+        .sum::<f64>()
+        / 5.0;
+    let overall = Rect::new(area.x + 2, left.y + 25, area.width.saturating_sub(4), 1);
+    ProgressBar::new()
+        .ratio(total)
+        .label("Overall ")
+        .show_percent(true)
+        .render(overall, &mut cx);
+    StatusBar::new(" r rerun stage  ●  l follow log  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn pg_stages(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {
+    let [fill, dim] = styles;
+    let notes = [
+        "14 files",
+        "412 of 760 crates cached",
+        "1,087 tests",
+        "2 artifacts",
+        "uploading to the release",
+    ];
+    for (index, (name, start, span)) in PG_STAGES.iter().enumerate() {
+        let y = area.y + 2 + u16::try_from(index).unwrap_or(0) * 4;
+        let done = pg_progress(tick, *start, *span);
+        let state = if done >= 1.0 && index != 4 {
+            "done"
+        } else if done > 0.0 {
+            "running"
+        } else {
+            "waiting"
+        };
+        cx.put_str(area.x + 3, y, name, fill);
+        cx.put_str(
+            area.x + 3 + 56,
+            y,
+            state,
+            if state == "running" { fill } else { dim },
+        );
+        pg_bar(index, tick)
+            .show_percent(index != 4)
+            .render(Rect::new(area.x + 3, y + 1, area.width - 6, 1), cx);
+        cx.put_str(area.x + 3, y + 2, notes[index], dim);
+    }
+}
+
+fn pg_log(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {
+    let [fill, dim] = styles;
+    let lines = [
+        "checkout main @ 7577d26",
+        "fetch 14 files",
+        "cargo build --release",
+        "compiling lunatui-widgets",
+        "compiling lunatui-runtime",
+        "cargo test --workspace",
+        "test form ... ok",
+        "test slider ... ok",
+        "test toast ... ok",
+        "1 warning: unused import",
+        "package lunatui-0.1.15.crate",
+        "upload release assets",
+    ];
+    let shown = usize::try_from(tick / 20).unwrap_or(0).min(lines.len());
+    for (row, line) in (0_u16..).zip(&lines[..shown]) {
+        let style = if row + 1 == u16::try_from(shown).unwrap_or(0) {
+            fill
+        } else {
+            dim
+        };
+        cx.put_str(
+            area.x + 2,
+            area.y + 1 + row,
+            clip_display_prefix(
+                &format!("{:02}  {line}", row + 1),
+                area.width.saturating_sub(4),
+            ),
+            style,
+        );
+    }
+}
+
+fn progress_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const SB_ITEMS: [(&str, &str); 22] = [
+    ("Accordion", "collapsible sections"),
+    ("Breadcrumbs", "path segments"),
+    ("Calendar", "month grid"),
+    ("Canvas", "braille and block drawing"),
+    ("Chart", "lines, scatter, bars"),
+    ("Form", "labelled fields"),
+    ("Gauge", "filled ratio"),
+    ("Key hint bar", "shortcut footer"),
+    ("List", "scrolling rows"),
+    ("Markdown view", "rendered text"),
+    ("Number input", "spin box"),
+    ("Progress bar", "eighth blocks"),
+    ("Radio group", "one of many"),
+    ("Scroll view", "clipped content"),
+    ("Slider", "draggable value"),
+    ("Sparkline", "tiny trend"),
+    ("Split view", "draggable divider"),
+    ("Table", "rows and columns"),
+    ("Tabs", "pill tabs"),
+    ("Toast stack", "timed messages"),
+    ("Toggle", "on and off switch"),
+    ("Tooltip", "hint by an anchor"),
+];
+
+const SB_TYPING: [(u32, &str); 16] = [
+    (0, ""),
+    (20, "s"),
+    (26, "sl"),
+    (32, "sli"),
+    (38, "slid"),
+    (70, "sli"),
+    (74, "sl"),
+    (78, "s"),
+    (82, ""),
+    (100, "o"),
+    (106, "on"),
+    (112, "on "),
+    (118, "on s"),
+    (124, "on sw"),
+    (170, ""),
+    (190, "ta"),
+];
+
+fn sb_query(tick: u32) -> &'static str {
+    SB_TYPING
+        .iter()
+        .rev()
+        .find(|(at, _)| tick >= *at)
+        .map_or("", |(_, query)| *query)
+}
+
+fn sb_active(tick: u32, total: usize) -> Option<usize> {
+    let steps = [200, 212, 224].iter().filter(|at| tick >= **at).count();
+    (steps > 0 && total > 0).then(|| (steps - 1) % total)
+}
+
+fn sb_texts() -> Vec<String> {
+    SB_ITEMS
+        .iter()
+        .map(|(name, note)| format!("{name:<16}{note}"))
+        .collect()
+}
+
+fn search_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Widget catalog  ·  lunatui", head);
+    let left = Rect::new(area.x + 2, area.y + 2, 62, 30);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        30,
+    );
+    for (title, pane) in [(" Widgets ", left), (" Details ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let query = sb_query(tick);
+    let texts = sb_texts();
+    let found = SearchBox::filter(&texts, query);
+    let active = sb_active(tick, found.len());
+    SearchBox::new(query, query.len())
+        .placeholder("Filter widgets")
+        .matches(active, found.len())
+        .state(WidgetState::Focused)
+        .render(
+            Rect::new(left.x + 2, left.y + 1, left.width - 4, 1),
+            &mut cx,
+        );
+    sb_list(&mut cx, left, &texts, &found, active, [fill, dim]);
+    sb_details(&mut cx, right, found.get(active.unwrap_or(0)), [fill, dim]);
+    StatusBar::new(" type to filter  ●  n next  N previous  ●  esc clear  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn sb_list(
+    cx: &mut RenderCx<'_>,
+    pane: Rect,
+    texts: &[String],
+    found: &[SearchMatch],
+    active: Option<usize>,
+    styles: [Style; 2],
+) {
+    let [fill, _] = styles;
+    let accent = cx.token(Token::Accent);
+    let raised = cx.token(Token::Surface1);
+    if found.is_empty() {
+        cx.put_str(
+            pane.x + 3,
+            pane.y + 4,
+            "No widget matches that filter.",
+            styles[1],
+        );
+        return;
+    }
+    for (row, hit) in (0_u16..).zip(found) {
+        let y = pane.y + 4 + row;
+        let current = active == Some(usize::from(row));
+        let base = if current { fill.bg(raised) } else { fill };
+        if current {
+            cx.put_str(
+                pane.x + 1,
+                y,
+                &" ".repeat(usize::from(pane.width) - 2),
+                base,
+            );
+            cx.put_str(pane.x + 2, y, "›", base.fg(accent));
+        }
+        let marked = base.fg(accent).with_attrs(Attrs::new().set_bold(true));
+        SearchBox::put_highlighted(
+            cx,
+            (pane.x + 4, y),
+            &texts[hit.index],
+            &hit.ranges,
+            (base, marked),
+            pane.width - 8,
+        );
+    }
+}
+
+fn sb_details(cx: &mut RenderCx<'_>, pane: Rect, shown: Option<&SearchMatch>, styles: [Style; 2]) {
+    let [fill, dim] = styles;
+    let accent = cx.token(Token::Accent);
+    let Some(hit) = shown else {
+        cx.put_str(pane.x + 2, pane.y + 2, "Nothing selected", dim);
+        return;
+    };
+    let (name, note) = SB_ITEMS[hit.index];
+    let slug = name.to_lowercase().replace(' ', "-");
+    cx.put_str(
+        pane.x + 2,
+        pane.y + 2,
+        name,
+        fill.fg(accent).with_attrs(Attrs::new().set_bold(true)),
+    );
+    cx.put_str(pane.x + 2, pane.y + 3, note, dim);
+    cx.put_str(pane.x + 2, pane.y + 5, "Feature", dim);
+    cx.put_str(pane.x + 14, pane.y + 5, &slug, fill);
+    cx.put_str(pane.x + 2, pane.y + 7, "Example", dim);
+    cx.put_str(
+        pane.x + 14,
+        pane.y + 7,
+        &format!("widget_preview {slug}"),
+        fill,
+    );
+    cx.put_str(pane.x + 2, pane.y + 9, "Matched", dim);
+    let spans: Vec<String> = hit
+        .ranges
+        .iter()
+        .map(|r| format!("{}..{}", r.start, r.end))
+        .collect();
+    cx.put_str(pane.x + 14, pane.y + 9, &spans.join("  "), fill);
+}
+
+fn search_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const HX_LEN: usize = 4096;
 const HX_SECTIONS: [(&str, u32, u32); 4] = [

@@ -153,6 +153,13 @@ A firmware inspector: the cursor walks the image header byte by byte, a shift-se
 
 Screenshot: [docs/media/hex-viewer.png](docs/media/hex-viewer.png). Recorded with `scripts/record-showcase.sh` (`CASE=hex-viewer`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
 
+### Progress bar
+
+A release pipeline: a determinate bar for checkout, a stacked bar for compile (cached, compiled, and failed crates in their own colors), a stacked bar for the test suites (passed, skipped, failed), an indeterminate block bouncing along the track while the upload runs, and an overall bar with a percentage. The fill moves in eighths of a cell, and a cell where two segments meet shows both colors.
+
+<img src="docs/media/progress-bar.webp" alt="ProgressBar: determinate, stacked, and indeterminate bars across a release pipeline in the dark theme" width="1028">
+
+Screenshot: [docs/media/progress-bar.png](docs/media/progress-bar.png). Recorded with `scripts/record-showcase.sh` (`CASE=progress-bar`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 ### Accordion
 
 A pipeline settings screen: sections with a caret, a title, and a badge open and close one after another, each body growing and shrinking through a reveal fraction the app raises and lowers every tick. The accordion draws the headers and gives back the body rectangles, so the app fills them with its own content, and the summary pane follows the focused section.
@@ -175,6 +182,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 <img src="docs/media/slider.webp" alt="Slider: channel faders and equalizer range sliders with half-cell positions over a mixer screen in the dark theme" width="1028">
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
+### Search box
+
+A widget catalog with live filtering: the query is typed one character at a time (and backspaced), the list narrows to the items that contain every term with the matched text highlighted, the count on the right follows, and `n` steps the active match with the details pane following it. The widget draws the field and hands back the rules (`filter` with smart case and match ranges, `step` through the matches, `put_highlighted` for drawing a row with its matches marked) and the clear button's cell for the app's own key and mouse handling.
+
+<img src="docs/media/search-box.webp" alt="SearchBox: a catalog filtered live with highlighted matches and a match count in the dark theme" width="1028">
+
+Screenshot: [docs/media/search-box.png](docs/media/search-box.png). Recorded with `scripts/record-showcase.sh` (`CASE=search-box`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
 
 ### Sparkline
 

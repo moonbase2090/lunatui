@@ -17,9 +17,9 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
-    MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, Popup, RadioGroup, RenderCx,
-    ScrollView, ScrollbarVisibility, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs,
-    TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, Popup, ProgressBar,
+    RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis,
+    SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -206,6 +206,15 @@ pub static CASES: &[Case] = &[
         ratatui: form_ratatui,
     },
     Case {
+        name: "progress-bar",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no progress bar with eighth-block precision, segments, or an indeterminate mode; its side draws the same single-segment bar by hand as styled spans",
+        ),
+        lunatui: progress_lunatui,
+        ratatui: progress_ratatui,
+    },
+    Case {
         name: "hex-viewer",
         gated: true,
         parity: Parity::Exact,
@@ -238,6 +247,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: number_input_lunatui,
         ratatui: number_input_ratatui,
+    },
+    Case {
+        name: "search-box",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no search field with a placeholder, match count, clear button, or smart-case filtering; its side draws the prompt, query, and count by hand as styled spans",
+        ),
+        lunatui: search_box_lunatui,
+        ratatui: search_box_ratatui,
     },
     Case {
         name: "calendar",
@@ -1037,6 +1055,66 @@ fn accordion_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     }
 }
 
+const SEARCH_QUERIES: [&str; 4] = ["sl", "tab", "on sw", ""];
+
+fn search_box_query(tick: u32) -> &'static str {
+    SEARCH_QUERIES[usize::try_from(tick / 25).unwrap_or(0) % SEARCH_QUERIES.len()]
+}
+
+fn search_box_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let query = search_box_query(tick);
+    SearchBox::new(query, query.len())
+        .placeholder("Filter widgets")
+        .matches(None, query.len())
+        .render(Rect::new(area.x, area.y, area.width.min(40), 1), &mut cx);
+}
+
+fn search_box_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let base = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let accent = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Accent))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let dim = base.add_modifier(ratatui::style::Modifier::DIM);
+    let query = search_box_query(tick);
+    let width = usize::from(area.width.min(40));
+    let shown = if query.is_empty() {
+        "Filter widgets"
+    } else {
+        query
+    };
+    let count = if query.is_empty() {
+        String::new()
+    } else {
+        format!("{} matches", query.len())
+    };
+    let used = 3 + shown.chars().count() + count.chars().count() + 3;
+    let pad = width.saturating_sub(used);
+    let mut spans = vec![
+        Span::styled(" / ", accent),
+        Span::styled(shown, if query.is_empty() { dim } else { base }),
+        Span::styled(" ".repeat(pad), base),
+        Span::styled(count, dim),
+    ];
+    if !query.is_empty() {
+        spans.push(Span::styled(" × ", accent));
+    }
+    RatParagraph::new(Line::from(spans)).render(
+        RatRect::new(area.x, area.y, u16::try_from(width).unwrap_or(0), 1),
+        buf,
+    );
+}
+
 const RADIO_OPTIONS: [&str; 4] = ["Small", "Medium", "Large", "Extra large"];
 
 fn radio_lunatui(
@@ -1267,6 +1345,61 @@ fn slider_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
                     (true, true) => Span::styled("━", fill),
                     (true, false) => Span::styled("╸", fill),
                     _ => Span::styled("─", rest),
+                }
+            })
+            .collect();
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
+}
+
+const PROGRESS_ROWS: usize = 4;
+
+fn progress_eighths(tick: u32, row: usize, total: u16) -> u16 {
+    let phase = (tick * 3 + u32::try_from(row).unwrap_or(0) * 29) % 200;
+    let phase = if phase > 100 { 200 - phase } else { phase };
+    u16::try_from(u32::from(total) * phase / 100).unwrap_or(total)
+}
+
+fn progress_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let total = area.width.saturating_mul(8);
+    for row in 0..PROGRESS_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let eighths = progress_eighths(tick, row, total);
+        ProgressBar::new()
+            .ratio(f64::from(eighths) / f64::from(total.max(1)))
+            .render(Rect::new(area.x, y, area.width, 1), &mut cx);
+    }
+}
+
+fn progress_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let fill = color(lunatui_theme::Token::Accent);
+    let track = color(lunatui_theme::Token::Surface1);
+    let partial = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
+    let total = area.width.saturating_mul(8);
+    for row in 0..PROGRESS_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let eighths = progress_eighths(tick, row, total);
+        let spans: Vec<Span<'_>> = (0..area.width)
+            .map(|cell| {
+                let base = cell * 8;
+                if base + 8 <= eighths {
+                    Span::styled("█", RatStyle::new().fg(fill))
+                } else if eighths <= base {
+                    Span::styled("█", RatStyle::new().fg(track))
+                } else {
+                    Span::styled(
+                        partial[usize::from(eighths - base - 1)],
+                        RatStyle::new().fg(fill).bg(track),
+                    )
                 }
             })
             .collect();
