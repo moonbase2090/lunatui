@@ -18,7 +18,11 @@ markdown = ["widget-state", "lunatui-text/markdown"]
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
+chart = ["widget-state"]
+canvas = ["widget-state"]
+
 barchart = ["widget-state"]
+toast = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -112,6 +116,16 @@ path = "tests/image.rs"
 required-features = ["image"]
 
 [[test]]
+name = "chart"
+path = "tests/chart.rs"
+required-features = ["chart"]
+
+[[test]]
+name = "chart_ratatui"
+path = "tests/chart_ratatui.rs"
+required-features = ["chart"]
+
+[[test]]
 name = "bar_chart"
 path = "tests/bar_chart.rs"
 required-features = ["barchart"]
@@ -120,3 +134,18 @@ required-features = ["barchart"]
 name = "markdown_view"
 path = "tests/markdown_view.rs"
 required-features = ["markdown"]
+
+[[test]]
+name = "canvas"
+path = "tests/canvas.rs"
+required-features = ["canvas"]
+
+[[test]]
+name = "canvas_ratatui"
+path = "tests/canvas_ratatui.rs"
+required-features = ["canvas"]
+
+[[test]]
+name = "toast"
+path = "tests/toast.rs"
+required-features = ["toast"]
