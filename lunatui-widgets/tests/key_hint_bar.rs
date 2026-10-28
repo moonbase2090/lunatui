@@ -173,11 +173,8 @@ fn drawing_stays_inside_an_offset_area() {
 #[test]
 fn nothing_is_drawn_past_the_right_edge_of_the_area() {
     let theme = Theme::builtin(Variant::Dark);
-    for (area_width, expected) in [
-        (12_u16, "[Ctrl+S] Sav        "),
-        (15, "[Ctrl+S] Save  [   "),
-        (14, "[Ctrl+S] Save      "),
-    ] {
+    let full = "[Ctrl+S] Save       [Q] Quit";
+    for area_width in [12_u16, 14, 15] {
         let mut grid = Grid::new(20, 1);
         let mut clusters = ClusterTable::new();
         let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
@@ -186,7 +183,7 @@ fn nothing_is_drawn_past_the_right_edge_of_the_area() {
             .render(Rect::new(0, 0, area_width, 1), &mut cx);
         let drawn = grid.row_display(0, &clusters);
         assert!(
-            drawn.starts_with(&expected[..usize::from(area_width)]),
+            drawn.starts_with(&full[..usize::from(area_width)]),
             "{drawn:?}"
         );
         for x in area_width..20 {
