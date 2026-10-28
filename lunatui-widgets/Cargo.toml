@@ -26,6 +26,7 @@ toast = ["widget-state"]
 slider = ["widget-state"]
 number-input = ["widget-state"]
 progress = ["widget-state"]
+accordion = ["widget-state"]
 form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
@@ -34,7 +35,7 @@ bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["dep:lunatui-runtime"]
-all-widgets = ["barchart", "bigtext", "calendar", "canvas", "chart", "form", "key-hints", "line-gauge", "markdown", "number-input", "progress", "radio", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "form", "key-hints", "line-gauge", "markdown", "number-input", "progress", "radio", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
@@ -195,6 +196,11 @@ required-features = ["slider"]
 name = "number_input"
 path = "tests/number_input.rs"
 required-features = ["number-input"]
+
+[[test]]
+name = "accordion"
+path = "tests/accordion.rs"
+required-features = ["accordion"]
 
 [[test]]
 name = "progress_bar"

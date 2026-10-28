@@ -17,13 +17,13 @@ use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
-    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
-    Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, FieldArea, Form,
-    FormField, Gauge, GraphType, KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly,
-    NumberInput, PaneId, Paragraph, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup,
-    RenderCx, Scrollbar, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove,
-    Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget,
-    WidgetState,
+    Accordion, AccordionSection, Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText,
+    Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId,
+    FieldArea, Form, FormField, Gauge, GraphType, KeyHintBar, LegendPosition, List, MarkdownView,
+    Marker, Monthly, NumberInput, PaneId, Paragraph, PixelSize, ProgressBar, ProgressTone,
+    RadioFlow, RadioGroup, RenderCx, Scrollbar, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
+    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
+    Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -103,6 +103,11 @@ const PREVIEWS: &[Preview] = &[
         name: "progress-bar",
         native: progress_native,
         baseline: progress_baseline,
+    },
+    Preview {
+        name: "accordion",
+        native: accordion_native,
+        baseline: accordion_baseline,
     },
     Preview {
         name: "slider",
@@ -5077,6 +5082,243 @@ fn nm_estimate(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2])
 }
 
 fn number_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const AC_SECTIONS: [(&str, &str, &[&str]); 7] = [
+    (
+        "Build",
+        "3 settings",
+        &[
+            "profile   release",
+            "target    aarch64-apple-darwin",
+            "jobs      8",
+        ],
+    ),
+    (
+        "Environment",
+        "4 variables",
+        &[
+            "RUST_LOG          info",
+            "CARGO_TERM_COLOR  always",
+            "TZ                UTC",
+            "CI                true",
+        ],
+    ),
+    (
+        "Dependencies",
+        "212 crates",
+        &[
+            "serde          1.0.219",
+            "unicode-width  0.2.1",
+            "bitflags       2.9.4",
+            "smallvec       1.15.1",
+        ],
+    ),
+    (
+        "Tests",
+        "3 suites",
+        &[
+            "unit         412 passed",
+            "integration   96 passed",
+            "doctests      31 passed",
+        ],
+    ),
+    (
+        "Deploy",
+        "2 targets",
+        &["channel  stable", "region   us-west-2"],
+    ),
+    (
+        "Cache",
+        "1.8 GB",
+        &[
+            "registry   shared",
+            "target     per branch",
+            "keep       14 days",
+        ],
+    ),
+    (
+        "Notifications",
+        "2 channels",
+        &["on failure  team chat", "on release  email digest"],
+    ),
+];
+
+const AC_TARGETS: [[bool; 7]; 4] = [
+    [true, false, false, false, false, false, false],
+    [false, true, false, false, false, false, false],
+    [false, true, true, false, false, false, false],
+    [false, false, true, true, false, false, false],
+];
+
+fn ac_state(index: usize, tick: u32) -> (bool, f64) {
+    let phase = usize::try_from(tick / 60).unwrap_or(3).min(3);
+    let step = tick.saturating_sub(u32::try_from(phase).unwrap_or(0) * 60);
+    let now = AC_TARGETS[phase][index];
+    let before = AC_TARGETS[phase.saturating_sub(1)][index];
+    let ramp = f64::from(step.saturating_sub(10).min(20)) / 20.0;
+    let eased = ramp * ramp * (3.0 - 2.0 * ramp);
+    let reveal = match (before, now) {
+        (false, true) => eased,
+        (true, false) => 1.0 - eased,
+        (open, _) => f64::from(u8::from(open)),
+    };
+    (if step >= 10 { now } else { before }, reveal)
+}
+
+fn ac_accordion(tick: u32) -> Accordion {
+    let phase = usize::try_from(tick / 60).unwrap_or(3).min(3);
+    let sections = AC_SECTIONS
+        .iter()
+        .enumerate()
+        .map(|(index, (title, badge, body))| {
+            let (open, reveal) = ac_state(index, tick);
+            AccordionSection::new(*title, u16::try_from(body.len()).unwrap_or(0))
+                .open(open)
+                .reveal(reveal)
+                .badge(*badge)
+        });
+    Accordion::new(sections).focus(Some(phase)).gap(1)
+}
+
+fn accordion_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Pipeline settings  ·  release-aarch64",
+        head,
+    );
+    let left = Rect::new(area.x + 2, area.y + 2, 60, 30);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        30,
+    );
+    for (title, pane) in [(" Sections ", left), (" Summary ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let accordion = ac_accordion(tick);
+    let inner = Rect::new(left.x + 2, left.y + 2, left.width - 4, left.height - 3);
+    accordion.render(inner, &mut cx);
+    for section in accordion.layout(inner) {
+        let body = AC_SECTIONS[section.index].2;
+        for (row, line) in (0..section.body.height).zip(body) {
+            cx.put_str(section.body.x, section.body.y + row, line, dim);
+        }
+    }
+    ac_summary(&mut cx, right, tick, theme, [fill, dim]);
+    StatusBar::new(" ↑↓ move  ●  enter open or close  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn ac_summary(cx: &mut RenderCx<'_>, right: Rect, tick: u32, theme: &Theme, styles: [Style; 2]) {
+    let [fill, dim] = styles;
+    let surface = theme.resolve(Token::Surface0);
+    let accent = theme.resolve(Token::Accent);
+    let phase = usize::try_from(tick / 60).unwrap_or(3).min(3);
+    let (title, badge, _) = AC_SECTIONS[phase];
+    cx.put_str(
+        right.x + 2,
+        right.y + 2,
+        title,
+        Style::new()
+            .fg(accent)
+            .bg(surface)
+            .with_attrs(Attrs::new().set_bold(true)),
+    );
+    cx.put_str(right.x + 2, right.y + 3, badge, dim);
+    let notes = [
+        [
+            "Release profile with thin LTO.",
+            "Cross build for Apple silicon.",
+            "Eight parallel jobs.",
+        ],
+        [
+            "Set for every job in the run.",
+            "Colors stay on in the log.",
+            "Times are UTC.",
+        ],
+        [
+            "Locked by Cargo.lock.",
+            "No yanked releases.",
+            "Two minor updates waiting.",
+        ],
+        [
+            "All suites green.",
+            "Doctests run on the facade.",
+            "Last run 38 s.",
+        ],
+    ];
+    for (row, line) in (0_u16..).zip(notes[phase]) {
+        cx.put_str(right.x + 2, right.y + 5 + row, line, fill);
+    }
+    let runs = [
+        ("#1841", "passed", "4m 12s"),
+        ("#1840", "passed", "4m 31s"),
+        ("#1839", "failed", "2m 03s"),
+        ("#1838", "passed", "4m 09s"),
+        ("#1837", "passed", "4m 20s"),
+        ("#1836", "passed", "4m 44s"),
+    ];
+    cx.put_str(
+        right.x + 2,
+        right.y + 11,
+        "Recent runs",
+        Style::new()
+            .fg(accent)
+            .bg(surface)
+            .with_attrs(Attrs::new().set_bold(true)),
+    );
+    for (row, (id, result, took)) in (0_u16..).zip(runs) {
+        let style = if result == "failed" {
+            Style::new().fg(theme.resolve(Token::Fail)).bg(surface)
+        } else {
+            dim
+        };
+        cx.put_str(
+            right.x + 2,
+            right.y + 13 + row,
+            &format!("{id}  {result:<7} {took}"),
+            style,
+        );
+    }
+}
+
+fn accordion_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const PG_STAGES: [(&str, u32, u32); 5] = [
     ("Checkout", 0, 40),
