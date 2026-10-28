@@ -16,9 +16,9 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
-    Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize,
-    RadioGroup, RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
-    ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph,
+    PixelSize, RadioGroup, RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap,
+    ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -179,6 +179,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: radio_lunatui,
         ratatui: radio_ratatui,
+    },
+    Case {
+        name: "form",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no form container; its side draws the same labels, required markers and messages by hand, one paragraph line each",
+        ),
+        lunatui: form_lunatui,
+        ratatui: form_ratatui,
     },
     Case {
         name: "calendar",
@@ -722,6 +731,69 @@ fn radio_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             ),
         ]);
         RatParagraph::new(line).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
+}
+
+const FORM_LABELS: [&str; 3] = ["Name", "Email", "Notes"];
+
+fn form_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let focus = usize::try_from(tick / 4 % 3).unwrap_or(0);
+    let fields = [
+        FormField::new(FORM_LABELS[0])
+            .required()
+            .hint("As on invoices"),
+        FormField::new(FORM_LABELS[1]).required().error("Required"),
+        FormField::new(FORM_LABELS[2]).hint("Optional"),
+    ];
+    Form::new(fields).focus(Some(focus)).render(area, &mut cx);
+}
+
+fn form_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let focus = usize::try_from(tick / 4 % 3).unwrap_or(0);
+    let messages = ["As on invoices", "✖ Required", "Optional"];
+    for (index, label) in FORM_LABELS.iter().enumerate() {
+        let y = area.y.saturating_add(u16::try_from(index).unwrap_or(0) * 3);
+        let mut name = RatStyle::new().fg(color(if index == focus {
+            lunatui_theme::Token::Accent
+        } else {
+            lunatui_theme::Token::TextPrimary
+        }));
+        if index == focus {
+            name = name.add_modifier(ratatui::style::Modifier::BOLD);
+        }
+        let mut spans = vec![Span::styled(*label, name)];
+        if index < 2 {
+            spans.push(Span::styled(
+                " *",
+                RatStyle::new().fg(color(lunatui_theme::Token::Fail)),
+            ));
+        }
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+        let message_style = if index == 1 {
+            RatStyle::new().fg(color(lunatui_theme::Token::Fail))
+        } else {
+            RatStyle::new()
+                .fg(color(lunatui_theme::Token::TextPrimary))
+                .add_modifier(ratatui::style::Modifier::DIM)
+        };
+        RatParagraph::new(Line::from(Span::styled(messages[index], message_style))).render(
+            RatRect::new(
+                area.x.saturating_add(9),
+                y.saturating_add(1),
+                area.width.saturating_sub(9),
+                1,
+            ),
+            buf,
+        );
     }
 }
 

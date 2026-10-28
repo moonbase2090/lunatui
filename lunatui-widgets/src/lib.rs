@@ -19,6 +19,8 @@ mod calendar;
 pub mod canvas;
 #[cfg(feature = "chart")]
 mod chart;
+#[cfg(feature = "form")]
+mod form;
 mod gauge;
 #[cfg(feature = "image")]
 mod image;
@@ -74,6 +76,8 @@ pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use canvas::Canvas;
 #[cfg(feature = "chart")]
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
+#[cfg(feature = "form")]
+pub use form::{FieldArea, Form, FormField};
 pub use gauge::Gauge;
 #[cfg(feature = "image")]
 pub use image::Image;
