@@ -132,3 +132,14 @@ fn marks_the_copied_span_dirty() {
         })
     );
 }
+
+#[test]
+fn a_destination_past_the_grid_copies_nothing() {
+    let mut clusters = ClusterTable::new();
+    let src = source(&["ab"], &mut clusters);
+    let mut dst = Grid::new(2, 2);
+    dst.blit(&src, Rect::new(0, 0, 2, 1), 5, 0);
+    dst.blit(&src, Rect::new(0, 0, 2, 1), 0, 7);
+    dst.blit(&src, Rect::new(0, 3, 2, 1), 0, 0);
+    assert_eq!(rows(&dst, &clusters), ["  ", "  "]);
+}

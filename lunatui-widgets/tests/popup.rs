@@ -330,3 +330,82 @@ fn the_popup_traps_focus_unless_told_not_to() {
 fn an_empty_area_draws_nothing() {
     assert_eq!(rows(&plain("abc"), 0, 0), Vec::<String>::new());
 }
+
+#[test]
+fn a_press_on_the_last_column_or_row_grabs_and_one_past_does_not() {
+    let area = Rect::new(0, 0, 20, 10);
+    let mut state = PopupState::new();
+    plain("abc").sync(area, &mut state);
+    assert!(!state.press(12, 4));
+    assert!(!state.press(8, 6));
+    assert!(state.press(11, 5));
+    state.drag(15, 8);
+    assert_eq!(state.moved_to(), Some((11, 6)));
+}
+
+#[test]
+fn an_anchor_with_room_on_both_sides_keeps_the_side_asked_for() {
+    let area = Rect::new(0, 0, 20, 12);
+    let below = plain("abc").placement(Placement::Below(Rect::new(8, 5, 3, 1)));
+    assert_eq!(below.area(area), Rect::new(8, 6, 5, 3));
+    let right = plain("abc").placement(Placement::Right(Rect::new(8, 5, 3, 1)));
+    assert_eq!(right.area(area), Rect::new(11, 5, 5, 3));
+}
+
+#[test]
+fn flipping_measures_room_from_an_offset_area() {
+    let right = plain("abc").placement(Placement::Right(Rect::new(9, 1, 2, 1)));
+    assert_eq!(right.area(Rect::new(2, 0, 12, 8)), Rect::new(4, 1, 5, 3));
+    let below = plain("abc").placement(Placement::Below(Rect::new(2, 7, 3, 1)));
+    assert_eq!(below.area(Rect::new(0, 2, 12, 8)), Rect::new(2, 4, 5, 3));
+}
+
+#[test]
+fn content_is_not_drawn_when_the_border_leaves_no_room() {
+    let narrow = plain("abc").size(Size::new(0, 1));
+    assert_eq!(rows(&narrow, 4, 3), [" ╭╮ ", " ││ ", " ╰╯ "]);
+    let flat = plain("abc").size(Size::new(1, 0));
+    assert_eq!(rows(&flat, 5, 2), [" ╭─╮ ", " ╰─╯ "]);
+}
+
+#[test]
+fn content_with_its_own_foreground_keeps_it_on_the_panel_background() -> Result<(), &'static str> {
+    struct Inked;
+    impl Widget for Inked {
+        fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+            cx.put_str(area.x, area.y, "a", Style::new().fg(Color::Rgb(9, 8, 7)));
+            cx.put_str(
+                area.x + 1,
+                area.y,
+                "b",
+                Style::new().bg(Color::Rgb(1, 2, 3)),
+            );
+        }
+
+        fn measure(&self, avail: Size) -> Size {
+            Size::new(2, 1).clamp(avail)
+        }
+    }
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(6, 3);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Popup::new(Inked)
+        .backdrop(0.0)
+        .render(Rect::new(0, 0, 6, 3), &mut cx);
+    let style =
+        |x| -> Result<Style, &'static str> { Ok(grid.get(x, 1).ok_or("missing cell")?.style()) };
+    assert_eq!(
+        style(2)?,
+        Style::new()
+            .fg(Color::Rgb(9, 8, 7))
+            .bg(theme.resolve(Token::Surface1))
+    );
+    assert_eq!(
+        style(3)?,
+        Style::new()
+            .fg(theme.resolve(Token::TextPrimary))
+            .bg(Color::Rgb(1, 2, 3))
+    );
+    Ok(())
+}

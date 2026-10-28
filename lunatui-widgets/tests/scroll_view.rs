@@ -6,7 +6,7 @@
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    RenderCx, ScrollView, ScrollViewState, ScrollbarVisibility, Widget, WidgetState,
+    RenderCx, ScrollView, ScrollViewState, Scrollbar, ScrollbarVisibility, Widget, WidgetState,
 };
 
 struct Letters;
@@ -268,4 +268,78 @@ fn measure_is_the_content_size_within_the_space_given() {
 #[test]
 fn an_empty_area_draws_nothing() {
     assert_eq!(rows(&letters(), 0, 0), Vec::<String>::new());
+}
+
+#[test]
+fn content_exactly_as_tall_as_the_area_needs_no_vertical_scrollbar() {
+    let view = ScrollView::new(Letters, Size::new(4, 3));
+    assert_eq!(rows(&view, 6, 3), ["ABCD  ", "EFGH  ", "IJKL  "]);
+}
+
+#[test]
+fn a_horizontal_scrollbar_brings_the_vertical_one_only_when_a_row_is_lost() {
+    let view = ScrollView::new(Letters, Size::new(7, 3));
+    assert_eq!(rows(&view, 6, 4), ["ABCDEF", "HIJKLM", "OPQRST", "━━━━━━"]);
+}
+
+#[test]
+fn scrollbars_that_are_not_needed_leave_the_cells_after_the_view_alone() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(6, 4);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    ScrollView::new(Letters, Size::new(4, 2)).render(Rect::new(0, 0, 5, 3), &mut cx);
+    let shown: Vec<String> = (0..4).map(|row| grid.row_display(row, &clusters)).collect();
+    assert_eq!(shown, ["ABCD  ", "EFGH  ", "      ", "      "]);
+}
+
+#[test]
+fn a_zero_width_area_draws_no_scrollbars() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(6, 6);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    letters().render(Rect::new(0, 0, 0, 6), &mut cx);
+    letters().render(Rect::new(0, 0, 6, 0), &mut cx);
+    let shown: Vec<String> = (0..6).map(|row| grid.row_display(row, &clusters)).collect();
+    assert_eq!(shown, ["      "; 6]);
+}
+
+#[test]
+fn a_scrollbar_draws_nothing_without_room_or_content() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(3, 3);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Scrollbar::vertical(10, 3, 0).render(Rect::new(0, 0, 0, 3), &mut cx);
+    Scrollbar::horizontal(10, 3, 0).render(Rect::new(0, 0, 3, 0), &mut cx);
+    Scrollbar::vertical(0, 3, 0).render(Rect::new(1, 0, 1, 3), &mut cx);
+    let shown: Vec<String> = (0..3).map(|row| grid.row_display(row, &clusters)).collect();
+    assert_eq!(shown, ["   "; 3]);
+}
+
+#[test]
+fn a_scrollbar_measures_one_cell_across_its_track() {
+    assert_eq!(
+        Scrollbar::vertical(10, 3, 0).measure(Size::new(5, 4)),
+        Size::new(1, 4)
+    );
+    assert_eq!(
+        Scrollbar::horizontal(10, 3, 0).measure(Size::new(5, 4)),
+        Size::new(5, 1)
+    );
+    assert_eq!(
+        Scrollbar::horizontal(10, 3, 0).measure(Size::new(0, 4)),
+        Size::new(0, 0)
+    );
+    assert_eq!(
+        Scrollbar::vertical(10, 3, 0).measure(Size::new(5, 0)),
+        Size::new(0, 0)
+    );
+}
+
+#[test]
+fn content_exactly_as_wide_as_the_area_needs_no_horizontal_scrollbar() {
+    let view = ScrollView::new(Letters, Size::new(4, 3));
+    assert_eq!(rows(&view, 4, 4), ["ABCD", "EFGH", "IJKL", "    "]);
 }
