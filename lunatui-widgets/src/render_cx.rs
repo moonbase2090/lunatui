@@ -196,6 +196,12 @@ impl<'a> RenderCx<'a> {
         self.grid.set_style(area, style);
     }
 
+    /// Fills `area` with `symbol` and `style`.
+    #[cfg(feature = "text-area")]
+    pub fn fill(&mut self, area: Rect, symbol: char, style: Style) {
+        self.grid.fill(area, style, symbol, self.clusters);
+    }
+
     /// Alpha-composites `tint` over each cell background in `area` (glyphs unchanged).
     pub fn blend_backdrop(&mut self, area: Rect, alpha: f32, tint: Color) {
         let tint_rgb = resolve_rgb(tint, self.theme);

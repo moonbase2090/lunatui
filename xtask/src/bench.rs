@@ -63,8 +63,13 @@ fn bench_plan(valgrind: bool) -> Vec<BenchStep> {
         },
         BenchStep {
             target: "widget_suite",
-            feature: None,
+            feature: Some("text-area"),
             after: &["--gate"],
+        },
+        BenchStep {
+            target: "criterion_widgets",
+            feature: Some("text-area"),
+            after: &["text-area"],
         },
     ];
     if valgrind {
@@ -117,8 +122,13 @@ mod tests {
     };
     const WIDGETS: BenchStep = BenchStep {
         target: "widget_suite",
-        feature: None,
+        feature: Some("text-area"),
         after: &["--gate"],
+    };
+    const TEXTAREA_CRITERION: BenchStep = BenchStep {
+        target: "criterion_widgets",
+        feature: Some("text-area"),
+        after: &["text-area"],
     };
     const GUNGRAUN: BenchStep = BenchStep {
         target: "gungraun_calibration",
@@ -128,14 +138,24 @@ mod tests {
 
     #[test]
     fn plan_without_valgrind_skips_gungraun() {
-        assert_eq!(bench_plan(false), [METRICS, CEILING, CRITERION, WIDGETS]);
+        assert_eq!(
+            bench_plan(false),
+            [METRICS, CEILING, CRITERION, WIDGETS, TEXTAREA_CRITERION]
+        );
     }
 
     #[test]
     fn plan_with_valgrind_ends_with_gungraun() {
         assert_eq!(
             bench_plan(true),
-            [METRICS, CEILING, CRITERION, WIDGETS, GUNGRAUN]
+            [
+                METRICS,
+                CEILING,
+                CRITERION,
+                WIDGETS,
+                TEXTAREA_CRITERION,
+                GUNGRAUN
+            ]
         );
     }
 
@@ -147,6 +167,8 @@ mod tests {
                 "bench",
                 "--package",
                 "lunatui-bench",
+                "--features",
+                "text-area",
                 "--bench",
                 "widget_suite",
                 "--",

@@ -18,6 +18,7 @@ app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
 image-presenter = ["app", "lunatui-runtime/image-presenter"]
 image-decode = ["lunatui-widgets/image-decode"]
 keymap = ["app", "lunatui-runtime/keymap"]
+text-area = ["lunatui-widgets/text-area", "lunatui-bench/text-area"]
 
 [dependencies]
 lunatui-runtime = { version = "0.1.12", path = "../lunatui-runtime", optional = true }

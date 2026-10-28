@@ -13,18 +13,23 @@ use lunatui_core::{
     Attrs, ClusterTable, Color, Grid, Rect, Style, clip_display_prefix, width as cols,
 };
 use lunatui_term::{ColorMode, Encoder};
+#[cfg(feature = "text-area")]
+use lunatui_term::{Event, KeyCode, KeyEvent, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Alignment, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Date, DateStyle,
     Monthly, Paragraph, PixelSize, RenderCx, Sparkline, Widget, WidgetState,
 };
-
 #[path = "deploy_board.rs"]
 mod deploy_board;
+#[cfg(feature = "text-area")]
+use lunatui_widgets::{KeymapMode, TextArea, TextPosition, VimMode};
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
 use ratatui::style::Color as RatColor;
+#[cfg(feature = "text-area")]
+use ratatui::widgets::Widget as RatWidget;
 use ratatui::{Terminal, TerminalOptions, Viewport};
 use time::{Date as TimeDate, Month};
 
@@ -63,7 +68,142 @@ const PREVIEWS: &[Preview] = &[
         native: deploy_native,
         baseline: deploy_baseline,
     },
+    #[cfg(feature = "text-area")]
+    Preview {
+        name: "text-area",
+        native: text_area_motion,
+        baseline: text_area_baseline,
+    },
 ];
+
+#[cfg(feature = "text-area")]
+const TEXTAREA_DOC: &str = "# lunatui v0.1.12\n\n## Highlights\n\n- Native multi-line editing with undo and redo\n- Search, directed selection, and bracketed paste\n- Emacs and Vim keymaps through the runtime registry\n\n## Theme\n\nGraphite tokens style the cursor, selection, search marks, and gutter.\nThe viewport follows the cursor and keeps its preferred display column.\n\n## Editing\n\nArrow keys move by grapheme; Shift extends a directed selection.\nPaste arrives as one undoable edit, even when split into chunks.\nUndo, redo, and search stay local to this editor.\n\n## Release checklist\n\n- [x] Grapheme-safe movement\n- [x] Bounded edit history\n- [ ] Final review and release notes";
+
+#[cfg(feature = "text-area")]
+fn text_area_motion(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let chrome = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" release-notes.md ")
+        .style(
+            Style::new()
+                .fg(theme.resolve(Token::TextPrimary))
+                .bg(theme.resolve(Token::Surface0)),
+        )
+        .title_style(
+            Style::new()
+                .fg(theme.resolve(Token::TextStrong))
+                .bg(theme.resolve(Token::Surface0)),
+        )
+        .border_style(Style::new().fg(theme.resolve(Token::Border)));
+    chrome.render(area, &mut RenderCx::new(grid, clusters, theme));
+    let mut editor = TextArea::new(TEXTAREA_DOC)
+        .keymap_mode(KeymapMode::Emacs)
+        .line_numbers(true);
+    editor.set_widget_state(WidgetState::Focused);
+    let release_line_index = TEXTAREA_DOC
+        .lines()
+        .position(|line| line.starts_with("- [ ] Final review"))
+        .unwrap_or(0);
+    let release_line = TEXTAREA_DOC
+        .lines()
+        .nth(release_line_index)
+        .unwrap_or_default();
+    editor.move_to(
+        TextPosition {
+            line: release_line_index,
+            grapheme: release_line.len().saturating_sub(5),
+        },
+        false,
+    );
+    for (frame, event) in text_area_actions() {
+        if frame > tick {
+            break;
+        }
+        editor.handle_event(&event);
+    }
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let mut content_area = chrome.inner(area);
+    content_area.height = content_area.height.saturating_sub(1);
+    editor.render(content_area, &mut cx);
+    if area.height > 2 {
+        let status_y = area.y + area.height - 2;
+        let mode = match editor.active_keymap_mode() {
+            KeymapMode::Emacs => "EMACS",
+            KeymapMode::Vim if editor.vim_mode() == VimMode::Insert => "INSERT",
+            KeymapMode::Vim => "NORMAL",
+        };
+        let cursor = editor.cursor();
+        let status = format!(
+            "  {mode}  |  LINE {}  |  COL {}",
+            cursor.line + 1,
+            cursor.grapheme + 1
+        );
+        cx.put_str(
+            area.x + 1,
+            status_y,
+            &status,
+            Style::new()
+                .fg(theme.resolve(Token::TextMuted))
+                .bg(theme.resolve(Token::Surface0)),
+        );
+    }
+}
+
+#[cfg(feature = "text-area")]
+fn text_area_actions() -> Vec<(u32, Event)> {
+    let mut events = (0..5)
+        .map(|index| (18 + index * 2, Event::Key(KeyEvent::press(KeyCode::Right))))
+        .collect::<Vec<_>>();
+    events.extend((0..5).map(|index| {
+        (
+            32 + index * 2,
+            Event::Key(KeyEvent::press(KeyCode::Left).modifiers(Modifiers::new().shift())),
+        )
+    }));
+    events.push((
+        44,
+        Event::Key(KeyEvent::press(KeyCode::Char('p')).text("plans")),
+    ));
+    events.push((
+        50,
+        Event::Key(KeyEvent::press(KeyCode::Char('s')).modifiers(Modifiers::new().control())),
+    ));
+    for (index, c) in "Graphite".chars().enumerate() {
+        events.push((
+            55 + u32::try_from(index).unwrap_or(0) * 3,
+            Event::Key(KeyEvent::press(KeyCode::Char(c)).text(c.to_string())),
+        ));
+    }
+    events
+}
+
+#[cfg(feature = "text-area")]
+fn text_area_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, _tick: u32) {
+    let block = ratatui::widgets::Block::bordered()
+        .border_type(ratatui::widgets::BorderType::Rounded)
+        .title(" release-notes.md ")
+        .style(
+            ratatui::style::Style::new()
+                .fg(rat_color(theme.resolve(Token::TextPrimary)))
+                .bg(rat_color(theme.resolve(Token::Surface0))),
+        )
+        .border_style(ratatui::style::Style::new().fg(rat_color(theme.resolve(Token::Border))));
+    let inner = block.inner(area);
+    block.render(area, buffer);
+    ratatui::widgets::Paragraph::new(TEXTAREA_DOC)
+        .style(
+            ratatui::style::Style::new()
+                .fg(rat_color(theme.resolve(Token::TextPrimary)))
+                .bg(rat_color(theme.resolve(Token::Surface0))),
+        )
+        .render(inner, buffer);
+}
 
 fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)

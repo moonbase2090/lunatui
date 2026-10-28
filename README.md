@@ -15,6 +15,14 @@ Lunatui's own dashboard numbers on one machine (Apple M5 Max, release build), me
 
 Method and limits: [docs/performance.md](docs/performance.md).
 
+## Widget gallery
+
+TextArea supports multi-line editing, selection, search, Vim and Emacs keymaps, and cursor-following scroll. The screenshot shows the editor with line numbers and its focused cursor; the motion capture shows editing and search.
+
+![TextArea widget screenshot](captures/text-area.png)
+
+[Watch the TextArea motion demo](captures/text-area.gif).
+
 ## Quick start
 
 ```sh

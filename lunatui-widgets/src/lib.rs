@@ -31,6 +31,8 @@ mod status_bar;
 mod status_dot;
 mod table;
 mod tabs;
+#[cfg(feature = "text-area")]
+mod text_area;
 mod text_input;
 mod widget;
 
@@ -70,5 +72,7 @@ pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
 pub use table::Table;
 pub use tabs::Tabs;
+#[cfg(feature = "text-area")]
+pub use text_area::{EditResult, KeymapMode, TextArea, TextPosition, TextSelection, VimMode};
 pub use text_input::TextInput;
 pub use widget::Widget;

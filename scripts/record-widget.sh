@@ -26,6 +26,8 @@ OUT="${OUT:-$ROOT/target/widget-recordings}"
 MAX_BYTES="${MAX_BYTES:-2000000}"
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
+FEATURES=(color-profiles)
+if [[ "$CASE" == "text-area" ]]; then FEATURES+=(text-area); fi
 for value in "$WIDTH" "$HEIGHT" "$FRAMES" "$FPS"; do
   if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
     echo "record-widget: sizes, frames and fps must be positive integers" >&2
@@ -73,7 +75,7 @@ if [[ "$CASE" == "image" ]]; then
   echo "Image showcase: ${GIF} (${BYTES} bytes, ${DURATION}s), screenshot: ${PNG}"
   exit 0
 fi
-cargo build -q --release -p lunatui --features color-profiles --example widget_preview
+cargo build -q --release -p lunatui --features "${FEATURES[*]}" --example widget_preview
 BIN="$ROOT/target/release/examples/widget_preview"
 ARGS=(--case "$CASE" --width "$WIDTH" --height "$HEIGHT" --frames "$FRAMES" --fps "$FPS" --profile "$PROFILE" --theme "$THEME")
 for side in lunatui ratatui; do
@@ -81,9 +83,14 @@ for side in lunatui ratatui; do
     -c "$(printf '%q ' "$BIN" --side "$side" "${ARGS[@]}")" "${OUT}/${NAME}-${side}.cast"
   python3 "$ROOT/scripts/trim-cast.py" "${OUT}/${NAME}-${side}.cast"
   agg --font-size 14 "${OUT}/${NAME}-${side}.cast" "${OUT}/${NAME}-${side}.gif"
+  seek=1
+  if [[ "$side" == "ratatui" ]]; then seek=0; fi
+  ffmpeg -loglevel error -y -ss "$seek" -i "${OUT}/${NAME}-${side}.gif" -frames:v 1 "${OUT}/${NAME}-${side}.png"
+  test -s "${OUT}/${NAME}-${side}.png"
 done
 ffmpeg -loglevel error -y -i "${OUT}/${NAME}-lunatui.gif" -i "${OUT}/${NAME}-ratatui.gif" \
   -filter_complex "[0:v][1:v]hstack=inputs=2,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p" \
   -c:v libx264 -crf 28 -movflags +faststart \
   "${OUT}/${NAME}-side-by-side.mp4"
 echo "Recording: ${OUT}/${NAME}-side-by-side.mp4"
+echo "Screenshots: ${OUT}/${NAME}-lunatui.png ${OUT}/${NAME}-ratatui.png"

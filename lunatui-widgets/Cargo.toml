@@ -21,6 +21,7 @@ barchart = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
+text-area = ["widget-state", "lunatui-theme/graphite-tokens", "dep:lunatui-runtime", "lunatui-runtime/keymap", "dep:lunatui-term"]
 
 [dependencies]
 lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
@@ -28,6 +29,8 @@ lunatui-layout = { version = "0.1.12", path = "../lunatui-layout" }
 lunatui-image = { version = "0.1.12", path = "../lunatui-image", optional = true }
 lunatui-text = { version = "0.1.12", path = "../lunatui-text" }
 lunatui-theme = { version = "0.1.12", path = "../lunatui-theme" }
+lunatui-runtime = { version = "0.1.12", path = "../lunatui-runtime", optional = true }
+lunatui-term = { version = "0.1.12", path = "../lunatui-term", optional = true }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
