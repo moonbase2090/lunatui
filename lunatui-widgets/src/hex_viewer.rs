@@ -599,8 +599,6 @@ fn at(x: u16, offset: usize) -> u16 {
     x.saturating_add(u16::try_from(offset).unwrap_or(u16::MAX))
 }
 
-/// Writes ASCII `text` at `(x, y)`, cut at column `end`, keeping the background and attributes
-/// under it wherever `style` leaves them unset.
 fn put(cx: &mut RenderCx<'_>, x: u16, y: u16, end: u16, text: &[u8], style: Style) {
     for (offset, &byte) in text.iter().enumerate() {
         let at = at(x, offset);
