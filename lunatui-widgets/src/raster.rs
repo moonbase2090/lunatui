@@ -174,7 +174,7 @@ impl Raster {
         );
     }
 
-    pub(crate) fn segment(
+    pub(crate) fn segment_centered(
         &mut self,
         window: Window,
         marker: Marker,
@@ -236,6 +236,57 @@ impl Raster {
                     }
                     core::cmp::Ordering::Greater => self.mark(marker, x + sx, y, series),
                 }
+            }
+        }
+    }
+
+    #[cfg(feature = "chart")]
+    pub(crate) fn segment(
+        &mut self,
+        window: Window,
+        marker: Marker,
+        a: (f64, f64),
+        b: (f64, f64),
+        series: usize,
+    ) {
+        let Some((a, b)) = window.clip(a, b) else {
+            return;
+        };
+        let (sub_w, sub_h) = self.resolution(marker);
+        let (x0, y0) = (window.column(a.0, sub_w), window.row(a.1, sub_h));
+        let (x1, y1) = (window.column(b.0, sub_w), window.row(b.1, sub_h));
+        let (dx, dy) = ((x1 - x0).abs(), (y1 - y0).abs());
+        if dy < dx {
+            let ((x0, y0), (x1, y1)) = if x0 > x1 {
+                ((x1, y1), (x0, y0))
+            } else {
+                ((x0, y0), (x1, y1))
+            };
+            let step = if y1 < y0 { -1 } else { 1 };
+            let (mut y, mut error) = (y0, 2 * dy - dx);
+            for x in x0..=x1 {
+                self.mark(marker, x, y, series);
+                if error > 0 {
+                    y += step;
+                    error -= 2 * dx;
+                }
+                error += 2 * dy;
+            }
+        } else {
+            let ((x0, y0), (x1, y1)) = if y0 > y1 {
+                ((x1, y1), (x0, y0))
+            } else {
+                ((x0, y0), (x1, y1))
+            };
+            let step = if x1 < x0 { -1 } else { 1 };
+            let (mut x, mut error) = (x0, 2 * dx - dy);
+            for y in y0..=y1 {
+                self.mark(marker, x, y, series);
+                if error > 0 {
+                    x += step;
+                    error -= 2 * dy;
+                }
+                error += 2 * dx;
             }
         }
     }

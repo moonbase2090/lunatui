@@ -50,7 +50,8 @@ impl Painter<'_> {
             return;
         }
         let tag = self.tag(style);
-        self.raster.segment(self.window, self.marker, from, to, tag);
+        self.raster
+            .segment_centered(self.window, self.marker, from, to, tag);
     }
 
     /// Dots across and down the canvas, which depends on the marker.

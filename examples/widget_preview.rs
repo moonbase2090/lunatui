@@ -4536,9 +4536,17 @@ impl CanvasBoard {
             (half_w * 0.28, half_h * 0.05),
             (half_w * 0.78, half_h * 0.52),
         ];
-        let progress = f64::from(self.tick.min(239)) / 239.0 * (route.len() - 1) as f64;
-        let segment = (progress.floor() as usize).min(route.len() - 2);
-        let fraction = progress - segment as f64;
+        let progress = f64::from(self.tick.min(239)) / 239.0 * 4.0;
+        let (segment, segment_start) = if progress < 1.0 {
+            (0, 0.0)
+        } else if progress < 2.0 {
+            (1, 1.0)
+        } else if progress < 3.0 {
+            (2, 2.0)
+        } else {
+            (3, 3.0)
+        };
+        let fraction = progress - segment_start;
         let moving = (
             route[segment].0 + (route[segment + 1].0 - route[segment].0) * fraction,
             route[segment].1 + (route[segment + 1].1 - route[segment].1) * fraction,
