@@ -143,6 +143,6 @@ Screenshot: [docs/media/image-120x36-truecolor-dark.png](docs/media/image-120x36
 
 A release console. The build log is a `ScrollView` wider and taller than its pane, scrolled and panned with both scrollbars. A deploy `Popup` opens over a faded backdrop, the choice moves to Deploy, and the dialog is dragged aside. After the confirm, new log lines fill the last page and the services roll to the new build. An alerts `Popup` then opens above its status-bar chip with a scrolling `ScrollView` inside.
 
-![Popup and ScrollView: a release console in the dark theme](docs/media/popup-scrollview.gif)
+<img src="docs/media/popup-scrollview.webp" alt="Popup and ScrollView: a release console in the dark theme" width="1028">
 
 Screenshot: [docs/media/popup-scrollview.png](docs/media/popup-scrollview.png). Recorded with `scripts/record-showcase.sh` (`CASE=popup-scrollview`, 120×36 at 2× scale, 240 frames at 30 fps, dark, lossless animated WebP, about 10 seconds).

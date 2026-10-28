@@ -356,7 +356,7 @@ struct Panel<'p, W> {
 impl<W: Widget> Widget for Panel<'_, W> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let (panel, border, title) = self.styles;
-        cx.fill(area, panel);
+        cx.fill(area, panel, ' ');
         let mut block = Block::bordered()
             .border_type(self.popup.border_type)
             .style(panel)

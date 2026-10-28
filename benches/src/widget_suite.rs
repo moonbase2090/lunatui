@@ -16,8 +16,8 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
-    Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize,
-    Popup, RenderCx, ScrollView, ScrollbarVisibility, Sparkline, SplitAxis, SplitTree, Table, Tabs,
+    Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, Popup,
+    RenderCx, ScrollView, ScrollbarVisibility, Sparkline, SplitAxis, SplitTree, Table, Tabs,
     TextWrap, ToastKind, ToastScope, ToastStack, Widget,
 };
 use ratatui::backend::CrosstermBackend;

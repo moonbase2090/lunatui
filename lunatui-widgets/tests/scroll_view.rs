@@ -426,3 +426,61 @@ fn scrollbars_at_the_coordinate_edges_stop_at_the_last_cell() {
         .collect();
     assert_eq!(column, " █││");
 }
+
+#[cfg(feature = "image")]
+mod images {
+    use lunatui_core::{ClusterTable, Color, DecodedGlyph, Grid, Rect, Size};
+    use lunatui_image::{ImageError, ImageId, ImageRequest, ImageSink, ImageSource};
+    use lunatui_theme::{Theme, Variant};
+    use lunatui_widgets::{Image, RenderCx, ScrollView, ScrollbarVisibility, Widget};
+
+    struct CountingSink(usize);
+
+    impl ImageSink for CountingSink {
+        fn supports_pixels(&self) -> bool {
+            true
+        }
+
+        fn submit(&mut self, _request: ImageRequest<'_>) -> bool {
+            self.0 += 1;
+            true
+        }
+    }
+
+    fn render_with_sink(widget: &impl Widget, sink: &mut CountingSink) -> (Grid, ClusterTable) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut grid = Grid::new(1, 1);
+        let mut clusters = ClusterTable::new();
+        widget.render(
+            Rect::new(0, 0, 1, 1),
+            &mut RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(sink),
+        );
+        (grid, clusters)
+    }
+
+    #[test]
+    fn images_inside_a_view_draw_cells_instead_of_reaching_the_pixel_sink() -> Result<(), ImageError>
+    {
+        let source = ImageSource::rgba8(
+            1,
+            2,
+            vec![255, 0, 0, 255, 0, 0, 255, 255].into_boxed_slice(),
+        )?;
+        let id = ImageId::new(3).ok_or(ImageError::Empty)?;
+        let image = || Image::new(source.clone()).id(id);
+
+        let mut direct = CountingSink(0);
+        render_with_sink(&image(), &mut direct);
+        assert_eq!(direct.0, 1);
+
+        let view = ScrollView::new(image(), Size::new(1, 1)).scrollbars(ScrollbarVisibility::Never);
+        let mut viewed = CountingSink(0);
+        let (grid, _) = render_with_sink(&view, &mut viewed);
+        assert_eq!(viewed.0, 0);
+        let cell = grid.get(0, 0).ok_or(ImageError::Empty)?;
+        assert_eq!(cell.glyph().decode(), DecodedGlyph::Inline('▀'));
+        assert_eq!(cell.style().fg, Color::Rgb(255, 0, 0));
+        assert_eq!(cell.style().bg, Color::Rgb(0, 0, 255));
+        Ok(())
+    }
+}

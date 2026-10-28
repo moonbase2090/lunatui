@@ -213,9 +213,8 @@ impl<'a> RenderCx<'a> {
             let style = cell.style();
             if style.bg == Color::Default && bg != Color::Default {
                 self.grid.set_style(Rect::new(x, y, 1, 1), style.bg(bg));
-    #[cfg(feature = "popup")]
-    pub(crate) fn fill(&mut self, area: Rect, style: Style) {
-        self.grid.fill(area, style, ' ', self.clusters);
+            }
+        }
     }
 
     #[cfg(feature = "popup")]
@@ -278,6 +277,8 @@ impl<'a> RenderCx<'a> {
             theme: self.theme,
             #[cfg(feature = "color-profiles")]
             palette: self.palette,
+            #[cfg(feature = "image")]
+            image_sink: None,
         };
         draw(&mut cx);
     }
