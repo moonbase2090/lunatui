@@ -3,7 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
-#[cfg(feature = "tooltip")]
+#[cfg(any(feature = "tooltip", feature = "popover"))]
 mod anchor;
 #[cfg(feature = "barchart")]
 mod bar_chart;
@@ -33,6 +33,8 @@ mod markdown_view;
 mod overlay;
 mod padding;
 mod paragraph;
+#[cfg(feature = "popover")]
+mod popover;
 #[cfg(feature = "popup")]
 mod popup;
 #[cfg(feature = "radio")]
@@ -63,7 +65,7 @@ mod toggle;
 mod tooltip;
 mod widget;
 
-#[cfg(feature = "tooltip")]
+#[cfg(any(feature = "tooltip", feature = "popover"))]
 pub use anchor::AnchorSide;
 #[cfg(feature = "barchart")]
 pub use bar_chart::{Bar, BarChart, BarDirection, BarGroup};
@@ -97,6 +99,8 @@ pub use markdown_view::MarkdownView;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
+#[cfg(feature = "popover")]
+pub use popover::{Popover, PopoverClick, PopoverState};
 #[cfg(feature = "popup")]
 pub use popup::{Placement, Popup, PopupState};
 #[cfg(feature = "radio")]

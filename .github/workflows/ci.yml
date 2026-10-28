@@ -46,7 +46,7 @@ jobs:
       - run: cargo test --locked -p lunatui-bench --features subcell --test subcell_allocs
       - run: cargo test --locked -p lunatui-core --features render-color
       - run: cargo test --locked -p lunatui-bench --features render-color --test render_color_allocs
-      - run: cargo test -p lunatui-widgets --features color-profiles,barchart,bigtext,calendar,canvas,chart,markdown,sparkline,toast,toggle,radio,tooltip
+      - run: cargo test -p lunatui-widgets --features color-profiles,barchart,bigtext,calendar,canvas,chart,markdown,sparkline,toast,toggle,radio,tooltip,popover
       - run: cargo test --locked -p lunatui-term --features pixel-layer
       - run: cargo test --locked -p lunatui-bench --features pixel-layer --test pixel_layer_allocs
       # `app` is off by default. Select the packages that define it so

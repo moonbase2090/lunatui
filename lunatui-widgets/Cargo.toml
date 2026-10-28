@@ -31,6 +31,7 @@ image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
+popover = ["popup"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 
 [dependencies]
@@ -177,3 +178,8 @@ required-features = ["scroll-view"]
 name = "tooltip"
 path = "tests/tooltip.rs"
 required-features = ["tooltip"]
+
+[[test]]
+name = "popover"
+path = "tests/popover.rs"
+required-features = ["popover"]
