@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-10-28
+
 ### Added
 - `Breadcrumbs` widget: a one-row path of segments with a separator, styles for the segments, the last segment, the separators, and a hovered segment. A path wider than the area collapses its middle to `…`, keeping the first segment and as many of the last as fit. `Breadcrumbs::segment_areas` reports where each shown segment sits, for `HitMap`.
 - `SplitTree` for resizable, nestable split panes with a zoomed pane: `split` and `close` change the tree, `layout` gives every pane's cells and every divider's line, `SplitDrag` resizes a divider cell by cell from pointer events (stopping at minimum sizes, with cancel), and `SplitLayout::render_dividers` draws the lines.
@@ -27,10 +29,11 @@ Every PR adds its entry under **Unreleased**.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
 ### Changed
-- The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
+- The `Table` highlight style now covers the selected row's full width, gaps included.
 - `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
 - `List` clears every row of its area and paints the selected row's highlight across the full width.
 - `Overlay` clears the modal area before drawing its content, so the backdrop does not show through.
+- The MarkdownView README demo is recorded at 2x as a lossless animated WebP, and `scripts/record-showcase.sh` now records at 2x and writes WebP.
 
 ### Fixed
 - `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
