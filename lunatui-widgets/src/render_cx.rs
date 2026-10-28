@@ -8,6 +8,7 @@ use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 #[cfg(any(
     feature = "bigtext",
     feature = "calendar",
+    feature = "chart",
     feature = "image",
     feature = "sparkline"
 ))]
@@ -146,6 +147,7 @@ impl<'a> RenderCx<'a> {
     #[cfg(any(
         feature = "bigtext",
         feature = "calendar",
+        feature = "chart",
         feature = "image",
         feature = "sparkline"
     ))]
@@ -159,6 +161,7 @@ impl<'a> RenderCx<'a> {
         self.grid.put_char(x, y, patched, glyph, self.clusters);
     }
 
+    #[cfg(feature = "chart")]
     pub(crate) fn clear_area(&mut self, area: Rect, style: Style) {
         let blank = lunatui_core::GlyphSlot::inline_scalar(' ');
         for y in area.y..area.y.saturating_add(area.height) {
@@ -215,6 +218,7 @@ impl<'a> RenderCx<'a> {
 #[cfg(any(
     feature = "bigtext",
     feature = "calendar",
+    feature = "chart",
     feature = "image",
     feature = "sparkline"
 ))]
@@ -237,6 +241,7 @@ pub(crate) fn patch_style(base: Style, over: Style) -> Style {
 #[cfg(any(
     feature = "bigtext",
     feature = "calendar",
+    feature = "chart",
     feature = "image",
     feature = "sparkline"
 ))]
