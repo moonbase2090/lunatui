@@ -18,7 +18,7 @@ use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
     Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize,
     RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope,
-    ToastStack, Widget,
+    ToastStack, Toggle, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -152,6 +152,15 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: key_hints_lunatui,
         ratatui: key_hints_ratatui,
+    },
+    Case {
+        name: "toggle",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no toggle switch; its side draws the same knob and track glyphs by hand as styled spans",
+        ),
+        lunatui: toggle_lunatui,
+        ratatui: toggle_ratatui,
     },
     Case {
         name: "calendar",
@@ -591,6 +600,73 @@ fn key_hints_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
         ),
         buf,
     );
+}
+
+const TOGGLES: [&str; 4] = ["Dark mode", "Notifications", "Auto update", "Telemetry"];
+
+fn toggle_on(tick: u32, index: usize) -> bool {
+    !(tick / 4 + u32::try_from(index).unwrap_or(0)).is_multiple_of(3)
+}
+
+fn toggle_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for (index, label) in TOGGLES.iter().enumerate() {
+        let y = area.y.saturating_add(u16::try_from(index).unwrap_or(0));
+        Toggle::new(toggle_on(tick, index))
+            .label(*label)
+            .render(Rect::new(area.x, y, area.width, 1), &mut cx);
+    }
+}
+
+fn toggle_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    for (index, label) in TOGGLES.iter().enumerate() {
+        let y = area.y.saturating_add(u16::try_from(index).unwrap_or(0));
+        let on = toggle_on(tick, index);
+        let (rail, rail_style) = if on {
+            (
+                "━━━",
+                RatStyle::new().fg(color(lunatui_theme::Token::Accent)),
+            )
+        } else {
+            (
+                "───",
+                RatStyle::new()
+                    .fg(color(lunatui_theme::Token::TextPrimary))
+                    .add_modifier(ratatui::style::Modifier::DIM),
+            )
+        };
+        let knob = RatStyle::new().fg(color(if on {
+            lunatui_theme::Token::Ok
+        } else {
+            lunatui_theme::Token::TextPrimary
+        }));
+        let line = if on {
+            Line::from(vec![
+                Span::styled(rail, rail_style),
+                Span::styled("●", knob),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled("●", knob),
+                Span::styled(rail, rail_style),
+            ])
+        };
+        let mut spans = line.spans;
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(
+            *label,
+            RatStyle::new().fg(color(lunatui_theme::Token::TextPrimary)),
+        ));
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
 }
 
 fn tabs_lunatui(

@@ -49,6 +49,8 @@ mod tabs;
 mod text_input;
 #[cfg(feature = "toast")]
 mod toast;
+#[cfg(feature = "toggle")]
+mod toggle;
 mod widget;
 
 #[cfg(feature = "barchart")]
@@ -106,4 +108,6 @@ pub use tabs::{TabMove, Tabs, TabsDrag};
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]
 pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};
+#[cfg(feature = "toggle")]
+pub use toggle::Toggle;
 pub use widget::Widget;
