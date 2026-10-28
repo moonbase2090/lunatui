@@ -145,6 +145,14 @@ An editor screen with a toolbar, a file tree, source with a warning in the gutte
 
 Screenshot: [docs/media/tooltip.png](docs/media/tooltip.png). Recorded with `scripts/record-showcase.sh` (`CASE=tooltip`, 120×36 at 2x scale, `FRAMES=270`, dark, lossless animated WebP, about 9 seconds plus a 2-second hold).
 
+### Accordion
+
+A pipeline settings screen: sections with a caret, a title, and a badge open and close one after another, each body growing and shrinking through a reveal fraction the app raises and lowers every tick. The accordion draws the headers and gives back the body rectangles, so the app fills them with its own content, and the summary pane follows the focused section.
+
+<img src="docs/media/accordion.webp" alt="Accordion: sections opening and closing on a pipeline settings screen in the dark theme" width="1028">
+
+Screenshot: [docs/media/accordion.png](docs/media/accordion.png). Recorded with `scripts/record-showcase.sh` (`CASE=accordion`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
