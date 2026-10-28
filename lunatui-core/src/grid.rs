@@ -467,6 +467,69 @@ impl Grid {
         }
     }
 
+    /// Copies the cells of `from` in `src` to `(x, y)` in this grid, clipped to both grids.
+    ///
+    /// Both grids must share one [`ClusterTable`], because cluster glyphs are copied by id. A
+    /// source cell with a [`Color::Default`](crate::Color::Default) background keeps the
+    /// background already under it, so content drawn without a background shows the surface it
+    /// is copied onto. A wide grapheme cut by either edge of the copy, in the source or in this
+    /// grid, becomes a blank in its own style.
+    #[cfg(feature = "blit")]
+    pub fn blit(&mut self, src: &Grid, from: Rect, x: u16, y: u16) {
+        const BG_BITS: u128 = 0xFFFF_FFFF_u128 << 64;
+        let src_end_x = from.x.saturating_add(from.width).min(src.width);
+        let src_end_y = from.y.saturating_add(from.height).min(src.height);
+        if from.x >= src_end_x || from.y >= src_end_y || x >= self.width || y >= self.height {
+            return;
+        }
+        let width = (src_end_x - from.x).min(self.width - x);
+        let height = (src_end_y - from.y).min(self.height - y);
+        let end = x + width;
+        for row in 0..height {
+            let dst_row = y + row;
+            let src_row = from.y + row;
+            if x > 0
+                && let Some(cell) = self.get(x, dst_row)
+                && cell.meta().width == CellWidth::Continuation
+            {
+                self.place_blank(x - 1, dst_row, cell.style());
+            }
+            if end < self.width
+                && let Some(cell) = self.get(end - 1, dst_row)
+                && cell.meta().width == CellWidth::Two
+            {
+                self.place_blank(end, dst_row, cell.style());
+            }
+            let src_base = usize::from(src_row) * usize::from(src.width) + usize::from(from.x);
+            let dst_base = usize::from(dst_row) * usize::from(self.width) + usize::from(x);
+            let words = &src.cells[src_base..src_base + usize::from(width)];
+            for (dst, &word) in self.cells[dst_base..dst_base + usize::from(width)]
+                .iter_mut()
+                .zip(words)
+            {
+                *dst = if word & BG_BITS == 0 {
+                    word | (*dst & BG_BITS)
+                } else {
+                    word
+                };
+            }
+            for col in [x, end - 1] {
+                let Some(cell) = self.get(col, dst_row) else {
+                    continue;
+                };
+                let cut = match cell.meta().width {
+                    CellWidth::Continuation => col == x,
+                    CellWidth::Two => col == end - 1,
+                    CellWidth::One => false,
+                };
+                if cut {
+                    self.place_blank(col, dst_row, cell.style());
+                }
+            }
+            self.mark_dirty(dst_row, x, end);
+        }
+    }
+
     /// One row of display text (wide graphemes appear once; continuation cells are skipped).
     #[must_use]
     pub fn row_display(&self, row: u16, clusters: &ClusterTable) -> String {

@@ -30,6 +30,8 @@ use lunatui_widgets::{
 mod canvas_showcase;
 #[path = "deploy_board.rs"]
 mod deploy_board;
+#[path = "release_console.rs"]
+mod release_console;
 #[path = "tooltip_showcase.rs"]
 mod tooltip_showcase;
 use ratatui::backend::CrosstermBackend;
@@ -158,6 +160,11 @@ const PREVIEWS: &[Preview] = &[
         name: "deploy",
         native: deploy_native,
         baseline: deploy_baseline,
+    },
+    Preview {
+        name: "popup-scrollview",
+        native: release_console::draw,
+        baseline: release_console::baseline,
     },
 ];
 
