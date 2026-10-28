@@ -185,3 +185,23 @@ fn a_second_render_clears_the_old_symbol_band_and_gap_rows() {
         );
     }
 }
+
+#[test]
+fn a_shorter_second_render_clears_the_rows_it_no_longer_uses() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(16, 4);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Table::new(bench_source(), columns()).render(Rect::new(0, 0, 16, 4), &mut cx);
+    let mut short = VecSource::new();
+    short.push_row(vec!["only".to_owned(), "1.00".to_owned(), "ok".to_owned()]);
+    Table::new(short, columns()).render(Rect::new(0, 0, 16, 4), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "only   1.00 ok  ");
+    for y in 1..4 {
+        assert_eq!(
+            grid.row_display(y, &clusters),
+            "                ",
+            "row {y}"
+        );
+    }
+}
