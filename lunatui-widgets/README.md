@@ -21,6 +21,8 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 `MarkdownView` is behind the `markdown` feature. It lays a parsed `lunatui_text::markdown::Document` out at the width it is given and draws headings, wrapped paragraphs with emphasis, code, and links, lists with task markers, block quotes, code blocks, tables, and rules. `scroll` moves it by rows and `content_height` sizes a scrollbar; every cell of the area is rewritten, and `background` keeps a panel color.
 
+`SplitTree` holds nested splits: each divides its area between two panes or further splits at a ratio (in thousandths) with optional minimum sizes, and one pane can be zoomed to fill everything. `layout` returns each pane's cells and each divider's one-cell line for drawing and hit testing, `SplitDrag` turns pointer press, drag, and release on a divider into cell-exact resizing that stops at the minimums (and can cancel), and `SplitLayout::render_dividers` draws the lines.
+
 `Sparkline` is behind the `sparkline` feature. It draws one column per sample with the eight block steps, matches ratatui when given an explicit style, and otherwise paints from theme tokens for the current `WidgetState`.
 
 `SpinnerPreset` is a catalog of named cycles on the existing `Spinner`: dots, line, arc, bounce, pulse, moon, ring, bars, quadrant, and half-moon. Each preset has its own frames and the interval between them. `Spinner::preset` selects one. The default spinner still draws Braille dots, and the caller still supplies the frame index.
