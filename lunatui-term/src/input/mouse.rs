@@ -84,10 +84,10 @@ pub(crate) fn mouse_from_sgr(body: &str, release: bool, pixels: bool) -> Option<
     })
 }
 
-pub(crate) fn mouse_from_x10(raw: [u8; 3], pixels: bool) -> Option<MouseEvent> {
-    let code = u32::from(raw[0].saturating_sub(32));
-    let column = u16::from(raw[1].saturating_sub(32)).saturating_sub(1);
-    let row = u16::from(raw[2].saturating_sub(32)).saturating_sub(1);
+pub(crate) fn mouse_from_x10(bytes: [u8; 3], pixels: bool) -> Option<MouseEvent> {
+    let code = u32::from(bytes[0].saturating_sub(32));
+    let column = u16::from(bytes[1].saturating_sub(32)).saturating_sub(1);
+    let row = u16::from(bytes[2].saturating_sub(32)).saturating_sub(1);
     let (kind, modifiers) = decode_cb(code, false)?;
     Some(MouseEvent {
         kind,
