@@ -37,6 +37,8 @@ mod radio_group;
 mod raster;
 mod render_cx;
 mod scrollbar;
+#[cfg(feature = "slider")]
+mod slider;
 #[cfg(feature = "sparkline")]
 mod sparkline;
 mod spinner;
@@ -93,6 +95,8 @@ pub use radio_group::{RadioFlow, RadioGroup};
 pub use raster::Marker;
 pub use render_cx::RenderCx;
 pub use scrollbar::Scrollbar;
+#[cfg(feature = "slider")]
+pub use slider::Slider;
 #[cfg(feature = "sparkline")]
 pub use sparkline::{
     BarSet, Baseline, NINE_LEVELS, RenderDirection, Sparkline, SparklineBar, SparklineValue,

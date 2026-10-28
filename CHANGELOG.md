@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Slider` widget, behind the `slider` feature: a one-row slider for a single value or a range, with half-cell track precision, an optional knob, a label and value text, step snapping, `value_at` for clicks and drags, `nudge` for the keyboard, and `track_area` and `thumb_areas` for hit testing.
 - `RadioGroup` widget, behind the `radio` feature: single-choice options drawn as `◉`/`○` one per row or side by side, with focus, per-option and whole-group disabling, theme-token colors, `option_areas` for hit testing, and `step` for keyboard movement that wraps and skips disabled options.
 - `Toggle` widget, behind the `toggle` feature: an on/off switch with an optional label and a configurable track width, painted from theme tokens for the normal, focused, and disabled states, with `hit_area` for hit testing.
 - Canvas Braille lines use a thin, centered sub-cell raster so ties stay in one stroke; `Context::marker` lets a paint closure switch to block markers for straight guides and outlines.

@@ -23,6 +23,7 @@ canvas = ["widget-state"]
 
 barchart = ["widget-state"]
 toast = ["widget-state"]
+slider = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
@@ -159,3 +160,8 @@ required-features = ["toast"]
 name = "key_hint_bar"
 path = "tests/key_hint_bar.rs"
 required-features = ["key-hints"]
+
+[[test]]
+name = "slider"
+path = "tests/slider.rs"
+required-features = ["slider"]
