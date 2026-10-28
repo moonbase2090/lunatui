@@ -268,3 +268,134 @@ impl Widget for Tabs {
         Size::new(avail.width, avail.height.min(rows))
     }
 }
+
+/// A finished reorder: the tab at `from` moved to position `to`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TabMove {
+    /// Index the tab had before the move.
+    pub from: usize,
+    /// Index the tab has after the move.
+    pub to: usize,
+}
+
+impl TabMove {
+    /// Moves the item at `from` to `to` in `items`, shifting the ones between. Does nothing when
+    /// either index is out of range.
+    pub fn apply<T>(self, items: &mut Vec<T>) {
+        if self.from < items.len() && self.to < items.len() {
+            let item = items.remove(self.from);
+            items.insert(self.to, item);
+        }
+    }
+
+    /// Where the selected tab `selected` ends up after this move, so the selection stays on the
+    /// same tab: the dragged tab keeps it, and tabs it passed shift by one.
+    #[must_use]
+    pub fn selection(self, selected: usize) -> usize {
+        if selected == self.from {
+            self.to
+        } else if self.from < selected && selected <= self.to {
+            selected - 1
+        } else if self.to <= selected && selected < self.from {
+            selected + 1
+        } else {
+            selected
+        }
+    }
+}
+
+/// Pointer-driven reordering of a [`Tabs`] strip.
+///
+/// Feed it the regions from [`Tabs::tab_areas`] and the pointer events: [`TabsDrag::press`] on
+/// button down, [`TabsDrag::drag`] while the pointer moves, then [`TabsDrag::release`] on button up,
+/// which returns the [`TabMove`] to apply. A press that never leaves its own tab is a click and
+/// reorders nothing. Moving off the strip's rows, or [`TabsDrag::cancel`], abandons the drag.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TabsDrag {
+    from: Option<usize>,
+    target: Option<usize>,
+}
+
+impl TabsDrag {
+    /// Starts idle.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether a drag is in progress.
+    #[must_use]
+    pub fn is_dragging(&self) -> bool {
+        self.from.is_some()
+    }
+
+    /// Index of the tab being dragged.
+    #[must_use]
+    pub fn from(&self) -> Option<usize> {
+        self.from
+    }
+
+    /// Index the dragged tab would take if released now, or `None` while the pointer is off the
+    /// strip.
+    #[must_use]
+    pub fn target(&self) -> Option<usize> {
+        self.target
+    }
+
+    /// Begins a drag when `(column, row)` is on a tab. Returns whether one began.
+    pub fn press(&mut self, areas: &[(usize, Rect)], column: u16, row: u16) -> bool {
+        self.from = areas
+            .iter()
+            .find(|(_, rect)| contains(*rect, column, row))
+            .map(|(index, _)| *index);
+        self.target = self.from;
+        self.from.is_some()
+    }
+
+    /// Updates the drop target for the pointer at `(column, row)`. Left of the first tab picks the
+    /// first, right of the last picks the last, the gap between two tabs keeps the current target,
+    /// and a row outside the strip picks none.
+    pub fn drag(&mut self, areas: &[(usize, Rect)], column: u16, row: u16) {
+        if self.from.is_none() {
+            return;
+        }
+        if !areas.iter().any(|(_, rect)| row_in(*rect, row)) {
+            self.target = None;
+            return;
+        }
+        let under = |rect: &Rect| column >= rect.x && column < rect.x + rect.width;
+        if let Some((index, _)) = areas.first().filter(|(_, rect)| column < rect.x) {
+            self.target = Some(*index);
+        } else if let Some((index, _)) = areas
+            .last()
+            .filter(|(_, rect)| column >= rect.x + rect.width)
+        {
+            self.target = Some(*index);
+        } else if let Some((index, _)) = areas.iter().find(|(_, rect)| under(rect)) {
+            self.target = Some(*index);
+        } else if self.target.is_none() {
+            self.target = self.from;
+        }
+    }
+
+    /// Ends the drag and returns the reorder to apply, if the tab was dropped on another tab.
+    pub fn release(&mut self) -> Option<TabMove> {
+        let from = self.from.take()?;
+        let to = self.target.take()?;
+        (from != to).then_some(TabMove { from, to })
+    }
+
+    /// Abandons the drag without a reorder.
+    pub fn cancel(&mut self) {
+        self.from = None;
+        self.target = None;
+    }
+}
+
+fn row_in(rect: Rect, row: u16) -> bool {
+    row >= rect.y && row < rect.y + rect.height
+}
+
+fn contains(rect: Rect, column: u16, row: u16) -> bool {
+    column >= rect.x && column < rect.x + rect.width && row_in(rect, row)
+}

@@ -102,7 +102,7 @@ pub use state::WidgetState;
 pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
 pub use table::{CellStyle, Table};
-pub use tabs::Tabs;
+pub use tabs::{TabMove, Tabs, TabsDrag};
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]
 pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};

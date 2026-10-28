@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `TabsDrag` turns pointer press, drag, and release over the regions from `Tabs::tab_areas` into a `TabMove` that reorders tabs: dropping on another tab moves the dragged tab there, a press that stays on its own tab is a click, and leaving the strip or `cancel` drops nothing. `TabMove::apply` reorders a `Vec` and `TabMove::selection` keeps the selection on the same tab.
 - `KeyHintBar`, behind the `key-hints` feature, renders the first registered shortcut for each command in the active `Keymap`.
 
 ## [0.1.13] - 2026-10-28
