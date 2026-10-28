@@ -21,7 +21,7 @@ use lunatui_widgets::{
     Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
     KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
     RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
-    Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, VecSource, Widget, WidgetState,
+    Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -76,6 +76,11 @@ const PREVIEWS: &[Preview] = &[
         name: "list-icons",
         native: list_icons_native,
         baseline: list_icons_baseline,
+    },
+    Preview {
+        name: "toggle",
+        native: toggle_native,
+        baseline: toggle_baseline,
     },
     Preview {
         name: "calendar",
@@ -4096,6 +4101,201 @@ fn ls_detail(
 }
 
 fn list_icons_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const TG_ITEMS: [(&str, &str, &str, bool); 8] = [
+    (
+        "Dark mode",
+        "Use the dark theme everywhere",
+        "dark_mode",
+        true,
+    ),
+    (
+        "Reduce motion",
+        "Skip transitions and animations",
+        "reduce_motion",
+        false,
+    ),
+    (
+        "Compact layout",
+        "Tighter rows in tables and lists",
+        "compact",
+        false,
+    ),
+    (
+        "Line numbers",
+        "Show line numbers in the editor",
+        "line_numbers",
+        true,
+    ),
+    (
+        "Desktop alerts",
+        "Notify when a build finishes",
+        "desktop_alerts",
+        true,
+    ),
+    (
+        "Alert sound",
+        "Play a sound with each alert",
+        "alert_sound",
+        false,
+    ),
+    (
+        "Share usage data",
+        "Send anonymous feature counts",
+        "usage_data",
+        false,
+    ),
+    (
+        "Crash reports",
+        "Send a report when the app fails",
+        "crash_reports",
+        true,
+    ),
+];
+
+fn tg_state(tick: u32) -> ([bool; 8], usize) {
+    let mut on = [false; 8];
+    for (slot, item) in on.iter_mut().zip(TG_ITEMS) {
+        *slot = item.3;
+    }
+    let focus = usize::try_from(tick / 16).unwrap_or(0) % 8;
+    for pass in 0..2_u32 {
+        for index in 0..8_u32 {
+            let at = pass * 128 + index * 16 + 8;
+            let skipped = pass == 1 && index % 2 == 1;
+            if tick >= at && !skipped {
+                let slot = usize::try_from(index).unwrap_or(0);
+                on[slot] = !on[slot];
+            }
+        }
+    }
+    (on, focus)
+}
+
+fn tg_extra(cx: &mut RenderCx<'_>, config: Rect, styles: [Style; 2], accent: Color) {
+    let [fill, dim] = styles;
+    for (row, line) in (0_u16..).zip([
+        "",
+        "[editor]",
+        "tab_width       = 4",
+        "font            = \"JetBrains Mono\"",
+        "font_size       = 14",
+        "",
+        "[updates]",
+        "channel         = \"stable\"",
+    ]) {
+        let y = config.y + 10 + row;
+        if y + 1 >= config.y + config.height {
+            break;
+        }
+        let style = if line.starts_with('[') {
+            fill.fg(accent)
+        } else {
+            dim
+        };
+        cx.put_str(config.x + 2, y, line, style);
+    }
+}
+
+fn toggle_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Settings", head);
+    let (on, focus) = tg_state(tick);
+    let width = (area.width.saturating_sub(5)) / 2;
+    let left = Rect::new(area.x + 2, area.y + 2, width, 14);
+    let right = Rect::new(left.x + width + 1, left.y, width, 14);
+    for (title, pane, first) in [
+        (" General ", left, 0_usize),
+        (" Notifications and privacy ", right, 4),
+    ] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+        for row in 0..4_u16 {
+            let index = first + usize::from(row);
+            let y = pane.y + 1 + row * 3;
+            let state = if index == focus {
+                WidgetState::Focused
+            } else {
+                WidgetState::Normal
+            };
+            Toggle::new(on[index])
+                .label(TG_ITEMS[index].0)
+                .state(state)
+                .render(
+                    Rect::new(pane.x + 2, y, pane.width.saturating_sub(4), 1),
+                    &mut cx,
+                );
+            cx.put_str(pane.x + 2 + 5, y + 1, TG_ITEMS[index].1, dim);
+        }
+    }
+    let config = Rect::new(
+        area.x + 2,
+        left.y + 15,
+        area.width.saturating_sub(4),
+        area.height.saturating_sub(left.y + 18),
+    );
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" ~/.config/lunatui/settings.toml ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(config, &mut cx);
+    cx.put_str(config.x + 2, config.y + 1, "[app]", fill.fg(accent));
+    for (row, (item, value)) in (0_u16..).zip(TG_ITEMS.iter().zip(on)) {
+        if row + 4 >= config.height {
+            break;
+        }
+        let style = if usize::from(row) == focus { fill } else { dim };
+        cx.put_str(
+            config.x + 2,
+            config.y + 2 + row,
+            &format!("{:<16}= {value}", item.2),
+            style,
+        );
+    }
+    tg_extra(&mut cx, config, [fill, dim], accent);
+    StatusBar::new(" Tab next setting  ●  Space toggle  ●  Esc close")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn toggle_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "toggle") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
