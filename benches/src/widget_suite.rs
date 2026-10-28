@@ -16,13 +16,14 @@ use lunatui_theme::{Theme, Variant};
 #[cfg(feature = "line-gauge")]
 use lunatui_widgets::LineGauge;
 use lunatui_widgets::{
-    Axis, Bar, BarChart, BigText, Block, BorderType, Canvas, Chart, Dataset, Date, Gauge,
-    GraphType, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline,
-    Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Widget,
+    Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
+    Gauge, GraphType, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx,
+    Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack,
+    Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint as RatConstraint, Rect as RatRect};
+use ratatui::layout::{Constraint as RatConstraint, Layout as RatLayout, Rect as RatRect};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::symbols::Marker as RatMarker;
 use ratatui::text::{Line, Span};
@@ -111,11 +112,29 @@ pub static CASES: &[Case] = &[
         ratatui: list_ratatui,
     },
     Case {
+        name: "split",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no split container; its side lays the same three panes out with Layout constraints and leaves out the divider lines and the one-cell gap lunatui reserves for them",
+        ),
+        lunatui: split_lunatui,
+        ratatui: split_ratatui,
+    },
+    Case {
         name: "tabs",
         gated: false,
         parity: Parity::Exact,
         lunatui: tabs_lunatui,
         ratatui: tabs_ratatui,
+    },
+    Case {
+        name: "breadcrumbs",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no breadcrumb widget; its side draws the full path as one line and clips it, where lunatui collapses the middle to an ellipsis when the path is wider than the area",
+        ),
+        lunatui: breadcrumbs_lunatui,
+        ratatui: breadcrumbs_ratatui,
     },
     Case {
         name: "calendar",
@@ -395,6 +414,101 @@ fn list_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .take(usize::from(area.height))
         .map(|row| ListItem::new(row[0].as_str()));
     RatWidget::render(RatList::new(items).style(rat_text()), area, buf);
+}
+
+fn split_share(tick: u32) -> u16 {
+    let phase = u16::try_from(tick % 40).unwrap_or(0);
+    300 + 10 * if phase <= 20 { phase } else { 40 - phase }
+}
+
+fn split_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let (mut tree, left) = SplitTree::new();
+    if let Some(right) = tree.split(left, SplitAxis::Horizontal, split_share(tick)) {
+        tree.split(right, SplitAxis::Vertical, 500);
+    }
+    let layout = tree.layout(area);
+    for pane in &layout.panes {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(format!(" Pane {} ", pane.pane.0))
+            .style(text_style())
+            .border_style(dim_style())
+            .render(pane.rect, &mut cx);
+    }
+    layout.render_dividers(dim_style(), None, accent_style(), &mut cx);
+}
+
+fn split_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let columns = RatLayout::horizontal([
+        RatConstraint::Percentage(split_share(tick) / 10),
+        RatConstraint::Fill(1),
+    ])
+    .split(area);
+    let rows = RatLayout::vertical([RatConstraint::Percentage(50), RatConstraint::Fill(1)])
+        .split(columns[1]);
+    for (index, rect) in [columns[0], rows[0], rows[1]].into_iter().enumerate() {
+        RatBlock::bordered()
+            .border_type(RatBorderType::Rounded)
+            .title(format!(" Pane {index} "))
+            .style(rat_text())
+            .border_style(rat_dim())
+            .render(rect, buf);
+    }
+}
+
+const CRUMBS: [&str; 12] = [
+    "Home",
+    "Projects",
+    "Moonbase2090",
+    "lunatui",
+    "lunatui-widgets",
+    "src",
+    "markdown",
+    "tests",
+    "fixtures",
+    "commonmark",
+    "spec",
+    "0.31.2",
+];
+
+fn breadcrumbs_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    _tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    Breadcrumbs::new(CRUMBS)
+        .style(text_style())
+        .current_style(accent_style())
+        .separator_style(dim_style())
+        .render(Rect::new(area.x, area.y, area.width, 1), &mut cx);
+}
+
+fn breadcrumbs_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
+    let mut spans = Vec::new();
+    for (index, name) in CRUMBS.iter().enumerate() {
+        if index > 0 {
+            spans.push(Span::styled(" › ", rat_dim()));
+        }
+        let style = if index + 1 == CRUMBS.len() {
+            rat_accent()
+        } else {
+            rat_text()
+        };
+        spans.push(Span::styled(*name, style));
+    }
+    RatParagraph::new(Line::from(spans))
+        .style(rat_text())
+        .render(RatRect::new(area.x, area.y, area.width, 1), buf);
 }
 
 fn tabs_lunatui(
