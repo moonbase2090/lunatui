@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - `Chart` widget, behind the `chart` feature, with `Dataset`, `Axis`, `GraphType` (scatter, line, bar), `Marker` (braille, half block, dot, block), and `LegendPosition`. Axes carry bounds, labels, and titles; a legend lists named datasets and is hidden when it would take more than half the plot, which `hidden_legend_constraints` changes. Series colors cycle through theme tokens and the axes follow `WidgetState`.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 

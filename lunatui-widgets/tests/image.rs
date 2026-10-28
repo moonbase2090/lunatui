@@ -5,8 +5,14 @@
 
 use lunatui_core::{ClusterTable, Color, DecodedGlyph, Grid, Rect};
 use lunatui_image::{Fit, ImageError, ImageId, ImageRequest, ImageSink, ImageSource};
-use lunatui_theme::{Profile, Theme, Variant};
+use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{Image, RenderCx, Widget, WidgetState};
+
+const SURFACE: Color = Color::Rgb(20, 40, 60);
+
+fn surface_theme() -> Theme {
+    Theme::with_overrides(Variant::Dark, &[(Token::Surface0, SURFACE)])
+}
 
 #[test]
 fn half_block_preserves_top_and_bottom_pixel_colors() -> Result<(), ImageError> {
@@ -32,7 +38,7 @@ fn half_block_preserves_top_and_bottom_pixel_colors() -> Result<(), ImageError> 
 fn contain_leaves_letterbox_in_surface_token() -> Result<(), ImageError> {
     let source = ImageSource::rgba8(1, 1, vec![0, 255, 0, 255].into_boxed_slice())?;
     let theme = Theme::builtin(Variant::Dark);
-    let surface = theme.resolve(lunatui_theme::Token::Surface0);
+    let surface = theme.resolve(Token::Surface0);
     let mut grid = Grid::new(1, 2);
     let mut clusters = ClusterTable::new();
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
@@ -50,7 +56,7 @@ fn contain_leaves_letterbox_in_surface_token() -> Result<(), ImageError> {
 #[test]
 fn transparent_pixels_composite_over_surface_and_fit_is_configurable() -> Result<(), ImageError> {
     let source = ImageSource::rgba8(1, 2, vec![255, 0, 0, 128, 0, 0, 0, 0].into_boxed_slice())?;
-    let theme = Theme::builtin(Variant::Dark);
+    let theme = surface_theme();
     let mut grid = Grid::new(1, 1);
     let mut clusters = ClusterTable::new();
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
@@ -59,11 +65,8 @@ fn transparent_pixels_composite_over_surface_and_fit_is_configurable() -> Result
         .render(Rect::new(0, 0, 1, 1), &mut cx);
 
     let cell = grid.get(0, 0).ok_or(ImageError::Empty)?;
-    assert_eq!(cell.style().fg, Color::Rgb(143, 15, 23));
-    assert_eq!(
-        cell.style().bg,
-        theme.resolve(lunatui_theme::Token::Surface0)
-    );
+    assert_eq!(cell.style().fg, Color::Rgb(138, 20, 30));
+    assert_eq!(cell.style().bg, SURFACE);
     Ok(())
 }
 
@@ -75,7 +78,7 @@ fn focused_image_uses_theme_focus_ring_and_insets_the_pixels() -> Result<(), Ima
         vec![255, 0, 0, 255, 0, 0, 255, 255].into_boxed_slice(),
     )?;
     let theme = Theme::builtin(Variant::Dark);
-    let focus_ring = theme.resolve(lunatui_theme::Token::FocusRing);
+    let focus_ring = theme.resolve(Token::FocusRing);
     let mut grid = Grid::new(3, 3);
     let mut clusters = ClusterTable::new();
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
@@ -98,7 +101,7 @@ fn disabled_image_is_dimmed_with_theme_surface_compositing() -> Result<(), Image
         2,
         vec![255, 0, 0, 255, 255, 0, 0, 255].into_boxed_slice(),
     )?;
-    let theme = Theme::builtin(Variant::Dark);
+    let theme = surface_theme();
     let mut grid = Grid::new(1, 1);
     let mut clusters = ClusterTable::new();
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
@@ -107,8 +110,8 @@ fn disabled_image_is_dimmed_with_theme_surface_compositing() -> Result<(), Image
         .render(Rect::new(0, 0, 1, 1), &mut cx);
 
     let cell = grid.get(0, 0).ok_or(ImageError::Empty)?;
-    assert_eq!(cell.style().fg, Color::Rgb(165, 12, 18));
-    assert_eq!(cell.style().bg, Color::Rgb(165, 12, 18));
+    assert_eq!(cell.style().fg, Color::Rgb(161, 16, 24));
+    assert_eq!(cell.style().bg, Color::Rgb(161, 16, 24));
     Ok(())
 }
 

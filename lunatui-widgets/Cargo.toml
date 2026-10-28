@@ -17,6 +17,7 @@ widget-state = []
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
+barchart = ["widget-state"]
 chart = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
@@ -95,6 +96,11 @@ path = "tests/spinner_presets.rs"
 name = "image"
 path = "tests/image.rs"
 required-features = ["image"]
+
+[[test]]
+name = "bar_chart"
+path = "tests/bar_chart.rs"
+required-features = ["barchart"]
 
 [[test]]
 name = "chart"

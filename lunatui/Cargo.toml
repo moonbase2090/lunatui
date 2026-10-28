@@ -30,7 +30,7 @@ lunatui-term = { path = "../lunatui-term" }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["bigtext", "calendar", "chart", "image", "sparkline"] }
+lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "chart", "image", "sparkline"] }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
 lunatui-prismattyc = { version = "0.1.12", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"
