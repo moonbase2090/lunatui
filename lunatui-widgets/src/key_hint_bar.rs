@@ -42,14 +42,26 @@ impl Widget for KeyHintBar<'_> {
         let title_style = Style::new().fg(cx.token(Token::TextPrimary));
         let end = area.x.saturating_add(area.width);
         let mut x = area.x;
+        let mut hints_left = self
+            .keymap
+            .commands()
+            .iter()
+            .filter(|command| !command.chords().is_empty())
+            .count();
 
-        for command in self.keymap.commands() {
-            let Some(chord) = command.chords().first() else {
-                continue;
-            };
+        for command in self
+            .keymap
+            .commands()
+            .iter()
+            .filter(|command| !command.chords().is_empty())
+        {
+            hints_left = hints_left.saturating_sub(1);
             if x >= end {
                 break;
             }
+            let Some(chord) = command.chords().first() else {
+                continue;
+            };
 
             let key = format!("[{chord}]");
             let key_draw = clip_display_prefix(&key, end - x);
@@ -68,7 +80,7 @@ impl Widget for KeyHintBar<'_> {
             let title_draw = clip_display_prefix(command.title(), end - x);
             cx.put_str(x, area.y, title_draw, title_style);
             x = x.saturating_add(u16::try_from(width(title_draw)).unwrap_or(u16::MAX));
-            if x < end {
+            if hints_left > 0 && x < end {
                 let gap = self.gap.min(end - x);
                 for _ in 0..gap {
                     cx.put_str(x, area.y, " ", title_style);
