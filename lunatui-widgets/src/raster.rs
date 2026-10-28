@@ -31,6 +31,7 @@ pub(crate) enum Ink {
     Quadrant,
     Sextant,
     Braille,
+    #[cfg(feature = "chart")]
     Eighths,
 }
 
@@ -53,16 +54,19 @@ pub(crate) const QUADRANT: [char; 16] = [
 ];
 
 pub(crate) fn sextant(mask: u8) -> char {
-    match mask & 63 {
-        0 => ' ',
-        21 => '▌',
-        42 => '▐',
-        63 => '█',
-        m => char::from_u32(0x1FB00 + u32::from(m) - 1 - u32::from(m > 21) - u32::from(m > 42))
-            .unwrap_or(' '),
-    }
+    let code = match mask & 63 {
+        0 => return ' ',
+        21 => return '▌',
+        42 => return '▐',
+        63 => return '█',
+        m @ 1..=20 => 0x1FB00 + u32::from(m) - 1,
+        m @ 22..=41 => 0x1FB00 + u32::from(m) - 2,
+        m => 0x1FB00 + u32::from(m) - 3,
+    };
+    char::from_u32(code).unwrap_or(' ')
 }
 
+#[cfg(feature = "chart")]
 pub(crate) const EIGHTHS_UP: [char; 9] = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
 pub(crate) struct Raster {
@@ -132,6 +136,7 @@ impl Raster {
         }
     }
 
+    #[cfg(feature = "chart")]
     pub(crate) fn eighths(&mut self, column: u16, ticks: i64, series: usize) {
         let height = i64::from(self.rect.height);
         let ticks = ticks.clamp(0, height * 8);
@@ -327,6 +332,7 @@ impl Window {
         round_to_tick((self.y[1] - y) * span(cells - 1) / self.height())
     }
 
+    #[cfg(feature = "chart")]
     pub(crate) fn ticks(self, y: f64, eighths: i64) -> i64 {
         round_to_tick((y - self.y[0]) * span(eighths) / self.height())
     }
@@ -345,6 +351,7 @@ pub(crate) fn glyph(spot: Spot) -> char {
         Ink::Quadrant => QUADRANT[usize::from(spot.mask & 15)],
         Ink::Sextant => sextant(spot.mask),
         Ink::Braille => char::from_u32(0x2800 + u32::from(spot.mask)).unwrap_or(' '),
+        #[cfg(feature = "chart")]
         Ink::Eighths => EIGHTHS_UP[usize::from(spot.mask.min(8))],
     }
 }

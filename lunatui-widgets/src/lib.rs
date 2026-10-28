@@ -11,6 +11,9 @@ mod block;
 mod borders;
 #[cfg(feature = "calendar")]
 mod calendar;
+/// Shapes for [`Canvas`] and the painter they draw with.
+#[cfg(feature = "canvas")]
+pub mod canvas;
 #[cfg(feature = "chart")]
 mod chart;
 mod gauge;
@@ -48,6 +51,8 @@ pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
+#[cfg(feature = "canvas")]
+pub use canvas::Canvas;
 #[cfg(feature = "chart")]
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
 pub use gauge::Gauge;
