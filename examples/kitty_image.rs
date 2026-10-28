@@ -1,0 +1,119 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!("README.md")]
+
+use std::io;
+
+use lunatui::{App, ControlFlow, RunOptions, is_quit, run};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+use lunatui_runtime::RenderFrame;
+use lunatui_term::Event;
+use lunatui_theme::{Theme, Variant};
+use lunatui_widgets::{Block, Image, ImageFit, ImageId, ImageSource, RenderCx, Widget};
+
+const WIDTH: u16 = 100;
+const HEIGHT: u16 = 32;
+
+fn main() -> io::Result<()> {
+    let source = ImageSource::decode(include_bytes!("../site/assets/earth.jpg"))
+        .map_err(|error| io::Error::other(error.to_string()))?;
+    run(KittyImage { source }, RunOptions::new(WIDTH, HEIGHT))
+}
+
+struct KittyImage {
+    source: ImageSource,
+}
+
+impl App for KittyImage {
+    fn update(&mut self, event: &Event) -> ControlFlow {
+        if is_quit(event) {
+            ControlFlow::Break
+        } else {
+            ControlFlow::Continue
+        }
+    }
+
+    fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &theme);
+        self.draw(area, &mut cx);
+    }
+
+    fn render_frame(&mut self, frame: &mut RenderFrame<'_>, area: Rect) {
+        let theme = Theme::builtin(Variant::Dark);
+        let (grid, clusters, images) = frame.parts();
+        let mut cx = RenderCx::new(grid, clusters, &theme).image_sink(images);
+        self.draw(area, &mut cx);
+    }
+}
+
+impl KittyImage {
+    fn draw(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let panel = Block::bordered().title("LUNATUI  /  IMAGE");
+        panel.render(area, cx);
+        let inner = panel.inner(area);
+        cx.put_str(
+            inner.x,
+            inner.y,
+            "KITTY GRAPHICS  ·  NASA Blue Marble / PIA18033",
+            Style::new().fg(Color::Rgb(184, 167, 240)),
+        );
+        let image_area = Rect::new(
+            inner.x + 2,
+            inner.y + 2,
+            inner.width.saturating_sub(4),
+            inner.height.saturating_sub(5),
+        );
+        let Some(image_id) = ImageId::new(42) else {
+            return;
+        };
+        Image::new(self.source.clone())
+            .id(image_id)
+            .fit(ImageFit::Contain)
+            .render(image_area, cx);
+        cx.put_str(
+            inner.x,
+            inner.y + inner.height.saturating_sub(1),
+            "Press q to leave  ·  Kitty sends pixels; other terminals use the cell renderer",
+            Style::new().fg(Color::Rgb(164, 174, 193)),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Image, ImageFit, ImageId, ImageSource, RenderCx, Widget};
+    use lunatui_core::{ClusterTable, Grid, Rect};
+    use lunatui_term::{PixelLayer, PixelMode};
+    use lunatui_theme::{Theme, Variant};
+
+    #[test]
+    fn kitty_transmission_keeps_native_pixels_and_places_scaled_to_cells() {
+        let source = ImageSource::decode(include_bytes!("../site/assets/earth.jpg"))
+            .expect("bundled NASA image should decode");
+
+        assert_eq!(
+            (source.size().width(), source.size().height()),
+            (1920, 1920)
+        );
+        let mut grid = Grid::new(100, 32);
+        let mut clusters = ClusterTable::new();
+        let theme = Theme::builtin(Variant::Dark);
+        let mut layer = PixelLayer::new(PixelMode::Kitty);
+        layer.begin_frame();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(&mut layer);
+        Image::new(source)
+            .id(ImageId::new(42).expect("nonzero image id"))
+            .fit(ImageFit::Contain)
+            .render(Rect::new(4, 4, 92, 25), &mut cx);
+        let frame = String::from_utf8_lossy(layer.finish_frame());
+
+        assert!(
+            frame.starts_with("\x1b_Ga=t,i=42,f=32,s=1920,v=1920,q=2,m=1;"),
+            "unexpected transmit header: {:?}",
+            frame.get(..60)
+        );
+        assert!(frame.contains("\x1b_Ga=p,i=42,p=1,c=50,r=25,z=0,C=1,q=2\x1b\\"));
+    }
+}
