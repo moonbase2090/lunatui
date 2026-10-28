@@ -10,26 +10,16 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
-- `BigTextFont::FiveBySeven`, a compact 5×7 clock font for the digits `0`–`9` and `:`, drawn with full blocks.
-
-### Fixed
-
-- `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
-
-### Added
-
-- `Block::title_inset` keeps border cells between the left corner and a left-aligned title, and `Block::title_at` adds a title with its own position, alignment, and style.
-- `Tabs::boxed` draws the selected tab in a rounded box that opens into a divider line, `Tabs::join_parent_border` joins that divider to a parent block's side borders, and `Tabs::indent` sets the space before the first tab.
-- `TextInput::field_style`, `TextInput::padding`, and `TextInput::show_cursor` style the cells inside the field, inset the text, and hide the cursor of an unfocused field.
-- `Monthly::weekend_style` styles Saturdays and Sundays under event styles, and `Monthly::selected_style` styles the selected day as a chip that covers the blank cell on each side.
-- `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
-- A `BarChart` widget behind the off-by-default `barchart` feature: bars of any width with eighth-block tops, a bar gap, per-bar styles, a track style, and labels under the bars.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
 - `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
 - `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
 - `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
 - `Overlay::shadow` draws a drop shadow one cell right and down behind the modal.
+- `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
+- `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
+- `MarkdownView` widget, behind the `markdown` feature: it draws a parsed Markdown `Document` wrapped to the area's width, with headings and rules, lists and task items, block quotes, code blocks, boxed tables, and styled inline text, scrolls by rows, reports its `content_height` for a scrollbar, and follows `WidgetState` and an optional background style.
+- An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
 ### Changed
 
@@ -37,6 +27,39 @@ Every PR adds its entry under **Unreleased**.
 - `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
 - `List` clears every row of its area and paints the selected row's highlight across the full width.
 - `Overlay` clears the modal area before drawing its content, so the backdrop does not show through.
+
+### Fixed
+
+- `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
+
+- A focused `Image` draws its focus ring over the background already in its area instead of the terminal default.
+
+## [0.1.12] - 2026-10-27
+
+### Added
+
+- `Layout::limits` and `aspect_fit` in `lunatui-layout`, behind the opt-in `size-limits` feature: each segment can have a floor and a cap (`Limit::at_least`, `at_most`, `between`) so panes keep a usable size on resize, and cells a capped segment cannot take go to the other growing segments. `aspect_fit` returns the largest rectangle of a given shape inside an area, centred.
+- `Layout::split_wrapped` in `lunatui-layout`, behind the opt-in `flex-wrap` feature: segments that do not fit move onto the next line (or column), each line is split with the layout's flex and spacing, and one `Constraint` sizes every line. `Layout::gap` sets the spacing between segments and between lines in one call.
+- Named spinner presets on the existing `Spinner`: dots, line, arc, bounce, pulse, moon, ring, bars, quadrant, and half-moon. Each preset has its own frames and interval. `Spinner::preset` selects one. The default spinner is unchanged, and the caller still supplies the frame index. The example is a production deploy board.
+- `lunatui_text::markdown`, behind the `markdown` feature: a Markdown parser that follows CommonMark 0.31.2 and adds GFM tables, strikethrough, task lists, and bare autolinks. It returns a syntax tree (`Document`, `Block`, `Inline`), does no rendering or I/O, and runs in time linear in the input size.
+- `BigTextFont::FiveBySeven`, a compact 5×7 clock font for the digits `0`–`9` and `:`, drawn with full blocks.
+- A CI guard for the site widget gallery: `scripts/check-gallery-real-output.sh` fails when a site capture example writes cells after a widget renders, and `lunatui/tests/site_gallery_repro.rs` re-renders each scene and compares it, and its committed PNG, with a recorded manifest.
+- `CONTRIBUTING.md` and a pull request template carry the rule that demos show real widget output only.
+- `Block::title_inset` keeps border cells between the left corner and a left-aligned title, and `Block::title_at` adds a title with its own position, alignment, and style.
+- `Tabs::boxed` draws the selected tab in a rounded box that opens into a divider line, `Tabs::join_parent_border` joins that divider to a parent block's side borders, and `Tabs::indent` sets the space before the first tab.
+- `TextInput::field_style`, `TextInput::padding`, and `TextInput::show_cursor` style the cells inside the field, inset the text, and hide the cursor of an unfocused field.
+- `Monthly::weekend_style` styles Saturdays and Sundays under event styles, and `Monthly::selected_style` styles the selected day as a chip that covers the blank cell on each side.
+
+### Changed
+
+- The website gallery shows the full-screen Calendar, BigText, Sparkline, Spinner, and TextInput recordings. The README recordings for Calendar, BigText, and Sparkline are those same clips.
+
+### Fixed
+
+- The PTY integration tests for `lunatui` and `lunatui-test` carry their crate docs on Windows, where the tests are compiled out, so `missing_docs` no longer fails the Windows build.
+- The website hero sky no longer drifts side to side; the sky image is static.
+- `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
+
 
 ## [0.1.11] - 2026-10-27
 

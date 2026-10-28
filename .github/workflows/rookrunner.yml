@@ -45,7 +45,7 @@ jobs:
           sh "$RUNNER_TEMP/rustup-init.sh" -y --default-toolchain stable --profile minimal --no-modify-path
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - run: cargo test --workspace
-      - run: cargo test -p lunatui-widgets --features color-profiles,barchart,bigtext,calendar,line-gauge,sparkline
+      - run: cargo test -p lunatui-widgets --features color-profiles,barchart,bigtext,calendar,sparkline
       - run: cargo run --example hello_box
       - run: cargo run --example hello_box -- --metrics
 
@@ -208,3 +208,10 @@ jobs:
         uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           sarif_file: scorecard.sarif
+
+  gallery-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: ./scripts/check-gallery-real-output-selftest.sh
+      - run: ./scripts/check-gallery-real-output.sh

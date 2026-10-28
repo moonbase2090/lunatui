@@ -7,9 +7,11 @@ Each example runs from the repository root with one command (PRD M13). The **v0.
 | `gallery` | `cargo run --example gallery` | Phase 4 widget gallery: Paragraph/List/Table plus Tabs, Gauge, Scrollbar, Spinner, `StatusBar`, `TextInput`, and `Overlay` modal (PRs 30–33). Piped stdout: `--snapshot` for a text frame (M13 capture in `captures/gallery.cast`). | PR 34 |
 | `demo` | `cargo run --example demo --features app` | Hello-world on `lunatui::run()` (PR 23, `app` feature). Interactive `run()` works on Unix and Windows Terminal (PR 27). `--counter` adds clickable/focusable `[ - ]` / `[ + ]` buttons with `HitMap` + `FocusManager` (PR 24). `--motion` (with `--counter`) animates the value with a spring and accent tween (PR 25). Counter mode uses theme tokens; default bundled `prismattyc-dark`; press `t` to toggle prismattyc light/dark (PR 26). Counter UI is framed with `lunatui_widgets::Block` (PR 29); title row still shows `StatusDot` via `RenderCx` (PR 28). `--ratatui-bridge --snapshot` draws the ratatui dashboard scene through `lunatui_ratatui::LunatuiBackend` (PR 43). `--porting --snapshot` shows the three L2 port patterns (PR 46). `--simd --snapshot` prints runtime SIMD dispatch level and differential harness probe (PR 47), and ASCII log width bench (PR 49). `--encode-bench --snapshot` times 256× `Encoder::encode_diff` on dashboard-like frames (PR 50). Piped stdout: `--snapshot` or release bench (`--width` / `--height`). | PR 50 |
 | `widget_preview` | `cargo run --release --example widget_preview --features color-profiles -- --case block --side lunatui --profile ansi16 --theme light` | One widget from the parity suite, drawn at a fixed frame rate on either side, for recordings. Flags: `--case`, `--side lunatui\|ratatui`, `--profile truecolor\|ansi256\|ansi16`, `--theme dark\|light`, `--width`, `--height`, `--frames`, `--fps`. | recording |
+| `image_showcase` | `cargo run --release --example image_showcase --features image-decode -- --width 120 --height 36 --frames 300 --fps 30` | Dark media library: `Image` thumbnails (focused, disabled while importing), a preview that switches between contain and cover, and tone bands, drawn with the `Image` cell fallback. `--snapshot` prints the first frame as text. | Image gallery |
 | `bigtext` | `cargo run --example bigtext -- --snapshot` | Three themed readings (normal, focused, disabled) of large half-height text. `--snapshot` prints the frame as text. | bigtext |
 | `calendar` | `cargo run --example calendar -- --snapshot` | Three themed months (normal, focused, disabled) for October, with styled event days. `--snapshot` prints the frame as text. | calendar |
 | `sparkline` | `cargo run --example sparkline -- --snapshot` | Three themed sparklines (normal, focused, disabled) over a sliding request-rate series. `--snapshot` prints the frame as text. | sparkline |
+| `spinner_presets` | `cargo run --example spinner_presets -- --snapshot` | A production deploy board: image, checks, and canary cards, a task list, an event log, and a rollout gauge. `--width`, `--height`, `--frames`, and `--fps` play the screen. `--snapshot` prints the first frame as text. | presets |
 | `port_ratatui_block` | `cargo run --example port_ratatui_block -- --snapshot` | Side-by-side lunatui `Block` and ratatui `Block` through `RatatuiWidget` (PR 46 porting guide). | PR 46 |
 | `port_ratatui_paragraph` | `cargo run --example port_ratatui_paragraph -- --snapshot` | ratatui `Paragraph` with styled spans inside lunatui chrome (PR 46). | PR 46 |
 | `port_ratatui_list` | `cargo run --example port_ratatui_list -- --snapshot` | Stateful ratatui `List` via `RatatuiStatefulWidget` (PR 46). | PR 46 |
@@ -29,6 +31,8 @@ Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cas
 
 `captures/gallery.cast` is `cargo run -q --example gallery -- --snapshot` (one rendered frame with overlay modal).
 
+`captures/spinner-presets.gif` is `CASE=deploy WIDTH=120 HEIGHT=36 FRAMES=80 FPS=10 PROFILE=truecolor THEME=dark scripts/record-widget.sh`. The still from that clip is `captures/spinner-presets.png`.
+
 ![Capture of the hello box example](captures/hello_box.png)
 
 ![Capture of the cell dump example](captures/cell_dump.png)
@@ -40,6 +44,8 @@ Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cas
 ![Capture of the live dashboard example](captures/live_dashboard.png)
 
 ![Capture of the demo example](captures/demo.png)
+
+![Spinner presets](captures/spinner-presets.gif)
 
 Examples live in this directory and are registered as `[[example]]` targets of the `lunatui` facade crate (`lunatui/Cargo.toml`).
 

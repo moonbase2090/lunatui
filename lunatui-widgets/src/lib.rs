@@ -12,10 +12,14 @@ mod borders;
 #[cfg(feature = "calendar")]
 mod calendar;
 mod gauge;
+#[cfg(feature = "image")]
+mod image;
 mod lightcycle;
 #[cfg(feature = "line-gauge")]
 mod line_gauge;
 mod list;
+#[cfg(feature = "markdown")]
+mod markdown_view;
 mod overlay;
 mod padding;
 mod paragraph;
@@ -24,6 +28,7 @@ mod scrollbar;
 #[cfg(feature = "sparkline")]
 mod sparkline;
 mod spinner;
+mod spinner_preset;
 #[cfg(feature = "widget-state")]
 mod state;
 mod status_bar;
@@ -34,7 +39,7 @@ mod text_input;
 mod widget;
 
 #[cfg(feature = "barchart")]
-pub use bar_chart::BarChart;
+pub use bar_chart::{Bar, BarChart, BarDirection, BarGroup};
 #[cfg(feature = "bigtext")]
 pub use big_text::{BigText, BigTextFont, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
@@ -42,13 +47,19 @@ pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use gauge::Gauge;
+#[cfg(feature = "image")]
+pub use image::Image;
 pub use lightcycle::Lightcycle;
 #[cfg(feature = "line-gauge")]
 pub use line_gauge::LineGauge;
 pub use list::List;
 pub use lunatui_core::Size;
+#[cfg(feature = "image")]
+pub use lunatui_image::{Fit as ImageFit, ImageError, ImageId, ImageSource};
 pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
+#[cfg(feature = "markdown")]
+pub use markdown_view::MarkdownView;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
@@ -60,6 +71,7 @@ pub use sparkline::{
     THREE_LEVELS,
 };
 pub use spinner::{Spinner, SpinnerPattern};
+pub use spinner_preset::SpinnerPreset;
 #[cfg(feature = "widget-state")]
 pub use state::WidgetState;
 pub use status_bar::StatusBar;

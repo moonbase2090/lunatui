@@ -95,3 +95,26 @@ fn shadow_sits_one_cell_right_and_down_behind_the_modal() {
     assert_ne!(bg(6, 1), Some(shadow), "no shadow above the offset");
     assert_ne!(bg(2, 3), Some(shadow), "no shadow left of the offset");
 }
+
+#[test]
+fn rerender_updates_the_shadow_without_building_a_blank_string() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(8, 5);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    let modal = Rect::new(2, 1, 4, 2);
+    let render = |cx: &mut RenderCx<'_>, shadow| {
+        Overlay::new(Block::new(), modal)
+            .backdrop(0.0, Color::Rgb(0, 0, 0))
+            .shadow(Style::new().bg(shadow))
+            .render(Rect::new(0, 0, 8, 5), cx);
+    };
+
+    render(&mut cx, Color::Rgb(4, 5, 11));
+    render(&mut cx, Color::Rgb(40, 50, 110));
+
+    assert_eq!(
+        grid.get(6, 2).map(|cell| cell.style().bg),
+        Some(Color::Rgb(40, 50, 110))
+    );
+}

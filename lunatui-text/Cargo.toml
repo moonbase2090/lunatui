@@ -10,9 +10,18 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+markdown = []
+
 [dependencies]
-lunatui-core = { version = "0.1.11", path = "../lunatui-core" }
+lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
 proptest = "=1.9.0"
+
+[[test]]
+name = "markdown"
+path = "tests/markdown.rs"
+required-features = ["markdown"]

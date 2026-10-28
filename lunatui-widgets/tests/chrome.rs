@@ -6,7 +6,7 @@
 use lunatui_core::{Attrs, Cell, ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Gauge, RenderCx, Spinner, SpinnerPattern, StatusBar, Tabs, TextInput, Widget,
+    Gauge, RenderCx, Spinner, SpinnerPattern, SpinnerPreset, StatusBar, Tabs, TextInput, Widget,
 };
 
 #[test]
@@ -295,14 +295,40 @@ fn status_bar_segments_fill_the_row_and_pin_right_segments_to_the_edge() {
 }
 
 #[test]
-fn status_bar_without_segments_is_unchanged() {
+fn status_bar_text_clears_the_rest_of_its_row() {
     let theme = Theme::builtin(Variant::Dark);
-    let mut grid = Grid::new(10, 1);
+    let mut grid = Grid::new(12, 1);
     let mut clusters = ClusterTable::new();
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
-    cx.put_str(0, 0, "xxxxxxxxxx", Style::new());
-    StatusBar::new("ok").render(Rect::new(0, 0, 10, 1), &mut cx);
-    assert_eq!(grid.row_display(0, &clusters), "okxxxxxxxx");
+    cx.put_str(0, 0, "xxxxxxxxxxxx", Style::new());
+    let panel = Color::Rgb(17, 22, 49);
+    StatusBar::new("")
+        .left([(" NORMAL ", Style::new().bg(Color::Rgb(185, 167, 240)))])
+        .render(Rect::new(1, 0, 10, 1), &mut cx);
+    StatusBar::new("ok")
+        .style(Style::new().bg(panel))
+        .render(Rect::new(1, 0, 10, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "xok        x");
+    let style = |x| grid.get(x, 0).map(Cell::style).unwrap_or_default();
+    for x in 1..11 {
+        assert_eq!(style(x).bg, panel, "x={x}");
+    }
+}
+
+#[test]
+fn status_bar_clips_an_area_at_the_u16_edge() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 0, "keep", Style::new());
+
+    StatusBar::new("body")
+        .left([("left", Style::new())])
+        .right([("right", Style::new())])
+        .render(Rect::new(u16::MAX - 5, 0, 10, 1), &mut cx);
+
+    assert_eq!(grid.row_display(0, &clusters), "keep");
 }
 
 #[test]
@@ -327,5 +353,19 @@ fn spinner_glyph_matches_the_rendered_frame_and_wraps() {
     assert_eq!(
         Spinner::new(9).pattern(SpinnerPattern::BrailleRing).glyph(),
         "⣽"
+    );
+}
+
+#[test]
+fn spinner_glyph_matches_preset_frames_and_handles_empty_presets() {
+    assert_eq!(
+        Spinner::new(4).preset(SpinnerPreset::BOUNCE).glyph(),
+        "    ●"
+    );
+    assert_eq!(
+        Spinner::new(0)
+            .preset(SpinnerPreset::new("empty", &[], 1))
+            .glyph(),
+        ""
     );
 }

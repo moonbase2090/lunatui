@@ -87,6 +87,7 @@ impl<S: RowSource> List<S> {
 
     /// An optional mark per row, right-aligned `padding` cells in from the right
     /// edge. It takes the row's background and keeps its own color and attributes.
+    /// On a row with a mark, the item text is clipped so it ends before the mark.
     #[must_use]
     pub fn marks(mut self, marks: Vec<Option<(String, Style)>>, padding: u16) -> Self {
         self.marks = marks;
@@ -104,19 +105,18 @@ impl<S: RowSource> Widget for List<S> {
         let gutter = self
             .highlight_symbol
             .map_or(0, |(symbol, _)| cell_width(symbol).min(area.width));
-        let blank = " ".repeat(usize::from(area.width));
         let mut row = RowBuilder::default();
         for y in 0..area.height {
             let line = area.y + y;
             let index = self.offset + usize::from(y);
             if index >= self.source.len() {
-                cx.put_str(area.x, line, &blank, self.style);
+                cx.fill(Rect::new(area.x, line, area.width, 1), self.style, ' ');
                 continue;
             }
-            self.source.row(index, &mut row);
             let selected = self.selected == Some(index);
             let style = if selected { self.highlight } else { self.style };
-            cx.put_str(area.x, line, &blank, style);
+            cx.fill(Rect::new(area.x, line, area.width, 1), style, ' ');
+            self.source.row(index, &mut row);
             if let (true, Some((symbol, symbol_style))) = (selected, self.highlight_symbol) {
                 let draw = clip_display_prefix(symbol, gutter);
                 cx.put_str(area.x, line, draw, decoration(style, symbol_style));
@@ -130,15 +130,18 @@ impl<S: RowSource> Widget for List<S> {
                     .saturating_add(1)
                     .min(end);
             }
-            let text = row.cells.first().map_or("", String::as_str);
-            let draw = clip_display_prefix(text, end.saturating_sub(x));
-            cx.put_str(x, line, draw, style);
-            if let Some(Some((mark, mark_style))) = self.marks.get(index) {
-                let mark_width = cell_width(mark);
+            let mark = self.marks.get(index).and_then(Option::as_ref).map(|mark| {
                 let mark_x = end
                     .saturating_sub(self.mark_padding)
-                    .saturating_sub(mark_width)
+                    .saturating_sub(cell_width(&mark.0))
                     .max(area.x);
+                (mark_x, mark)
+            });
+            let text_end = mark.map_or(end, |(mark_x, _)| mark_x);
+            let text = row.cells.first().map_or("", String::as_str);
+            let draw = clip_display_prefix(text, text_end.saturating_sub(x));
+            cx.put_str(x, line, draw, style);
+            if let Some((mark_x, (mark, mark_style))) = mark {
                 let draw = clip_display_prefix(mark, end.saturating_sub(mark_x));
                 cx.put_str(mark_x, line, draw, decoration(style, *mark_style));
             }

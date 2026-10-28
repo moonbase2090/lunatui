@@ -12,6 +12,7 @@ default = []
 app = []
 keymap = []
 motion = []
+image-presenter = ["app", "dep:lunatui-image", "lunatui-term/pixel-layer"]
 
 [[test]]
 name = "keymap"
@@ -22,8 +23,9 @@ name = "motion"
 required-features = ["motion"]
 
 [dependencies]
-lunatui-core = { version = "0.1.11", path = "../lunatui-core" }
-lunatui-term = { version = "0.1.11", path = "../lunatui-term" }
+lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
+lunatui-image = { version = "0.1.12", path = "../lunatui-image", optional = true }
+lunatui-term = { version = "0.1.12", path = "../lunatui-term" }
 
 [dev-dependencies]
 proptest = "1.9"

@@ -14,4 +14,12 @@ fo = "fo"
 
 [files]
 # Asciinema recordings in examples/captures are raw terminal output, not prose.
-extend-exclude = ["*.cast"]
+# The HTML entity name table is generated data, not prose.
+extend-exclude = ["*.cast", "lunatui-text/src/markdown/tables.rs"]
+
+[type.cargo-deny]
+extend-glob = ["deny.toml"]
+
+[type.cargo-deny.extend-identifiers]
+# Cargo registry crate name in the dependency allowlist.
+flate2 = "flate2"

@@ -1,0 +1,9 @@
+# Gallery guard allowlist (see scripts/check-gallery-real-output.sh).
+#
+# Each line names one thing and says why it is safe.
+#   helper NAME # reason   a function that takes a render surface (RenderCx,
+#                          Grid, Frame, Buffer) and only lays out real widgets
+#   scope PATH # reason    an extra example file the guard must scan
+#
+# A helper may not write cells itself. The cell-writing calls stay forbidden
+# everywhere in scope, so listing a helper never lets it paint.

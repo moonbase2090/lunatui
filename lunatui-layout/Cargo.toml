@@ -10,8 +10,23 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = []
+# Per-segment floors and caps (`Layout::limits`) and `aspect_fit`.
+size-limits = []
+# Wrapped splits (`Layout::split_wrapped`) and the `Layout::gap` setting.
+flex-wrap = []
+
+[[test]]
+name = "size_limits"
+required-features = ["size-limits"]
+
+[[test]]
+name = "flex_wrap"
+required-features = ["flex-wrap"]
+
 [dependencies]
-lunatui-core = { version = "0.1.11", path = "../lunatui-core" }
+lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
 num-bigint = { version = "0.4", default-features = false }
 num-traits = { version = "0.2", default-features = false }
 

@@ -16,11 +16,19 @@ struct Spec {
     upper: u64,
     weight: u32,
     shrink: u8,
+    floor: u64,
 }
 
-pub(crate) fn axis_sizes(
+impl Spec {
+    fn least(&self) -> u64 {
+        self.lower.max(self.floor)
+    }
+}
+
+pub(crate) fn axis_sizes_bounded(
     len: u16,
     constraints: &[Constraint],
+    bounds: &[(u16, u16)],
     spacing: i16,
     flex: Flex,
 ) -> (Vec<u16>, Vec<i64>, bool) {
@@ -37,11 +45,20 @@ pub(crate) fn axis_sizes(
         return (alloc::vec![0; n], gaps, true);
     }
     let budget = u64::try_from(len_i - middle_sum).unwrap_or(0);
-    let specs: Vec<Spec> = constraints.iter().map(|c| spec(*c, flex)).collect();
+    let specs: Vec<Spec> = constraints
+        .iter()
+        .enumerate()
+        .map(|(index, c)| bounded(spec(*c, flex), bounds.get(index).copied()))
+        .collect();
     let mut sizes: Vec<u64> = specs.iter().map(|s| s.prefer.min(s.upper)).collect();
     grant_family_extras(&mut sizes, constraints, len);
+    let base: Vec<u64> = sizes
+        .iter()
+        .zip(&specs)
+        .map(|(size, spec)| (*size).clamp(spec.lower.min(spec.upper), spec.upper))
+        .collect();
     for (size, spec) in sizes.iter_mut().zip(&specs) {
-        *size = (*size).clamp(spec.lower.min(spec.upper), spec.upper);
+        *size = (*size).clamp(spec.least().min(spec.upper), spec.upper);
     }
     let sum: u64 = sizes.iter().sum();
     if sum > budget {
@@ -50,8 +67,16 @@ pub(crate) fn axis_sizes(
     } else {
         let mut weights: Vec<u32> = specs.iter().map(|s| s.weight).collect();
         promote_zero_fills(constraints, &mut weights);
-        let extra = budget - sizes.iter().sum::<u64>();
-        grow_weighted(&mut sizes, &specs, &weights, extra);
+        let fixed: u64 = (0..n)
+            .filter(|&index| weights[index] == 0)
+            .map(|index| sizes[index])
+            .sum();
+        let growing: u64 = (0..n)
+            .filter(|&index| weights[index] > 0)
+            .map(|index| base[index])
+            .sum();
+        let extra = budget.saturating_sub(fixed + growing);
+        grow_weighted(&mut sizes, &base, &specs, &weights, extra);
         let slack = budget.saturating_sub(sizes.iter().sum());
         if flex == Flex::Legacy {
             absorb_legacy(&mut sizes, &specs, slack);
@@ -65,6 +90,14 @@ pub(crate) fn axis_sizes(
     (sizes.into_iter().map(as_u16).collect(), gaps, needs_solver)
 }
 
+fn bounded(mut spec: Spec, bound: Option<(u16, u16)>) -> Spec {
+    if let Some((floor, cap)) = bound {
+        spec.floor = u64::from(floor);
+        spec.upper = spec.upper.min(u64::from(cap)).max(spec.least());
+    }
+    spec
+}
+
 fn spec(constraint: Constraint, flex: Flex) -> Spec {
     let open = u64::from(u16::MAX);
     match constraint {
@@ -74,6 +107,7 @@ fn spec(constraint: Constraint, flex: Flex) -> Spec {
             upper: open,
             weight: u32::from(flex != Flex::Legacy),
             shrink: 1,
+            floor: 0,
         },
         Constraint::Max(max) => Spec {
             lower: 0,
@@ -81,6 +115,7 @@ fn spec(constraint: Constraint, flex: Flex) -> Spec {
             upper: u64::from(max),
             weight: 0,
             shrink: 5,
+            floor: 0,
         },
         Constraint::Length(length) => Spec {
             lower: 0,
@@ -88,6 +123,7 @@ fn spec(constraint: Constraint, flex: Flex) -> Spec {
             upper: open,
             weight: 0,
             shrink: 2,
+            floor: 0,
         },
         Constraint::Percentage(_) | Constraint::Ratio(_, _) => Spec {
             lower: 0,
@@ -98,6 +134,7 @@ fn spec(constraint: Constraint, flex: Flex) -> Spec {
                 Constraint::Percentage(_) => 3,
                 _ => 4,
             },
+            floor: 0,
         },
         Constraint::Fill(weight) => Spec {
             lower: 0,
@@ -105,6 +142,7 @@ fn spec(constraint: Constraint, flex: Flex) -> Spec {
             upper: open,
             weight: u32::from(weight),
             shrink: 6,
+            floor: 0,
         },
     }
 }
@@ -290,7 +328,7 @@ fn shrink(sizes: &mut [u64], specs: &[Spec], mut excess: u64) -> bool {
         if excess == 0 {
             break;
         }
-        let floor = specs[index].lower;
+        let floor = specs[index].least();
         let cut = sizes[index].saturating_sub(floor).min(excess);
         sizes[index] -= cut;
         excess -= cut;
@@ -325,38 +363,76 @@ fn promote_zero_fills(constraints: &[Constraint], weights: &mut [u32]) {
     }
 }
 
-fn grow_weighted(sizes: &mut [u64], specs: &[Spec], weights: &[u32], extra: u64) {
-    let total: u64 = weights.iter().map(|&weight| u64::from(weight)).sum();
-    if total == 0 || extra == 0 {
-        return;
-    }
-    let mut given = 0_u64;
-    for (index, &weight) in weights.iter().enumerate() {
-        let share = mul_div(extra, u64::from(weight), total);
-        let room = specs[index].upper.saturating_sub(sizes[index]);
-        let add = share.min(room);
-        sizes[index] = sizes[index].saturating_add(add);
-        given = given.saturating_add(add);
-    }
-    let mut left = extra.saturating_sub(given);
-    let mut order: Vec<usize> = (0..weights.len())
+fn grow_weighted(sizes: &mut [u64], base: &[u64], specs: &[Spec], weights: &[u32], extra: u64) {
+    let mut active: Vec<usize> = (0..weights.len())
         .filter(|&index| weights[index] > 0)
         .collect();
-    order.sort_by(|&left_index, &right_index| {
-        let left_rem = mul_rem(extra, u64::from(weights[left_index]), total);
-        let right_rem = mul_rem(extra, u64::from(weights[right_index]), total);
-        right_rem.cmp(&left_rem).then(left_index.cmp(&right_index))
+    let mut pool = extra;
+    while !active.is_empty() {
+        let targets = weighted_targets(base, weights, &active, pool);
+        let mut over_floor = 0_u64;
+        let mut under_cap = 0_u64;
+        for (&index, &target) in active.iter().zip(&targets) {
+            let clamped = target.clamp(
+                specs[index].floor.min(specs[index].upper),
+                specs[index].upper,
+            );
+            over_floor += clamped.saturating_sub(target);
+            under_cap += target.saturating_sub(clamped);
+        }
+        if over_floor == 0 && under_cap == 0 {
+            for (&index, &target) in active.iter().zip(&targets) {
+                sizes[index] = target;
+            }
+            return;
+        }
+        let mut still = Vec::with_capacity(active.len());
+        for (&index, &target) in active.iter().zip(&targets) {
+            let spec = &specs[index];
+            let clamped = target.clamp(spec.floor.min(spec.upper), spec.upper);
+            let freeze = match over_floor.cmp(&under_cap) {
+                core::cmp::Ordering::Greater => clamped > target,
+                core::cmp::Ordering::Less => clamped < target,
+                core::cmp::Ordering::Equal => clamped != target,
+            };
+            if freeze {
+                sizes[index] = clamped;
+                pool = pool.saturating_sub(clamped.saturating_sub(base[index]));
+            } else {
+                still.push(index);
+            }
+        }
+        active = still;
+    }
+}
+
+fn weighted_targets(base: &[u64], weights: &[u32], active: &[usize], pool: u64) -> Vec<u64> {
+    let total: u64 = active.iter().map(|&index| u64::from(weights[index])).sum();
+    let mut targets: Vec<u64> = active
+        .iter()
+        .map(|&index| base[index].saturating_add(mul_div(pool, u64::from(weights[index]), total)))
+        .collect();
+    let given: u64 = active
+        .iter()
+        .map(|&index| mul_div(pool, u64::from(weights[index]), total))
+        .sum();
+    let mut left = pool.saturating_sub(given);
+    let mut order: Vec<usize> = (0..active.len()).collect();
+    order.sort_by(|&left_slot, &right_slot| {
+        let left_rem = mul_rem(pool, u64::from(weights[active[left_slot]]), total);
+        let right_rem = mul_rem(pool, u64::from(weights[active[right_slot]]), total);
+        right_rem
+            .cmp(&left_rem)
+            .then(active[left_slot].cmp(&active[right_slot]))
     });
-    for index in order {
+    for slot in order {
         if left == 0 {
             break;
         }
-        if sizes[index] >= specs[index].upper {
-            continue;
-        }
-        sizes[index] = sizes[index].saturating_add(1);
+        targets[slot] = targets[slot].saturating_add(1);
         left -= 1;
     }
+    targets
 }
 
 fn minimum_gaps(n: usize, spacing: i16, flex: Flex) -> Vec<i64> {
@@ -616,7 +692,7 @@ fn mul_rem(value: u64, weight: u64, total: u64) -> u64 {
 mod ratio_extras_tests {
     use alloc::vec::Vec;
 
-    use super::{Constraint, Flex, axis_sizes, grant_family_extras};
+    use super::{Constraint, Flex, axis_sizes_bounded, grant_family_extras};
 
     #[test]
     fn large_ratio_denominators_still_allocate_extras() {
@@ -670,7 +746,7 @@ mod ratio_extras_tests {
     #[test]
     fn twenty_fills_never_set_needs_solver() {
         let constraints = alloc::vec![Constraint::Fill(1); 20];
-        let (sizes, _, needs_solver) = axis_sizes(200, &constraints, 0, Flex::Start);
+        let (sizes, _, needs_solver) = axis_sizes_bounded(200, &constraints, &[], 0, Flex::Start);
         assert_eq!(sizes, alloc::vec![10; 20]);
         assert!(!needs_solver);
     }

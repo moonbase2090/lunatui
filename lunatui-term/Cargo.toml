@@ -12,14 +12,15 @@ workspace = true
 
 [features]
 default = []
-pixel-layer = []
+pixel-layer = ["dep:lunatui-image"]
 
 [[test]]
 name = "pixel_layer"
 required-features = ["pixel-layer"]
 
 [dependencies]
-lunatui-core = { version = "0.1.11", path = "../lunatui-core" }
+lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
+lunatui-image = { version = "0.1.12", path = "../lunatui-image", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.190"
