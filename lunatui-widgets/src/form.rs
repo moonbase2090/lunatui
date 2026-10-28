@@ -76,7 +76,7 @@ impl FormField {
     }
 }
 
-/// Where one field's parts sit in a [`FormLayout`].
+/// Where one field's parts sit in a [`Form::layout`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldArea {
     /// Index of the field.
