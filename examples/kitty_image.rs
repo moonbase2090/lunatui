@@ -83,22 +83,30 @@ impl KittyImage {
 
 #[cfg(test)]
 mod tests {
-    use super::ImageSource;
-    use lunatui_core::Rect;
-    use lunatui_term::{PixelImage, PixelLayer, PixelMode};
+    use super::{Image, ImageFit, ImageId, ImageSource, RenderCx, Widget};
+    use lunatui_core::{ClusterTable, Grid, Rect};
+    use lunatui_term::{PixelLayer, PixelMode};
+    use lunatui_theme::{Theme, Variant};
 
     #[test]
     fn kitty_transmission_keeps_native_pixels_and_places_scaled_to_cells() {
         let source = ImageSource::decode(include_bytes!("../site/assets/earth.jpg"))
             .expect("bundled NASA image should decode");
 
-        let (width, height) = (source.size().width(), source.size().height());
-        assert_eq!((width, height), (1920, 1920));
-        let image = PixelImage::new(width, height, source.rgba8_pixels())
-            .expect("decoded pixels should match the native dimensions");
+        assert_eq!(
+            (source.size().width(), source.size().height()),
+            (1920, 1920)
+        );
+        let mut grid = Grid::new(100, 32);
+        let mut clusters = ClusterTable::new();
+        let theme = Theme::builtin(Variant::Dark);
         let mut layer = PixelLayer::new(PixelMode::Kitty);
         layer.begin_frame();
-        layer.image(42, 1, &image, Rect::new(20, 4, 50, 25), 0);
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(&mut layer);
+        Image::new(source)
+            .id(ImageId::new(42).expect("nonzero image id"))
+            .fit(ImageFit::Contain)
+            .render(Rect::new(4, 4, 92, 25), &mut cx);
         let frame = String::from_utf8_lossy(layer.finish_frame());
 
         assert!(
