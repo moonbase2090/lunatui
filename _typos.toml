@@ -20,6 +20,6 @@ extend-exclude = ["*.cast", "lunatui-text/src/markdown/tables.rs"]
 [type.cargo-deny]
 extend-glob = ["deny.toml"]
 
-[type.cargo-deny.extend-words]
+[type.cargo-deny.extend-identifiers]
 # Cargo registry crate name in the dependency allowlist.
-flate = "flate"
+flate2 = "flate2"
