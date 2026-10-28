@@ -17,9 +17,9 @@ use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::canvas::{Circle, Line};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Canvas,
-    Chart, Dataset, Date, DateStyle, GraphType, LegendPosition, List, MarkdownView, Marker,
-    Monthly, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar, ToastKind,
-    ToastScope, ToastStack, Widget, WidgetState,
+    Chart, Dataset, Date, DateStyle, DividerId, GraphType, LegendPosition, List, MarkdownView,
+    Marker, Monthly, PaneId, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, SplitAxis,
+    SplitDrag, SplitTree, StatusBar, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -45,6 +45,11 @@ const PREVIEWS: &[Preview] = &[
         name: "toast",
         native: toast_native,
         baseline: toast_baseline,
+    },
+    Preview {
+        name: "split",
+        native: split_native,
+        baseline: split_baseline,
     },
     Preview {
         name: "calendar",
@@ -2324,6 +2329,175 @@ fn toast_native(
 
 fn toast_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "toast") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+struct SplitMove {
+    from: u32,
+    to: u32,
+    divider: usize,
+    target: (i32, i32),
+}
+
+const SPLIT_MOVES: [SplitMove; 4] = [
+    SplitMove {
+        from: 10,
+        to: 50,
+        divider: 0,
+        target: (42, 0),
+    },
+    SplitMove {
+        from: 60,
+        to: 100,
+        divider: 1,
+        target: (0, 19),
+    },
+    SplitMove {
+        from: 110,
+        to: 145,
+        divider: 2,
+        target: (84, 0),
+    },
+    SplitMove {
+        from: 205,
+        to: 235,
+        divider: 0,
+        target: (28, 0),
+    },
+];
+
+fn lerp(start: i32, end: i32, spent: u32, span: u32) -> i32 {
+    let delta = i64::from(end) - i64::from(start);
+    let step = delta * i64::from(spent) / i64::from(span.max(1));
+    i32::try_from(i64::from(start) + step).unwrap_or(start)
+}
+
+fn split_scene(area: Rect, tick: u32) -> (SplitTree, SplitDrag) {
+    let (mut tree, files) = SplitTree::new();
+    let editor = tree
+        .split(files, SplitAxis::Horizontal, 250)
+        .unwrap_or(files);
+    tree.split(editor, SplitAxis::Vertical, 700);
+    tree.split(editor, SplitAxis::Horizontal, 720);
+    for divider in 0..3 {
+        tree.set_min(DividerId(divider), 12, 12);
+    }
+    let mut drag = SplitDrag::new();
+    let mut start = (0_i32, 0_i32);
+    for now in 0..=tick {
+        for step in &SPLIT_MOVES {
+            if now == step.from {
+                let layout = tree.layout(area);
+                if let Some(line) = layout.dividers.get(step.divider) {
+                    let (x, y) = (line.rect.x, line.rect.y + line.rect.height / 2);
+                    start = (i32::from(x), i32::from(y));
+                    drag.press(&tree, &layout, x, y);
+                }
+            } else if now > step.from && now <= step.to {
+                let span = step.to - step.from;
+                let spent = now - step.from;
+                let column = u16::try_from(lerp(start.0, step.target.0, spent, span)).unwrap_or(0);
+                let row = u16::try_from(lerp(start.1, step.target.1, spent, span)).unwrap_or(0);
+                drag.drag(&mut tree, column, row);
+                if now == step.to {
+                    drag.release();
+                }
+            }
+        }
+    }
+    (tree, drag)
+}
+
+fn split_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let body = Rect::new(area.x, area.y, area.width, area.height.saturating_sub(1));
+    let (mut tree, drag) = split_scene(body, tick);
+    if (150..195).contains(&tick) {
+        tree.zoom(Some(PaneId(1)));
+    }
+    let layout = tree.layout(body);
+    let titles = ["Files", "Editor", "Terminal", "Inspector"];
+    let content: [&[&str]; 4] = [
+        &[
+            "src/",
+            "  block.rs",
+            "  split.rs",
+            "  tabs.rs",
+            "tests/",
+            "Cargo.toml",
+            "README.md",
+        ],
+        &[
+            "fn layout(&self, area: Rect) -> SplitLayout {",
+            "    let mut layout = SplitLayout::default();",
+            "    place(&self.root, area, &mut 0, &mut layout);",
+            "    layout",
+            "}",
+        ],
+        &[
+            "$ cargo test -p lunatui-widgets",
+            "   Compiling lunatui-widgets",
+            "test result: ok. 29 passed",
+        ],
+        &["panes     4", "dividers  3", "zoomed    none"],
+    ];
+    for area in &layout.panes {
+        let index = usize::try_from(area.pane.0).unwrap_or(0).min(3);
+        let title = if tree.zoomed().is_some() {
+            format!(" {} (zoomed) ", titles[index])
+        } else {
+            format!(" {} ", titles[index])
+        };
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(area.rect, &mut cx);
+        let room = area.rect.width.saturating_sub(4);
+        for (row, line) in (0_u16..).zip(content[index]) {
+            if row + 2 >= area.rect.height {
+                break;
+            }
+            cx.put_str(
+                area.rect.x + 2,
+                area.rect.y + 1 + row,
+                clip_display_prefix(line, room),
+                fill,
+            );
+        }
+    }
+    layout.render_dividers(
+        dim,
+        drag.active(),
+        Style::new().fg(accent).bg(surface),
+        &mut cx,
+    );
+    StatusBar::new(" drag a divider to resize  ●  zoom with z")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(area.x, area.y + body.height, area.width, 1),
+            &mut cx,
+        );
+}
+
+fn split_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "split") {
         (case.ratatui)(buffer, area, tick);
     }
 }

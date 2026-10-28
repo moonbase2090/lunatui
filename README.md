@@ -57,6 +57,14 @@ A docs reader: a page list beside a scrolling Markdown view, with headings and r
 
 Screenshot: [docs/media/markdown.png](docs/media/markdown.png). Recorded with `scripts/record-showcase.sh` (`CASE=markdown`, 120×36, `FRAMES=200`, dark, about 11 seconds).
 
+### Split panes
+
+A four-pane workspace (files, editor, terminal, inspector) whose dividers are dragged with the pointer: the grabbed divider is highlighted and the panes on both sides follow it one cell at a time, then the editor is zoomed to fill the screen and restored.
+
+<img src="docs/media/split.webp" alt="Split panes: dividers dragged and a pane zoomed in the dark theme" width="1028">
+
+Screenshot: [docs/media/split.png](docs/media/split.png). Recorded with `scripts/record-showcase.sh` (`CASE=split`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
 ### Canvas
 
 A monitoring wall drawn from shapes: a radar sweep with a fading trail and labeled blips, two moving signal traces, and the same circle and hand drawn with each marker (braille, sextant, quadrant, half block, block, and dot) so the grain of each is visible.
