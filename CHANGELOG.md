@@ -19,6 +19,10 @@ Every PR adds its entry under **Unreleased**.
 
 - The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
 
+### Fixed
+
+- `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
+
 ## [0.1.12] - 2026-10-27
 
 ### Added
