@@ -105,6 +105,14 @@ A release console whose bottom line is a `KeyHintBar` built from the keymap of t
 
 Screenshot: [docs/media/key-hints.png](docs/media/key-hints.png). Recorded with `scripts/record-showcase.sh` (`CASE=key-hints`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### List icons and marks
+
+A pull request list: a status icon before each title, a right-aligned number and area mark on every row, and a highlight symbol on the focused row whose band covers the whole row. The selection walks down the list, the list scrolls to keep it in view, a pull request changes state, and a new one arrives at the top.
+
+<img src="docs/media/list-icons.webp" alt="List: rows with status icons, right-aligned marks, and a highlight symbol over a pull request list in the dark theme" width="1028">
+
+Screenshot: [docs/media/list-icons.png](docs/media/list-icons.png). Recorded with `scripts/record-showcase.sh` (`CASE=list-icons`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
 ### Overlay with a drop shadow
 
 An operations console with two confirmation dialogs: the backdrop fades in over the whole screen, the dialog is cleared and drawn with a drop shadow one cell down and to the right, the focused button changes, and the backdrop fades out again.
@@ -138,22 +146,6 @@ A cutover board: a live clock, a countdown that reaches zero, and ticking metric
 ![BigText widget: a cutover board in the dark theme](docs/media/bigtext.gif)
 
 Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36, dark, about 11 seconds).
-
-### LineGauge
-
-A live service health board rendered by Lunatui. Each row uses a real LineGauge widget, with the selected row, disabled state, value label, threshold colors, and line styles visible in the recording.
-
-![LineGauge service health board](docs/media/line-gauge-120x36-truecolor-dark-lunatui.gif)
-
-Screenshot from the same Lunatui capture: [docs/media/line-gauge-120x36-truecolor-dark-lunatui.png](docs/media/line-gauge-120x36-truecolor-dark-lunatui.png). Recorded with `scripts/record-widget.sh` (`CASE=line-gauge`, 120×36, 240 frames at 30 fps, dark theme); the GIF is 699 KB and runs for about 11.8 seconds.
-
-### Release control screen
-
-A realistic Lunatui app screen combines the Monday-first calendar with selected-day and weekend styles, a highlighted deployment table, sub-cell Gauge, LineGauge, segmented StatusBar, animated Spinner, marked on-call List, and a dimmed approval Overlay with shadow. Every region is rendered by its widget; the capture does not overwrite widget cells.
-
-![Night shift release control screen](docs/media/nightshift-board-120x36-dark.gif)
-
-Screenshot from the same recording: [docs/media/nightshift-board-120x36-dark.png](docs/media/nightshift-board-120x36-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=nightshift-board`, 120×36, 180 frames at 30 fps, dark truecolor); the GIF is 237 KB and runs for 10.0 seconds.
 
 ### Image
 
