@@ -50,8 +50,12 @@ impl Painter<'_> {
             return;
         }
         let tag = self.tag(style);
-        self.raster
-            .segment_centered(self.window, self.marker, from, to, tag);
+        if self.marker == Marker::Braille {
+            self.raster
+                .segment_centered(self.window, self.marker, from, to, tag);
+        } else {
+            self.raster.segment(self.window, self.marker, from, to, tag);
+        }
     }
 
     /// Dots across and down the canvas, which depends on the marker.

@@ -52,7 +52,7 @@ fn block_lines_run_cell_by_cell() {
             });
         })
     };
-    assert_eq!(line(0.0, 0.0, 1.0, 1.0), ["   ██", " ███ ", "██   "]);
+    assert_eq!(line(0.0, 0.0, 1.0, 1.0), ["    █", "  ██ ", "██   "]);
     assert_eq!(line(0.0, 0.5, 1.0, 0.5), ["     ", "█████", "     "]);
     assert_eq!(line(0.5, 0.0, 0.5, 1.0), ["  █  ", "  █  ", "  █  "]);
 }
@@ -301,11 +301,11 @@ fn reversed_bounds_flip_and_empty_bounds_draw_nothing() {
     };
     assert_eq!(
         diagonal(([1.0, 0.0], [0.0, 1.0])),
-        ["██   ", " ███ ", "   ██"].map(str::to_owned).to_vec()
+        ["██   ", "  ██ ", "    █"].map(str::to_owned).to_vec()
     );
     assert_eq!(
         diagonal(([0.0, 1.0], [1.0, 0.0])),
-        ["██   ", " ███ ", "   ██"].map(str::to_owned).to_vec()
+        ["██   ", "  ██ ", "    █"].map(str::to_owned).to_vec()
     );
     for bounds in [
         ([1.0, 1.0], [0.0, 1.0]),

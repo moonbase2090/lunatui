@@ -174,6 +174,7 @@ impl Raster {
         );
     }
 
+    #[cfg(feature = "canvas")]
     pub(crate) fn segment_centered(
         &mut self,
         window: Window,
@@ -240,7 +241,7 @@ impl Raster {
         }
     }
 
-    #[cfg(feature = "chart")]
+    #[cfg(any(feature = "canvas", feature = "chart"))]
     pub(crate) fn segment(
         &mut self,
         window: Window,
