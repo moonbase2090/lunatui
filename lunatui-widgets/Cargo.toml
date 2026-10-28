@@ -18,6 +18,8 @@ markdown = ["widget-state", "lunatui-text/markdown"]
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
+chart = ["widget-state"]
+
 barchart = ["widget-state"]
 toast = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
@@ -107,6 +109,16 @@ path = "tests/spinner_presets.rs"
 name = "image"
 path = "tests/image.rs"
 required-features = ["image"]
+
+[[test]]
+name = "chart"
+path = "tests/chart.rs"
+required-features = ["chart"]
+
+[[test]]
+name = "chart_ratatui"
+path = "tests/chart_ratatui.rs"
+required-features = ["chart"]
 
 [[test]]
 name = "bar_chart"
