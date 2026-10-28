@@ -20,9 +20,9 @@ use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
     Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, FieldArea, Form,
     FormField, Gauge, GraphType, KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly,
-    PaneId, Paragraph, PixelSize, RadioFlow, RadioGroup, RenderCx, Scrollbar, Slider, Sparkline,
-    SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput,
-    ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    NumberInput, PaneId, Paragraph, PixelSize, RadioFlow, RadioGroup, RenderCx, Scrollbar, Slider,
+    Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag,
+    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -102,6 +102,11 @@ const PREVIEWS: &[Preview] = &[
         name: "slider",
         native: slider_native,
         baseline: slider_baseline,
+    },
+    Preview {
+        name: "number-input",
+        native: number_native,
+        baseline: number_baseline,
     },
     Preview {
         name: "calendar",
@@ -4854,6 +4859,218 @@ fn sl_bands(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {
 }
 
 fn slider_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+type NumberField = (
+    &'static str,
+    &'static str,
+    f64,
+    f64,
+    f64,
+    f64,
+    u8,
+    &'static str,
+    i32,
+);
+
+const NM_FIELDS: [NumberField; 6] = [
+    (
+        "Width",
+        "Multiple of 16 pixels",
+        1920.0,
+        320.0,
+        7680.0,
+        16.0,
+        0,
+        " px",
+        10,
+    ),
+    (
+        "Height",
+        "Multiple of 8 pixels",
+        1080.0,
+        240.0,
+        4320.0,
+        8.0,
+        0,
+        " px",
+        10,
+    ),
+    (
+        "Frame rate",
+        "Frames per second",
+        24.0,
+        1.0,
+        120.0,
+        0.01,
+        2,
+        " fps",
+        0,
+    ),
+    (
+        "Quality",
+        "Percent, 0 to 100",
+        70.0,
+        0.0,
+        100.0,
+        1.0,
+        0,
+        "%",
+        3,
+    ),
+    (
+        "Bitrate",
+        "Megabits per second",
+        8.0,
+        0.5,
+        80.0,
+        0.5,
+        1,
+        " Mbps",
+        4,
+    ),
+    (
+        "Copies",
+        "Files written per export",
+        1.0,
+        1.0,
+        99.0,
+        1.0,
+        0,
+        "",
+        1,
+    ),
+];
+
+const NM_EVENTS: [u32; 4] = [15, 20, 25, 30];
+const NM_TYPING: [(u32, &str); 6] = [
+    (12, ""),
+    (18, "2"),
+    (24, "23"),
+    (30, "23."),
+    (34, "23.9"),
+    (38, "23.97"),
+];
+
+fn nm_input(index: usize, value: f64) -> NumberInput<'static> {
+    let (_, _, _, min, max, step, decimals, suffix, _) = NM_FIELDS[index];
+    NumberInput::new(value)
+        .range(min, max)
+        .step(step)
+        .decimals(decimals)
+        .suffix(suffix)
+}
+
+fn nm_value(index: usize, tick: u32) -> f64 {
+    let (_, _, base, _, _, _, _, _, per_event) = NM_FIELDS[index];
+    let local = tick.saturating_sub(u32::try_from(index).unwrap_or(0) * 40);
+    if index == 2 {
+        return if local > 38 { 23.97 } else { base };
+    }
+    NM_EVENTS
+        .iter()
+        .filter(|event| local >= **event)
+        .fold(base, |value, _| nm_input(index, value).nudge(per_event))
+}
+
+fn nm_edit(tick: u32) -> Option<(&'static str, usize)> {
+    let local = tick.checked_sub(80).filter(|local| *local <= 38)?;
+    NM_TYPING
+        .iter()
+        .rev()
+        .find(|(at, _)| local >= *at)
+        .map(|(_, text)| (*text, text.len()))
+}
+
+fn number_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Render queue  ·  export settings", head);
+    let left = Rect::new(area.x + 2, area.y + 2, 62, 30);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        30,
+    );
+    for (title, pane) in [(" Output ", left), (" Estimate ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let focus = usize::try_from(tick / 40).unwrap_or(5).min(5);
+    for (index, (label, hint, ..)) in NM_FIELDS.iter().enumerate() {
+        let y = left.y + 2 + u16::try_from(index).unwrap_or(0) * 4;
+        let mut input = nm_input(index, nm_value(index, tick));
+        if index == focus {
+            input = input.state(WidgetState::Focused);
+            if let (2, Some((typed, caret))) = (index, nm_edit(tick)) {
+                input = input.edit(typed, caret);
+            }
+        }
+        cx.put_str(left.x + 3, y, label, fill);
+        input.render(Rect::new(left.x + 20, y, 30, 1), &mut cx);
+        cx.put_str(left.x + 20, y + 1, hint, dim);
+    }
+    nm_estimate(&mut cx, right, tick, [fill, dim]);
+    StatusBar::new(" ↑↓ field  ●  − + step  ●  type a value  ●  enter commit  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn nm_estimate(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {
+    let [fill, dim] = styles;
+    let value = |index| nm_value(index, tick);
+    let size = value(4) * 120.0 / 8.0 * value(5);
+    let rows = [
+        ("Resolution", format!("{:.0} × {:.0}", value(0), value(1))),
+        ("Frame rate", format!("{:.2} fps", value(2))),
+        ("Quality", format!("{:.0}%", value(3))),
+        ("Bitrate", format!("{:.1} Mbps", value(4))),
+        ("Length", "2 min".to_owned()),
+        ("Files", format!("{:.0}", value(5))),
+        ("Size", format!("{size:.0} MB")),
+    ];
+    for (row, (label, text)) in (0_u16..).zip(rows) {
+        cx.put_str(area.x + 2, area.y + 2 + row * 2, label, dim);
+        cx.put_str(area.x + 15, area.y + 2 + row * 2, &text, fill);
+    }
+    let queue = ["intro.mov", "scene-02.mov", "scene-03.mov", "outro.mov"];
+    cx.put_str(area.x + 2, area.y + 18, "Queue", dim);
+    for (row, name) in (0_u16..).zip(queue) {
+        cx.put_str(area.x + 2, area.y + 20 + row * 2, name, fill);
+    }
+}
+
+fn number_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
