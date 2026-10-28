@@ -10,16 +10,18 @@ use std::time::{Duration, Instant};
 
 use lunatui_bench::widget_suite::{CASES, Case, pin_color_output};
 use lunatui_core::{
-    Attrs, ClusterTable, Color, Grid, Rect, Style, clip_display_prefix, width as cols,
+    Attrs, ClusterTable, Color, Grid, Rect, Style, UnderlineStyle, clip_display_prefix,
+    width as cols,
 };
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::canvas::{Circle, Line};
 use lunatui_widgets::{
-    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Canvas,
-    Chart, Dataset, Date, DateStyle, GraphType, LegendPosition, List, MarkdownView, Marker,
-    Monthly, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar, ToastKind,
-    ToastScope, ToastStack, Widget, WidgetState,
+    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
+    Breadcrumbs, Canvas, Chart, Dataset, Date, DateStyle, DividerId, GraphType, LegendPosition,
+    List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize, RenderCx, Scrollbar,
+    Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, ToastKind, ToastScope, ToastStack,
+    Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -45,6 +47,16 @@ const PREVIEWS: &[Preview] = &[
         name: "toast",
         native: toast_native,
         baseline: toast_baseline,
+    },
+    Preview {
+        name: "split",
+        native: split_native,
+        baseline: split_baseline,
+    },
+    Preview {
+        name: "breadcrumbs",
+        native: breadcrumbs_native,
+        baseline: breadcrumbs_baseline,
     },
     Preview {
         name: "calendar",
@@ -2324,6 +2336,527 @@ fn toast_native(
 
 fn toast_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "toast") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+struct SplitMove {
+    from: u32,
+    to: u32,
+    divider: usize,
+    target: (i32, i32),
+}
+
+const SPLIT_MOVES: [SplitMove; 4] = [
+    SplitMove {
+        from: 10,
+        to: 50,
+        divider: 0,
+        target: (42, 0),
+    },
+    SplitMove {
+        from: 60,
+        to: 100,
+        divider: 1,
+        target: (0, 19),
+    },
+    SplitMove {
+        from: 110,
+        to: 145,
+        divider: 2,
+        target: (84, 0),
+    },
+    SplitMove {
+        from: 205,
+        to: 235,
+        divider: 0,
+        target: (28, 0),
+    },
+];
+
+fn lerp(start: i32, end: i32, spent: u32, span: u32) -> i32 {
+    let delta = i64::from(end) - i64::from(start);
+    let step = delta * i64::from(spent) / i64::from(span.max(1));
+    i32::try_from(i64::from(start) + step).unwrap_or(start)
+}
+
+fn split_scene(area: Rect, tick: u32) -> (SplitTree, SplitDrag) {
+    let (mut tree, files) = SplitTree::new();
+    let editor = tree
+        .split(files, SplitAxis::Horizontal, 250)
+        .unwrap_or(files);
+    tree.split(editor, SplitAxis::Vertical, 700);
+    tree.split(editor, SplitAxis::Horizontal, 720);
+    for divider in 0..3 {
+        tree.set_min(DividerId(divider), 12, 12);
+    }
+    let mut drag = SplitDrag::new();
+    let mut start = (0_i32, 0_i32);
+    for now in 0..=tick {
+        for step in &SPLIT_MOVES {
+            if now == step.from {
+                let layout = tree.layout(area);
+                if let Some(line) = layout.dividers.get(step.divider) {
+                    let (x, y) = (line.rect.x, line.rect.y + line.rect.height / 2);
+                    start = (i32::from(x), i32::from(y));
+                    drag.press(&tree, &layout, x, y);
+                }
+            } else if now > step.from && now <= step.to {
+                let span = step.to - step.from;
+                let spent = now - step.from;
+                let column = u16::try_from(lerp(start.0, step.target.0, spent, span)).unwrap_or(0);
+                let row = u16::try_from(lerp(start.1, step.target.1, spent, span)).unwrap_or(0);
+                drag.drag(&mut tree, column, row);
+                if now == step.to {
+                    drag.release();
+                }
+            }
+        }
+    }
+    (tree, drag)
+}
+
+fn split_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let body = Rect::new(area.x, area.y, area.width, area.height.saturating_sub(1));
+    let (mut tree, drag) = split_scene(body, tick);
+    if (150..195).contains(&tick) {
+        tree.zoom(Some(PaneId(1)));
+    }
+    let layout = tree.layout(body);
+    let titles = ["Files", "Editor", "Terminal", "Inspector"];
+    let content: [&[&str]; 4] = [
+        &[
+            "src/",
+            "  block.rs",
+            "  split.rs",
+            "  tabs.rs",
+            "tests/",
+            "Cargo.toml",
+            "README.md",
+        ],
+        &[
+            "fn layout(&self, area: Rect) -> SplitLayout {",
+            "    let mut layout = SplitLayout::default();",
+            "    place(&self.root, area, &mut 0, &mut layout);",
+            "    layout",
+            "}",
+        ],
+        &[
+            "$ cargo test -p lunatui-widgets",
+            "   Compiling lunatui-widgets",
+            "test result: ok. 29 passed",
+        ],
+        &["panes     4", "dividers  3", "zoomed    none"],
+    ];
+    for area in &layout.panes {
+        let index = usize::try_from(area.pane.0).unwrap_or(0).min(3);
+        let title = if tree.zoomed().is_some() {
+            format!(" {} (zoomed) ", titles[index])
+        } else {
+            format!(" {} ", titles[index])
+        };
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(area.rect, &mut cx);
+        let room = area.rect.width.saturating_sub(4);
+        for (row, line) in (0_u16..).zip(content[index]) {
+            if row + 2 >= area.rect.height {
+                break;
+            }
+            cx.put_str(
+                area.rect.x + 2,
+                area.rect.y + 1 + row,
+                clip_display_prefix(line, room),
+                fill,
+            );
+        }
+    }
+    layout.render_dividers(
+        dim,
+        drag.active(),
+        Style::new().fg(accent).bg(surface),
+        &mut cx,
+    );
+    StatusBar::new(" drag a divider to resize  ●  zoom with z")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(area.x, area.y + body.height, area.width, 1),
+            &mut cx,
+        );
+}
+
+fn split_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "split") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+const CRUMB_PATH: [&str; 6] = [
+    "Home",
+    "Projects",
+    "Moonbase2090",
+    "lunatui",
+    "lunatui-widgets",
+    "src",
+];
+
+type CrumbEntry = (&'static str, u32, &'static str);
+
+const CRUMB_DIRS: [&[CrumbEntry]; 6] = [
+    &[
+        ("Documents/", 0, "Oct 12"),
+        ("Downloads/", 0, "Oct 27"),
+        ("Pictures/", 0, "Sep 30"),
+        ("Projects/", 0, "Oct 28"),
+        ("notes.txt", 2_400, "Oct 21"),
+        ("todo.md", 1_100, "Oct 26"),
+    ],
+    &[
+        ("Moonbase2090/", 0, "Oct 28"),
+        ("Scratch/", 0, "Oct 03"),
+        ("archive/", 0, "Aug 19"),
+        ("README.md", 3_900, "Oct 14"),
+    ],
+    &[
+        ("lunatui/", 0, "Oct 28"),
+        ("prismattyc/", 0, "Oct 27"),
+        ("rookrunner/", 0, "Oct 28"),
+        ("scorecard/", 0, "Oct 25"),
+        ("waypoint/", 0, "Oct 26"),
+        ("NOTES.md", 8_200, "Oct 24"),
+    ],
+    &[
+        ("benches/", 0, "Oct 27"),
+        ("examples/", 0, "Oct 28"),
+        ("lunatui-core/", 0, "Oct 26"),
+        ("lunatui-text/", 0, "Oct 26"),
+        ("lunatui-theme/", 0, "Oct 20"),
+        ("lunatui-widgets/", 0, "Oct 28"),
+        ("CHANGELOG.md", 21_700, "Oct 28"),
+        ("Cargo.toml", 1_900, "Oct 27"),
+        ("README.md", 15_300, "Oct 28"),
+    ],
+    &[
+        ("src/", 0, "Oct 28"),
+        ("tests/", 0, "Oct 28"),
+        ("Cargo.toml", 4_100, "Oct 28"),
+        ("README.md", 6_800, "Oct 28"),
+    ],
+    &[
+        ("block.rs", 18_400, "Oct 24"),
+        ("borders.rs", 4_900, "Oct 20"),
+        ("breadcrumbs.rs", 8_600, "Oct 28"),
+        ("gauge.rs", 12_100, "Oct 26"),
+        ("lib.rs", 5_300, "Oct 28"),
+        ("list.rs", 3_200, "Oct 26"),
+        ("table.rs", 21_900, "Oct 27"),
+        ("tabs.rs", 9_700, "Oct 28"),
+    ],
+];
+
+fn crumb_size(bytes: u32) -> String {
+    if bytes == 0 {
+        String::from("--")
+    } else if bytes < 1_000 {
+        format!("{bytes} B")
+    } else {
+        format!("{}.{} KB", bytes / 1_000, bytes % 1_000 / 100)
+    }
+}
+
+fn crumb_preview(name: &str, bytes: u32, level: usize) -> Vec<String> {
+    let extension = std::path::Path::new(name)
+        .extension()
+        .and_then(|ext| ext.to_str());
+    let kind = match extension {
+        _ if name.ends_with('/') => "Folder",
+        Some("rs") => "Rust source",
+        Some("toml") => "TOML",
+        Some("md") => "Markdown",
+        _ => "Text",
+    };
+    let mut lines = vec![
+        name.trim_end_matches('/').to_owned(),
+        format!("{kind}  ·  {}", crumb_size(bytes)),
+        String::new(),
+    ];
+    if name.ends_with('/') {
+        let inside = CRUMB_DIRS.get(level + 1).map_or(0, |dir| dir.len());
+        lines.push(format!("{inside} items"));
+        lines.push(String::from("Press Enter to open"));
+    } else if extension == Some("rs") {
+        for line in [
+            "// Copyright (c) 2026 Moonbase 2090 LLC",
+            "// SPDX-License-Identifier: MIT",
+            "",
+            "use lunatui_core::{Rect, Size, Style};",
+            "",
+            "use crate::{RenderCx, Widget};",
+            "",
+            "#[derive(Clone, Debug, PartialEq, Eq)]",
+        ] {
+            lines.push(line.to_owned());
+        }
+    } else if extension == Some("toml") {
+        for line in [
+            "[package]",
+            "name = \"lunatui-widgets\"",
+            "version.workspace = true",
+            "",
+            "[features]",
+            "default = []",
+            "widget-state = []",
+        ] {
+            lines.push(line.to_owned());
+        }
+    } else {
+        for line in [
+            "# Notes",
+            "",
+            "- check the release PRs",
+            "- review the showcase media",
+            "- retarget the stacked branches",
+        ] {
+            lines.push(line.to_owned());
+        }
+    }
+    lines
+}
+
+fn crumb_panes(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    level: usize,
+    tick: u32,
+    styles: [Style; 2],
+    colors: [Color; 2],
+) {
+    let [fill, dim] = styles;
+    let [accent, raised] = colors;
+    let (text, surface) = (fill.fg, fill.bg);
+    let entries = CRUMB_DIRS[level];
+    let body_top = area.y;
+    let body_height = area.height.min(18);
+    let list = Rect::new(area.x + 2, body_top, 72, body_height);
+    let side = Rect::new(
+        list.x + list.width + 1,
+        body_top,
+        area.width.saturating_sub(list.width + 5),
+        body_height,
+    );
+    let selected = usize::try_from(tick / 14).unwrap_or(0) % entries.len();
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(format!(" {} ", CRUMB_PATH[level]))
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(list, cx);
+    let columns = [list.x + 2, list.x + 44, list.x + 58];
+    cx.put_str(columns[0], list.y + 1, "Name", dim);
+    cx.put_str(columns[1], list.y + 1, "Size", dim);
+    cx.put_str(columns[2], list.y + 1, "Modified", dim);
+    for (row, (name, bytes, modified)) in (0_u16..).zip(entries.iter()) {
+        let y = list.y + 3 + row;
+        if y + 1 >= list.y + list.height {
+            break;
+        }
+        let picked = usize::from(row) == selected;
+        let style = if picked {
+            Style::new().fg(text).bg(raised)
+        } else if name.ends_with('/') {
+            Style::new().fg(accent).bg(surface)
+        } else {
+            fill
+        };
+        cx.put_str(
+            list.x + 1,
+            y,
+            &" ".repeat(usize::from(list.width.saturating_sub(2))),
+            style,
+        );
+        cx.put_str(columns[0], y, name, style);
+        cx.put_str(columns[1], y, &crumb_size(*bytes), style);
+        cx.put_str(columns[2], y, modified, style);
+    }
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Preview ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(side, cx);
+    let (name, bytes, _) = entries[selected];
+    for (row, line) in (0_u16..).zip(crumb_preview(name, bytes, level)) {
+        let y = side.y + 1 + row;
+        if y + 1 >= side.y + side.height {
+            break;
+        }
+        let style = if row == 0 {
+            fill.fg(accent)
+        } else if row == 1 {
+            dim
+        } else {
+            fill
+        };
+        cx.put_str(
+            side.x + 2,
+            y,
+            clip_display_prefix(&line, side.width.saturating_sub(4)),
+            style,
+        );
+    }
+    let recent = Rect::new(
+        area.x + 2,
+        body_top + body_height,
+        area.width.saturating_sub(4),
+        area.height.saturating_sub(body_height),
+    );
+    crumb_visited(cx, recent, level, styles, colors);
+}
+
+fn crumb_visited(
+    cx: &mut RenderCx<'_>,
+    recent: Rect,
+    level: usize,
+    styles: [Style; 2],
+    colors: [Color; 2],
+) {
+    let [fill, dim] = styles;
+    let [accent, _] = colors;
+    let surface = fill.bg;
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Visited ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(recent, cx);
+    for (row, depth) in (0_u16..).zip(1..=level + 1) {
+        let y = recent.y + 1 + row;
+        if y + 1 >= recent.y + recent.height {
+            break;
+        }
+        let path = CRUMB_PATH[..depth].join("/");
+        let count = CRUMB_DIRS[depth - 1].len();
+        let here = depth == level + 1;
+        let marker = if here { "▶" } else { " " };
+        let line = format!(" {marker} {path:<52}{count:>3} items");
+        let style = if here { fill.fg(accent) } else { dim };
+        cx.put_str(
+            recent.x + 1,
+            y,
+            clip_display_prefix(&line, recent.width.saturating_sub(2)),
+            style,
+        );
+    }
+}
+
+fn breadcrumbs_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let header = Style::new().fg(text).bg(raised);
+
+    let depth = if tick < 190 {
+        (1 + usize::try_from(tick / 28).unwrap_or(0)).min(CRUMB_PATH.len())
+    } else {
+        2
+    };
+    let span = area.width.saturating_sub(4);
+    let squeeze = if (96..176).contains(&tick) {
+        u64::from(span) - tri(tick - 96, 80, 0, u64::from(span.saturating_sub(26)))
+    } else {
+        u64::from(span)
+    };
+    let wide = u16::try_from(squeeze).unwrap_or(span).min(span);
+    let bar = Rect::new(area.x + 2, area.y + 1, wide, 1);
+    let mut crumbs = Breadcrumbs::new(CRUMB_PATH[..depth].iter().copied())
+        .style(header)
+        .current_style(header.fg(accent).with_attrs(Attrs::new().set_bold(true)))
+        .separator_style(header.with_attrs(Attrs::new().set_dim(true)));
+    let areas = crumbs.segment_areas(bar);
+    let hover = if (150..190).contains(&tick) {
+        areas
+            .iter()
+            .map(|(index, _)| *index)
+            .find(|index| *index == 1)
+    } else if tick < 150 && tick % 40 >= 24 && !areas.is_empty() {
+        let pick = usize::try_from(tick / 40).unwrap_or(0) % areas.len();
+        areas.get(pick).map(|(index, _)| *index)
+    } else {
+        None
+    };
+    crumbs = crumbs.hover(
+        hover,
+        Style::new().with_attrs(Attrs::new().set_underline(UnderlineStyle::Single)),
+    );
+    cx.put_str(
+        area.x,
+        area.y + 1,
+        &" ".repeat(usize::from(area.width)),
+        header,
+    );
+    crumbs.render(bar, &mut cx);
+    cx.put_str(area.x + 1, area.y, " Files", fill.fg(accent));
+
+    let level = depth - 1;
+    let entries = CRUMB_DIRS[level];
+    let panes = Rect::new(
+        area.x,
+        area.y + 3,
+        area.width,
+        area.height.saturating_sub(5),
+    );
+    crumb_panes(&mut cx, panes, level, tick, [fill, dim], [accent, raised]);
+    StatusBar::new(format!(
+        " {} items  ●  {}  ●  click a path segment to jump back",
+        entries.len(),
+        CRUMB_PATH[..depth].join("/")
+    ))
+    .style(Style::new().fg(text).bg(raised))
+    .render(
+        Rect::new(
+            area.x,
+            area.y + area.height.saturating_sub(1),
+            area.width,
+            1,
+        ),
+        &mut cx,
+    );
+}
+
+fn breadcrumbs_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "breadcrumbs") {
         (case.ratatui)(buffer, area, tick);
     }
 }
