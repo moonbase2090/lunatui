@@ -16,15 +16,16 @@ use lunatui_core::{
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
-use lunatui_widgets::canvas::{Line, Points, Rectangle};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
-    Breadcrumbs, Canvas, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
+    Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
     KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
     RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
     Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
 };
 
+#[path = "canvas_showcase.rs"]
+mod canvas_showcase;
 #[path = "deploy_board.rs"]
 mod deploy_board;
 use ratatui::backend::CrosstermBackend;
@@ -4344,239 +4345,6 @@ fn chart_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32)
     }
 }
 
-struct CanvasBoard {
-    text: Color,
-    surface: Color,
-    edge: Color,
-    accent: Color,
-    warn: Color,
-    tick: u32,
-}
-
-impl CanvasBoard {
-    fn new(cx: &RenderCx<'_>, tick: u32) -> Self {
-        Self {
-            text: cx.token(Token::TextPrimary),
-            surface: cx.token(Token::Surface0),
-            edge: cx.token(Token::Surface1),
-            accent: cx.token(Token::Accent),
-            warn: cx.token(Token::Warn),
-            tick,
-        }
-    }
-
-    fn fill(&self) -> Style {
-        Style::new().fg(self.text).bg(self.surface)
-    }
-
-    fn panel(&self, title: &str, area: Rect, cx: &mut RenderCx<'_>) -> Rect {
-        let panel = Block::bordered()
-            .title(format!(" {title} "))
-            .style(self.fill())
-            .border_style(Style::new().fg(self.edge).bg(self.surface))
-            .title_style(self.fill());
-        panel.render(area, cx);
-        panel.inner(area)
-    }
-
-    fn radar(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Radar / contact sweep", area, cx);
-        let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
-        let radius = half_w.min(half_h) - 3.0;
-        let sweep = f64::from(self.tick) * 0.022;
-        let (text, accent, warn) = (self.text, self.accent, self.warn);
-        let contacts: [(f64, f64, &str); 5] = [
-            (0.62, 0.9, "ALPHA"),
-            (0.35, 2.2, "BRAVO"),
-            (0.8, 3.6, "CHARLIE"),
-            (0.5, 4.9, "DELTA"),
-            (0.7, 5.8, "ECHO"),
-        ];
-        Canvas::new(move |ctx| {
-            let guide = Style::new().fg(text).with_attrs(Attrs::new().set_dim(true));
-            ctx.marker(Marker::HalfBlock);
-            ctx.draw(&Line {
-                x1: -radius,
-                y1: 0.0,
-                x2: radius,
-                y2: 0.0,
-                style: guide,
-            });
-            ctx.draw(&Line {
-                x1: 0.0,
-                y1: -radius,
-                x2: 0.0,
-                y2: radius,
-                style: guide,
-            });
-            ctx.layer();
-            let angle = sweep.rem_euclid(core::f64::consts::TAU);
-            ctx.marker(Marker::Braille);
-            ctx.draw(&Line {
-                x1: 0.0,
-                y1: 0.0,
-                x2: radius * angle.cos(),
-                y2: radius * angle.sin(),
-                style: Style::new().fg(accent),
-            });
-            ctx.layer();
-            ctx.marker(Marker::Dot);
-            for &(distance, bearing, name) in &contacts {
-                let (x, y) = (
-                    radius * distance * bearing.cos(),
-                    radius * distance * bearing.sin(),
-                );
-                let since = (sweep - bearing).rem_euclid(core::f64::consts::TAU);
-                let style = if since < 1.6 {
-                    Style::new().fg(warn)
-                } else {
-                    Style::new().fg(text).with_attrs(Attrs::new().set_dim(true))
-                };
-                ctx.draw(&Points {
-                    coords: &[(x, y)],
-                    style,
-                });
-                ctx.print(x + 2.0, y, name, style);
-            }
-        })
-        .x_bounds([-half_w, half_w])
-        .y_bounds([-half_h, half_h])
-        .marker(Marker::Braille)
-        .background(self.fill())
-        .render(inner, cx);
-    }
-
-    fn scope(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Signal / live", area, cx);
-        let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
-        let phase = f64::from(self.tick) * 0.025;
-        let accent = self.accent;
-        Canvas::new(move |ctx| {
-            let wave = |x: f64| (x * 0.11 + phase).sin() * half_h * 0.64;
-            ctx.marker(Marker::Braille);
-            let mut previous = (-half_w, wave(-half_w));
-            let mut x = -half_w + 0.5;
-            while x <= half_w {
-                let point = (x, wave(x));
-                ctx.draw(&Line {
-                    x1: previous.0,
-                    y1: previous.1,
-                    x2: point.0,
-                    y2: point.1,
-                    style: Style::new().fg(accent),
-                });
-                previous = point;
-                x += 0.5;
-            }
-            ctx.print(
-                -half_w + 1.0,
-                half_h * 0.82,
-                "A / B",
-                Style::new().fg(accent),
-            );
-        })
-        .x_bounds([-half_w, half_w])
-        .y_bounds([-half_h, half_h])
-        .marker(Marker::Braille)
-        .background(self.fill())
-        .render(inner, cx);
-    }
-
-    fn route(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Route / corridor", area, cx);
-        let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
-        let (accent, text, edge, warn) = (self.accent, self.text, self.edge, self.warn);
-        let route = [
-            (-half_w * 0.82, -half_h * 0.58),
-            (-half_w * 0.52, -half_h * 0.15),
-            (-half_w * 0.18, half_h * 0.20),
-            (half_w * 0.28, half_h * 0.05),
-            (half_w * 0.78, half_h * 0.52),
-        ];
-        let progress = f64::from(self.tick.min(239)) / 239.0 * 4.0;
-        let (segment, segment_start) = if progress < 1.0 {
-            (0, 0.0)
-        } else if progress < 2.0 {
-            (1, 1.0)
-        } else if progress < 3.0 {
-            (2, 2.0)
-        } else {
-            (3, 3.0)
-        };
-        let fraction = progress - segment_start;
-        let moving = (
-            route[segment].0 + (route[segment + 1].0 - route[segment].0) * fraction,
-            route[segment].1 + (route[segment + 1].1 - route[segment].1) * fraction,
-        );
-        Canvas::new(move |ctx| {
-            ctx.marker(Marker::HalfBlock);
-            ctx.draw(&Rectangle {
-                x: -half_w * 0.92,
-                y: -half_h * 0.82,
-                width: half_w * 1.84,
-                height: half_h * 1.64,
-                style: Style::new().fg(edge),
-            });
-            ctx.draw(&Rectangle {
-                x: -half_w * 0.42,
-                y: half_h * 0.25,
-                width: half_w * 0.25,
-                height: half_h * 0.34,
-                style: Style::new().fg(warn).with_attrs(Attrs::new().set_dim(true)),
-            });
-            ctx.draw(&Rectangle {
-                x: half_w * 0.44,
-                y: -half_h * 0.62,
-                width: half_w * 0.26,
-                height: half_h * 0.30,
-                style: Style::new().fg(edge),
-            });
-            ctx.layer();
-            ctx.marker(Marker::Braille);
-            for pair in route.windows(2) {
-                ctx.draw(&Line {
-                    x1: pair[0].0,
-                    y1: pair[0].1,
-                    x2: pair[1].0,
-                    y2: pair[1].1,
-                    style: Style::new().fg(accent),
-                });
-            }
-            ctx.layer();
-            ctx.marker(Marker::Dot);
-            for (index, &(x, y)) in route.iter().enumerate() {
-                ctx.draw(&Points {
-                    coords: &[(x, y)],
-                    style: Style::new().fg(text),
-                });
-                if index == 0 || index == route.len() - 1 {
-                    ctx.print(
-                        x + 2.0,
-                        y,
-                        if index == 0 { "ORIGIN" } else { "ARRAY 7" },
-                        Style::new().fg(text),
-                    );
-                }
-            }
-            ctx.draw(&Points {
-                coords: &[moving],
-                style: Style::new().fg(warn),
-            });
-            ctx.print(
-                moving.0 + 2.0,
-                moving.1 - 2.0,
-                "LIVE",
-                Style::new().fg(warn),
-            );
-        })
-        .x_bounds([-half_w, half_w])
-        .y_bounds([-half_h, half_h])
-        .marker(Marker::Braille)
-        .background(self.fill())
-        .render(inner, cx);
-    }
-}
-
 fn canvas_native(
     grid: &mut Grid,
     clusters: &mut ClusterTable,
@@ -4584,27 +4352,7 @@ fn canvas_native(
     area: Rect,
     tick: u32,
 ) {
-    let surface = theme.resolve(Token::Surface0);
-    let text = theme.resolve(Token::TextPrimary);
-    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
-    let mut cx = RenderCx::new(grid, clusters, theme);
-    let board = CanvasBoard::new(&cx, tick);
-    let split = area.width * 42 / 100;
-    board.radar(Rect::new(area.x, area.y, split, area.height), &mut cx);
-    let top = area.height * 48 / 100;
-    board.scope(
-        Rect::new(area.x + split, area.y, area.width - split, top),
-        &mut cx,
-    );
-    board.route(
-        Rect::new(
-            area.x + split,
-            area.y + top,
-            area.width - split,
-            area.height - top,
-        ),
-        &mut cx,
-    );
+    canvas_showcase::render(grid, clusters, theme, area, tick);
 }
 
 fn canvas_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
@@ -4660,8 +4408,8 @@ fn play_lunatui(
     let mut clusters = ClusterTable::new();
     let mut encoder = Encoder::new();
     let period = Duration::from_secs(1) / options.fps;
+    let started = Instant::now();
     for tick in 0..options.frames {
-        let started = Instant::now();
         match (preview(&options.case), case) {
             (Some(preview), _) => (preview.native)(&mut next, &mut clusters, &theme, area, tick),
             (None, Some(case)) => (case.lunatui)(&mut next, &mut clusters, &theme, area, tick),
@@ -4671,9 +4419,14 @@ fn play_lunatui(
         out.write_all(encoder.encode_diff(&previous, &next, &clusters, ColorMode::TrueColor))?;
         out.flush()?;
         std::mem::swap(&mut previous, &mut next);
-        thread::sleep(period.saturating_sub(started.elapsed()));
+        pace(started, period, tick);
     }
     Ok(())
+}
+
+fn pace(started: Instant, period: Duration, tick: u32) {
+    let due = started + period * tick.saturating_add(1);
+    thread::sleep(due.saturating_duration_since(Instant::now()));
 }
 
 fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()> {
@@ -4689,8 +4442,8 @@ fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()
         return Err(invalid(format!("unknown case: {}", options.case)));
     }
     let period = Duration::from_secs(1) / options.fps;
+    let started = Instant::now();
     for tick in 0..options.frames {
-        let started = Instant::now();
         terminal.draw(|frame| {
             let buffer = frame.buffer_mut();
             match (preview(&options.case), case) {
@@ -4700,7 +4453,7 @@ fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()
             }
             downsample_buffer(buffer, options.profile);
         })?;
-        thread::sleep(period.saturating_sub(started.elapsed()));
+        pace(started, period, tick);
     }
     Ok(())
 }

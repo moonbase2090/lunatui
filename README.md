@@ -75,11 +75,11 @@ Screenshot: [docs/media/split.png](docs/media/split.png). Recorded with `scripts
 
 ### Canvas
 
-A monitoring wall drawn with Canvas: a radar sweep over sparse half-block guides with labeled contacts, a single live signal curve, and a route map with smooth paths, outlined corridors, labeled waypoints, and a moving marker. Braille's 2×4 sub-cell grid draws curves; half-blocks keep straight guides and rectangles solid.
+Six scenes drawn with Canvas, each in thin one-dot Braille strokes with no filled areas: an XY oscilloscope whose Lissajous figure glides between frequency ratios with a fading trail over a faint graticule, a slowly turning globe with great-circle flight paths and planes moving along them, CPU, memory, and network history as scrolling lines, an analog clock with a sweeping second hand beside a tree that grows branch by branch, a flock of 200 boids with short trails, and a world map with fading ping rings. Each frame is drawn for its own time on a fixed 30 fps step.
 
-<img src="docs/media/canvas.webp" alt="Canvas widget: a radar sweep, one signal curve, and a labeled route map in the dark theme" width="1028">
+<img src="docs/media/canvas.webp" alt="Canvas widget: an oscilloscope, a globe with flight paths, system graphs, a clock and tree, a flock, and a ping map, in the dark theme" width="1028">
 
-Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas`, 120×36, 240-frame request at 30 fps, dark, 2× scale, lossless animated WebP, about 8 seconds; captured frames are retained).
+Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas FRAMES=252 HEIGHT=50 LINE_HEIGHT=1.0`, 120×50 at 30 fps, dark, 2× scale, lossless animated WebP, about 8.4 seconds plus a 2-second hold on the last frame; every frame is kept). Coastlines are from Natural Earth (public domain).
 
 ### Toast
 
