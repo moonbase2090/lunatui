@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-10-28
+
 ### Added
 
 - `ProgressBar` widget, behind the `progress` feature: a bar of eighth blocks that is determinate (`ratio`), stacked in accent, ok, warn, or fail segments (`segment`), or indeterminate (a block bouncing along the track), with an optional label and percentage, widget states, and `percent` and `track_area` for the numbers and cells.
