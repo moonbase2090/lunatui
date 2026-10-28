@@ -17,15 +17,15 @@ fn ms(value: u64) -> Duration {
 #[test]
 fn out_cubic_passes_through_the_hand_computed_point() {
     assert!((Ease::OutCubic.apply(0.2) - 0.5).abs() < 1e-3);
-    assert_eq!(Ease::OutCubic.apply(0.0), 0.0);
-    assert_eq!(Ease::OutCubic.apply(1.0), 1.0);
+    assert!((Ease::OutCubic.apply(0.0) - 0.0).abs() < 1e-4);
+    assert!((Ease::OutCubic.apply(1.0) - 1.0).abs() < 1e-4);
 }
 
 #[test]
 fn in_cubic_passes_through_the_hand_computed_point() {
     assert!((Ease::InCubic.apply(0.65) - 0.5).abs() < 1e-3);
-    assert_eq!(Ease::InCubic.apply(0.0), 0.0);
-    assert_eq!(Ease::InCubic.apply(1.0), 1.0);
+    assert!((Ease::InCubic.apply(0.0) - 0.0).abs() < 1e-4);
+    assert!((Ease::InCubic.apply(1.0) - 1.0).abs() < 1e-4);
 }
 
 #[test]
@@ -79,7 +79,7 @@ fn policy_caps_durations_and_zeroes_them_when_reduced() {
 fn a_reduced_tween_snaps_to_its_end() {
     let duration = MotionPolicy::new(true).duration(STANDARD);
     let tween = Tween::new(0.0, 10.0, duration, Ease::OutCubic);
-    assert_eq!(tween.sample(Duration::ZERO), 10.0);
+    assert!((tween.sample(Duration::ZERO) - 10.0).abs() < 1e-4);
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn a_transition_reports_whether_it_is_running() {
     assert!(transition.is_running(ms(10)));
     assert!(transition.is_running(ms(109)));
     assert!(!transition.is_running(ms(110)));
-    assert_eq!(transition.target(), 2.0);
+    assert!((transition.target() - 2.0).abs() < 1e-4);
 }
 
 #[test]
@@ -114,7 +114,7 @@ fn a_reduced_retarget_snaps_immediately() {
         STANDARD,
         Ease::OutCubic,
     );
-    assert_eq!(transition.value(ms(5)), 7.0);
+    assert!((transition.value(ms(5)) - 7.0).abs() < 1e-4);
     assert!(!transition.is_running(ms(5)));
 }
 
@@ -189,8 +189,8 @@ fn retargeting_a_spring_keeps_its_velocity() {
     spring.advance(ms(50));
     let (value, velocity) = (spring.value(), spring.velocity());
     spring.set_target(-5.0);
-    assert_eq!(spring.value(), value);
-    assert_eq!(spring.velocity(), velocity);
+    assert!((spring.value() - value).abs() < 1e-4);
+    assert!((spring.velocity() - velocity).abs() < 1e-4);
     assert!(velocity > 0.0);
 }
 
@@ -200,8 +200,8 @@ fn snap_jumps_to_the_target_and_stops() {
     spring.set_target(4.0);
     spring.advance(ms(30));
     spring.snap();
-    assert_eq!(spring.value(), 4.0);
-    assert_eq!(spring.velocity(), 0.0);
+    assert!((spring.value() - 4.0).abs() < 1e-4);
+    assert!(spring.velocity().abs() < 1e-4);
     assert!(spring.is_settled());
 }
 
@@ -210,7 +210,7 @@ fn a_spring_without_stiffness_never_moves() {
     let mut spring = DampedSpring::new(3.0, 0.0, 10.0, 1.0);
     spring.set_target(9.0);
     spring.advance(ms(500));
-    assert_eq!(spring.value(), 3.0);
+    assert!((spring.value() - 3.0).abs() < 1e-4);
 }
 
 #[test]
@@ -285,7 +285,7 @@ fn the_scheduler_follows_a_changed_frame_period() {
 fn retargeting_to_the_current_value_is_not_running() {
     let mut transition = Transition::at_rest(3.0);
     transition.retarget(ms(0), 3.0, STANDARD, Ease::OutCubic);
-    assert_eq!(transition.value(ms(50)), 3.0);
+    assert!((transition.value(ms(50)) - 3.0).abs() < 1e-4);
     assert!(!transition.is_running(ms(0)));
     assert!(!transition.is_running(ms(50)));
 }

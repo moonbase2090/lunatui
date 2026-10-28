@@ -5,13 +5,6 @@
 use core::fmt;
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 
-#[cfg(any(
-    feature = "barchart",
-    feature = "bigtext",
-    feature = "calendar",
-    feature = "image",
-    feature = "sparkline"
-))]
 use lunatui_core::UnderlineStyle;
 
 use crate::overlay::blend_rgb;
@@ -144,10 +137,16 @@ impl<'a> RenderCx<'a> {
         }
     }
 
+    /// Fills `area` with `ch` and `style` without building an intermediate string.
+    pub fn fill(&mut self, area: Rect, style: Style, ch: char) {
+        self.grid.fill(area, style, ch, self.clusters);
+    }
+
     #[cfg(any(
         feature = "barchart",
         feature = "bigtext",
         feature = "calendar",
+        feature = "chart",
         feature = "image",
         feature = "sparkline"
     ))]
@@ -161,7 +160,7 @@ impl<'a> RenderCx<'a> {
         self.grid.put_char(x, y, patched, glyph, self.clusters);
     }
 
-    #[cfg(feature = "barchart")]
+    #[cfg(any(feature = "barchart", feature = "canvas", feature = "chart"))]
     pub(crate) fn clear_area(&mut self, area: Rect, style: Style) {
         let blank = lunatui_core::GlyphSlot::inline_scalar(' ');
         for y in area.y..area.y.saturating_add(area.height) {
@@ -242,13 +241,6 @@ impl<'a> RenderCx<'a> {
     }
 }
 
-#[cfg(any(
-    feature = "barchart",
-    feature = "bigtext",
-    feature = "calendar",
-    feature = "image",
-    feature = "sparkline"
-))]
 pub(crate) fn patch_style(base: Style, over: Style) -> Style {
     Style {
         fg: if over.fg == Color::Default {
@@ -265,13 +257,6 @@ pub(crate) fn patch_style(base: Style, over: Style) -> Style {
     }
 }
 
-#[cfg(any(
-    feature = "barchart",
-    feature = "bigtext",
-    feature = "calendar",
-    feature = "image",
-    feature = "sparkline"
-))]
 fn merge_attrs(base: Attrs, over: Attrs) -> Attrs {
     if over.to_bits() == 0 {
         return base;

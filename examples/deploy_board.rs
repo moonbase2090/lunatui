@@ -341,7 +341,7 @@ fn paint_tasks(cx: &mut RenderCx<'_>, area: Rect, elapsed_ms: u64, ink: &Ink) {
 }
 
 fn paint_events(cx: &mut RenderCx<'_>, area: Rect, elapsed_ms: u64, ink: &Ink) {
-    if area.width < 8 || area.height < 3 || EVENTS.is_empty() {
+    if area.width < 8 || area.height < 3 {
         return;
     }
     let block = Block::bordered()
