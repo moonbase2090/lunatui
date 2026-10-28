@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 - `KeyHintBar`, behind the `key-hints` feature, renders the first registered shortcut for each command in the active `Keymap`.
+- `Breadcrumbs` widget: a one-row path of segments with a separator, styles for the segments, the last segment, the separators, and a hovered segment. A path wider than the area collapses its middle to `…`, keeping the first segment and as many of the last as fit. `Breadcrumbs::segment_areas` reports where each shown segment sits, for `HitMap`.
 - `SplitTree` for resizable, nestable split panes with a zoomed pane: `split` and `close` change the tree, `layout` gives every pane's cells and every divider's line, `SplitDrag` resizes a divider cell by cell from pointer events (stopping at minimum sizes, with cancel), and `SplitLayout::render_dividers` draws the lines.
 - `ToastStack` widget, behind the `toast` feature: timed toasts scoped to a pane (boxed, stacked up from the pane's bottom-right corner) or to the status rows (one line each), with `ToastKind` colors from theme tokens. The caller supplies the time, so expiry follows a virtual clock exactly; `placements` gives each shown toast's rectangle and layer so clicks can be routed through `HitMap`, with newer toasts above older ones and status toasts above pane toasts.
 - `Canvas` widget, behind the `canvas` feature: a paint closure draws `Line`, `Rectangle`, `Circle`, and `Points` shapes or its own `Shape` through a `Painter`, in layers, with text labels, clipped to the `x_bounds` and `y_bounds`, and follows `WidgetState` and an optional background style. `Marker` gains `Quadrant` and `Sextant`, and `Chart` draws with them too.
@@ -25,6 +26,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 - The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
+- `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
 
 ### Fixed
 - `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
@@ -56,6 +58,9 @@ Every PR adds its entry under **Unreleased**.
 - The PTY integration tests for `lunatui` and `lunatui-test` carry their crate docs on Windows, where the tests are compiled out, so `missing_docs` no longer fails the Windows build.
 - The website hero sky no longer drifts side to side; the sky image is static.
 - `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
+
+
+
 
 
 
