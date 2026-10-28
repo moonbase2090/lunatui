@@ -10,6 +10,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Accordion` widget, behind the `accordion` feature: collapsible sections with a caret, title, and badge per header, body rectangles for the caller's content, a per-section reveal fraction for animated opening and closing, `layout` for hit testing, `step` for tab-order focus, and widget states.
+- `lunatui-widgets` gets an `all-widgets` feature that turns on every widget needing no extra dependency, so test and example setups no longer list each widget.
 - `NumberInput` widget, behind the `number-input` feature: a spin box with minus and plus buttons, a range, a step, decimals, a prefix and suffix, and a text-editing display with a caret, plus `nudge`, `parse`, `accepts`, and `format` rules and button and field areas for hit testing.
 - `Slider` widget, behind the `slider` feature: a one-row slider for a single value or a range, with half-cell track precision, an optional knob, a label and value text, step snapping, `value_at` for clicks and drags, `nudge` for the keyboard, and `track_area` and `thumb_areas` for hit testing.
 - `Tooltip` widget, behind the `tooltip` feature: a short hint beside an anchor rectangle that never covers it, opening on a chosen side and flipping or sliding to stay inside the area, with text wrapped to a maximum width, theme-token colors, `area` for hit testing, and `TooltipState` for the hover delay and dismissal with caller-supplied time.

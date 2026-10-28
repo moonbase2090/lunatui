@@ -15,11 +15,11 @@ use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
-    Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly,
-    NumberInput, Paragraph, PixelSize, Popup, RadioGroup, RenderCx, ScrollView,
-    ScrollbarVisibility, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
-    ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
+    Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, KeyHintBar, List,
+    MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, Popup, RadioGroup, RenderCx,
+    ScrollView, ScrollbarVisibility, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs,
+    TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -204,6 +204,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: form_lunatui,
         ratatui: form_ratatui,
+    },
+    Case {
+        name: "accordion",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no collapsible section widget; its side draws each header and open body by hand as paragraphs",
+        ),
+        lunatui: accordion_lunatui,
+        ratatui: accordion_ratatui,
     },
     Case {
         name: "slider",
@@ -791,6 +800,80 @@ fn number_input_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             RatRect::new(area.x, y, u16::try_from(width).unwrap_or(0), 1),
             buf,
         );
+    }
+}
+
+const ACCORDION: [(&str, &str, u16); 4] = [
+    ("Build", "3 settings", 3),
+    ("Environment", "4 variables", 4),
+    ("Dependencies", "212 crates", 4),
+    ("Tests", "3 suites", 3),
+];
+
+fn accordion_open(tick: u32, index: usize) -> bool {
+    (tick / 20 + u32::try_from(index).unwrap_or(0)).is_multiple_of(2)
+}
+
+fn accordion_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let accordion = Accordion::new(ACCORDION.iter().enumerate().map(
+        |(index, (title, badge, rows))| {
+            AccordionSection::new(*title, *rows)
+                .open(accordion_open(tick, index))
+                .badge(*badge)
+        },
+    ));
+    accordion.render(area, &mut cx);
+    for section in accordion.layout(area) {
+        for row in 0..section.body.height {
+            cx.put_str(
+                section.body.x,
+                section.body.y + row,
+                &format!("setting {}", row + 1),
+                Style::new(),
+            );
+        }
+    }
+}
+
+fn accordion_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let text = RatStyle::new().fg(rat_color(theme.resolve(lunatui_theme::Token::TextPrimary)));
+    let dim = text.add_modifier(ratatui::style::Modifier::DIM);
+    let end = area.y.saturating_add(area.height);
+    let mut y = area.y;
+    for (index, (title, badge, rows)) in ACCORDION.iter().enumerate() {
+        if y >= end {
+            break;
+        }
+        let open = accordion_open(tick, index);
+        let caret = if open { "▾" } else { "▸" };
+        let pad = usize::from(area.width)
+            .saturating_sub(2 + title.chars().count() + badge.chars().count());
+        RatParagraph::new(Line::from(vec![
+            Span::styled(format!("{caret} {title}"), text),
+            Span::raw(" ".repeat(pad)),
+            Span::styled(*badge, dim),
+        ]))
+        .render(RatRect::new(area.x, y, area.width, 1), buf);
+        y += 1;
+        if !open {
+            continue;
+        }
+        for row in 0..(*rows).min(end.saturating_sub(y)) {
+            let indent = 2.min(area.width);
+            RatParagraph::new(Line::from(format!("setting {}", row + 1))).render(
+                RatRect::new(area.x + indent, y + row, area.width - indent, 1),
+                buf,
+            );
+        }
+        y = y.saturating_add(*rows);
     }
 }
 
