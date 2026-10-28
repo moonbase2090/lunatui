@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Form` container, behind the `form` feature: labelled fields with a label column, an input area for the caller's own widget, and a message row; required markers, dim hints, and fail-colored validation messages from theme tokens; `layout` for drawing and hit testing; `step` for tab-order focus that wraps and skips disabled fields; and `check_required`, `is_valid`, and `first_error` for validation.
 - `RadioGroup` widget, behind the `radio` feature: single-choice options drawn as `◉`/`○` one per row or side by side, with focus, per-option and whole-group disabling, theme-token colors, `option_areas` for hit testing, and `step` for keyboard movement that wraps and skips disabled options.
 - `Toggle` widget, behind the `toggle` feature: an on/off switch with an optional label and a configurable track width, painted from theme tokens for the normal, focused, and disabled states, with `hit_area` for hit testing.
 - Canvas Braille lines use a thin, centered sub-cell raster so ties stay in one stroke; `Context::marker` lets a paint closure switch to block markers for straight guides and outlines.
