@@ -185,6 +185,12 @@ impl Context<'_> {
         shape.draw(&mut painter);
     }
 
+    /// Sets the marker for shapes drawn next. The canvas marker is used initially; switch to a
+    /// block marker for filled regions, then back to braille for outlines and paths.
+    pub fn marker(&mut self, marker: Marker) {
+        self.marker = marker;
+    }
+
     /// Starts a new layer. A cell a later layer draws in replaces what an earlier layer drew
     /// there, so later layers sit on top.
     pub fn layer(&mut self) {

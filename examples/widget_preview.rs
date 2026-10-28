@@ -16,7 +16,7 @@ use lunatui_core::{
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
-use lunatui_widgets::canvas::{Circle, Line};
+use lunatui_widgets::canvas::{Circle, Line, Points, Rectangle};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
     Breadcrumbs, Canvas, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
@@ -4384,46 +4384,44 @@ impl CanvasBoard {
     }
 
     fn radar(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Radar", area, cx);
+        let inner = self.panel("Radar / contact sweep", area, cx);
         let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
-        let radius = half_w.min(half_h) - 2.0;
-        let sweep = f64::from(self.tick) * 0.045;
+        let radius = half_w.min(half_h) - 3.0;
+        let sweep = f64::from(self.tick) * 0.022;
         let (text, accent, ok, warn) = (self.text, self.accent, self.ok, self.warn);
-        let blips: [(f64, f64, &str); 5] = [
-            (0.62, 0.9, "alpha"),
-            (0.35, 2.2, "bravo"),
-            (0.8, 3.6, "charlie"),
-            (0.5, 4.9, "delta"),
-            (0.7, 5.8, "echo"),
+        let contacts: [(f64, f64, &str); 5] = [
+            (0.62, 0.9, "ALPHA"),
+            (0.35, 2.2, "BRAVO"),
+            (0.8, 3.6, "CHARLIE"),
+            (0.5, 4.9, "DELTA"),
+            (0.7, 5.8, "ECHO"),
         ];
         Canvas::new(move |ctx| {
-            let ring = Style::new().fg(text).with_attrs(Attrs::new().set_dim(true));
-            for fraction in [0.25, 0.5, 0.75, 1.0] {
-                ctx.draw(&Circle {
-                    x: 0.0,
-                    y: 0.0,
-                    radius: radius * fraction,
-                    style: ring,
-                });
-            }
+            let guide = Style::new().fg(text).with_attrs(Attrs::new().set_dim(true));
+            ctx.draw(&Circle {
+                x: 0.0,
+                y: 0.0,
+                radius,
+                style: guide,
+            });
             ctx.draw(&Line {
                 x1: -radius,
                 y1: 0.0,
                 x2: radius,
                 y2: 0.0,
-                style: ring,
+                style: guide,
             });
             ctx.draw(&Line {
                 x1: 0.0,
                 y1: -radius,
                 x2: 0.0,
                 y2: radius,
-                style: ring,
+                style: guide,
             });
             ctx.layer();
             let trail = [
                 Style::new().fg(ok).with_attrs(Attrs::new().set_dim(true)),
-                Style::new().fg(ok),
+                Style::new().fg(ok).with_attrs(Attrs::new().set_dim(true)),
                 Style::new()
                     .fg(accent)
                     .with_attrs(Attrs::new().set_dim(true)),
@@ -4431,7 +4429,7 @@ impl CanvasBoard {
             ];
             for (step, style) in trail.iter().enumerate() {
                 let behind = f64::from(3_u8 - u8::try_from(step).unwrap_or(0));
-                let angle = sweep - 0.09 * behind;
+                let angle = sweep - 0.07 * behind;
                 ctx.draw(&Line {
                     x1: 0.0,
                     y1: 0.0,
@@ -4441,130 +4439,171 @@ impl CanvasBoard {
                 });
             }
             ctx.layer();
-            for &(distance, bearing, name) in &blips {
+            for &(distance, bearing, name) in &contacts {
                 let (x, y) = (
                     radius * distance * bearing.cos(),
                     radius * distance * bearing.sin(),
                 );
                 let since = (sweep - bearing).rem_euclid(core::f64::consts::TAU);
-                let hot = since < 1.6;
-                let style = if hot {
+                let style = if since < 1.6 {
                     Style::new().fg(warn)
                 } else {
                     Style::new().fg(text).with_attrs(Attrs::new().set_dim(true))
                 };
-                ctx.draw(&Circle {
-                    x,
-                    y,
-                    radius: 1.6,
+                ctx.draw(&Points {
+                    coords: &[(x, y)],
                     style,
                 });
-                if hot {
-                    ctx.print(x + 3.0, y, name, style);
-                }
+                ctx.print(x + 2.0, y, name, style);
             }
         })
         .x_bounds([-half_w, half_w])
         .y_bounds([-half_h, half_h])
-        .marker(Marker::Sextant)
+        .marker(Marker::Braille)
         .background(self.fill())
         .render(inner, cx);
     }
 
     fn scope(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Signals", area, cx);
+        let inner = self.panel("Signal / area", area, cx);
         let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
-        let phase = f64::from(self.tick) * 0.05;
-        let (accent, focus, edge) = (self.accent, self.focus, self.edge);
+        let phase = f64::from(self.tick) * 0.025;
+        let (accent, focus, edge, ok) = (self.accent, self.focus, self.edge, self.ok);
         Canvas::new(move |ctx| {
-            ctx.draw(&Line {
-                x1: -half_w,
-                y1: 0.0,
-                x2: half_w,
-                y2: 0.0,
-                style: Style::new().fg(edge),
-            });
-            let wave = |x: f64, k: f64, shift: f64| (x * k + shift).sin() * half_h * 0.8;
-            let mut last: [Option<(f64, f64)>; 2] = [None, None];
+            let wave = |x: f64, k: f64, shift: f64| (x * k + shift).sin() * half_h * 0.62;
+            let baseline = -half_h * 0.76;
+            ctx.marker(Marker::HalfBlock);
             let mut x = -half_w;
             while x <= half_w {
-                let points = [
-                    (x, wave(x, 0.11, phase)),
-                    (x, wave(x, 0.19, -phase * 1.4) * 0.6),
-                ];
-                for (index, point) in points.iter().enumerate() {
-                    if let Some(previous) = last[index] {
-                        let style = Style::new().fg(if index == 0 { accent } else { focus });
-                        ctx.draw(&Line {
-                            x1: previous.0,
-                            y1: previous.1,
-                            x2: point.0,
-                            y2: point.1,
-                            style,
-                        });
-                    }
-                    last[index] = Some(*point);
-                }
+                ctx.draw(&Line {
+                    x1: x,
+                    y1: baseline,
+                    x2: x,
+                    y2: wave(x, 0.11, phase),
+                    style: Style::new().fg(ok).with_attrs(Attrs::new().set_dim(true)),
+                });
                 x += 1.0;
             }
+            ctx.marker(Marker::Braille);
+            ctx.draw(&Line {
+                x1: -half_w,
+                y1: baseline,
+                x2: half_w,
+                y2: baseline,
+                style: Style::new().fg(edge),
+            });
+            for (frequency, shift, gain, color) in [
+                (0.11, phase, 1.0, accent),
+                (0.19, -phase * 1.4, 0.55, focus),
+            ] {
+                let mut previous = (-half_w, wave(-half_w, frequency, shift) * gain);
+                let mut x = -half_w + 0.5;
+                while x <= half_w {
+                    let point = (x, wave(x, frequency, shift) * gain);
+                    ctx.draw(&Line {
+                        x1: previous.0,
+                        y1: previous.1,
+                        x2: point.0,
+                        y2: point.1,
+                        style: Style::new().fg(color),
+                    });
+                    previous = point;
+                    x += 0.5;
+                }
+            }
+            ctx.print(
+                -half_w + 1.0,
+                half_h * 0.82,
+                "A / B",
+                Style::new().fg(accent),
+            );
         })
         .x_bounds([-half_w, half_w])
         .y_bounds([-half_h, half_h])
-        .marker(Marker::Sextant)
+        .marker(Marker::Braille)
         .background(self.fill())
         .render(inner, cx);
     }
 
-    fn markers(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Markers", area, cx);
-        let names = [
-            ("braille", Marker::Braille),
-            ("sextant", Marker::Sextant),
-            ("quadrant", Marker::Quadrant),
-            ("half block", Marker::HalfBlock),
-            ("block", Marker::Block),
-            ("dot", Marker::Dot),
+    fn route(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let inner = self.panel("Route / corridor", area, cx);
+        let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
+        let (accent, text, edge, warn) = (self.accent, self.text, self.edge, self.warn);
+        let route = [
+            (-half_w * 0.82, -half_h * 0.58),
+            (-half_w * 0.52, -half_h * 0.15),
+            (-half_w * 0.18, half_h * 0.20),
+            (half_w * 0.28, half_h * 0.05),
+            (half_w * 0.78, half_h * 0.52),
         ];
-        let cell_w = inner.width / 3;
-        let cell_h = inner.height / 2;
-        let angle = f64::from(self.tick) * 0.06;
-        let (accent, text) = (self.accent, self.text);
-        for (index, (name, marker)) in (0_u16..).zip(names) {
-            let at = Rect::new(
-                inner.x + (index % 3) * cell_w,
-                inner.y + (index / 3) * cell_h,
-                cell_w.saturating_sub(1),
-                cell_h,
-            );
-            let (half_w, half_h) = (f64::from(at.width), f64::from(at.height) * 2.0);
-            let radius = half_w.min(half_h) * 0.8;
-            Canvas::new(move |ctx| {
-                ctx.draw(&Circle {
-                    x: 0.0,
-                    y: 0.0,
-                    radius,
+        let progress = f64::from(self.tick.min(239)) / 239.0 * (route.len() - 1) as f64;
+        let segment = (progress.floor() as usize).min(route.len() - 2);
+        let fraction = progress - segment as f64;
+        let moving = (
+            route[segment].0 + (route[segment + 1].0 - route[segment].0) * fraction,
+            route[segment].1 + (route[segment + 1].1 - route[segment].1) * fraction,
+        );
+        Canvas::new(move |ctx| {
+            ctx.draw(&Rectangle {
+                x: -half_w * 0.92,
+                y: -half_h * 0.82,
+                width: half_w * 1.84,
+                height: half_h * 1.64,
+                style: Style::new().fg(edge),
+            });
+            ctx.draw(&Rectangle {
+                x: -half_w * 0.42,
+                y: half_h * 0.25,
+                width: half_w * 0.25,
+                height: half_h * 0.34,
+                style: Style::new().fg(warn).with_attrs(Attrs::new().set_dim(true)),
+            });
+            ctx.draw(&Rectangle {
+                x: half_w * 0.44,
+                y: -half_h * 0.62,
+                width: half_w * 0.26,
+                height: half_h * 0.30,
+                style: Style::new().fg(edge),
+            });
+            for pair in route.windows(2) {
+                ctx.draw(&Line {
+                    x1: pair[0].0,
+                    y1: pair[0].1,
+                    x2: pair[1].0,
+                    y2: pair[1].1,
                     style: Style::new().fg(accent),
                 });
-                ctx.draw(&Line {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: radius * angle.cos(),
-                    y2: radius * angle.sin(),
+            }
+            for (index, &(x, y)) in route.iter().enumerate() {
+                ctx.draw(&Points {
+                    coords: &[(x, y)],
                     style: Style::new().fg(text),
                 });
-                ctx.print(
-                    -half_w,
-                    half_h,
-                    name,
-                    Style::new().fg(text).with_attrs(Attrs::new().set_dim(true)),
-                );
-            })
-            .x_bounds([-half_w, half_w])
-            .y_bounds([-half_h, half_h])
-            .marker(marker)
-            .background(self.fill())
-            .render(at, cx);
-        }
+                if index == 0 || index == route.len() - 1 {
+                    ctx.print(
+                        x + 2.0,
+                        y,
+                        if index == 0 { "ORIGIN" } else { "ARRAY 7" },
+                        Style::new().fg(text),
+                    );
+                }
+            }
+            ctx.draw(&Points {
+                coords: &[moving],
+                style: Style::new().fg(warn),
+            });
+            ctx.print(
+                moving.0 + 2.0,
+                moving.1 - 2.0,
+                "LIVE",
+                Style::new().fg(warn),
+            );
+        })
+        .x_bounds([-half_w, half_w])
+        .y_bounds([-half_h, half_h])
+        .marker(Marker::Braille)
+        .background(self.fill())
+        .render(inner, cx);
     }
 }
 
@@ -4580,14 +4619,14 @@ fn canvas_native(
     grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
     let mut cx = RenderCx::new(grid, clusters, theme);
     let board = CanvasBoard::new(&cx, tick);
-    let split = area.width * 55 / 100;
+    let split = area.width * 42 / 100;
     board.radar(Rect::new(area.x, area.y, split, area.height), &mut cx);
-    let top = area.height * 40 / 100;
+    let top = area.height * 48 / 100;
     board.scope(
         Rect::new(area.x + split, area.y, area.width - split, top),
         &mut cx,
     );
-    board.markers(
+    board.route(
         Rect::new(
             area.x + split,
             area.y + top,

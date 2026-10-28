@@ -52,9 +52,24 @@ fn block_lines_run_cell_by_cell() {
             });
         })
     };
-    assert_eq!(line(0.0, 0.0, 1.0, 1.0), ["    █", "  ██ ", "██   "]);
+    assert_eq!(line(0.0, 0.0, 1.0, 1.0), ["   ██", " ███ ", "██   "]);
     assert_eq!(line(0.0, 0.5, 1.0, 0.5), ["     ", "█████", "     "]);
     assert_eq!(line(0.5, 0.0, 0.5, 1.0), ["  █  ", "  █  ", "  █  "]);
+}
+
+#[test]
+fn braille_line_ties_stay_centered_on_a_shallow_slope() {
+    let rows = show(Marker::Braille, ([0.0, 5.0], [0.0, 14.0]), (3, 2), |ctx| {
+        ctx.draw(&Line {
+            x1: 0.0,
+            y1: 14.0,
+            x2: 4.0,
+            y2: 10.0,
+            style: Style::new(),
+        });
+    });
+
+    assert_eq!(rows, ["⠙⠲⠄", "   "]);
 }
 
 #[test]
@@ -201,6 +216,27 @@ fn a_later_layer_replaces_the_cell_it_shares() {
 }
 
 #[test]
+fn context_can_use_blocks_for_fills_and_braille_for_lines() {
+    let rows = show(Marker::Braille, UNIT, (3, 1), |ctx| {
+        ctx.marker(Marker::Block);
+        ctx.draw(&Points {
+            coords: &[(0.0, 0.0)],
+            style: Style::new(),
+        });
+        ctx.marker(Marker::Braille);
+        ctx.draw(&Line {
+            x1: 0.5,
+            y1: 0.5,
+            x2: 1.0,
+            y2: 1.0,
+            style: Style::new(),
+        });
+    });
+
+    assert_eq!(rows, ["█⠠⠊"]);
+}
+
+#[test]
 fn labels_sit_at_their_cell_and_cover_the_drawing() {
     let rows = show(Marker::Block, ([0.0, 20.0], [0.0, 10.0]), (30, 10), |ctx| {
         ctx.draw(&Line {
@@ -265,11 +301,11 @@ fn reversed_bounds_flip_and_empty_bounds_draw_nothing() {
     };
     assert_eq!(
         diagonal(([1.0, 0.0], [0.0, 1.0])),
-        ["██   ", "  ██ ", "    █"].map(str::to_owned).to_vec()
+        ["██   ", " ███ ", "   ██"].map(str::to_owned).to_vec()
     );
     assert_eq!(
         diagonal(([0.0, 1.0], [1.0, 0.0])),
-        ["██   ", "  ██ ", "    █"].map(str::to_owned).to_vec()
+        ["██   ", " ███ ", "   ██"].map(str::to_owned).to_vec()
     );
     for bounds in [
         ([1.0, 1.0], [0.0, 1.0]),

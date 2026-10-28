@@ -189,37 +189,53 @@ impl Raster {
         let (x0, y0) = (window.column(a.0, sub_w), window.row(a.1, sub_h));
         let (x1, y1) = (window.column(b.0, sub_w), window.row(b.1, sub_h));
         let (dx, dy) = ((x1 - x0).abs(), (y1 - y0).abs());
-        if dy < dx {
-            let ((x0, y0), (x1, y1)) = if x0 > x1 {
+        if dx == 0 && dy == 0 {
+            self.mark(marker, x0, y0, series);
+            return;
+        }
+        if dx >= dy {
+            let ((x0, y0), (_x1, y1)) = if x0 > x1 {
                 ((x1, y1), (x0, y0))
             } else {
                 ((x0, y0), (x1, y1))
             };
-            let step = if y1 < y0 { -1 } else { 1 };
-            let (mut y, mut error) = (y0, 2 * dy - dx);
-            for x in x0..=x1 {
-                self.mark(marker, x, y, series);
-                if error > 0 {
-                    y += step;
-                    error -= 2 * dx;
+            let sy = if y0 < y1 { 1 } else { -1 };
+            for offset in 0..=dx {
+                let numerator = offset * dy;
+                let minor = numerator / dx;
+                let remainder = numerator % dx;
+                let x = x0 + offset;
+                let y = y0 + sy * minor;
+                match (2 * remainder).cmp(&dx) {
+                    core::cmp::Ordering::Less => self.mark(marker, x, y, series),
+                    core::cmp::Ordering::Equal => {
+                        self.mark(marker, x, y, series);
+                        self.mark(marker, x, y + sy, series);
+                    }
+                    core::cmp::Ordering::Greater => self.mark(marker, x, y + sy, series),
                 }
-                error += 2 * dy;
             }
         } else {
-            let ((x0, y0), (x1, y1)) = if y0 > y1 {
+            let ((x0, y0), (x1, _y1)) = if y0 > y1 {
                 ((x1, y1), (x0, y0))
             } else {
                 ((x0, y0), (x1, y1))
             };
-            let step = if x1 < x0 { -1 } else { 1 };
-            let (mut x, mut error) = (x0, 2 * dx - dy);
-            for y in y0..=y1 {
-                self.mark(marker, x, y, series);
-                if error > 0 {
-                    x += step;
-                    error -= 2 * dy;
+            let sx = if x0 < x1 { 1 } else { -1 };
+            for offset in 0..=dy {
+                let numerator = offset * dx;
+                let minor = numerator / dy;
+                let remainder = numerator % dy;
+                let x = x0 + sx * minor;
+                let y = y0 + offset;
+                match (2 * remainder).cmp(&dy) {
+                    core::cmp::Ordering::Less => self.mark(marker, x, y, series),
+                    core::cmp::Ordering::Equal => {
+                        self.mark(marker, x, y, series);
+                        self.mark(marker, x + sx, y, series);
+                    }
+                    core::cmp::Ordering::Greater => self.mark(marker, x + sx, y, series),
                 }
-                error += 2 * dx;
             }
         }
     }
