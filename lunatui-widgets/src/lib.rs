@@ -12,6 +12,9 @@ mod borders;
 mod breadcrumbs;
 #[cfg(feature = "calendar")]
 mod calendar;
+/// Shapes for [`Canvas`] and the painter they draw with.
+#[cfg(feature = "canvas")]
+pub mod canvas;
 #[cfg(feature = "chart")]
 mod chart;
 mod gauge;
@@ -26,6 +29,8 @@ mod markdown_view;
 mod overlay;
 mod padding;
 mod paragraph;
+#[cfg(any(feature = "chart", feature = "canvas"))]
+mod raster;
 mod render_cx;
 mod scrollbar;
 #[cfg(feature = "sparkline")]
@@ -52,8 +57,10 @@ pub use borders::{BorderType, Borders};
 pub use breadcrumbs::Breadcrumbs;
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
+#[cfg(feature = "canvas")]
+pub use canvas::Canvas;
 #[cfg(feature = "chart")]
-pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition, Marker};
+pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
 pub use gauge::Gauge;
 #[cfg(feature = "image")]
 pub use image::Image;
@@ -71,6 +78,8 @@ pub use markdown_view::MarkdownView;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
+#[cfg(any(feature = "chart", feature = "canvas"))]
+pub use raster::Marker;
 pub use render_cx::RenderCx;
 pub use scrollbar::Scrollbar;
 #[cfg(feature = "sparkline")]

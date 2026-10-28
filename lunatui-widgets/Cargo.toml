@@ -19,6 +19,7 @@ line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
 chart = ["widget-state"]
+canvas = ["widget-state"]
 
 barchart = ["widget-state"]
 toast = ["widget-state"]
@@ -129,6 +130,16 @@ required-features = ["barchart"]
 name = "markdown_view"
 path = "tests/markdown_view.rs"
 required-features = ["markdown"]
+
+[[test]]
+name = "canvas"
+path = "tests/canvas.rs"
+required-features = ["canvas"]
+
+[[test]]
+name = "canvas_ratatui"
+path = "tests/canvas_ratatui.rs"
+required-features = ["canvas"]
 
 [[test]]
 name = "toast"
