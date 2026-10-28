@@ -26,7 +26,7 @@ name = "flex_wrap"
 required-features = ["flex-wrap"]
 
 [dependencies]
-lunatui-core = { version = "0.1.13", path = "../lunatui-core" }
+lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
 num-bigint = { version = "0.4", default-features = false }
 num-traits = { version = "0.2", default-features = false }
 
