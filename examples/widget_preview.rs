@@ -10,14 +10,15 @@ use std::time::{Duration, Instant};
 
 use lunatui_bench::widget_suite::{CASES, Case, pin_color_output};
 use lunatui_core::{
-    Attrs, ClusterTable, Color, Grid, Rect, Style, clip_display_prefix, width as cols,
+    Attrs, ClusterTable, Color, Grid, Rect, Style, UnderlineStyle, clip_display_prefix,
+    width as cols,
 };
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
-    Alignment, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Date, DateStyle,
-    List, MarkdownView, Monthly, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar,
-    Widget, WidgetState,
+    Alignment, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Breadcrumbs,
+    Date, DateStyle, List, MarkdownView, Monthly, Paragraph, PixelSize, RenderCx, Scrollbar,
+    Sparkline, StatusBar, Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -39,6 +40,11 @@ struct Preview {
 }
 
 const PREVIEWS: &[Preview] = &[
+    Preview {
+        name: "breadcrumbs",
+        native: breadcrumbs_native,
+        baseline: breadcrumbs_baseline,
+    },
     Preview {
         name: "calendar",
         native: calendar_native,
@@ -2150,6 +2156,124 @@ fn markdown_native(
 
 fn markdown_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "markdown") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+const CRUMB_PATH: [&str; 9] = [
+    "Home",
+    "Projects",
+    "Moonbase2090",
+    "lunatui",
+    "lunatui-widgets",
+    "src",
+    "markdown",
+    "tests",
+    "fixtures",
+];
+const CRUMB_FILES: [&str; 8] = [
+    "block.rs",
+    "borders.rs",
+    "breadcrumbs.rs",
+    "gauge.rs",
+    "lib.rs",
+    "list.rs",
+    "table.rs",
+    "tabs.rs",
+];
+
+fn breadcrumbs_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let depth = 3 + usize::try_from(tick / 24).unwrap_or(0) % (CRUMB_PATH.len() - 2);
+    let wide =
+        u16::try_from(tri(tick, 120, 30, u64::from(area.width.saturating_sub(4)))).unwrap_or(30);
+    let bar = Rect::new(
+        area.x + 2,
+        area.y + 1,
+        wide.min(area.width.saturating_sub(4)),
+        1,
+    );
+    let header = Style::new().fg(text).bg(raised);
+    let mut crumbs = Breadcrumbs::new(CRUMB_PATH[..depth].iter().copied())
+        .style(header)
+        .current_style(header.fg(accent).with_attrs(Attrs::new().set_bold(true)))
+        .separator_style(header.with_attrs(Attrs::new().set_dim(true)));
+    let areas = crumbs.segment_areas(bar);
+    let hovered = if areas.is_empty() {
+        None
+    } else {
+        areas
+            .get(usize::try_from(tick / 16).unwrap_or(0) % areas.len())
+            .map(|(index, _)| *index)
+    };
+    crumbs = crumbs.hover(
+        hovered,
+        Style::new().with_attrs(Attrs::new().set_underline(UnderlineStyle::Single)),
+    );
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), dim);
+    crumbs.render(bar, &mut cx);
+    let list = Rect::new(
+        area.x + 2,
+        area.y + 3,
+        area.width.saturating_sub(4),
+        area.height.saturating_sub(5),
+    );
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(format!(" {} ", CRUMB_PATH[depth - 1]))
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(list, &mut cx);
+    for (row, name) in (0_u16..).zip(CRUMB_FILES) {
+        let y = list.y + 1 + row;
+        if y + 1 >= list.y + list.height {
+            break;
+        }
+        let line = format!(" {name}");
+        let shade = if row == 2 {
+            Style::new().fg(accent).bg(surface)
+        } else {
+            fill
+        };
+        cx.put_str(
+            list.x + 1,
+            y,
+            clip_display_prefix(&line, list.width.saturating_sub(2)),
+            shade,
+        );
+    }
+    StatusBar::new(format!(
+        " {} items  ●  click a segment to jump",
+        CRUMB_FILES.len()
+    ))
+    .style(Style::new().fg(text).bg(raised))
+    .render(
+        Rect::new(
+            area.x,
+            area.y + area.height.saturating_sub(1),
+            area.width,
+            1,
+        ),
+        &mut cx,
+    );
+}
+
+fn breadcrumbs_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "breadcrumbs") {
         (case.ratatui)(buffer, area, tick);
     }
 }

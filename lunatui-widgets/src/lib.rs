@@ -9,6 +9,7 @@ mod bar_chart;
 mod big_text;
 mod block;
 mod borders;
+mod breadcrumbs;
 #[cfg(feature = "calendar")]
 mod calendar;
 mod gauge;
@@ -42,6 +43,7 @@ pub use bar_chart::{Bar, BarChart, BarDirection, BarGroup};
 pub use big_text::{BigText, BigTextFont, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
+pub use breadcrumbs::Breadcrumbs;
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use gauge::Gauge;
