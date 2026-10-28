@@ -16,7 +16,7 @@ const WIDTH: u16 = 100;
 const HEIGHT: u16 = 32;
 
 fn main() -> io::Result<()> {
-    let source = ImageSource::decode(include_bytes!("../site/assets/sky.webp"))
+    let source = ImageSource::decode(include_bytes!("../site/assets/earth.jpg"))
         .map_err(|error| io::Error::other(error.to_string()))?;
     run(KittyImage { source }, RunOptions::new(WIDTH, HEIGHT))
 }
@@ -56,7 +56,7 @@ impl KittyImage {
         cx.put_str(
             inner.x,
             inner.y,
-            "KITTY GRAPHICS  ·  auto-detected, cell fallback",
+            "KITTY GRAPHICS  ·  NASA Blue Marble / PIA18033",
             Style::new().fg(Color::Rgb(184, 167, 240)),
         );
         let image_area = Rect::new(
@@ -78,5 +78,42 @@ impl KittyImage {
             "Press q to leave  ·  Kitty sends pixels; other terminals use the cell renderer",
             Style::new().fg(Color::Rgb(164, 174, 193)),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Image, ImageFit, ImageId, ImageSource, RenderCx, Widget};
+    use lunatui_core::{ClusterTable, Grid, Rect};
+    use lunatui_term::{PixelLayer, PixelMode};
+    use lunatui_theme::{Theme, Variant};
+
+    #[test]
+    fn kitty_transmission_keeps_native_pixels_and_places_scaled_to_cells() {
+        let source = ImageSource::decode(include_bytes!("../site/assets/earth.jpg"))
+            .expect("bundled NASA image should decode");
+
+        assert_eq!(
+            (source.size().width(), source.size().height()),
+            (1920, 1920)
+        );
+        let mut grid = Grid::new(100, 32);
+        let mut clusters = ClusterTable::new();
+        let theme = Theme::builtin(Variant::Dark);
+        let mut layer = PixelLayer::new(PixelMode::Kitty);
+        layer.begin_frame();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(&mut layer);
+        Image::new(source)
+            .id(ImageId::new(42).expect("nonzero image id"))
+            .fit(ImageFit::Contain)
+            .render(Rect::new(4, 4, 92, 25), &mut cx);
+        let frame = String::from_utf8_lossy(layer.finish_frame());
+
+        assert!(
+            frame.starts_with("\x1b_Ga=t,i=42,f=32,s=1920,v=1920,q=2,m=1;"),
+            "unexpected transmit header: {:?}",
+            frame.get(..60)
+        );
+        assert!(frame.contains("\x1b_Ga=p,i=42,p=1,c=50,r=25,z=0,C=1,q=2\x1b\\"));
     }
 }
