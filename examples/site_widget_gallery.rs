@@ -210,7 +210,8 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 label(&mut cx, x + 25 - offset_width, y, offset, style(DIM));
             }
             label(&mut cx, 4, 21, "▕", style(LINE));
-            LineGauge::new(0.74)
+            LineGauge::new()
+                .ratio(0.74)
                 .filled_style(style(LAV2))
                 .unfilled_style(style(LINE))
                 .render(Rect::new(5, 21, 48, 1), &mut cx);
@@ -407,7 +408,8 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             for (index, (name, color, percent)) in resources.into_iter().enumerate() {
                 let y = 16 + u16::try_from(index).unwrap_or_default() * 2;
                 label(&mut cx, 4, y, name, style(MUTED));
-                LineGauge::new(f32::from(percent) / 100.0)
+                LineGauge::new()
+                    .ratio(f64::from(percent) / 100.0)
                     .filled_style(style(color))
                     .unfilled_style(style(LINE))
                     .render(Rect::new(10, y, 22, 1), &mut cx);
@@ -890,7 +892,8 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
             .cell_styles(cells)
             .render(Rect::new(2, 14, 60, 6), &mut cx);
             label(&mut cx, 4, 21, "2 of 6 done", style(MUTED));
-            LineGauge::new(2.0 / 6.0)
+            LineGauge::new()
+                .ratio(2.0 / 6.0)
                 .filled_style(style(LAV))
                 .unfilled_style(style(LINE))
                 .render(Rect::new(17, 21, 24, 1), &mut cx);
