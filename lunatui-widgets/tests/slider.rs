@@ -261,8 +261,9 @@ fn nothing_is_drawn_outside_the_area_or_for_empty_areas() {
 #[test]
 fn a_narrow_area_clips_the_label_and_leaves_no_track() {
     let slider = Slider::new(0.0, 10.0).label("Brightness").value(5.0);
-    assert_eq!(row(&slider, 5), "Brigh");
-    assert_eq!(row(&slider, 11), "Brightness ");
+    let full = "Brightness ";
+    assert_eq!(row(&slider, 5), full[..5]);
+    assert_eq!(row(&slider, 11), full);
 }
 
 #[test]
