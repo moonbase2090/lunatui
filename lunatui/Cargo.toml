@@ -15,6 +15,7 @@ workspace = true
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
+image-presenter = ["app", "lunatui-runtime/image-presenter"]
 keymap = ["app", "lunatui-runtime/keymap"]
 
 [dependencies]
@@ -23,11 +24,12 @@ lunatui-runtime = { version = "0.1.12", path = "../lunatui-runtime", optional = 
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
+lunatui-image = { path = "../lunatui-image" }
 lunatui-term = { path = "../lunatui-term" }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["bigtext", "calendar", "sparkline"] }
+lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["bigtext", "calendar", "image", "sparkline"] }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
 lunatui-prismattyc = { version = "0.1.12", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"
@@ -112,6 +114,11 @@ required-features = ["keymap"]
 name = "keymap_pty"
 path = "tests/keymap_pty.rs"
 required-features = ["keymap"]
+
+[[test]]
+name = "image_frame"
+path = "tests/image_frame.rs"
+required-features = ["image-presenter"]
 
 [[example]]
 name = "demo"

@@ -159,7 +159,6 @@ fn rounded_ratio(value: u32, numerator: u32, denominator: u32) -> u32 {
 }
 
 fn size(width: u32, height: u32) -> PixelSize {
-    // Geometry always stays inside a non-empty source or viewport.
     PixelSize {
         width: width.max(1),
         height: height.max(1),

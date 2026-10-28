@@ -949,6 +949,7 @@ dependencies = [
  "libc",
  "lunatui-bench",
  "lunatui-core",
+ "lunatui-image",
  "lunatui-prismattyc",
  "lunatui-ratatui",
  "lunatui-runtime",
@@ -996,6 +997,7 @@ name = "lunatui-image"
 version = "0.1.11"
 dependencies = [
  "image",
+ "lunatui-core",
 ]
 
 [[package]]
@@ -1034,6 +1036,7 @@ name = "lunatui-runtime"
 version = "0.1.12"
 dependencies = [
  "lunatui-core",
+ "lunatui-image",
  "lunatui-term",
  "proptest",
 ]
@@ -1046,6 +1049,7 @@ dependencies = [
  "libc",
  "lunatui-bench",
  "lunatui-core",
+ "lunatui-image",
  "lunatui-test",
  "lunatui-theme",
  "ratatui",

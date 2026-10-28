@@ -4,7 +4,9 @@
 #![doc = include_str!("../README.md")]
 
 mod geometry;
+mod presentation;
 mod source;
 
 pub use geometry::{Fit, ImageGeometry, PixelPoint, PixelRect, PixelSize};
+pub use presentation::{ImageId, ImageRequest, ImageSink};
 pub use source::{ImageError, ImageSource, MAX_RGBA8_BYTES};

@@ -4,7 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{ClusterTable, Color, DecodedGlyph, Grid, Rect};
-use lunatui_image::{Fit, ImageError, ImageSource};
+use lunatui_image::{Fit, ImageError, ImageId, ImageRequest, ImageSink, ImageSource};
 use lunatui_theme::{Profile, Theme, Variant};
 use lunatui_widgets::{Image, RenderCx, Widget, WidgetState};
 
@@ -129,5 +129,75 @@ fn image_colors_follow_the_prepared_ansi16_profile() -> Result<(), ImageError> {
     let cell = grid.get(0, 0).ok_or(ImageError::Empty)?;
     assert_eq!(cell.style().fg, Color::Indexed(9));
     assert_eq!(cell.style().bg, Color::Indexed(4));
+    Ok(())
+}
+
+struct CaptureSink {
+    accepts_pixels: bool,
+    request: Option<CapturedRequest>,
+}
+
+struct CapturedRequest {
+    id: u32,
+    generation: u64,
+    source: ImageSource,
+    area: Rect,
+    fit: Fit,
+    depth: i32,
+    opacity: u8,
+}
+
+impl ImageSink for CaptureSink {
+    fn supports_pixels(&self) -> bool {
+        self.accepts_pixels
+    }
+
+    fn submit(&mut self, request: ImageRequest<'_>) -> bool {
+        self.request = Some(CapturedRequest {
+            id: request.id().get(),
+            generation: request.generation(),
+            source: request.source().clone(),
+            area: request.area(),
+            fit: request.fit(),
+            depth: request.depth(),
+            opacity: request.opacity(),
+        });
+        true
+    }
+}
+
+#[test]
+fn pixel_sink_receives_stable_identity_geometry_and_disabled_opacity() -> Result<(), ImageError> {
+    let source = ImageSource::rgba8(1, 1, vec![20, 40, 60, 255].into_boxed_slice())?;
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(3, 3);
+    let mut clusters = ClusterTable::new();
+    let mut sink = CaptureSink {
+        accepts_pixels: true,
+        request: None,
+    };
+    {
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(&mut sink);
+        Image::new(source.clone())
+            .id(ImageId::new(7).ok_or(ImageError::Empty)?)
+            .generation(12)
+            .fit(Fit::Cover)
+            .depth(-2)
+            .state(WidgetState::Disabled)
+            .render(Rect::new(0, 0, 3, 3), &mut cx);
+    }
+
+    let request = sink.request.ok_or(ImageError::Empty)?;
+    assert_eq!(request.id, 7);
+    assert_eq!(request.generation, 12);
+    assert_eq!(request.source, source);
+    assert_eq!(request.area, Rect::new(0, 0, 3, 3));
+    assert_eq!(request.fit, Fit::Cover);
+    assert_eq!(request.depth, -2);
+    assert_eq!(request.opacity, 153);
+    assert_eq!(
+        grid.get(1, 1).map(|cell| cell.glyph().decode()),
+        Some(DecodedGlyph::Inline(' '))
+    );
     Ok(())
 }

@@ -45,7 +45,7 @@ pub use lightcycle::Lightcycle;
 pub use list::List;
 pub use lunatui_core::Size;
 #[cfg(feature = "image")]
-pub use lunatui_image::{Fit as ImageFit, ImageError, ImageSource};
+pub use lunatui_image::{Fit as ImageFit, ImageError, ImageId, ImageSource};
 pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
 pub use overlay::{FocusTrap, Overlay, blend_rgb};

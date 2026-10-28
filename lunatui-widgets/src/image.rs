@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Color, Rect, Size, Style};
-use lunatui_image::{Fit, ImageGeometry, ImageSource, PixelSize};
+use lunatui_image::{Fit, ImageGeometry, ImageId, ImageRequest, ImageSource, PixelSize};
 use lunatui_theme::{Profile, Token};
 
 use crate::{Block, BorderType, RenderCx, Widget, WidgetState};
@@ -13,6 +13,9 @@ pub struct Image {
     source: ImageSource,
     fit: Fit,
     state: WidgetState,
+    id: Option<ImageId>,
+    generation: u64,
+    depth: i32,
 }
 
 impl Image {
@@ -23,7 +26,31 @@ impl Image {
             source,
             fit: Fit::Contain,
             state: WidgetState::Normal,
+            id: None,
+            generation: 0,
+            depth: 0,
         }
+    }
+
+    /// Gives this image a stable pixel-protocol identity. Zero is reserved.
+    #[must_use]
+    pub const fn id(mut self, id: ImageId) -> Self {
+        self.id = Some(id);
+        self
+    }
+
+    /// Sets the source generation. Increment it whenever pixels change.
+    #[must_use]
+    pub const fn generation(mut self, generation: u64) -> Self {
+        self.generation = generation;
+        self
+    }
+
+    /// Sets relative depth for pixel protocols; smaller values appear behind text.
+    #[must_use]
+    pub const fn depth(mut self, depth: i32) -> Self {
+        self.depth = depth;
+        self
     }
 
     /// Sets how source pixels fit within the image area.
@@ -64,6 +91,24 @@ impl Widget for Image {
         };
         if image_area.width == 0 || image_area.height == 0 {
             return;
+        }
+        if let Some(id) = self.id {
+            let opacity = if self.state == WidgetState::Disabled {
+                153
+            } else {
+                u8::MAX
+            };
+            if cx.submit_image(ImageRequest::new(
+                id,
+                self.generation,
+                &self.source,
+                image_area,
+                self.fit,
+                self.depth,
+                opacity,
+            )) {
+                return;
+            }
         }
         let Some(viewport_height) = u32::from(image_area.height).checked_mul(2) else {
             return;
@@ -176,8 +221,6 @@ fn composite(source: Color, alpha: u8, backdrop: Color) -> Color {
         return source;
     }
     let Some((br, bg, bb)) = rgb(backdrop) else {
-        // The terminal's default background has no known RGB value. Preserve
-        // source color rather than inventing a theme-independent black.
         return source;
     };
     let Color::Rgb(sr, sg, sb) = source else {

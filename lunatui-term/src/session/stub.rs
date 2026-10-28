@@ -115,4 +115,13 @@ impl<W: Write> Session<W> {
     pub fn present_frame(&mut self, _payload: &[u8]) -> Result<(), SessionError> {
         Err(SessionError::Unsupported)
     }
+
+    /// Writes ordered payload parts as one synchronized frame and one flush.
+    ///
+    /// # Errors
+    ///
+    /// Always returns [`SessionError::Unsupported`] on non-Unix targets.
+    pub fn present_frame_parts(&mut self, _payloads: &[&[u8]]) -> Result<(), SessionError> {
+        Err(SessionError::Unsupported)
+    }
 }

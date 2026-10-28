@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+use core::fmt;
 
 #[cfg(any(
     feature = "bigtext",
@@ -14,17 +15,36 @@ use lunatui_core::{Attrs, UnderlineStyle};
 use crate::overlay::blend_rgb;
 use lunatui_theme::{Theme, Token};
 
+#[cfg(feature = "image")]
+use lunatui_image::{ImageRequest, ImageSink};
+
 #[cfg(feature = "color-profiles")]
 use lunatui_theme::{PreparedPalette, Profile};
 
 /// Grid, theme, and cluster state for [`Widget::render`](crate::Widget::render) (PRD §3.2 / DD-3).
-#[derive(Debug)]
+#[cfg_attr(not(feature = "image"), derive(Debug))]
 pub struct RenderCx<'a> {
     grid: &'a mut Grid,
     clusters: &'a mut ClusterTable,
     theme: &'a Theme,
     #[cfg(feature = "color-profiles")]
     palette: Option<&'a PreparedPalette>,
+    #[cfg(feature = "image")]
+    image_sink: Option<&'a mut dyn ImageSink>,
+}
+
+#[cfg(feature = "image")]
+impl fmt::Debug for RenderCx<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut debug = f.debug_struct("RenderCx");
+        debug
+            .field("grid", &self.grid)
+            .field("clusters", &self.clusters)
+            .field("theme", &self.theme);
+        #[cfg(feature = "color-profiles")]
+        debug.field("palette", &self.palette);
+        debug.finish_non_exhaustive()
+    }
 }
 
 impl<'a> RenderCx<'a> {
@@ -50,7 +70,25 @@ impl<'a> RenderCx<'a> {
             theme,
             #[cfg(feature = "color-profiles")]
             palette: None,
+            #[cfg(feature = "image")]
+            image_sink: None,
         }
+    }
+
+    /// Attaches the active frame's image sink. Unsupported protocols leave
+    /// image widgets on their cell fallback.
+    #[cfg(feature = "image")]
+    #[must_use]
+    pub fn image_sink(mut self, sink: &'a mut dyn ImageSink) -> Self {
+        self.image_sink = Some(sink);
+        self
+    }
+
+    #[cfg(feature = "image")]
+    pub(crate) fn submit_image(&mut self, request: ImageRequest<'_>) -> bool {
+        self.image_sink
+            .as_deref_mut()
+            .is_some_and(|sink| sink.supports_pixels() && sink.submit(request))
     }
 
     /// Borrow token colors prepared at startup or when the theme changes.
