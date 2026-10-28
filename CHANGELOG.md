@@ -10,13 +10,13 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
 ## [0.1.12] - 2026-10-27
 
 ### Added
 
-- `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - `Layout::limits` and `aspect_fit` in `lunatui-layout`, behind the opt-in `size-limits` feature: each segment can have a floor and a cap (`Limit::at_least`, `at_most`, `between`) so panes keep a usable size on resize, and cells a capped segment cannot take go to the other growing segments. `aspect_fit` returns the largest rectangle of a given shape inside an area, centred.
 - `Layout::split_wrapped` in `lunatui-layout`, behind the opt-in `flex-wrap` feature: segments that do not fit move onto the next line (or column), each line is split with the layout's flex and spacing, and one `Constraint` sizes every line. `Layout::gap` sets the spacing between segments and between lines in one call.
 - Named spinner presets on the existing `Spinner`: dots, line, arc, bounce, pulse, moon, ring, bars, quadrant, and half-moon. Each preset has its own frames and interval. `Spinner::preset` selects one. The default spinner is unchanged, and the caller still supplies the frame index. The example is a production deploy board.
