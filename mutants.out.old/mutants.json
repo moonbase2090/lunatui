@@ -1,0 +1,226 @@
+[
+  {
+    "diff": "--- lunatui-runtime/src/hit.rs\n+++ replace HitId::index_in -> Option<usize> with None\n@@ -10,18 +10,17 @@\n     pub u32,\n );\n \n impl HitId {\n     /// The item index of this id in a group registered with\n     /// [`HitMap::push_indexed`] from `first` for `count` items, or `None` for any other id.\n     #[must_use]\n     pub fn index_in(self, first: Self, count: usize) -> Option<usize> {\n-        let offset = usize::try_from(self.0.checked_sub(first.0)?).ok()?;\n-        (offset < count).then_some(offset)\n+        None /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n struct HitRegion {\n     id: HitId,\n     area: Rect,\n     z: u16,\n",
+    "file": "lunatui-runtime/src/hit.rs",
+    "function": {
+      "function_name": "HitId::index_in",
+      "return_type": "-> Option<usize>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 20
+        },
+        "start": {
+          "column": 5,
+          "line": 14
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with None",
+    "package": "lunatui-runtime",
+    "replacement": "None",
+    "span": {
+      "end": {
+        "column": 43,
+        "line": 19
+      },
+      "start": {
+        "column": 9,
+        "line": 18
+      }
+    }
+  },
+  {
+    "diff": "--- lunatui-runtime/src/hit.rs\n+++ replace HitId::index_in -> Option<usize> with Some(0)\n@@ -10,18 +10,17 @@\n     pub u32,\n );\n \n impl HitId {\n     /// The item index of this id in a group registered with\n     /// [`HitMap::push_indexed`] from `first` for `count` items, or `None` for any other id.\n     #[must_use]\n     pub fn index_in(self, first: Self, count: usize) -> Option<usize> {\n-        let offset = usize::try_from(self.0.checked_sub(first.0)?).ok()?;\n-        (offset < count).then_some(offset)\n+        Some(0) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n struct HitRegion {\n     id: HitId,\n     area: Rect,\n     z: u16,\n",
+    "file": "lunatui-runtime/src/hit.rs",
+    "function": {
+      "function_name": "HitId::index_in",
+      "return_type": "-> Option<usize>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 20
+        },
+        "start": {
+          "column": 5,
+          "line": 14
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with Some(0)",
+    "package": "lunatui-runtime",
+    "replacement": "Some(0)",
+    "span": {
+      "end": {
+        "column": 43,
+        "line": 19
+      },
+      "start": {
+        "column": 9,
+        "line": 18
+      }
+    }
+  },
+  {
+    "diff": "--- lunatui-runtime/src/hit.rs\n+++ replace HitId::index_in -> Option<usize> with Some(1)\n@@ -10,18 +10,17 @@\n     pub u32,\n );\n \n impl HitId {\n     /// The item index of this id in a group registered with\n     /// [`HitMap::push_indexed`] from `first` for `count` items, or `None` for any other id.\n     #[must_use]\n     pub fn index_in(self, first: Self, count: usize) -> Option<usize> {\n-        let offset = usize::try_from(self.0.checked_sub(first.0)?).ok()?;\n-        (offset < count).then_some(offset)\n+        Some(1) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n struct HitRegion {\n     id: HitId,\n     area: Rect,\n     z: u16,\n",
+    "file": "lunatui-runtime/src/hit.rs",
+    "function": {
+      "function_name": "HitId::index_in",
+      "return_type": "-> Option<usize>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 20
+        },
+        "start": {
+          "column": 5,
+          "line": 14
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with Some(1)",
+    "package": "lunatui-runtime",
+    "replacement": "Some(1)",
+    "span": {
+      "end": {
+        "column": 43,
+        "line": 19
+      },
+      "start": {
+        "column": 9,
+        "line": 18
+      }
+    }
+  },
+  {
+    "diff": "--- lunatui-runtime/src/hit.rs\n+++ replace < with == in HitId::index_in\n@@ -11,17 +11,17 @@\n );\n \n impl HitId {\n     /// The item index of this id in a group registered with\n     /// [`HitMap::push_indexed`] from `first` for `count` items, or `None` for any other id.\n     #[must_use]\n     pub fn index_in(self, first: Self, count: usize) -> Option<usize> {\n         let offset = usize::try_from(self.0.checked_sub(first.0)?).ok()?;\n-        (offset < count).then_some(offset)\n+        (offset == /* ~ changed by cargo-mutants ~ */ count).then_some(offset)\n     }\n }\n \n #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n struct HitRegion {\n     id: HitId,\n     area: Rect,\n     z: u16,\n",
+    "file": "lunatui-runtime/src/hit.rs",
+    "function": {
+      "function_name": "HitId::index_in",
+      "return_type": "-> Option<usize>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 20
+        },
+        "start": {
+          "column": 5,
+          "line": 14
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "lunatui-runtime/src/hit.rs:19:17: replace < with == in HitId::index_in",
+    "package": "lunatui-runtime",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 18,
+        "line": 19
+      },
+      "start": {
+        "column": 17,
+        "line": 19
+      }
+    }
+  },
+  {
+    "diff": "--- lunatui-runtime/src/hit.rs\n+++ replace < with > in HitId::index_in\n@@ -11,17 +11,17 @@\n );\n \n impl HitId {\n     /// The item index of this id in a group registered with\n     /// [`HitMap::push_indexed`] from `first` for `count` items, or `None` for any other id.\n     #[must_use]\n     pub fn index_in(self, first: Self, count: usize) -> Option<usize> {\n         let offset = usize::try_from(self.0.checked_sub(first.0)?).ok()?;\n-        (offset < count).then_some(offset)\n+        (offset > /* ~ changed by cargo-mutants ~ */ count).then_some(offset)\n     }\n }\n \n #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n struct HitRegion {\n     id: HitId,\n     area: Rect,\n     z: u16,\n",
+    "file": "lunatui-runtime/src/hit.rs",
+    "function": {
+      "function_name": "HitId::index_in",
+      "return_type": "-> Option<usize>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 20
+        },
+        "start": {
+          "column": 5,
+          "line": 14
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "lunatui-runtime/src/hit.rs:19:17: replace < with > in HitId::index_in",
+    "package": "lunatui-runtime",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 18,
+        "line": 19
+      },
+      "start": {
+        "column": 17,
+        "line": 19
+      }
+    }
+  },
+  {
+    "diff": "--- lunatui-runtime/src/hit.rs\n+++ replace < with <= in HitId::index_in\n@@ -11,17 +11,17 @@\n );\n \n impl HitId {\n     /// The item index of this id in a group registered with\n     /// [`HitMap::push_indexed`] from `first` for `count` items, or `None` for any other id.\n     #[must_use]\n     pub fn index_in(self, first: Self, count: usize) -> Option<usize> {\n         let offset = usize::try_from(self.0.checked_sub(first.0)?).ok()?;\n-        (offset < count).then_some(offset)\n+        (offset <= /* ~ changed by cargo-mutants ~ */ count).then_some(offset)\n     }\n }\n \n #[derive(Clone, Copy, Debug, PartialEq, Eq)]\n struct HitRegion {\n     id: HitId,\n     area: Rect,\n     z: u16,\n",
+    "file": "lunatui-runtime/src/hit.rs",
+    "function": {
+      "function_name": "HitId::index_in",
+      "return_type": "-> Option<usize>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 20
+        },
+        "start": {
+          "column": 5,
+          "line": 14
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "lunatui-runtime/src/hit.rs:19:17: replace < with <= in HitId::index_in",
+    "package": "lunatui-runtime",
+    "replacement": "<=",
+    "span": {
+      "end": {
+        "column": 18,
+        "line": 19
+      },
+      "start": {
+        "column": 17,
+        "line": 19
+      }
+    }
+  },
+  {
+    "diff": "--- lunatui-runtime/src/hit.rs\n+++ replace HitMap::push_indexed with ()\n@@ -54,20 +54,17 @@\n     /// `index` gets `HitId(first.0 + index)`. Pairs come from a widget's own geometry, such as\n     /// `Tabs::tab_areas` or `List::row_areas`, so what is drawn is what a click reaches.\n     pub fn push_indexed(\n         &mut self,\n         first: HitId,\n         areas: impl IntoIterator<Item = (usize, Rect)>,\n         z: u16,\n     ) {\n-        for (index, area) in areas {\n-            let offset = u32::try_from(index).unwrap_or(u32::MAX);\n-            self.push(HitId(first.0.saturating_add(offset)), area, z);\n-        }\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Returns the topmost hit at `(column, row)`, if any.\n     #[must_use]\n     pub fn pick(&self, column: u16, row: u16) -> Option<HitId> {\n         let mut best: Option<&HitRegion> = None;\n         for region in &self.regions {\n             if !contains(region.area, column, row) {\n",
+    "file": "lunatui-runtime/src/hit.rs",
+    "function": {
+      "function_name": "HitMap::push_indexed",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 66
+        },
+        "start": {
+          "column": 5,
+          "line": 53
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "lunatui-runtime/src/hit.rs:62:9: replace HitMap::push_indexed with ()",
+    "package": "lunatui-runtime",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 10,
+        "line": 65
+      },
+      "start": {
+        "column": 9,
+        "line": 62
+      }
+    }
+  }
+]

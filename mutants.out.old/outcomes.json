@@ -1,0 +1,515 @@
+{
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Success",
+      "log_path": "log/baseline.log",
+      "diff_path": null,
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.856361541,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=lunatui-runtime@0.1.12",
+            "--features=app"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.674383041,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=lunatui-runtime@0.1.12",
+            "--features=app"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with None",
+          "package": "lunatui-runtime",
+          "file": "lunatui-runtime/src/hit.rs",
+          "function": {
+            "function_name": "HitId::index_in",
+            "return_type": "-> Option<usize>",
+            "span": {
+              "start": {
+                "line": 14,
+                "column": 5
+              },
+              "end": {
+                "line": 20,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 18,
+              "column": 9
+            },
+            "end": {
+              "line": 19,
+              "column": 43
+            }
+          },
+          "replacement": "None",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/lunatui-runtime__src__hit.rs_line_18_col_9.log",
+      "diff_path": "diff/lunatui-runtime__src__hit.rs_line_18_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 5.223152291,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.408076792,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with Some(0)",
+          "package": "lunatui-runtime",
+          "file": "lunatui-runtime/src/hit.rs",
+          "function": {
+            "function_name": "HitId::index_in",
+            "return_type": "-> Option<usize>",
+            "span": {
+              "start": {
+                "line": 14,
+                "column": 5
+              },
+              "end": {
+                "line": 20,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 18,
+              "column": 9
+            },
+            "end": {
+              "line": 19,
+              "column": 43
+            }
+          },
+          "replacement": "Some(0)",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/lunatui-runtime__src__hit.rs_line_18_col_9_001.log",
+      "diff_path": "diff/lunatui-runtime__src__hit.rs_line_18_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.7537405,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.396436917,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "lunatui-runtime/src/hit.rs:18:9: replace HitId::index_in -> Option<usize> with Some(1)",
+          "package": "lunatui-runtime",
+          "file": "lunatui-runtime/src/hit.rs",
+          "function": {
+            "function_name": "HitId::index_in",
+            "return_type": "-> Option<usize>",
+            "span": {
+              "start": {
+                "line": 14,
+                "column": 5
+              },
+              "end": {
+                "line": 20,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 18,
+              "column": 9
+            },
+            "end": {
+              "line": 19,
+              "column": 43
+            }
+          },
+          "replacement": "Some(1)",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/lunatui-runtime__src__hit.rs_line_18_col_9_002.log",
+      "diff_path": "diff/lunatui-runtime__src__hit.rs_line_18_col_9_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.907510167,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.62101025,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "lunatui-runtime/src/hit.rs:19:17: replace < with == in HitId::index_in",
+          "package": "lunatui-runtime",
+          "file": "lunatui-runtime/src/hit.rs",
+          "function": {
+            "function_name": "HitId::index_in",
+            "return_type": "-> Option<usize>",
+            "span": {
+              "start": {
+                "line": 14,
+                "column": 5
+              },
+              "end": {
+                "line": 20,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 19,
+              "column": 17
+            },
+            "end": {
+              "line": 19,
+              "column": 18
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/lunatui-runtime__src__hit.rs_line_19_col_17.log",
+      "diff_path": "diff/lunatui-runtime__src__hit.rs_line_19_col_17.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.350895708,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.545487875,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "lunatui-runtime/src/hit.rs:19:17: replace < with > in HitId::index_in",
+          "package": "lunatui-runtime",
+          "file": "lunatui-runtime/src/hit.rs",
+          "function": {
+            "function_name": "HitId::index_in",
+            "return_type": "-> Option<usize>",
+            "span": {
+              "start": {
+                "line": 14,
+                "column": 5
+              },
+              "end": {
+                "line": 20,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 19,
+              "column": 17
+            },
+            "end": {
+              "line": 19,
+              "column": 18
+            }
+          },
+          "replacement": ">",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/lunatui-runtime__src__hit.rs_line_19_col_17_001.log",
+      "diff_path": "diff/lunatui-runtime__src__hit.rs_line_19_col_17_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.807694666,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.633999292,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "lunatui-runtime/src/hit.rs:19:17: replace < with <= in HitId::index_in",
+          "package": "lunatui-runtime",
+          "file": "lunatui-runtime/src/hit.rs",
+          "function": {
+            "function_name": "HitId::index_in",
+            "return_type": "-> Option<usize>",
+            "span": {
+              "start": {
+                "line": 14,
+                "column": 5
+              },
+              "end": {
+                "line": 20,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 19,
+              "column": 17
+            },
+            "end": {
+              "line": 19,
+              "column": 18
+            }
+          },
+          "replacement": "<=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/lunatui-runtime__src__hit.rs_line_19_col_17_002.log",
+      "diff_path": "diff/lunatui-runtime__src__hit.rs_line_19_col_17_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.866624583,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.462290125,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "lunatui-runtime/src/hit.rs:62:9: replace HitMap::push_indexed with ()",
+          "package": "lunatui-runtime",
+          "file": "lunatui-runtime/src/hit.rs",
+          "function": {
+            "function_name": "HitMap::push_indexed",
+            "return_type": "",
+            "span": {
+              "start": {
+                "line": 53,
+                "column": 5
+              },
+              "end": {
+                "line": 66,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 62,
+              "column": 9
+            },
+            "end": {
+              "line": 65,
+              "column": 10
+            }
+          },
+          "replacement": "()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/lunatui-runtime__src__hit.rs_line_62_col_9.log",
+      "diff_path": "diff/lunatui-runtime__src__hit.rs_line_62_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.8547355,
+          "process_status": "Success",
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.462778959,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/brandan/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=lunatui@0.1.12",
+            "--features=app"
+          ]
+        }
+      ]
+    }
+  ],
+  "total_mutants": 7,
+  "missed": 0,
+  "caught": 7,
+  "timeout": 0,
+  "unviable": 0,
+  "success": 0,
+  "start_time": "2026-10-28T05:24:28.196988Z",
+  "end_time": "2026-10-28T05:24:47.870562Z",
+  "cargo_mutants_version": "27.1.0"
+}

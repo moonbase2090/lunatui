@@ -1,0 +1,24 @@
+--- lunatui-runtime/src/hit.rs
++++ replace HitMap::push_indexed with ()
+@@ -54,20 +54,17 @@
+     /// `index` gets `HitId(first.0 + index)`. Pairs come from a widget's own geometry, such as
+     /// `Tabs::tab_areas` or `List::row_areas`, so what is drawn is what a click reaches.
+     pub fn push_indexed(
+         &mut self,
+         first: HitId,
+         areas: impl IntoIterator<Item = (usize, Rect)>,
+         z: u16,
+     ) {
+-        for (index, area) in areas {
+-            let offset = u32::try_from(index).unwrap_or(u32::MAX);
+-            self.push(HitId(first.0.saturating_add(offset)), area, z);
+-        }
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Returns the topmost hit at `(column, row)`, if any.
+     #[must_use]
+     pub fn pick(&self, column: u16, row: u16) -> Option<HitId> {
+         let mut best: Option<&HitRegion> = None;
+         for region in &self.regions {
+             if !contains(region.area, column, row) {
