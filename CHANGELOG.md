@@ -16,6 +16,7 @@ Every PR adds its entry under **Unreleased**.
 - `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
 - `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
 - `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
+- `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
 ### Changed
