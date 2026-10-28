@@ -8,6 +8,27 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
+- `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
+- A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
+- `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
+- `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
+- `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
+- `Overlay::shadow` draws a drop shadow one cell right and down behind the modal.
+
+### Changed
+
+- The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
+- `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
+- `List` clears every row of its area and paints the selected row's highlight across the full width.
+- `Overlay` clears the modal area before drawing its content, so the backdrop does not show through.
+
+### Fixed
+
+- `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
+
 ## [0.1.12] - 2026-10-27
 
 ### Added
@@ -35,22 +56,7 @@ Every PR adds its entry under **Unreleased**.
 - `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
 - `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
 
-### Added
 
-- `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
-- `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
-- A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
-- `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
-- `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
-- `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
-- `Overlay::shadow` draws a drop shadow one cell right and down behind the modal.
-
-### Changed
-
-- The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
-- `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
-- `List` clears every row of its area and paints the selected row's highlight across the full width.
-- `Overlay` clears the modal area before drawing its content, so the backdrop does not show through.
 ## [0.1.11] - 2026-10-27
 
 ### Added
