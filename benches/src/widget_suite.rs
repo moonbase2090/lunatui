@@ -16,9 +16,10 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
-    Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph,
-    PixelSize, ProgressBar, RadioGroup, RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs,
-    TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly,
+    NumberInput, Paragraph, PixelSize, ProgressBar, RadioGroup, RenderCx, Slider, Sparkline,
+    SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle,
+    Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -197,6 +198,24 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: progress_lunatui,
         ratatui: progress_ratatui,
+    },
+    Case {
+        name: "slider",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no slider; its side draws the same half-cell track glyphs by hand as styled spans",
+        ),
+        lunatui: slider_lunatui,
+        ratatui: slider_ratatui,
+    },
+    Case {
+        name: "number-input",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no number field with step buttons, range clamping, or typed-text validation; its side draws the buttons and the right-aligned value by hand as styled spans",
+        ),
+        lunatui: number_input_lunatui,
+        ratatui: number_input_ratatui,
     },
     Case {
         name: "calendar",
@@ -705,6 +724,56 @@ fn toggle_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     }
 }
 
+const NUMBER_ROWS: usize = 4;
+
+fn number_input_value(tick: u32, row: usize) -> f64 {
+    f64::from((tick * 7 + u32::try_from(row).unwrap_or(0) * 13) % 1000) / 10.0
+}
+
+fn number_input_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for row in 0..NUMBER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        NumberInput::new(number_input_value(tick, row))
+            .range(0.0, 100.0)
+            .decimals(1)
+            .suffix(" %")
+            .render(Rect::new(area.x, y, area.width.min(24), 1), &mut cx);
+    }
+}
+
+fn number_input_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let field = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let button = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Accent))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let width = usize::from(area.width.min(24));
+    for row in 0..NUMBER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let text = format!("{:.1} %", number_input_value(tick, row));
+        let inner = width.saturating_sub(8);
+        let line = Line::from(vec![
+            Span::styled(" − ", button),
+            Span::styled(format!(" {text:>inner$} "), field),
+            Span::styled(" + ", button),
+        ]);
+        RatParagraph::new(line).render(
+            RatRect::new(area.x, y, u16::try_from(width).unwrap_or(0), 1),
+            buf,
+        );
+    }
+}
+
 const RADIO_OPTIONS: [&str; 4] = ["Small", "Medium", "Large", "Extra large"];
 
 fn radio_lunatui(
@@ -876,6 +945,69 @@ fn tooltip_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
                     buf,
                 );
         }
+    }
+}
+
+const SLIDER_ROWS: usize = 4;
+
+fn slider_value(tick: u32, row: usize) -> f64 {
+    let step = (u64::from(tick) * 3 + u64::try_from(row).unwrap_or(0) * 17) % 200;
+    let step = if step > 100 { 200 - step } else { step };
+    f64::from(u32::try_from(step).unwrap_or(0))
+}
+
+fn slider_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for row in 0..SLIDER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        Slider::new(0.0, 100.0)
+            .value(slider_value(tick, row))
+            .render(Rect::new(area.x, y, area.width, 1), &mut cx);
+    }
+}
+
+fn slider_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let fill = RatStyle::new().fg(color(lunatui_theme::Token::Accent));
+    let rest = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .add_modifier(ratatui::style::Modifier::DIM);
+    let total = usize::from(area.width) * 2;
+    for row in 0..SLIDER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let value = slider_value(tick, row);
+        let halves = (0..=total)
+            .min_by(|a, b| {
+                let want = value / 100.0;
+                let da = (f64::from(u32::try_from(*a).unwrap_or(0))
+                    / f64::from(u32::try_from(total).unwrap_or(1))
+                    - want)
+                    .abs();
+                let db = (f64::from(u32::try_from(*b).unwrap_or(0))
+                    / f64::from(u32::try_from(total).unwrap_or(1))
+                    - want)
+                    .abs();
+                da.total_cmp(&db)
+            })
+            .unwrap_or(0);
+        let spans: Vec<Span<'_>> = (0..usize::from(area.width))
+            .map(|cell| {
+                let (left, right) = (cell * 2 < halves, cell * 2 + 1 < halves);
+                match (left, right) {
+                    (true, true) => Span::styled("━", fill),
+                    (true, false) => Span::styled("╸", fill),
+                    _ => Span::styled("─", rest),
+                }
+            })
+            .collect();
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
     }
 }
 
