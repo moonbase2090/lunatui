@@ -62,6 +62,25 @@ impl<S: RowSource> List<S> {
         self
     }
 
+    /// Where each visible row sits when the list is rendered into `area`, as `(index, rect)`
+    /// pairs from the first visible row down, for hit testing. Each row is the full width of the
+    /// area and one cell tall; rows past the end of the source are left out.
+    #[must_use]
+    pub fn row_areas(&self, area: Rect) -> Vec<(usize, Rect)> {
+        let mut areas = Vec::new();
+        if area.width == 0 {
+            return areas;
+        }
+        for y in 0..area.height {
+            let index = self.offset + usize::from(y);
+            if index >= self.source.len() {
+                break;
+            }
+            areas.push((index, Rect::new(area.x, area.y + y, area.width, 1)));
+        }
+        areas
+    }
+
     /// Focused row (selection until runtime focus wiring lands).
     #[must_use]
     pub fn selected(mut self, index: Option<usize>) -> Self {
