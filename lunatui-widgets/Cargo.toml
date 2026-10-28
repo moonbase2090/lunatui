@@ -75,6 +75,10 @@ name = "text_input"
 path = "tests/text_input.rs"
 
 [[test]]
+name = "list"
+path = "tests/list.rs"
+
+[[test]]
 name = "gauge"
 path = "tests/gauge.rs"
 
