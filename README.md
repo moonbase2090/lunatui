@@ -105,6 +105,14 @@ A release console whose bottom line is a `KeyHintBar` built from the keymap of t
 
 Screenshot: [docs/media/key-hints.png](docs/media/key-hints.png). Recorded with `scripts/record-showcase.sh` (`CASE=key-hints`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Overlay with a drop shadow
+
+An operations console with two confirmation dialogs: the backdrop fades in over the whole screen, the dialog is cleared and drawn with a drop shadow one cell down and to the right, the focused button changes, and the backdrop fades out again.
+
+<img src="docs/media/overlay.webp" alt="Overlay: confirmation dialogs with a dimmed backdrop and a drop shadow over an operations console in the dark theme" width="1028">
+
+Screenshot: [docs/media/overlay.png](docs/media/overlay.png). Recorded with `scripts/record-showcase.sh` (`CASE=overlay`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.

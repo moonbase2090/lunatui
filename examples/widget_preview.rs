@@ -20,9 +20,9 @@ use lunatui_widgets::canvas::{Circle, Line};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
     Breadcrumbs, Canvas, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
-    KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
-    RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
-    Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
+    KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, Overlay, PaneId, Paragraph,
+    PixelSize, RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove,
+    Table, Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
 };
 #[path = "deploy_board.rs"]
 mod deploy_board;
@@ -76,6 +76,11 @@ const PREVIEWS: &[Preview] = &[
         name: "key-hints",
         native: key_hints_native,
         baseline: key_hints_baseline,
+    },
+    Preview {
+        name: "overlay",
+        native: overlay_native,
+        baseline: overlay_baseline,
     },
     Preview {
         name: "calendar",
@@ -4047,6 +4052,223 @@ fn key_hints_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: 
         (case.ratatui)(buffer, area, tick);
     }
 }
+
+const OV_SERVICES: [(&str, &str, &str); 8] = [
+    ("api", "v0.1.13", "healthy"),
+    ("web", "v0.1.13", "healthy"),
+    ("jobs", "v0.1.13", "degraded"),
+    ("edge", "v0.1.12", "healthy"),
+    ("docs", "v0.1.13", "healthy"),
+    ("search", "v0.1.13", "healthy"),
+    ("billing", "v0.1.12", "healthy"),
+    ("auth", "v0.1.13", "healthy"),
+];
+
+const OV_ACTIVITY: [&str; 9] = [
+    "12:04  deploy   web v0.1.13 finished",
+    "12:02  alert    jobs queue depth above 400",
+    "11:58  deploy   api v0.1.13 finished",
+    "11:51  scale    edge 4 -> 6 instances",
+    "11:47  deploy   docs v0.1.13 finished",
+    "11:40  rotate   auth signing keys",
+    "11:33  deploy   search v0.1.13 finished",
+    "11:20  backup   billing snapshot stored",
+    "11:02  deploy   billing v0.1.12 finished",
+];
+
+fn ov_phase(tick: u32) -> Option<(usize, f32, bool)> {
+    let (first, second) = ((24_u32, 100_u32), (124_u32, 204_u32));
+    let (which, start, end) = if (first.0..first.1 + 12).contains(&tick) {
+        (0, first.0, first.1)
+    } else if (second.0..second.1 + 12).contains(&tick) {
+        (1, second.0, second.1)
+    } else {
+        return None;
+    };
+    let fade = if tick < start + 12 {
+        f32::from(u8::try_from(tick - start).unwrap_or(0)) / 12.0
+    } else if tick >= end {
+        1.0 - f32::from(u8::try_from(tick - end).unwrap_or(12).min(12)) / 12.0
+    } else {
+        1.0
+    };
+    let confirm = tick >= start + 46;
+    Some((which, fade * 0.6, confirm))
+}
+
+fn overlay_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    cx.put_str(
+        area.x,
+        area.y,
+        &" ".repeat(usize::from(area.width)),
+        Style::new()
+            .fg(accent)
+            .bg(raised)
+            .with_attrs(Attrs::new().set_bold(true)),
+    );
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Operations  ·  production",
+        Style::new()
+            .fg(accent)
+            .bg(raised)
+            .with_attrs(Attrs::new().set_bold(true)),
+    );
+    let left = Rect::new(area.x + 2, area.y + 2, 52, area.height.saturating_sub(5));
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        left.height,
+    );
+    for (title, pane) in [(" Services ", left), (" Activity ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    cx.put_str(
+        left.x + 2,
+        left.y + 1,
+        "Name           Version      State",
+        dim,
+    );
+    for (row, (name, version, state)) in (0_u16..).zip(OV_SERVICES) {
+        let style = if state == "degraded" {
+            fill.fg(theme.resolve(Token::Warn))
+        } else {
+            fill
+        };
+        cx.put_str(
+            left.x + 2,
+            left.y + 3 + row,
+            &format!("{name:<15}{version:<13}{state}"),
+            style,
+        );
+    }
+    for (row, line) in (0_u16..).zip(OV_ACTIVITY) {
+        cx.put_str(
+            right.x + 2,
+            right.y + 1 + row,
+            clip_display_prefix(line, right.width.saturating_sub(4)),
+            if row == 0 { fill } else { dim },
+        );
+    }
+    StatusBar::new(" r rollback  ●  d delete previews  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+    if let Some((which, alpha, confirm)) = ov_phase(tick) {
+        ov_modal(
+            &mut cx,
+            area,
+            which,
+            alpha,
+            confirm,
+            [fill, dim],
+            [accent, raised],
+        );
+    }
+}
+
+fn ov_modal(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    which: usize,
+    alpha: f32,
+    confirm: bool,
+    styles: [Style; 2],
+    colors: [Color; 2],
+) {
+    let [fill, dim] = styles;
+    let [accent, raised] = colors;
+    let (width, height, title) = if which == 0 {
+        (46_u16, 9_u16, " Roll back web? ")
+    } else {
+        (60_u16, 11_u16, " Delete preview environments? ")
+    };
+    let modal = Rect::new(
+        area.x + area.width / 2 - width / 2,
+        area.y + area.height / 2 - height / 2,
+        width,
+        height,
+    );
+    let body = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(title)
+        .style(fill.bg(raised))
+        .border_style(Style::new().fg(accent).bg(raised))
+        .title_style(Style::new().fg(accent).bg(raised));
+    Overlay::new(body, modal)
+        .backdrop(alpha, Color::Rgb(0, 0, 0))
+        .shadow(Style::new().bg(Color::Rgb(6, 7, 12)))
+        .render(area, cx);
+    let lines: &[&str] = if which == 0 {
+        &[
+            "web goes back from v0.1.13 to v0.1.12.",
+            "Open sessions stay connected.",
+        ]
+    } else {
+        &[
+            "pr-182  pr-185  pr-191  pr-193",
+            "These previews are older than 7 days.",
+            "Their databases are removed too.",
+        ]
+    };
+    let content = fill.bg(raised);
+    for (row, line) in (0_u16..).zip(lines) {
+        cx.put_str(modal.x + 3, modal.y + 2 + row, line, content);
+    }
+    let (yes, no) = if which == 0 {
+        ("Roll back", "Cancel")
+    } else {
+        ("Delete 4", "Keep")
+    };
+    let focus = Style::new()
+        .fg(raised)
+        .bg(accent)
+        .with_attrs(Attrs::new().set_bold(true));
+    let (yes_style, no_style) = if confirm {
+        (focus, dim.bg(raised))
+    } else {
+        (dim.bg(raised), focus)
+    };
+    let y = modal.y + modal.height - 3;
+    cx.put_str(modal.x + 3, y, &format!(" {yes} "), yes_style);
+    cx.put_str(
+        modal.x + 5 + u16::try_from(yes.len()).unwrap_or(0) + 3,
+        y,
+        &format!(" {no} "),
+        no_style,
+    );
+}
+
+fn overlay_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
