@@ -4,6 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::Rect;
+use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};
 use lunatui_term::{
     Caps, GraphicsProtocol, Multiplexer, PixelImage, PixelLayer, PixelMode, Protocols, TermIdentity,
 };
@@ -281,4 +282,62 @@ fn depth_is_written_signed() {
         text(&one(&mut layer, 1, 1, Rect::new(0, 0, 1, 1), i32::MIN)).contains("z=-2147483648,")
     );
     assert!(text(&one(&mut layer, 1, 1, Rect::new(0, 0, 1, 1), 0)).contains("z=0,"));
+}
+
+#[test]
+fn widget_image_request_crops_and_applies_opacity_before_kitty_upload()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = ImageSource::rgba8(1, 1, PIXEL.to_vec().into_boxed_slice())?;
+    let request = ImageRequest::new(
+        ImageId::new(13).ok_or("invalid image id")?,
+        4,
+        &source,
+        Rect::new(2, 3, 1, 1),
+        Fit::Stretch,
+        -1,
+        128,
+    );
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    layer.begin_frame();
+    assert!(layer.supports_pixels());
+    assert!(layer.submit(request));
+    assert_eq!(
+        text(layer.finish_frame()),
+        "\x1b_Ga=t,i=13,f=32,s=1,v=1,q=2;AQIDAg==\x1b\\\
+         \x1b[4;3H\x1b_Ga=p,i=13,p=1,c=1,r=1,z=-1,C=1,q=2\x1b\\"
+    );
+    layer.begin_frame();
+    assert!(layer.submit(request));
+    assert_eq!(layer.finish_frame(), b"");
+    Ok(())
+}
+
+#[test]
+fn cover_request_crops_the_source_and_keeps_the_centered_cell_rectangle()
+-> Result<(), Box<dyn std::error::Error>> {
+    let pixels = vec![10, 0, 0, 255, 20, 0, 0, 255, 30, 0, 0, 255, 40, 0, 0, 255];
+    let source = ImageSource::rgba8(2, 2, pixels.into_boxed_slice())?;
+    let request = ImageRequest::new(
+        ImageId::new(14).ok_or("invalid image id")?,
+        1,
+        &source,
+        Rect::new(2, 3, 1, 1),
+        Fit::Cover,
+        0,
+        u8::MAX,
+    );
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    layer.begin_frame();
+    assert!(layer.submit(request));
+    let output = layer.finish_frame();
+    let output_text = text(output);
+    let payload = output_text.split_once(';').map_or("", |(_, payload)| {
+        payload
+            .split_once('\u{1b}')
+            .map_or(payload, |(payload, _)| payload)
+    });
+    assert!(output_text.contains("s=1,v=2"));
+    assert_eq!(decode(payload), vec![10, 0, 0, 255, 30, 0, 0, 255]);
+    assert!(output_text.contains("\x1b[4;3H"));
+    Ok(())
 }
