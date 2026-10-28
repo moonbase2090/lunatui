@@ -20,6 +20,8 @@ mod gauge;
 #[cfg(feature = "image")]
 mod image;
 mod lightcycle;
+#[cfg(feature = "line-gauge")]
+mod line_gauge;
 mod list;
 #[cfg(feature = "markdown")]
 mod markdown_view;
@@ -59,6 +61,8 @@ pub use gauge::Gauge;
 #[cfg(feature = "image")]
 pub use image::Image;
 pub use lightcycle::Lightcycle;
+#[cfg(feature = "line-gauge")]
+pub use line_gauge::LineGauge;
 pub use list::List;
 pub use lunatui_core::Size;
 #[cfg(feature = "image")]
