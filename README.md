@@ -41,6 +41,14 @@ A deploy dashboard made of five bar charts: grouped vertical bars with value tex
 
 Screenshot: [docs/media/barchart.png](docs/media/barchart.png). Recorded with `scripts/record-showcase.sh` (`CASE=barchart`, 120×36, `FRAMES=200`, dark, about 11 seconds).
 
+### MarkdownView
+
+A docs reader: a page list beside a scrolling Markdown view, with headings and rules, hanging-indent lists, task items, quotes, code blocks, boxed tables, inline emphasis, code, and underlined links, and a scrollbar sized from the document. The reader moves through three pages.
+
+![MarkdownView widget: a docs reader in the dark theme](docs/media/markdown.gif)
+
+Screenshot: [docs/media/markdown.png](docs/media/markdown.png). Recorded with `scripts/record-showcase.sh` (`CASE=markdown`, 120×36, `FRAMES=200`, dark, about 11 seconds).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.

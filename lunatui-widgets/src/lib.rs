@@ -16,6 +16,8 @@ mod gauge;
 mod image;
 mod lightcycle;
 mod list;
+#[cfg(feature = "markdown")]
+mod markdown_view;
 mod overlay;
 mod padding;
 mod paragraph;
@@ -52,6 +54,8 @@ pub use lunatui_core::Size;
 pub use lunatui_image::{Fit as ImageFit, ImageError, ImageId, ImageSource};
 pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
+#[cfg(feature = "markdown")]
+pub use markdown_view::MarkdownView;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};

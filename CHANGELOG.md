@@ -10,9 +10,10 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
-- `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
+- `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
 - `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
+- `MarkdownView` widget, behind the `markdown` feature: it draws a parsed Markdown `Document` wrapped to the area's width, with headings and rules, lists and task items, block quotes, code blocks, boxed tables, and styled inline text, scrolls by rows, reports its `content_height` for a scrollbar, and follows `WidgetState` and an optional background style.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
 ### Changed
@@ -48,7 +49,6 @@ Every PR adds its entry under **Unreleased**.
 - The PTY integration tests for `lunatui` and `lunatui-test` carry their crate docs on Windows, where the tests are compiled out, so `missing_docs` no longer fails the Windows build.
 - The website hero sky no longer drifts side to side; the sky image is static.
 - `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
-
 
 ## [0.1.11] - 2026-10-27
 
