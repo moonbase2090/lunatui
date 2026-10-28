@@ -41,6 +41,8 @@ mod radio_group;
 mod raster;
 mod render_cx;
 mod scrollbar;
+#[cfg(feature = "search-box")]
+mod search_box;
 #[cfg(feature = "slider")]
 mod slider;
 #[cfg(feature = "sparkline")]
@@ -105,6 +107,8 @@ pub use radio_group::{RadioFlow, RadioGroup};
 pub use raster::Marker;
 pub use render_cx::RenderCx;
 pub use scrollbar::Scrollbar;
+#[cfg(feature = "search-box")]
+pub use search_box::{SearchBox, SearchMatch};
 #[cfg(feature = "slider")]
 pub use slider::Slider;
 #[cfg(feature = "sparkline")]

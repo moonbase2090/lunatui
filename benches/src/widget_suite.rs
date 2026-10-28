@@ -17,8 +17,8 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
     Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph,
-    PixelSize, RadioGroup, RenderCx, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs,
-    TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    PixelSize, RadioGroup, RenderCx, SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table,
+    Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -197,6 +197,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: slider_lunatui,
         ratatui: slider_ratatui,
+    },
+    Case {
+        name: "search-box",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no search field with a placeholder, match count, clear button, or smart-case filtering; its side draws the prompt, query, and count by hand as styled spans",
+        ),
+        lunatui: search_box_lunatui,
+        ratatui: search_box_ratatui,
     },
     Case {
         name: "calendar",
@@ -703,6 +712,66 @@ fn toggle_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         ));
         RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
     }
+}
+
+const SEARCH_QUERIES: [&str; 4] = ["sl", "tab", "on sw", ""];
+
+fn search_box_query(tick: u32) -> &'static str {
+    SEARCH_QUERIES[usize::try_from(tick / 25).unwrap_or(0) % SEARCH_QUERIES.len()]
+}
+
+fn search_box_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let query = search_box_query(tick);
+    SearchBox::new(query, query.len())
+        .placeholder("Filter widgets")
+        .matches(None, query.len())
+        .render(Rect::new(area.x, area.y, area.width.min(40), 1), &mut cx);
+}
+
+fn search_box_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let base = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let accent = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Accent))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let dim = base.add_modifier(ratatui::style::Modifier::DIM);
+    let query = search_box_query(tick);
+    let width = usize::from(area.width.min(40));
+    let shown = if query.is_empty() {
+        "Filter widgets"
+    } else {
+        query
+    };
+    let count = if query.is_empty() {
+        String::new()
+    } else {
+        format!("{} matches", query.len())
+    };
+    let used = 3 + shown.chars().count() + count.chars().count() + 3;
+    let pad = width.saturating_sub(used);
+    let mut spans = vec![
+        Span::styled(" / ", accent),
+        Span::styled(shown, if query.is_empty() { dim } else { base }),
+        Span::styled(" ".repeat(pad), base),
+        Span::styled(count, dim),
+    ];
+    if !query.is_empty() {
+        spans.push(Span::styled(" × ", accent));
+    }
+    RatParagraph::new(Line::from(spans)).render(
+        RatRect::new(area.x, area.y, u16::try_from(width).unwrap_or(0), 1),
+        buf,
+    );
 }
 
 const RADIO_OPTIONS: [&str; 4] = ["Small", "Medium", "Large", "Extra large"];
