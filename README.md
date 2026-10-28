@@ -79,7 +79,7 @@ A monitoring wall drawn with Canvas: one radar ring and a smoothly rotating swee
 
 <img src="docs/media/canvas.webp" alt="Canvas widget: a radar sweep, filled signal chart, and labeled route map in the dark theme" width="1028">
 
-Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas`, 120×36, 240-frame run at 30 fps, dark, 2× scale, lossless animated WebP; 237 output frames at 24.5 fps over 9.68 seconds, all captured frames retained).
+Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas`, 120×36, 240-frame request at 30 fps, dark, 2× scale, lossless animated WebP, about 10 seconds; captured frames are retained).
 
 ### Toast
 
