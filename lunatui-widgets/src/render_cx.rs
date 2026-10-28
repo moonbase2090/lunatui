@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+#[cfg(feature = "image")]
 use core::fmt;
+use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 
 #[cfg(any(
     feature = "bigtext",
@@ -10,7 +11,7 @@ use core::fmt;
     feature = "image",
     feature = "sparkline"
 ))]
-use lunatui_core::{Attrs, UnderlineStyle};
+use lunatui_core::UnderlineStyle;
 
 use crate::overlay::blend_rgb;
 use lunatui_theme::{Theme, Token};
