@@ -18,6 +18,7 @@ markdown = ["widget-state", "lunatui-text/markdown"]
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
+barchart = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -96,6 +97,11 @@ path = "tests/spinner_presets.rs"
 name = "image"
 path = "tests/image.rs"
 required-features = ["image"]
+
+[[test]]
+name = "bar_chart"
+path = "tests/bar_chart.rs"
+required-features = ["barchart"]
 
 [[test]]
 name = "markdown_view"
