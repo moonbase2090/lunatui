@@ -4627,7 +4627,15 @@ fn play_lunatui(
             (None, None) => return Err(invalid(format!("unknown case: {}", options.case))),
         }
         downsample_grid(&mut next, options.profile);
-        out.write_all(encoder.encode_diff(&previous, &next, &clusters, ColorMode::TrueColor))?;
+        let mut frame = b"\x1b[?2026h".to_vec();
+        frame.extend_from_slice(encoder.encode_diff(
+            &previous,
+            &next,
+            &clusters,
+            ColorMode::TrueColor,
+        ));
+        frame.extend_from_slice(b"\x1b[?2026l");
+        out.write_all(&frame)?;
         out.flush()?;
         std::mem::swap(&mut previous, &mut next);
         pace(started, period, tick);
