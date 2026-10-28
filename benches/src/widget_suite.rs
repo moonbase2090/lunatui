@@ -15,8 +15,8 @@ use lunatui_theme::{Theme, Variant};
 #[cfg(feature = "line-gauge")]
 use lunatui_widgets::LineGauge;
 use lunatui_widgets::{
-    BigText, Block, BorderType, Date, Gauge, List, Monthly, Paragraph, PixelSize, RenderCx,
-    Sparkline, Table, Tabs, TextWrap, Widget,
+    Bar, BarChart, BigText, Block, BorderType, Date, Gauge, List, Monthly, Paragraph, PixelSize,
+    RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -27,7 +27,8 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::LineGauge as RatLineGauge;
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
-    Block as RatBlock, BorderType as RatBorderType, Gauge as RatGauge, List as RatList, ListItem,
+    Bar as RatBar, BarChart as RatBarChart, BarGroup as RatBarGroup, Block as RatBlock,
+    BorderType as RatBorderType, Gauge as RatGauge, List as RatList, ListItem,
     Paragraph as RatParagraph, Row, Sparkline as RatSparkline, Table as RatTable, Tabs as RatTabs,
     Widget as RatWidget, Wrap,
 };
@@ -142,6 +143,13 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: sparkline_lunatui,
         ratatui: sparkline_ratatui,
+    },
+    Case {
+        name: "barchart",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: barchart_lunatui,
+        ratatui: barchart_ratatui,
     },
     Case {
         name: "bigtext",
@@ -541,6 +549,53 @@ fn sparkline_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     RatSparkline::default()
         .data(spark_window(tick, area.width))
         .style(rat_accent())
+        .render(RatRect::new(area.x, area.y, area.width, height), buf);
+}
+
+const BAR_COUNT: usize = 64;
+
+fn bar_values(tick: u32, width: u16) -> Vec<u64> {
+    let columns = usize::from(width).div_ceil(2).min(BAR_COUNT);
+    (0..columns)
+        .map(|index| {
+            let phase = u64::try_from(index).unwrap_or(0) * 3 + u64::from(tick);
+            (phase * 37 % 101) + (phase * 11 % 29)
+        })
+        .collect()
+}
+
+fn barchart_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let height = area.height.min(12);
+    let bars: Vec<Bar<'_>> = bar_values(tick, area.width)
+        .into_iter()
+        .map(Bar::new)
+        .collect();
+    BarChart::from_bars(&bars)
+        .background(base_style())
+        .max(130)
+        .style(accent_style())
+        .render(Rect::new(area.x, area.y, area.width, height), &mut cx);
+}
+
+fn barchart_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let height = area.height.min(12);
+    let bars: Vec<RatBar<'_>> = bar_values(tick, area.width)
+        .into_iter()
+        .map(|value| RatBar::default().value(value).text_value(String::new()))
+        .collect();
+    RatBarChart::default()
+        .data(RatBarGroup::default().bars(&bars))
+        .bar_width(1)
+        .bar_gap(1)
+        .max(130)
+        .bar_style(rat_accent())
         .render(RatRect::new(area.x, area.y, area.width, height), buf);
 }
 
