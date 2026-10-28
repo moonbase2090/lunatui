@@ -23,6 +23,7 @@ canvas = ["widget-state"]
 
 barchart = ["widget-state"]
 toast = ["widget-state"]
+slider = ["widget-state"]
 number-input = ["widget-state"]
 form = ["widget-state"]
 radio = ["widget-state"]
@@ -182,6 +183,11 @@ required-features = ["form"]
 name = "tooltip"
 path = "tests/tooltip.rs"
 required-features = ["tooltip"]
+
+[[test]]
+name = "slider"
+path = "tests/slider.rs"
+required-features = ["slider"]
 
 [[test]]
 name = "number_input"

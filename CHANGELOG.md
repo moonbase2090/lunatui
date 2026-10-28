@@ -11,6 +11,7 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `NumberInput` widget, behind the `number-input` feature: a spin box with minus and plus buttons, a range, a step, decimals, a prefix and suffix, and a text-editing display with a caret, plus `nudge`, `parse`, `accepts`, and `format` rules and button and field areas for hit testing.
+- `Slider` widget, behind the `slider` feature: a one-row slider for a single value or a range, with half-cell track precision, an optional knob, a label and value text, step snapping, `value_at` for clicks and drags, `nudge` for the keyboard, and `track_area` and `thumb_areas` for hit testing.
 - `Tooltip` widget, behind the `tooltip` feature: a short hint beside an anchor rectangle that never covers it, opening on a chosen side and flipping or sliding to stay inside the area, with text wrapped to a maximum width, theme-token colors, `area` for hit testing, and `TooltipState` for the hover delay and dismissal with caller-supplied time.
 - `Form` container, behind the `form` feature: labelled fields with a label column, an input area for the caller's own widget, and a message row; required markers, dim hints, and fail-colored validation messages from theme tokens; `layout` for drawing and hit testing; `step` for tab-order focus that wraps and skips disabled fields; and `check_required`, `is_valid`, and `first_error` for validation.
 
