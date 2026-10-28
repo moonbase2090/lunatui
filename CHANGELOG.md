@@ -10,17 +10,24 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Popup` and `ScrollView` containers in `lunatui-widgets`, behind the opt-in `popup` and `scroll-view` features. `Popup` is a titled, bordered panel on `Overlay`: centred, at a point, or anchored beside a rectangle (flipping when there is no room), draggable through `PopupState`, with a backdrop that fades what is behind toward the surface. `ScrollView` draws a widget into an offscreen grid larger than the screen and shows part of it, with vertical and horizontal scrollbars and `ScrollViewState` for scrolling and paging. Both take their colors from theme tokens and the `WidgetState`. `Grid::blit` (opt-in `blit` feature in `lunatui-core`) copies a region between grids, and `Scrollbar::horizontal` comes with `scroll-view`.
+
+## [0.1.14] - 2026-10-28
+
+### Added
+
+- `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
 - `RadioGroup` widget, behind the `radio` feature: single-choice options drawn as `◉`/`○` one per row or side by side, with focus, per-option and whole-group disabling, theme-token colors, `option_areas` for hit testing, and `step` for keyboard movement that wraps and skips disabled options.
 - `Toggle` widget, behind the `toggle` feature: an on/off switch with an optional label and a configurable track width, painted from theme tokens for the normal, focused, and disabled states, with `hit_area` for hit testing.
-- Canvas Braille lines use a thin, centered sub-cell raster so ties stay in one stroke; `Context::marker` lets a paint closure switch to block markers for straight guides and outlines.
+- `Context::marker` lets a Canvas paint closure switch markers for straight guides and outlines.
 - `TabsDrag` turns pointer press, drag, and release over the regions from `Tabs::tab_areas` into a `TabMove` that reorders tabs: dropping on another tab moves the dragged tab there, a press that stays on its own tab is a click, and leaving the strip or `cancel` drops nothing. `TabMove::apply` reorders a `Vec` and `TabMove::selection` keeps the selection on the same tab.
 - `KeyHintBar`, behind the `key-hints` feature, renders the first registered shortcut for each command in the active `Keymap`.
 - `kitty_image` demonstrates a sharp 1920×1920 NASA Blue Marble image through Kitty graphics at native source resolution, with cell fallback elsewhere; the image is credited in `NOTICE`.
-- `Popup` and `ScrollView` containers in `lunatui-widgets`, behind the opt-in `popup` and `scroll-view` features. `Popup` is a titled, bordered panel on `Overlay`: centred, at a point, or anchored beside a rectangle (flipping when there is no room), draggable through `PopupState`, with a backdrop that fades what is behind toward the surface. `ScrollView` draws a widget into an offscreen grid larger than the screen and shows part of it, with vertical and horizontal scrollbars and `ScrollViewState` for scrolling and paging. Both take their colors from theme tokens and the `WidgetState`. `Grid::blit` (opt-in `blit` feature in `lunatui-core`) copies a region between grids, and `Scrollbar::horizontal` comes with `scroll-view`.
 - `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
 
 ### Changed
 
+- Canvas Braille lines use a thin, centered sub-cell raster, and the Canvas demo shows six scenes with thin lines.
 - `List` clears every row of its area and paints the selected row's highlight across the full width.
 
 ### Fixed
@@ -40,7 +47,6 @@ Every PR adds its entry under **Unreleased**.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
 - `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
-- `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
 - `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
 - `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - `MarkdownView` widget, behind the `markdown` feature: it draws a parsed Markdown `Document` wrapped to the area's width, with headings and rules, lists and task items, block quotes, code blocks, boxed tables, and styled inline text, scrolls by rows, reports its `content_height` for a scrollbar, and follows `WidgetState` and an optional background style.
