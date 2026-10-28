@@ -38,10 +38,9 @@ write_cast "$tmp/plain.cast"
 python3 -I "$ROOT/scripts/trim-cast.py" "$tmp/plain.cast"
 check "trim only" "0.000000:a 0.031000:b 0.002000:c 0.037000:d" "$tmp/plain.cast"
 
-# Frame starts move to 1/30 s and 2/30 s; the split write keeps its 2 ms offset, so the
-# third frame follows it by 2/30 - 1/30 - 0.002 s.
+# Frames move to 0, 1/30 s, and 2/30 s, and the second frame's split write joins its frame.
 write_cast "$tmp/snap.cast"
 python3 -I "$ROOT/scripts/trim-cast.py" "$tmp/snap.cast" 30
-check "snapped to 30 fps" "0.000000:a 0.033333:b 0.002000:c 0.031333:d" "$tmp/snap.cast"
+check "snapped to 30 fps" "0.000000:a 0.033333:b 0.000000:c 0.033333:d" "$tmp/snap.cast"
 
 echo "trim-cast-selftest: ok"
