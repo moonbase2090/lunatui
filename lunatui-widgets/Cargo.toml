@@ -27,6 +27,7 @@ slider = ["widget-state"]
 form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
+tooltip = []
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -176,6 +177,11 @@ required-features = ["radio"]
 name = "form"
 path = "tests/form.rs"
 required-features = ["form"]
+
+[[test]]
+name = "tooltip"
+path = "tests/tooltip.rs"
+required-features = ["tooltip"]
 
 [[test]]
 name = "slider"

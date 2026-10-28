@@ -45,7 +45,7 @@ jobs:
           sh "$RUNNER_TEMP/rustup-init.sh" -y --default-toolchain stable --profile minimal --no-modify-path
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - run: cargo test --workspace
-      - run: cargo test -p lunatui-widgets --features color-profiles,barchart,bigtext,calendar,canvas,chart,markdown,sparkline,toast,toggle,radio,form,slider
+      - run: cargo test -p lunatui-widgets --features color-profiles,barchart,bigtext,calendar,canvas,chart,markdown,sparkline,toast,toggle,radio,form,tooltip,slider
       - run: cargo run --example hello_box
       - run: cargo run --example hello_box -- --metrics
 
