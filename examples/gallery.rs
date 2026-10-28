@@ -10,13 +10,23 @@ use lunatui_core::{ClusterTable, Grid, Rect, Style};
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Block, Constraint, Gauge, List, Overlay, Paragraph, RenderCx, Scrollbar, Spinner, StatusBar,
-    Table, Tabs, TextInput, TextWrap, VecSource, Widget,
+    Block, Constraint, Gauge, Lightcycle, List, Overlay, Padding, Paragraph, RenderCx, Scrollbar,
+    Spinner, StatusBar, StatusDot, StatusState, Table, Tabs, TextInput, TextWrap, VecSource,
+    Widget,
 };
 
-const BLURB: &str = "PR 33: Overlay backdrop blend + modal (gallery).\n";
+mod site_widget_gallery;
 
+const BLURB: &str = "Text wraps within its panel.\n";
+
+#[expect(
+    clippy::too_many_lines,
+    reason = "This established demo composes the complete widget showcase in one screen."
+)]
 fn main() -> io::Result<()> {
+    if env::args().any(|arg| arg.starts_with("--site-widget=")) {
+        return site_widget_gallery::run();
+    }
     let snapshot = env::args().any(|arg| arg == "--snapshot");
     let width = 72_u16;
     let height = 22_u16;
@@ -52,7 +62,12 @@ fn main() -> io::Result<()> {
         .thumb_style(accent)
         .render(Rect::new(inner.x + 12, inner.y + 5, 1, list_h), &mut cx);
     TextInput::new("lunatui", 4)
-        .block(Block::bordered().title("filter"))
+        .block(Block::bordered().title("filter").padding(Padding {
+            left: 1,
+            right: 1,
+            top: 0,
+            bottom: 0,
+        }))
         .style(text_style)
         .cursor_style(accent)
         .render(Rect::new(inner.x + 14, inner.y + 5, 20, 3), &mut cx);
@@ -90,6 +105,15 @@ fn main() -> io::Result<()> {
     let modal_area = Rect::new(inner.x + 18, inner.y + 7, 36, 8);
     let modal = Block::bordered().title("overlay").style(text_style);
     Overlay::new(modal, modal_area).render(inner, &mut cx);
+    Lightcycle::new(std::time::Duration::from_secs(4))
+        .render(Rect::new(inner.x + 55, inner.y + 7, 14, 5), &mut cx);
+    Paragraph::new("cycle")
+        .style(accent)
+        .render(Rect::new(inner.x + 57, inner.y + 12, 10, 1), &mut cx);
+    StatusDot::new(StatusState::Ok).render(Rect::new(inner.x + 56, inner.y + 15, 1, 1), &mut cx);
+    Paragraph::new("ready")
+        .style(text_style)
+        .render(Rect::new(inner.x + 58, inner.y + 15, 7, 1), &mut cx);
     if snapshot {
         let mut out = String::new();
         for y in 0..height {
@@ -101,7 +125,7 @@ fn main() -> io::Result<()> {
     }
     let mut encoder = Encoder::new();
     let prev = Grid::new(width, height);
-    let bytes = encoder.encode_diff(&prev, &grid, &clusters, ColorMode::NoColor);
+    let bytes = encoder.encode_diff(&prev, &grid, &clusters, ColorMode::TrueColor);
     io::stdout().write_all(bytes)?;
     Ok(())
 }

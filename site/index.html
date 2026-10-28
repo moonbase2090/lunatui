@@ -93,9 +93,7 @@ section.block{padding:72px 0}
 .sec-h p{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--peri);margin-top:6px;text-wrap:balance}
 .panel{background:linear-gradient(180deg,var(--card-top),var(--card) 62%);border:1px solid var(--edge);border-radius:14px;box-shadow:inset 0 1px 0 rgba(185,167,240,.22),0 22px 56px rgba(2,4,14,.6)}
 /* gallery */
-.gallery{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px}
-.gallery .tile{grid-column:span 2}
-.gallery .tile:nth-child(n+4){grid-column:span 3}
+.gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
 .tile{padding:14px;transition:border-color .2s,box-shadow .2s}
 .tile:hover{border-color:var(--edge-hi);box-shadow:inset 0 1px 0 rgba(185,167,240,.3),0 22px 56px rgba(2,4,14,.6),0 0 0 1px rgba(143,168,255,.18)}
 .tile-h{display:flex;align-items:center;gap:9px;font-weight:500;margin-bottom:10px}
@@ -160,7 +158,7 @@ footer nav a:hover{color:var(--lav)}
 /* motion */
 .reveal{animation:up 1.8s ease-out both}
 @keyframes up{from{opacity:.94;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (max-width:1000px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery .tile,.gallery .tile:nth-child(n+4){grid-column:auto}.gallery .tile:last-child:nth-child(odd){grid-column:1/-1}.tech{grid-template-columns:1fr 1fr}.speed{grid-template-columns:1fr}}
+@media (max-width:1000px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.tech{grid-template-columns:1fr 1fr}.speed{grid-template-columns:1fr}}
 @media (max-width:767px){
  .container{padding:0 20px}
  .nav ul{display:none}
@@ -281,14 +279,27 @@ footer nav a:hover{color:var(--lav)}
 
 <section class="block" id="gallery"><div class="container">
  <div class="sec-h reveal"><h2>Widget Gallery</h2><p>Rich widgets. Beautiful&nbsp;terminal.</p></div>
- <div class="gallery" id="carousel">
-  <article class="tile panel"><div class="tile-h"><span>Calendar</span></div><img class="widget-demo" data-static="assets/media/calendar.gif" data-gif="assets/media/calendar.gif" alt="Calendar widget rendering a monthly schedule" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>BigText</span></div><img class="widget-demo" data-static="assets/media/bigtext.gif" data-gif="assets/media/bigtext.gif" alt="BigText widget rendering large block lettering" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Sparkline</span></div><img class="widget-demo" data-static="assets/media/sparkline.gif" data-gif="assets/media/sparkline.gif" alt="Sparkline widget drawing a live data trend" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Spinner</span></div><img class="widget-demo" data-static="assets/media/spinner.gif" data-gif="assets/media/spinner.gif" alt="Spinner widget cycling its frame patterns" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>TextInput</span></div><img class="widget-demo" data-static="assets/media/textinput.gif" data-gif="assets/media/textinput.gif" alt="TextInput widget with a block cursor and a bar cursor" loading="lazy" decoding="async" width="240" height="170"></article>
+ <div class="gallery" id="carousel" tabindex="0" role="region" aria-label="Widget gallery">
+  <article class="tile panel"><div class="tile-h"><span>BigText</span></div><img class="widget-demo" data-static="assets/media/bigtext.png" alt="BigText widget rendering large block lettering" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Block</span></div><img class="widget-demo" data-static="assets/media/block.png" alt="Block widget drawing a titled border around terminal content" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Calendar</span></div><img class="widget-demo" data-static="assets/media/calendar.png" alt="Calendar widget rendering a monthly schedule" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Gauge</span></div><img class="widget-demo" data-static="assets/media/gauge.png" alt="Gauge widget showing progress in a bordered bar" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Lightcycle</span></div><img class="widget-demo" data-static="assets/media/lightcycle.png" alt="Lightcycle widget drawing a colored Braille trail" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>List</span></div><img class="widget-demo" data-static="assets/media/list.png" alt="List widget displaying selectable terminal rows" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Overlay</span></div><img class="widget-demo" data-static="assets/media/overlay.png" alt="Overlay widget drawing a modal over background content" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Paragraph</span></div><img class="widget-demo" data-static="assets/media/paragraph.png" alt="Paragraph widget rendering wrapped terminal text" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Padding</span></div><img class="widget-demo" data-static="assets/media/padding.png" alt="Text input content inset inside a padded block" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Scrollbar</span></div><img class="widget-demo" data-static="assets/media/scrollbar.png" alt="Scrollbar widget showing a vertical thumb and track" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Sparkline</span></div><img class="widget-demo" data-static="assets/media/sparkline.png" alt="Sparkline widget drawing a live data trend" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Spinner</span></div><img class="widget-demo" data-static="assets/media/spinner.png" alt="Spinner widget showing one frame of its animated indicator" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>StatusBar</span></div><img class="widget-demo" data-static="assets/media/statusbar.png" alt="StatusBar widget displaying a status message along the bottom edge" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>StatusDot</span></div><img class="widget-demo" data-static="assets/media/statusdot.png" alt="StatusDot widget showing a successful ready state" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Table</span></div><img class="widget-demo" data-static="assets/media/table.png" alt="Table widget displaying check names and results in columns" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Tabs</span></div><img class="widget-demo" data-static="assets/media/tabs.png" alt="Tabs widget highlighting the selected Lints tab" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>TextInput</span></div><img class="widget-demo" data-static="assets/media/textinput.png" alt="TextInput widget with an editable filter value" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Borders</span></div><img class="widget-demo" data-static="assets/media/borders.png" alt="Rounded borders drawn around an overlay panel" loading="lazy" decoding="async" width="240" height="170"></article>
  </div>
- <div class="dots" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show Calendar"></button><button type="button" aria-label="Show BigText"></button><button type="button" aria-label="Show Sparkline"></button><button type="button" aria-label="Show Spinner"></button><button type="button" aria-label="Show TextInput"></button></div>
+ <div class="dots" role="group" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show first gallery cards"></button><button type="button" aria-label="Show middle gallery cards"></button><button type="button" aria-label="Show final gallery cards"></button></div>
 </div></section>
 
 <section class="block" id="speed"><div class="container">

@@ -26,6 +26,9 @@ No rules yet.
 | `lunatui-widgets/src/line_gauge.rs`, `percent_label` | `clippy::cast_possible_truncation` | The clamped ratio bounds rounded percent to 0..=100 | LineGauge |
 | `lunatui-widgets/src/line_gauge.rs`, `percent_label` | `clippy::cast_sign_loss` | The clamped ratio bounds rounded percent to 0..=100 | LineGauge |
 | `lunatui-term/src/bin/session_pty_probe.rs`, `run_panic` | `clippy::panic` | PTY integration test exercises panic restore | PR 10 (#22) |
+| `examples/gallery.rs`, `main` | `clippy::too_many_lines` | Keep the established demo's widget composition together | PR 137 |
+| `examples/site_widget_gallery.rs`, `date` | `clippy::expect_used` | The fixed calendar dates are valid demo constants | PR 137 |
+| `examples/site_widget_gallery.rs`, `render_case` | `clippy::too_many_lines` | Keep each fixed-cell widget scene with its dispatch case | PR 137 |
 
 ## Checks
 
