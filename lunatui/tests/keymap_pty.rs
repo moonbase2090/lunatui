@@ -15,7 +15,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 const BASE_HINT: &str = "Press F1 for shortcuts";
-const OVERLAY_TITLE: &str = "Show shortcuts";
+const OVERLAY_TITLE: &str = "Shortcuts";
 const PALETTE_ROW: &str = "> Show shortcuts";
 const F1_LEGACY: &[u8] = b"\x1bOP";
 const CTRL_SHIFT_P_KITTY: &[u8] = b"\x1b[112;6u";
