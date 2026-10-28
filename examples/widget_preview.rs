@@ -4658,8 +4658,8 @@ fn play_lunatui(
     let mut clusters = ClusterTable::new();
     let mut encoder = Encoder::new();
     let period = Duration::from_secs(1) / options.fps;
+    let started = Instant::now();
     for tick in 0..options.frames {
-        let started = Instant::now();
         match (preview(&options.case), case) {
             (Some(preview), _) => (preview.native)(&mut next, &mut clusters, &theme, area, tick),
             (None, Some(case)) => (case.lunatui)(&mut next, &mut clusters, &theme, area, tick),
@@ -4669,7 +4669,7 @@ fn play_lunatui(
         out.write_all(encoder.encode_diff(&previous, &next, &clusters, ColorMode::TrueColor))?;
         out.flush()?;
         std::mem::swap(&mut previous, &mut next);
-        thread::sleep(period.saturating_sub(started.elapsed()));
+        thread::sleep((started + period * (tick + 1)).saturating_duration_since(Instant::now()));
     }
     Ok(())
 }
@@ -4687,8 +4687,8 @@ fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()
         return Err(invalid(format!("unknown case: {}", options.case)));
     }
     let period = Duration::from_secs(1) / options.fps;
+    let started = Instant::now();
     for tick in 0..options.frames {
-        let started = Instant::now();
         terminal.draw(|frame| {
             let buffer = frame.buffer_mut();
             match (preview(&options.case), case) {
@@ -4698,7 +4698,7 @@ fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()
             }
             downsample_buffer(buffer, options.profile);
         })?;
-        thread::sleep(period.saturating_sub(started.elapsed()));
+        thread::sleep((started + period * (tick + 1)).saturating_duration_since(Instant::now()));
     }
     Ok(())
 }
