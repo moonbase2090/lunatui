@@ -8,9 +8,20 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
+- `Overlay::shadow` draws a drop shadow one cell right and down behind the modal.
+
+### Changed
+
+- `List` clears every row of its area and paints the selected row's highlight across the full width.
+- `Overlay` clears the modal area before drawing its content, so the backdrop does not show through.
+
 ## [0.1.13] - 2026-10-28
 
 ### Added
+
 - `Breadcrumbs` widget: a one-row path of segments with a separator, styles for the segments, the last segment, the separators, and a hovered segment. A path wider than the area collapses its middle to `…`, keeping the first segment and as many of the last as fit. `Breadcrumbs::segment_areas` reports where each shown segment sits, for `HitMap`.
 - `SplitTree` for resizable, nestable split panes with a zoomed pane: `split` and `close` change the tree, `layout` gives every pane's cells and every divider's line, `SplitDrag` resizes a divider cell by cell from pointer events (stopping at minimum sizes, with cancel), and `SplitLayout::render_dividers` draws the lines.
 - `ToastStack` widget, behind the `toast` feature: timed toasts scoped to a pane (boxed, stacked up from the pane's bottom-right corner) or to the status rows (one line each), with `ToastKind` colors from theme tokens. The caller supplies the time, so expiry follows a virtual clock exactly; `placements` gives each shown toast's rectangle and layer so clicks can be routed through `HitMap`, with newer toasts above older ones and status toasts above pane toasts.
@@ -21,21 +32,19 @@ Every PR adds its entry under **Unreleased**.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
 - `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
 - `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
-- `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
-- `Overlay::shadow` draws a drop shadow one cell right and down behind the modal.
 - `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
 - `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - `MarkdownView` widget, behind the `markdown` feature: it draws a parsed Markdown `Document` wrapped to the area's width, with headings and rules, lists and task items, block quotes, code blocks, boxed tables, and styled inline text, scrolls by rows, reports its `content_height` for a scrollbar, and follows `WidgetState` and an optional background style.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
 ### Changed
+
 - The `Table` highlight style now covers the selected row's full width, gaps included.
 - `Table` clears every row of its area, including rows below the last data row, so a re-render leaves no stale rows.
-- `List` clears every row of its area and paints the selected row's highlight across the full width.
-- `Overlay` clears the modal area before drawing its content, so the backdrop does not show through.
 - The MarkdownView README demo is recorded at 2x as a lossless animated WebP, and `scripts/record-showcase.sh` now records at 2x and writes WebP.
 
 ### Fixed
+
 - `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
 - `lunatui-widgets` builds with no features enabled; `Table` styling no longer depends on a widget feature being on.
 - A focused `Image` draws its focus ring over the background already in its area instead of the terminal default.
