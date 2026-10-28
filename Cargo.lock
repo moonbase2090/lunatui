@@ -1018,6 +1018,8 @@ dependencies = [
  "lunatui-widgets",
  "ratatui",
  "time",
+ "tui-popup",
+ "tui-scrollview",
 ]
 
 [[package]]

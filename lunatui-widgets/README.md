@@ -6,7 +6,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 - [`Widget`](src/widget.rs): `render(&self, area, &mut RenderCx)` and `measure(&self, avail: Size) -> Size`.
 - [`RenderCx`](src/render_cx.rs): grid, cluster table, and theme for token-aware drawing. Optional `color-profiles` feature adds `profile` for ANSI16/256 downsampling in `token`.
-- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `markdown`, `sparkline`, and `toast` forward it. `line-gauge` reserves the same feature.
+- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `markdown`, `popup`, `scroll-view`, `sparkline`, and `toast` forward it. `line-gauge` reserves the same feature.
 - `KeyHintBar` is behind the `key-hints` feature. Construct it from the keymap active for the current screen or mode; it renders the first chord registered for each command.
 - [`Size`](https://docs.rs/lunatui-core/latest/lunatui_core/struct.Size.html) lives in `lunatui-core` and is re-exported here.
 
@@ -35,6 +35,10 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 `ToastStack` is behind the `toast` feature. It holds timed messages and takes the time from the caller (a `Duration`, such as a virtual clock's `now`), so expiry is deterministic. A toast is scoped to a pane (a boxed message in the pane's bottom-right corner, newest nearest the corner) or to the status rows (one line each, right aligned). `placements` returns each shown toast's cells and layer for `HitMap`, and `render` draws them with theme colors for the kind.
 
 `Sparkline` is behind the `sparkline` feature. It draws one column per sample with the eight block steps, matches ratatui when given an explicit style, and otherwise paints from theme tokens for the current `WidgetState`.
+
+`Popup` is behind the `popup` feature. It draws a titled, bordered panel over an `Overlay` backdrop, centred, at a point, or anchored beside a rectangle, and `PopupState` tracks dragging and moving. Content cells drawn without colors take the panel's.
+
+`ScrollView` is behind the `scroll-view` feature. It draws a widget into an offscreen grid of the content size and copies the visible part, with automatic, always, or hidden scrollbars on each axis. `ScrollViewState` keeps the offset and pages once `ScrollView::sync` has recorded the sizes.
 
 `SpinnerPreset` is a catalog of named cycles on the existing `Spinner`: dots, line, arc, bounce, pulse, moon, ring, bars, quadrant, and half-moon. Each preset has its own frames and the interval between them. `Spinner::preset` selects one. The default spinner still draws Braille dots, and the caller still supplies the frame index.
 

@@ -269,7 +269,7 @@ fn explicit_styles_win() -> Result<(), &'static str> {
 }
 
 #[test]
-fn the_backdrop_fades_what_is_behind_toward_the_surface() -> Result<(), &'static str> {
+fn the_backdrop_fades_what_is_behind_toward_the_surface() {
     let mut theme = Theme::builtin(Variant::Dark);
     theme.set_token(Token::Surface0, Color::Rgb(0, 0, 0));
     theme.set_token(Token::TextPrimary, Color::Rgb(100, 100, 100));
@@ -307,7 +307,6 @@ fn the_backdrop_fades_what_is_behind_toward_the_surface() -> Result<(), &'static
         style(3, 2).map(|style| style.bg),
         Some(theme.resolve(Token::Surface1))
     );
-    Ok(())
 }
 
 #[test]

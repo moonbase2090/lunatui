@@ -27,6 +27,8 @@ use lunatui_widgets::{
 
 #[path = "deploy_board.rs"]
 mod deploy_board;
+#[path = "release_console.rs"]
+mod release_console;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
@@ -108,6 +110,11 @@ const PREVIEWS: &[Preview] = &[
         name: "deploy",
         native: deploy_native,
         baseline: deploy_baseline,
+    },
+    Preview {
+        name: "popup-scrollview",
+        native: release_console::draw,
+        baseline: release_console::baseline,
     },
 ];
 
