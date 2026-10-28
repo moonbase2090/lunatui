@@ -6,7 +6,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 - [`Widget`](src/widget.rs): `render(&self, area, &mut RenderCx)` and `measure(&self, avail: Size) -> Size`.
 - [`RenderCx`](src/render_cx.rs): grid, cluster table, and theme for token-aware drawing. Optional `color-profiles` feature adds `profile` for ANSI16/256 downsampling in `token`.
-- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `markdown`, `sparkline`, and `radio`, `slider`, `toast`, and `toggle` forward it. `line-gauge` reserves the same feature.
+- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `markdown`, `sparkline`, and `radio`, `form`, `slider`, `toast`, and `toggle` forward it. `line-gauge` reserves the same feature.
 - `KeyHintBar` is behind the `key-hints` feature. Construct it from the keymap active for the current screen or mode; it renders the first chord registered for each command.
 - [`Size`](https://docs.rs/lunatui-core/latest/lunatui_core/struct.Size.html) lives in `lunatui-core` and is re-exported here.
 
@@ -35,6 +35,8 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 `Toggle` is behind the `toggle` feature. It draws an on/off switch (`━━━●` on, `●───` off) with an optional label, a configurable track width, and the widget states: focused uses the focus-ring knob and a bold label, disabled dims it. `Toggle::hit_area` gives the cells a click should reach, so it plugs into `HitMap`.
 
 `RadioGroup` is behind the `radio` feature. It draws a group of options of which at most one is selected (`◉` and `○`), one per row or side by side with a gap, with the focused option in the focus ring color with a bold label, per-option and whole-group disabling, and `option_areas` for hit testing. `RadioGroup::step` moves the selection with the keyboard, wrapping around and skipping disabled options.
+
+`Form` is behind the `form` feature. It lays out labelled fields (a label column, an input area for your own widget, and a message row) and draws the labels, `*` markers for required fields, dim hints, and fail-colored validation messages. `FormField` sets a label, required, disabled, hint, error, and input height; `Form::layout` returns each part's cells for drawing inputs and for hit testing; `Form::step` moves focus in tab order, wrapping and skipping disabled fields; and `check_required` fills "Required" for empty required fields.
 
 `Slider` is behind the `slider` feature. It draws a one-row slider for a single value or a range, with the filled part of the track ending on a half cell (`━━╸───`), an optional `●` knob on each end, a label, and the value (or `low–high`) after the track. `value_at` turns a click or drag column into a value snapped to the step, `nudge` moves a value by whole steps for the keyboard, and `track_area` and `thumb_areas` give the cells for hit testing.
 
