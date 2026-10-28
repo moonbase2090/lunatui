@@ -2223,15 +2223,15 @@ fn sparkline_baseline(
 const MD_PAGES: [(&str, &str); 3] = [
     (
         "Getting started",
-        "# Getting started\n\nLunatui draws terminal interfaces from small **widgets**. Each widget takes an area and a `RenderCx` and writes cells; nothing else is needed to get a frame on screen.\n\n## Install\n\n1. Add the crate with the features you use.\n2. Create a `Grid` and a `ClusterTable`.\n3. Render a widget into the grid.\n4. Diff the grid and write the changes.\n\n```toml\n[dependencies]\nlunatui = \"0.1\"\nlunatui-widgets = { version = \"0.1\", features = [\"markdown\"] }\n```\n\n## Your first frame\n\n> Every widget redraws the whole of its own area, so a frame never shows leftovers from the one before it.\n\n- [x] Block and Paragraph\n- [x] List and Table\n- [ ] Your own widget\n  - implement `Widget`\n  - keep `render` free of side effects\n\n---\n\nRead the *architecture overview* next, or jump to the [widget gallery](https://example.com/gallery).\n",
+        "# Getting started\n\nLunatui draws terminal interfaces from small **widgets**. Each widget takes an area and a `RenderCx` and writes cells; nothing else is needed to get a frame on screen.\n\n## Install\n\n1. Add the crate with the features you use.\n2. Create a `Grid` and a `ClusterTable`.\n3. Render a widget into the grid.\n4. Diff the grid and write the changes.\n\n```toml\n[dependencies]\nlunatui = \"0.1\"\nlunatui-widgets = { version = \"0.1\", features = [\"markdown\"] }\n```\n\n## Your first frame\n\n> Every widget redraws the whole of its own area, so a frame never shows leftovers from the one before it.\n\n- [x] Block and Paragraph\n- [x] List and Table\n- [ ] Your own widget\n  - implement `Widget`\n  - keep `render` free of side effects\n\n## Themes\n\nColors come from semantic tokens, so a theme change recolors every widget without touching the widget code. The built-in dark and light themes cover the common terminals, and a prepared palette downsamples once instead of on every cell.\n\n| token | used for |\n|:--|:--|\n| `Accent` | headings and highlights |\n| `FocusRing` | links and focus |\n| `Surface1` | raised panels and code |\n\n## Input\n\nKeys, mouse, and paste events arrive as plain values. The runtime maps them to focus changes and hit tests, and keeps a small keymap so shortcuts stay discoverable.\n\n1. Parse bytes into events.\n2. Route the event to the focused widget.\n3. Redraw only what changed.\n\n---\n\nRead the *architecture overview* next, or jump to the [widget gallery](https://example.com/gallery).\n",
     ),
     (
         "Layout",
-        "# Layout\n\nA layout splits an area into rectangles from a list of **constraints**. The solver is exact for the common cases and falls back to a general solver only when it must.\n\n## Constraints\n\n| constraint | meaning |\n|:--|--:|\n| `Length(n)` | exactly n cells |\n| `Min(n)` | at least n cells |\n| `Percentage(p)` | p percent of the axis |\n| `Fill(w)` | a weighted share of the rest |\n\n## Flex\n\n- `Start`, `Center`, and `End` place the group\n- `SpaceBetween` spreads the gaps\n  - a lone segment sits at the start\n- `Legacy` keeps the older rules\n\n```rust\nlet [left, right] = Layout::horizontal([Length(24), Fill(1)])\n    .split(area)\n    .into_array();\n```\n\n> Floors and caps are opt in: turn on the `size-limits` feature to bound a segment.\n",
+        "# Layout\n\nA layout splits an area into rectangles from a list of **constraints**. The solver is exact for the common cases and falls back to a general solver only when it must.\n\n## Constraints\n\n| constraint | meaning |\n|:--|--:|\n| `Length(n)` | exactly n cells |\n| `Min(n)` | at least n cells |\n| `Percentage(p)` | p percent of the axis |\n| `Fill(w)` | a weighted share of the rest |\n\n## Flex\n\n- `Start`, `Center`, and `End` place the group\n- `SpaceBetween` spreads the gaps\n  - a lone segment sits at the start\n- `Legacy` keeps the older rules\n\n```rust\nlet [left, right] = Layout::horizontal([Length(24), Fill(1)])\n    .split(area)\n    .into_array();\n```\n\n> Floors and caps are opt in: turn on the `size-limits` feature to bound a segment.\n\n## Wrapping\n\nSegments that do not fit move onto the next line, so a row of tags or buttons reflows when the window narrows. Lines break greedily: a segment joins the current line when its natural size plus the spacing fits in what is left.\n\n1. Measure each segment.\n2. Break the list into lines.\n3. Split every line with the same solver.\n\n## Spacing\n\nOne `gap` setting spaces segments and lines alike, which keeps grids and toolbars consistent. Negative spacing overlaps neighbours by a cell, which is how bordered panels share an edge.\n\n- [x] horizontal and vertical splits\n- [x] wrapped lines\n- [ ] nested constraints in one pass\n\n---\n\nThe solver never allocates on the fast path.\n",
     ),
     (
         "Widgets",
-        "# Widgets\n\nThe widget set covers text, lists, tables, gauges, charts, and now **Markdown**.\n\n## Markdown\n\nThe view lays a parsed document out at the width it is given: headings get rules, lists keep a hanging indent, quotes keep their bar, and tables are boxed. ~~Raw source~~ is never shown.\n\n1. Parse once with `markdown::parse`.\n2. Render with `MarkdownView::new(&document)`.\n3. Scroll with `.scroll(rows)` and size a scrollbar from `content_height`.\n\n### Inline styles\n\nText can be *emphasised*, **strong**, ***both***, ~~struck~~, or `code`, and a [link](https://example.com) is underlined.\n\n| widget | feature |\n|:--|:-:|\n| `Sparkline` | sparkline |\n| `BarChart` | barchart |\n| `Chart` | chart |\n| `MarkdownView` | markdown |\n\n- [x] headings, lists, quotes\n- [x] code blocks and tables\n- [x] task items\n\n---\n\nThat is the whole tour.\n",
+        "# Widgets\n\nThe widget set covers text, lists, tables, gauges, charts, and now **Markdown**.\n\n## Markdown\n\nThe view lays a parsed document out at the width it is given: headings get rules, lists keep a hanging indent, quotes keep their bar, and tables are boxed. ~~Raw source~~ is never shown.\n\n1. Parse once with `markdown::parse`.\n2. Render with `MarkdownView::new(&document)`.\n3. Scroll with `.scroll(rows)` and size a scrollbar from `content_height`.\n\n### Inline styles\n\nText can be *emphasised*, **strong**, ***both***, ~~struck~~, or `code`, and a [link](https://example.com) is underlined.\n\n| widget | feature |\n|:--|:-:|\n| `Sparkline` | sparkline |\n| `BarChart` | barchart |\n| `Chart` | chart |\n| `MarkdownView` | markdown |\n\n## Lists and tasks\n\n- [x] headings, lists, quotes\n- [x] code blocks and tables\n- [x] task items\n  - nested items indent\n    - and nest again\n\n## Quotes\n\n> A quote keeps its bar on every row, even when the text wraps to a second or a third line.\n>\n> > Quotes nest as deep as the text needs.\n\n## Code\n\n```rust\nlet document = markdown::parse(source, Options::gfm());\nMarkdownView::new(&document)\n    .scroll(offset)\n    .render(area, &mut cx);\n```\n\n---\n\nThat is the whole tour.\n",
     ),
 ];
 
@@ -2262,7 +2262,7 @@ fn markdown_native(
     let raised = cx.token(Token::Surface1);
     let accent = cx.token(Token::Accent);
     let fill = Style::new().fg(text).bg(surface);
-    let page = usize::try_from(tick / 70).unwrap_or(0) % MD_PAGES.len();
+    let page = usize::try_from(tick / 80).unwrap_or(0) % MD_PAGES.len();
     let (title, _) = MD_PAGES[page];
     let document = &md_documents()[page];
     StatusBar::new(format!(" Docs  ›  {title}"))
@@ -2317,11 +2317,11 @@ fn markdown_native(
     );
     let content = MarkdownView::new(document).content_height(view.width);
     let travel = content.saturating_sub(usize::from(view.height));
-    let phase = usize::try_from(tick % 70)
+    let phase = usize::try_from(tick % 80)
         .unwrap_or(0)
-        .saturating_sub(8)
-        .min(54);
-    let scroll = travel * phase / 54;
+        .saturating_sub(6)
+        .min(68);
+    let scroll = travel * phase / 68;
     MarkdownView::new(document)
         .background(fill)
         .scroll(scroll)

@@ -33,15 +33,15 @@ image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
 
 [dependencies]
-lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
-lunatui-layout = { version = "0.1.12", path = "../lunatui-layout" }
-lunatui-image = { version = "0.1.12", path = "../lunatui-image", optional = true }
-lunatui-text = { version = "0.1.12", path = "../lunatui-text" }
-lunatui-theme = { version = "0.1.12", path = "../lunatui-theme" }
+lunatui-core = { version = "0.1.13", path = "../lunatui-core" }
+lunatui-layout = { version = "0.1.13", path = "../lunatui-layout" }
+lunatui-image = { version = "0.1.13", path = "../lunatui-image", optional = true }
+lunatui-text = { version = "0.1.13", path = "../lunatui-text" }
+lunatui-theme = { version = "0.1.13", path = "../lunatui-theme" }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.12", path = "../lunatui-test" }
+lunatui-test = { version = "0.1.13", path = "../lunatui-test" }
 ratatui = "=0.30.2"
 proptest = "=1.9.0"
 time = { version = "=0.3.55", default-features = false }
