@@ -25,6 +25,7 @@ barchart = ["widget-state"]
 toast = ["widget-state"]
 slider = ["widget-state"]
 number-input = ["widget-state"]
+search-box = ["widget-state"]
 progress = ["widget-state"]
 accordion = ["widget-state"]
 form = ["widget-state"]
@@ -37,7 +38,7 @@ image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "form", "key-hints", "line-gauge", "markdown", "number-input", "popup", "progress", "radio", "scroll-view", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "form", "key-hints", "line-gauge", "markdown", "number-input", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
@@ -218,3 +219,8 @@ required-features = ["accordion"]
 name = "progress_bar"
 path = "tests/progress_bar.rs"
 required-features = ["progress"]
+
+[[test]]
+name = "search_box"
+path = "tests/search_box.rs"
+required-features = ["search-box"]

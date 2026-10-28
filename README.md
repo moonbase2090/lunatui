@@ -175,6 +175,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Search box
+
+A widget catalog with live filtering: the query is typed one character at a time (and backspaced), the list narrows to the items that contain every term with the matched text highlighted, the count on the right follows, and `n` steps the active match with the details pane following it. The widget draws the field and hands back the rules (`filter` with smart case and match ranges, `step` through the matches, `put_highlighted` for drawing a row with its matches marked) and the clear button's cell for the app's own key and mouse handling.
+
+<img src="docs/media/search-box.webp" alt="SearchBox: a catalog filtered live with highlighted matches and a match count in the dark theme" width="1028">
+
+Screenshot: [docs/media/search-box.png](docs/media/search-box.png). Recorded with `scripts/record-showcase.sh` (`CASE=search-box`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.

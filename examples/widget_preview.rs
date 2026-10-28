@@ -21,9 +21,9 @@ use lunatui_widgets::{
     Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId,
     FieldArea, Form, FormField, Gauge, GraphType, KeyHintBar, LegendPosition, List, MarkdownView,
     Marker, Monthly, NumberInput, PaneId, Paragraph, PixelSize, ProgressBar, ProgressTone,
-    RadioFlow, RadioGroup, RenderCx, Scrollbar, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
-    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
-    Toggle, VecSource, Widget, WidgetState,
+    RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Slider, Sparkline,
+    SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput,
+    ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -120,6 +120,11 @@ const PREVIEWS: &[Preview] = &[
         name: "number-input",
         native: number_native,
         baseline: number_baseline,
+    },
+    Preview {
+        name: "search-box",
+        native: search_native,
+        baseline: search_baseline,
     },
     Preview {
         name: "calendar",
@@ -5500,6 +5505,215 @@ fn pg_log(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {
 }
 
 fn progress_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const SB_ITEMS: [(&str, &str); 22] = [
+    ("Accordion", "collapsible sections"),
+    ("Breadcrumbs", "path segments"),
+    ("Calendar", "month grid"),
+    ("Canvas", "braille and block drawing"),
+    ("Chart", "lines, scatter, bars"),
+    ("Form", "labelled fields"),
+    ("Gauge", "filled ratio"),
+    ("Key hint bar", "shortcut footer"),
+    ("List", "scrolling rows"),
+    ("Markdown view", "rendered text"),
+    ("Number input", "spin box"),
+    ("Progress bar", "eighth blocks"),
+    ("Radio group", "one of many"),
+    ("Scroll view", "clipped content"),
+    ("Slider", "draggable value"),
+    ("Sparkline", "tiny trend"),
+    ("Split view", "draggable divider"),
+    ("Table", "rows and columns"),
+    ("Tabs", "pill tabs"),
+    ("Toast stack", "timed messages"),
+    ("Toggle", "on and off switch"),
+    ("Tooltip", "hint by an anchor"),
+];
+
+const SB_TYPING: [(u32, &str); 16] = [
+    (0, ""),
+    (20, "s"),
+    (26, "sl"),
+    (32, "sli"),
+    (38, "slid"),
+    (70, "sli"),
+    (74, "sl"),
+    (78, "s"),
+    (82, ""),
+    (100, "o"),
+    (106, "on"),
+    (112, "on "),
+    (118, "on s"),
+    (124, "on sw"),
+    (170, ""),
+    (190, "ta"),
+];
+
+fn sb_query(tick: u32) -> &'static str {
+    SB_TYPING
+        .iter()
+        .rev()
+        .find(|(at, _)| tick >= *at)
+        .map_or("", |(_, query)| *query)
+}
+
+fn sb_active(tick: u32, total: usize) -> Option<usize> {
+    let steps = [200, 212, 224].iter().filter(|at| tick >= **at).count();
+    (steps > 0 && total > 0).then(|| (steps - 1) % total)
+}
+
+fn sb_texts() -> Vec<String> {
+    SB_ITEMS
+        .iter()
+        .map(|(name, note)| format!("{name:<16}{note}"))
+        .collect()
+}
+
+fn search_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Widget catalog  ·  lunatui", head);
+    let left = Rect::new(area.x + 2, area.y + 2, 62, 30);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        30,
+    );
+    for (title, pane) in [(" Widgets ", left), (" Details ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let query = sb_query(tick);
+    let texts = sb_texts();
+    let found = SearchBox::filter(&texts, query);
+    let active = sb_active(tick, found.len());
+    SearchBox::new(query, query.len())
+        .placeholder("Filter widgets")
+        .matches(active, found.len())
+        .state(WidgetState::Focused)
+        .render(
+            Rect::new(left.x + 2, left.y + 1, left.width - 4, 1),
+            &mut cx,
+        );
+    sb_list(&mut cx, left, &texts, &found, active, [fill, dim]);
+    sb_details(&mut cx, right, found.get(active.unwrap_or(0)), [fill, dim]);
+    StatusBar::new(" type to filter  ●  n next  N previous  ●  esc clear  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn sb_list(
+    cx: &mut RenderCx<'_>,
+    pane: Rect,
+    texts: &[String],
+    found: &[SearchMatch],
+    active: Option<usize>,
+    styles: [Style; 2],
+) {
+    let [fill, _] = styles;
+    let accent = cx.token(Token::Accent);
+    let raised = cx.token(Token::Surface1);
+    if found.is_empty() {
+        cx.put_str(
+            pane.x + 3,
+            pane.y + 4,
+            "No widget matches that filter.",
+            styles[1],
+        );
+        return;
+    }
+    for (row, hit) in (0_u16..).zip(found) {
+        let y = pane.y + 4 + row;
+        let current = active == Some(usize::from(row));
+        let base = if current { fill.bg(raised) } else { fill };
+        if current {
+            cx.put_str(
+                pane.x + 1,
+                y,
+                &" ".repeat(usize::from(pane.width) - 2),
+                base,
+            );
+            cx.put_str(pane.x + 2, y, "›", base.fg(accent));
+        }
+        let marked = base.fg(accent).with_attrs(Attrs::new().set_bold(true));
+        SearchBox::put_highlighted(
+            cx,
+            (pane.x + 4, y),
+            &texts[hit.index],
+            &hit.ranges,
+            (base, marked),
+            pane.width - 8,
+        );
+    }
+}
+
+fn sb_details(cx: &mut RenderCx<'_>, pane: Rect, shown: Option<&SearchMatch>, styles: [Style; 2]) {
+    let [fill, dim] = styles;
+    let accent = cx.token(Token::Accent);
+    let Some(hit) = shown else {
+        cx.put_str(pane.x + 2, pane.y + 2, "Nothing selected", dim);
+        return;
+    };
+    let (name, note) = SB_ITEMS[hit.index];
+    let slug = name.to_lowercase().replace(' ', "-");
+    cx.put_str(
+        pane.x + 2,
+        pane.y + 2,
+        name,
+        fill.fg(accent).with_attrs(Attrs::new().set_bold(true)),
+    );
+    cx.put_str(pane.x + 2, pane.y + 3, note, dim);
+    cx.put_str(pane.x + 2, pane.y + 5, "Feature", dim);
+    cx.put_str(pane.x + 14, pane.y + 5, &slug, fill);
+    cx.put_str(pane.x + 2, pane.y + 7, "Example", dim);
+    cx.put_str(
+        pane.x + 14,
+        pane.y + 7,
+        &format!("widget_preview {slug}"),
+        fill,
+    );
+    cx.put_str(pane.x + 2, pane.y + 9, "Matched", dim);
+    let spans: Vec<String> = hit
+        .ranges
+        .iter()
+        .map(|r| format!("{}..{}", r.start, r.end))
+        .collect();
+    cx.put_str(pane.x + 14, pane.y + 9, &spans.join("  "), fill);
+}
+
+fn search_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
