@@ -60,7 +60,8 @@ impl Image {
         self
     }
 
-    /// Sets the semantic appearance for normal, focused, or disabled use.
+    /// Sets the semantic appearance for normal, focused, or disabled use. A focused image
+    /// is inset by a rounded focus ring drawn over the background already in its area.
     #[must_use]
     pub const fn state(mut self, state: WidgetState) -> Self {
         self.state = state;
@@ -84,7 +85,7 @@ impl Widget for Image {
                 .border_type(BorderType::Rounded)
                 .border_style(Style::new().fg(cx.token(Token::FocusRing)));
             let inner = block.inner(area);
-            block.render(area, cx);
+            cx.keep_backgrounds(area, |cx| block.render(area, cx));
             inner
         } else {
             area

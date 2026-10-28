@@ -19,6 +19,10 @@ Every PR adds its entry under **Unreleased**.
 
 - The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
 
+### Fixed
+
+- A focused `Image` draws its focus ring over the background already in its area instead of the terminal default.
+
 ## [0.1.12] - 2026-10-27
 
 ### Added
