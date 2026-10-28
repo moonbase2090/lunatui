@@ -29,10 +29,11 @@ lunatui-core = { path = "../lunatui-core" }
 lunatui-image = { path = "../lunatui-image" }
 lunatui-term = { path = "../lunatui-term" }
 lunatui-layout = { path = "../lunatui-layout" }
+lunatui-text = { path = "../lunatui-text", features = ["markdown"] }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "image", "sparkline"] }
+lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "image", "markdown", "sparkline"] }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
 lunatui-prismattyc = { version = "0.1.12", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"

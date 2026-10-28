@@ -16,7 +16,8 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Alignment, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Date, DateStyle,
-    Monthly, Paragraph, PixelSize, RenderCx, Sparkline, Widget, WidgetState,
+    List, MarkdownView, Monthly, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar,
+    Widget, WidgetState,
 };
 #[path = "deploy_board.rs"]
 mod deploy_board;
@@ -60,6 +61,11 @@ const PREVIEWS: &[Preview] = &[
         name: "barchart",
         native: barchart_native,
         baseline: barchart_baseline,
+    },
+    Preview {
+        name: "markdown",
+        native: markdown_native,
+        baseline: markdown_baseline,
     },
     Preview {
         name: "sparkline",
@@ -2183,6 +2189,139 @@ fn sparkline_baseline(
         area,
         buffer,
     );
+}
+
+const MD_PAGES: [(&str, &str); 3] = [
+    (
+        "Getting started",
+        "# Getting started\n\nLunatui draws terminal interfaces from small **widgets**. Each widget takes an area and a `RenderCx` and writes cells; nothing else is needed to get a frame on screen.\n\n## Install\n\n1. Add the crate with the features you use.\n2. Create a `Grid` and a `ClusterTable`.\n3. Render a widget into the grid.\n4. Diff the grid and write the changes.\n\n```toml\n[dependencies]\nlunatui = \"0.1\"\nlunatui-widgets = { version = \"0.1\", features = [\"markdown\"] }\n```\n\n## Your first frame\n\n> Every widget redraws the whole of its own area, so a frame never shows leftovers from the one before it.\n\n- [x] Block and Paragraph\n- [x] List and Table\n- [ ] Your own widget\n  - implement `Widget`\n  - keep `render` free of side effects\n\n---\n\nRead the *architecture overview* next, or jump to the [widget gallery](https://example.com/gallery).\n",
+    ),
+    (
+        "Layout",
+        "# Layout\n\nA layout splits an area into rectangles from a list of **constraints**. The solver is exact for the common cases and falls back to a general solver only when it must.\n\n## Constraints\n\n| constraint | meaning |\n|:--|--:|\n| `Length(n)` | exactly n cells |\n| `Min(n)` | at least n cells |\n| `Percentage(p)` | p percent of the axis |\n| `Fill(w)` | a weighted share of the rest |\n\n## Flex\n\n- `Start`, `Center`, and `End` place the group\n- `SpaceBetween` spreads the gaps\n  - a lone segment sits at the start\n- `Legacy` keeps the older rules\n\n```rust\nlet [left, right] = Layout::horizontal([Length(24), Fill(1)])\n    .split(area)\n    .into_array();\n```\n\n> Floors and caps are opt in: turn on the `size-limits` feature to bound a segment.\n",
+    ),
+    (
+        "Widgets",
+        "# Widgets\n\nThe widget set covers text, lists, tables, gauges, charts, and now **Markdown**.\n\n## Markdown\n\nThe view lays a parsed document out at the width it is given: headings get rules, lists keep a hanging indent, quotes keep their bar, and tables are boxed. ~~Raw source~~ is never shown.\n\n1. Parse once with `markdown::parse`.\n2. Render with `MarkdownView::new(&document)`.\n3. Scroll with `.scroll(rows)` and size a scrollbar from `content_height`.\n\n### Inline styles\n\nText can be *emphasised*, **strong**, ***both***, ~~struck~~, or `code`, and a [link](https://example.com) is underlined.\n\n| widget | feature |\n|:--|:-:|\n| `Sparkline` | sparkline |\n| `BarChart` | barchart |\n| `Chart` | chart |\n| `MarkdownView` | markdown |\n\n- [x] headings, lists, quotes\n- [x] code blocks and tables\n- [x] task items\n\n---\n\nThat is the whole tour.\n",
+    ),
+];
+
+fn md_documents() -> &'static [lunatui_text::markdown::Document] {
+    static DOCUMENTS: std::sync::OnceLock<Vec<lunatui_text::markdown::Document>> =
+        std::sync::OnceLock::new();
+    DOCUMENTS.get_or_init(|| {
+        MD_PAGES
+            .iter()
+            .map(|(_, source)| {
+                lunatui_text::markdown::parse(source, lunatui_text::markdown::Options::gfm())
+            })
+            .collect()
+    })
+}
+
+fn markdown_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let raised = cx.token(Token::Surface1);
+    let accent = cx.token(Token::Accent);
+    let fill = Style::new().fg(text).bg(surface);
+    let page = usize::try_from(tick / 70).unwrap_or(0) % MD_PAGES.len();
+    let (title, _) = MD_PAGES[page];
+    let document = &md_documents()[page];
+    StatusBar::new(format!(" Docs  ›  {title}"))
+        .style(
+            Style::new()
+                .fg(accent)
+                .bg(raised)
+                .with_attrs(Attrs::new().set_bold(true)),
+        )
+        .render(Rect::new(area.x, area.y, area.width, 1), &mut cx);
+    let body = Rect::new(
+        area.x,
+        area.y + 1,
+        area.width,
+        area.height.saturating_sub(2),
+    );
+    let side_w = 26.min(body.width / 3);
+    let side = Rect::new(body.x, body.y, side_w, body.height);
+    let panel = |title: &str| {
+        Block::bordered()
+            .title(format!(" {title} "))
+            .style(fill)
+            .border_style(Style::new().fg(raised).bg(surface))
+            .title_style(fill)
+    };
+    let side_block = panel("Pages");
+    side_block.render(side, &mut cx);
+    let names: Vec<Vec<String>> = MD_PAGES
+        .iter()
+        .map(|(name, _)| vec![(*name).to_owned()])
+        .collect();
+    let source = lunatui_widgets::VecSource::from_rows(names);
+    List::new(source)
+        .style(fill)
+        .highlight_style(
+            Style::new()
+                .fg(accent)
+                .bg(raised)
+                .with_attrs(Attrs::new().set_bold(true)),
+        )
+        .selected(Some(page))
+        .render(side_block.inner(side), &mut cx);
+    let main = Rect::new(body.x + side_w, body.y, body.width - side_w, body.height);
+    let main_block = panel("Reader");
+    main_block.render(main, &mut cx);
+    let inner = main_block.inner(main);
+    let view = Rect::new(
+        inner.x + 1,
+        inner.y,
+        inner.width.saturating_sub(3),
+        inner.height,
+    );
+    let content = MarkdownView::new(document).content_height(view.width);
+    let travel = content.saturating_sub(usize::from(view.height));
+    let phase = usize::try_from(tick % 70)
+        .unwrap_or(0)
+        .saturating_sub(8)
+        .min(54);
+    let scroll = travel * phase / 54;
+    MarkdownView::new(document)
+        .background(fill)
+        .scroll(scroll)
+        .render(view, &mut cx);
+    Scrollbar::vertical(content, usize::from(view.height), scroll)
+        .track_style(Style::new().fg(raised).bg(surface))
+        .thumb_style(Style::new().fg(accent).bg(surface))
+        .render(
+            Rect::new(inner.x + inner.width - 1, inner.y, 1, inner.height),
+            &mut cx,
+        );
+    let percent = (scroll * 100).checked_div(travel).unwrap_or(100);
+    StatusBar::new(format!(" tab pages   ↑↓ scroll   q quit   {percent}%"))
+        .style(
+            Style::new()
+                .fg(text)
+                .bg(raised)
+                .with_attrs(Attrs::new().set_dim(true)),
+        )
+        .render(
+            Rect::new(area.x, area.y + area.height - 1, area.width, 1),
+            &mut cx,
+        );
+}
+
+fn markdown_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "markdown") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];

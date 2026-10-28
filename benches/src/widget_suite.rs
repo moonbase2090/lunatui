@@ -15,8 +15,8 @@ use lunatui_theme::{Theme, Variant};
 #[cfg(feature = "line-gauge")]
 use lunatui_widgets::LineGauge;
 use lunatui_widgets::{
-    Bar, BarChart, BigText, Block, BorderType, Date, Gauge, List, Monthly, Paragraph, PixelSize,
-    RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
+    Bar, BarChart, BigText, Block, BorderType, Date, Gauge, List, MarkdownView, Monthly, Paragraph,
+    PixelSize, RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -150,6 +150,15 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: barchart_lunatui,
         ratatui: barchart_ratatui,
+    },
+    Case {
+        name: "markdown",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no Markdown widget; its side shows the same source in a wrapped Paragraph",
+        ),
+        lunatui: markdown_lunatui,
+        ratatui: markdown_ratatui,
     },
     Case {
         name: "bigtext",
@@ -550,6 +559,37 @@ fn sparkline_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .data(spark_window(tick, area.width))
         .style(rat_accent())
         .render(RatRect::new(area.x, area.y, area.width, height), buf);
+}
+
+const MARKDOWN: &str = "# Release notes\n\nThe **widgets** crate gained a `MarkdownView`: headings, lists, quotes, code, and tables, drawn from a parsed document.\n\n## Checklist\n\n- [x] Parse the source once\n- [x] Lay the rows out at the width\n- [ ] Scroll by rows\n  - nested items indent\n\n> A quote keeps its bar on every row, even when the text wraps to a second or third line.\n\n```rust\nlet view = MarkdownView::new(&document);\nview.render(area, &mut cx);\n```\n\n| widget | state |\n|:--|--:|\n| table | ready |\n| list | ready |\n\n---\n\nMore text follows so the view has something to scroll through when the area is short. Another paragraph with *emphasis*, ~~strikethrough~~, and a [link](https://example.com).\n";
+
+fn markdown_document() -> &'static lunatui_text::markdown::Document {
+    static DOCUMENT: OnceLock<lunatui_text::markdown::Document> = OnceLock::new();
+    DOCUMENT.get_or_init(|| {
+        lunatui_text::markdown::parse(MARKDOWN, lunatui_text::markdown::Options::gfm())
+    })
+}
+
+fn markdown_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    MarkdownView::new(markdown_document())
+        .background(text_style())
+        .scroll(usize::try_from(tick % 20).unwrap_or(0))
+        .render(area, &mut cx);
+}
+
+fn markdown_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    RatParagraph::new(MARKDOWN)
+        .wrap(Wrap { trim: true })
+        .scroll((u16::try_from(tick % 20).unwrap_or(0), 0))
+        .style(rat_text())
+        .render(area, buf);
 }
 
 const BAR_COUNT: usize = 64;
