@@ -11,24 +11,8 @@ denom = "denom"
 ratatui = "ratatui"
 # RFC 4648 base64 input vector in lunatui-term/src/pixel/tests.rs.
 fo = "fo"
-# Exact HTML named character references generated in markdown/tables.rs.
-Ofr = "Ofr"
-andd = "andd"
-becaus = "becaus"
-BA = "BA"
-curren = "curren"
-equest = "equest"
-ges = "ges"
-infintie = "infintie"
-lates = "lates"
-ofr = "ofr"
-oint = "oint"
-olt = "olt"
-pluse = "pluse"
-pointint = "pointint"
-scap = "scap"
-ABD = "ABD"
 
 [files]
 # Asciinema recordings in examples/captures are raw terminal output, not prose.
-extend-exclude = ["*.cast"]
+# The HTML entity name table is generated data, not prose.
+extend-exclude = ["*.cast", "lunatui-text/src/markdown/tables.rs"]
