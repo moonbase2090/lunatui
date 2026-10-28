@@ -18,7 +18,7 @@ use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Chart,
     Dataset, Date, DateStyle, DividerId, GraphType, LegendPosition, List, MarkdownView, Marker,
     Monthly, PaneId, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag,
-    SplitTree, StatusBar, Widget, WidgetState,
+    SplitTree, StatusBar, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -40,6 +40,11 @@ struct Preview {
 }
 
 const PREVIEWS: &[Preview] = &[
+    Preview {
+        name: "toast",
+        native: toast_native,
+        baseline: toast_baseline,
+    },
     Preview {
         name: "split",
         native: split_native,
@@ -2161,6 +2166,163 @@ fn markdown_native(
 
 fn markdown_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "markdown") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+const TOAST_TICK: Duration = Duration::from_millis(50);
+const TOAST_SCRIPT: [(u32, u32, ToastScope, ToastKind, &str); 7] = [
+    (
+        20,
+        70,
+        ToastScope::Pane(1),
+        ToastKind::Success,
+        "api 4.12 deployed",
+    ),
+    (
+        45,
+        80,
+        ToastScope::Pane(1),
+        ToastKind::Info,
+        "web: 3 checks queued",
+    ),
+    (
+        70,
+        90,
+        ToastScope::Pane(2),
+        ToastKind::Warning,
+        "Log stream is lagging",
+    ),
+    (
+        95,
+        60,
+        ToastScope::Status,
+        ToastKind::Info,
+        "Syncing with origin",
+    ),
+    (
+        110,
+        100,
+        ToastScope::Pane(1),
+        ToastKind::Error,
+        "jobs: migration failed",
+    ),
+    (
+        130,
+        50,
+        ToastScope::Status,
+        ToastKind::Success,
+        "Synced 14 files",
+    ),
+    (
+        150,
+        70,
+        ToastScope::Pane(2),
+        ToastKind::Info,
+        "Tailing build 4821",
+    ),
+];
+
+fn toast_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    let raised = theme.resolve(Token::Surface1);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let body = Rect::new(area.x, area.y, area.width, area.height.saturating_sub(1));
+    let left = Rect::new(body.x, body.y, body.width / 2, body.height);
+    let right = Rect::new(
+        left.x + left.width,
+        body.y,
+        body.width - left.width,
+        body.height,
+    );
+    for (title, pane) in [(" Pipelines ", left), (" Activity ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let pipelines = [
+        "api", "web", "jobs", "edge", "docs", "search", "billing", "auth",
+    ];
+    for (row, name) in (0_u16..).zip(pipelines) {
+        let y = left.y + 1 + row;
+        if y + 1 >= left.y + left.height {
+            break;
+        }
+        let state = if name == "jobs" && tick >= 110 {
+            "failed "
+        } else {
+            "passing"
+        };
+        let line = format!(
+            " {name:<10}{state}  #{}",
+            4800 + u32::from(row) * 3 + tick / 40
+        );
+        cx.put_str(
+            left.x + 1,
+            y,
+            clip_display_prefix(&line, left.width.saturating_sub(2)),
+            fill,
+        );
+    }
+    for row in 0..right.height.saturating_sub(2) {
+        let second = tick / 4 + u32::from(row);
+        let line = format!(
+            " 12:{:02}:{:02}  worker-{}  ok",
+            (second / 60) % 60,
+            second % 60,
+            row % 5 + 1
+        );
+        cx.put_str(
+            right.x + 1,
+            right.y + 1 + row,
+            clip_display_prefix(&line, right.width.saturating_sub(2)),
+            dim,
+        );
+    }
+    StatusBar::new(" main  ●  3 workers  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(area.x, area.y + body.height, area.width, 1),
+            &mut cx,
+        );
+    let now = TOAST_TICK * tick;
+    let mut stack = ToastStack::new();
+    for (start, ttl, scope, kind, message) in TOAST_SCRIPT {
+        if tick >= start {
+            stack.push(
+                TOAST_TICK * start,
+                Some(TOAST_TICK * ttl),
+                scope,
+                kind,
+                message,
+            );
+        }
+    }
+    let panes = |id: u32| match id {
+        1 => Some(left),
+        2 => Some(right),
+        _ => None,
+    };
+    stack.render(now, area, panes, &mut cx);
+}
+
+fn toast_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "toast") {
         (case.ratatui)(buffer, area, tick);
     }
 }

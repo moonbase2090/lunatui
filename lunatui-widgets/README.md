@@ -6,9 +6,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 - [`Widget`](src/widget.rs): `render(&self, area, &mut RenderCx)` and `measure(&self, avail: Size) -> Size`.
 - [`RenderCx`](src/render_cx.rs): grid, cluster table, and theme for token-aware drawing. Optional `color-profiles` feature adds `profile` for ANSI16/256 downsampling in `token`.
-- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `bigtext`, `calendar`, `chart`, and `sparkline` forward it. `line-gauge` reserves the same feature.
-
-- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `markdown`, and `sparkline` forward it. `line-gauge` reserves the same feature.
+- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `chart`, `markdown`, `sparkline`, and `toast` forward it. `line-gauge` reserves the same feature.
 - [`Size`](https://docs.rs/lunatui-core/latest/lunatui_core/struct.Size.html) lives in `lunatui-core` and is re-exported here.
 
 ## Widgets (v0.1.0)
@@ -26,6 +24,8 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 `MarkdownView` is behind the `markdown` feature. It lays a parsed `lunatui_text::markdown::Document` out at the width it is given and draws headings, wrapped paragraphs with emphasis, code, and links, lists with task markers, block quotes, code blocks, tables, and rules. `scroll` moves it by rows and `content_height` sizes a scrollbar; every cell of the area is rewritten, and `background` keeps a panel color.
 
 `SplitTree` holds nested splits: each divides its area between two panes or further splits at a ratio (in thousandths) with optional minimum sizes, and one pane can be zoomed to fill everything. `layout` returns each pane's cells and each divider's one-cell line for drawing and hit testing, `SplitDrag` turns pointer press, drag, and release on a divider into cell-exact resizing that stops at the minimums (and can cancel), and `SplitLayout::render_dividers` draws the lines.
+
+`ToastStack` is behind the `toast` feature. It holds timed messages and takes the time from the caller (a `Duration`, such as a virtual clock's `now`), so expiry is deterministic. A toast is scoped to a pane (a boxed message in the pane's bottom-right corner, newest nearest the corner) or to the status rows (one line each, right aligned). `placements` returns each shown toast's cells and layer for `HitMap`, and `render` draws them with theme colors for the kind.
 
 `Sparkline` is behind the `sparkline` feature. It draws one column per sample with the eight block steps, matches ratatui when given an explicit style, and otherwise paints from theme tokens for the current `WidgetState`.
 

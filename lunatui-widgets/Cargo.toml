@@ -21,6 +21,7 @@ sparkline = ["widget-state"]
 chart = ["widget-state"]
 
 barchart = ["widget-state"]
+toast = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -128,3 +129,8 @@ required-features = ["barchart"]
 name = "markdown_view"
 path = "tests/markdown_view.rs"
 required-features = ["markdown"]
+
+[[test]]
+name = "toast"
+path = "tests/toast.rs"
+required-features = ["toast"]
