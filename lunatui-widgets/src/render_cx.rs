@@ -318,6 +318,15 @@ impl<'a> RenderCx<'a> {
     }
 }
 
+pub(crate) fn clip_to_coordinates(area: Rect) -> Rect {
+    Rect::new(
+        area.x,
+        area.y,
+        area.width.min(u16::MAX - area.x),
+        area.height.min(u16::MAX - area.y),
+    )
+}
+
 pub(crate) fn patch_style(base: Style, over: Style) -> Style {
     Style {
         fg: if over.fg == Color::Default {

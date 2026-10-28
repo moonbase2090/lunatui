@@ -3,6 +3,7 @@
 
 use lunatui_core::{Rect, Size, Style};
 
+use crate::render_cx::clip_to_coordinates;
 use crate::{RenderCx, Widget};
 
 /// Scrollbar for a virtualized viewport, vertical by default.
@@ -59,6 +60,7 @@ impl Scrollbar {
 
 impl Widget for Scrollbar {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let area = clip_to_coordinates(area);
         if area.width == 0 || area.height == 0 || self.content_len == 0 {
             return;
         }
@@ -77,9 +79,9 @@ impl Widget for Scrollbar {
         );
         for step in 0..track_len {
             let (x, y) = if self.horizontal {
-                (area.x + step, area.y)
+                (area.x.saturating_add(step), area.y)
             } else {
-                (area.x, area.y + step)
+                (area.x, area.y.saturating_add(step))
             };
             if step >= thumb_at && step < thumb_at.saturating_add(thumb_len) {
                 cx.put_str(x, y, thumb, self.thumb_style);

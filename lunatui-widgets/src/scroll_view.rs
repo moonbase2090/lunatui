@@ -4,6 +4,7 @@
 use lunatui_core::{Attrs, Grid, Rect, Size, Style};
 use lunatui_theme::Token;
 
+use crate::render_cx::clip_to_coordinates;
 use crate::{RenderCx, Scrollbar, Widget, WidgetState};
 
 /// When a [`ScrollView`] draws a scrollbar.
@@ -254,6 +255,7 @@ impl<W> ScrollView<W> {
     /// The part of `area` that shows content, after the scrollbars take their row and column.
     #[must_use]
     pub fn viewport(&self, area: Rect) -> Rect {
+        let area = clip_to_coordinates(area);
         let (horizontal, vertical) = self.bars(area);
         Rect::new(
             area.x,
@@ -311,6 +313,7 @@ impl<W> ScrollView<W> {
 
 impl<W: Widget> Widget for ScrollView<W> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let area = clip_to_coordinates(area);
         if area.width == 0 || area.height == 0 {
             return;
         }
@@ -328,7 +331,10 @@ impl<W: Widget> Widget for ScrollView<W> {
             let shown = Rect::new(x, y, viewport.width, viewport.height);
             cx.blit(&canvas, shown, area.x, area.y);
         }
-        let (track, thumb) = self.bar_styles(cx, (area.x + area.width - 1, area.y));
+        let (track, thumb) = self.bar_styles(
+            cx,
+            (area.x.saturating_add(area.width.saturating_sub(1)), area.y),
+        );
         if vertical && viewport.height > 0 {
             Scrollbar::vertical(
                 usize::from(self.size.height),
@@ -338,7 +344,12 @@ impl<W: Widget> Widget for ScrollView<W> {
             .track_style(track)
             .thumb_style(thumb)
             .render(
-                Rect::new(area.x + viewport.width, area.y, 1, viewport.height),
+                Rect::new(
+                    area.x.saturating_add(viewport.width),
+                    area.y,
+                    1,
+                    viewport.height,
+                ),
                 cx,
             );
         }
@@ -351,7 +362,12 @@ impl<W: Widget> Widget for ScrollView<W> {
             .track_style(track)
             .thumb_style(thumb)
             .render(
-                Rect::new(area.x, area.y + viewport.height, viewport.width, 1),
+                Rect::new(
+                    area.x,
+                    area.y.saturating_add(viewport.height),
+                    viewport.width,
+                    1,
+                ),
                 cx,
             );
         }

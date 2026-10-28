@@ -409,3 +409,84 @@ fn content_with_its_own_foreground_keeps_it_on_the_panel_background() -> Result<
     );
     Ok(())
 }
+
+fn edge_row(popup: &Popup<Text>, grid: (u16, u16), area: Rect, row: u16) -> String {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut target = Grid::new(grid.0, grid.1);
+    let mut clusters = ClusterTable::new();
+    popup.render(area, &mut RenderCx::new(&mut target, &mut clusters, &theme));
+    target.row_display(row, &clusters)
+}
+
+fn tail(row: &str, cells: usize) -> String {
+    let chars: Vec<char> = row.chars().collect();
+    chars[chars.len() - cells..].iter().collect()
+}
+
+#[test]
+fn a_popup_at_the_right_coordinate_edge_is_clipped_to_the_last_column() {
+    let popup = plain("abc").border_type(BorderType::Plain);
+    let area = Rect::new(u16::MAX - 5, 0, 10, 8);
+    assert_eq!(popup.area(area), Rect::new(u16::MAX - 5, 2, 5, 3));
+    let grid = (u16::MAX, 8);
+    assert_eq!(tail(&edge_row(&popup, grid, area, 2), 5), "┌───┐");
+    assert_eq!(tail(&edge_row(&popup, grid, area, 3), 5), "│abc│");
+    assert_eq!(tail(&edge_row(&popup, grid, area, 4), 5), "└───┘");
+}
+
+#[test]
+fn a_popup_at_the_bottom_coordinate_edge_is_clipped_to_the_last_row() {
+    let popup = plain("abc").border_type(BorderType::Plain);
+    let area = Rect::new(0, u16::MAX - 5, 10, 8);
+    assert_eq!(popup.area(area), Rect::new(2, u16::MAX - 4, 5, 3));
+    let grid = (10, u16::MAX);
+    assert_eq!(edge_row(&popup, grid, area, u16::MAX - 4), "  ┌───┐   ");
+    assert_eq!(edge_row(&popup, grid, area, u16::MAX - 3), "  │abc│   ");
+    assert_eq!(edge_row(&popup, grid, area, u16::MAX - 2), "  └───┘   ");
+}
+
+#[test]
+fn every_placement_at_a_coordinate_edge_stays_inside_the_representable_area() {
+    let corner = Rect::new(u16::MAX - 2, u16::MAX - 2, 2, 1);
+    let placements = [
+        Placement::Center,
+        Placement::At(u16::MAX, u16::MAX),
+        Placement::Below(corner),
+        Placement::Above(corner),
+        Placement::Right(corner),
+        Placement::Left(corner),
+    ];
+    let edges = [
+        (
+            Rect::new(u16::MAX - 5, 0, 10, 8),
+            Rect::new(u16::MAX - 5, 0, 5, 8),
+        ),
+        (
+            Rect::new(0, u16::MAX - 5, 10, 8),
+            Rect::new(0, u16::MAX - 5, 10, 5),
+        ),
+        (
+            Rect::new(u16::MAX - 5, u16::MAX - 5, 10, 10),
+            Rect::new(u16::MAX - 5, u16::MAX - 5, 5, 5),
+        ),
+    ];
+    for (area, room) in edges {
+        for placement in placements {
+            let popup = Popup::new(Text("abc")).placement(placement);
+            let drawn = popup.area(area);
+            assert!(
+                drawn.x >= room.x
+                    && drawn.y >= room.y
+                    && drawn.x - room.x + drawn.width <= room.width
+                    && drawn.y - room.y + drawn.height <= room.height,
+                "{placement:?} in {area:?} drew at {drawn:?}"
+            );
+            let theme = Theme::builtin(Variant::Dark);
+            let mut grid = Grid::new(4, 4);
+            let before = grid.clone();
+            let mut clusters = ClusterTable::new();
+            popup.render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+            assert_eq!(grid, before, "{placement:?} in {area:?} escaped the grid");
+        }
+    }
+}

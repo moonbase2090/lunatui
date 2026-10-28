@@ -5,6 +5,7 @@ use lunatui_core::{Attrs, Color, Rect, Size, Style};
 use lunatui_theme::Token;
 
 use crate::overlay::FocusTrap;
+use crate::render_cx::clip_to_coordinates;
 use crate::{Block, BorderType, Overlay, RenderCx, Widget, WidgetState};
 
 /// Where a [`Popup`] opens inside its area.
@@ -279,6 +280,7 @@ impl<W: Widget> Popup<W> {
     /// Where the popup is drawn inside `area`.
     #[must_use]
     pub fn area(&self, area: Rect) -> Rect {
+        let area = clip_to_coordinates(area);
         let inner = Size::new(area.width.saturating_sub(2), area.height.saturating_sub(2));
         let wanted = self.size.unwrap_or_else(|| self.content.measure(inner));
         let size = Size::new(
@@ -290,8 +292,8 @@ impl<W: Widget> Popup<W> {
             Some(at) => at,
             None => place(self.placement, area, size),
         };
-        let max_x = area.x + area.width - size.width;
-        let max_y = area.y + area.height - size.height;
+        let max_x = area.x.saturating_add(area.width - size.width);
+        let max_y = area.y.saturating_add(area.height - size.height);
         Rect::new(
             x.clamp(area.x, max_x),
             y.clamp(area.y, max_y),
@@ -311,12 +313,14 @@ impl<W: Widget> Popup<W> {
 }
 
 fn place(placement: Placement, area: Rect, size: Size) -> (u16, u16) {
-    let right = area.x + area.width;
-    let bottom = area.y + area.height;
+    let right = area.x.saturating_add(area.width);
+    let bottom = area.y.saturating_add(area.height);
     match placement {
         Placement::Center => (
-            area.x + (area.width - size.width) / 2,
-            area.y + (area.height - size.height) / 2,
+            area.x
+                .saturating_add(area.width.saturating_sub(size.width) / 2),
+            area.y
+                .saturating_add(area.height.saturating_sub(size.height) / 2),
         ),
         Placement::At(x, y) => (x, y),
         Placement::Below(anchor) | Placement::Above(anchor) => {
@@ -376,6 +380,7 @@ impl<W: Widget> Widget for Panel<'_, W> {
 
 impl<W: Widget> Widget for Popup<W> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let area = clip_to_coordinates(area);
         if area.width == 0 || area.height == 0 {
             return;
         }

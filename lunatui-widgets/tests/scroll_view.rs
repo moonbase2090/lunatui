@@ -365,3 +365,64 @@ fn a_viewport_past_the_content_is_cleared_and_keeps_its_background() -> Result<(
     );
     Ok(())
 }
+
+fn edge_rows<W: Widget>(widget: &W, grid: (u16, u16), area: Rect, rows: &[u16]) -> Vec<String> {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut target = Grid::new(grid.0, grid.1);
+    let mut clusters = ClusterTable::new();
+    widget.render(area, &mut RenderCx::new(&mut target, &mut clusters, &theme));
+    rows.iter()
+        .map(|row| target.row_display(*row, &clusters))
+        .collect()
+}
+
+fn tail(row: &str, cells: usize) -> String {
+    let chars: Vec<char> = row.chars().collect();
+    chars[chars.len() - cells..].iter().collect()
+}
+
+#[test]
+fn a_view_at_the_right_coordinate_edge_is_clipped_to_the_last_column() {
+    let view = letters().scrollbars(ScrollbarVisibility::Always);
+    let area = Rect::new(u16::MAX - 5, 0, 10, 8);
+    assert_eq!(view.viewport(area), Rect::new(u16::MAX - 5, 0, 4, 7));
+    let rows = edge_rows(&view, (u16::MAX, 8), area, &[0, 1, 7]);
+    assert_eq!(tail(&rows[0], 5), "ABCD█");
+    assert_eq!(tail(&rows[1], 5), "KLMN█");
+    assert!(tail(&rows[2], 5).starts_with('━'), "{}", tail(&rows[2], 5));
+}
+
+#[test]
+fn a_view_at_the_bottom_coordinate_edge_is_clipped_to_the_last_row() {
+    let view = letters().scrollbars(ScrollbarVisibility::Always);
+    let area = Rect::new(0, u16::MAX - 5, 8, 10);
+    assert_eq!(view.viewport(area), Rect::new(0, u16::MAX - 5, 7, 4));
+    let mut scroll = ScrollViewState::with_offset(9, 9);
+    view.sync(area, &mut scroll);
+    assert_eq!(scroll.offset(), (3, 6));
+    let rows = edge_rows(&view, (10, u16::MAX), area, &[u16::MAX - 5, u16::MAX - 1]);
+    assert_eq!(rows[0], "ABCDEFG█  ");
+    assert!(rows[1].starts_with('━'), "{}", rows[1]);
+}
+
+#[test]
+fn scrollbars_at_the_coordinate_edges_stop_at_the_last_cell() {
+    let across = edge_rows(
+        &Scrollbar::horizontal(20, 5, 0),
+        (u16::MAX, 1),
+        Rect::new(u16::MAX - 3, 0, 10, 1),
+        &[0],
+    );
+    assert_eq!(tail(&across[0], 4), " ━──");
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(1, u16::MAX);
+    let mut clusters = ClusterTable::new();
+    Scrollbar::vertical(20, 5, 0).render(
+        Rect::new(0, u16::MAX - 3, 1, 10),
+        &mut RenderCx::new(&mut grid, &mut clusters, &theme),
+    );
+    let column: String = (u16::MAX - 4..u16::MAX)
+        .map(|row| grid.row_display(row, &clusters))
+        .collect();
+    assert_eq!(column, " █││");
+}
