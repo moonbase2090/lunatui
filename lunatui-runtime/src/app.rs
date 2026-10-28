@@ -4,6 +4,9 @@
 use lunatui_core::{ClusterTable, Color, Grid, Rect};
 use lunatui_term::Event;
 
+#[cfg(feature = "image-presenter")]
+use crate::frame::RenderFrame;
+
 /// Whether the host loop should keep running.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ControlFlow {
@@ -20,6 +23,16 @@ pub trait App {
 
     /// Draw the current UI into `grid` for `area`.
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable);
+
+    /// Draws one frame with access to the optional image presenter.
+    ///
+    /// The default keeps existing applications source-compatible. Override
+    /// this when widgets should send pixel images through the runtime.
+    #[cfg(feature = "image-presenter")]
+    fn render_frame(&mut self, frame: &mut RenderFrame<'_>, area: Rect) {
+        let (grid, clusters, _) = frame.parts();
+        self.render(grid, area, clusters);
+    }
 
     /// When true, [`run`](crate::run::run) schedules timer-driven frames until this returns false.
     fn needs_animation_frames(&self) -> bool {
