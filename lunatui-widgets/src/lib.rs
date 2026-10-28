@@ -11,6 +11,8 @@ mod block;
 mod borders;
 #[cfg(feature = "calendar")]
 mod calendar;
+#[cfg(feature = "chart")]
+mod chart;
 mod gauge;
 #[cfg(feature = "image")]
 mod image;
@@ -46,6 +48,8 @@ pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
+#[cfg(feature = "chart")]
+pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition, Marker};
 pub use gauge::Gauge;
 #[cfg(feature = "image")]
 pub use image::Image;
