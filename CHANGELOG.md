@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `KeyHintBar`, behind the `key-hints` feature, renders the first registered shortcut for each command in the active `Keymap`.
+
 ## [0.1.13] - 2026-10-28
 
 ### Added
