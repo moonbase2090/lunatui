@@ -35,6 +35,10 @@ fn draws_current_keymap_commands_in_registration_order() {
         grid.row_display(0, &clusters)
             .starts_with("[Ctrl+S] Save  [Q] Quit")
     );
+    assert_eq!(
+        grid.get(23, 0).map(lunatui_core::Cell::style),
+        Some(Style::new())
+    );
 }
 
 #[test]
