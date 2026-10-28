@@ -14,6 +14,10 @@ Every PR adds its entry under **Unreleased**.
 - `Form` container, behind the `form` feature: labelled fields with a label column, an input area for the caller's own widget, and a message row; required markers, dim hints, and fail-colored validation messages from theme tokens; `layout` for drawing and hit testing; `step` for tab-order focus that wraps and skips disabled fields; and `check_required`, `is_valid`, and `first_error` for validation.
 - `Popup` and `ScrollView` containers in `lunatui-widgets`, behind the opt-in `popup` and `scroll-view` features. `Popup` is a titled, bordered panel on `Overlay`: centred, at a point, or anchored beside a rectangle (flipping when there is no room), draggable through `PopupState`, with a backdrop that fades what is behind toward the surface. `ScrollView` draws a widget into an offscreen grid larger than the screen and shows part of it, with vertical and horizontal scrollbars and `ScrollViewState` for scrolling and paging. Both take their colors from theme tokens and the `WidgetState`. `Grid::blit` (opt-in `blit` feature in `lunatui-core`) copies a region between grids, and `Scrollbar::horizontal` comes with `scroll-view`.
 
+### Changed
+
+- `Block` draws its titles without allocating on each render; a titled block renders exactly as before.
+
 ## [0.1.14] - 2026-10-28
 
 ### Added
