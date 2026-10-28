@@ -83,9 +83,9 @@ Screenshot: [docs/media/toast.png](docs/media/toast.png). Recorded with `scripts
 
 ### Tab reordering
 
-A boxed tab strip whose tabs are dragged with the pointer: pressing a tab selects it, the status line says a drag is under way, and releasing over another tab moves it there with the selection following the tab. Three drags run: forward, to the front, and back.
+A release pipelines screen with a boxed tab strip reordered by the pointer. Pressing a tab selects it and lifts it off the strip. While it follows the pointer, the other tabs slide aside and an empty slot marks where it will land. On release it settles into that slot, and the selection stays on it. Three drags run: Builds forward, Deploys to the front, and Logs to the end. Each tab shows live content: a builds table with a running build, deploys with a rollout in progress, and a streaming log.
 
-<img src="docs/media/tabs-drag.webp" alt="TabsDrag: a boxed tab strip with tabs dragged into a new order, the grabbed tab staying selected, in the dark theme" width="1028">
+<img src="docs/media/tabs-drag.webp" alt="TabsDrag: a tab lifted off a boxed strip and dropped into a new position over builds, deploys and logs panes, in the dark theme" width="1028">
 
 Screenshot: [docs/media/tabs-drag.png](docs/media/tabs-drag.png). Recorded with `scripts/record-showcase.sh` (`CASE=tabs-drag`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
