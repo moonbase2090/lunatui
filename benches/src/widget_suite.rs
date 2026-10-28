@@ -439,8 +439,12 @@ fn key_hints_lunatui(
 
 fn key_hints_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
     let theme = Theme::builtin(Variant::Dark);
-    let key = rat_base().fg(rat_color(theme.resolve(lunatui_theme::Token::Accent)));
-    let title = rat_base().fg(rat_color(theme.resolve(lunatui_theme::Token::TextPrimary)));
+    let key = RatStyle::new()
+        .fg(rat_color(theme.resolve(lunatui_theme::Token::Accent)))
+        .bg(RatColor::Reset);
+    let title = RatStyle::new()
+        .fg(rat_color(theme.resolve(lunatui_theme::Token::TextPrimary)))
+        .bg(RatColor::Reset);
     let header = rat_text();
     let dim = rat_dim();
     RatParagraph::new(Line::from(Span::styled("RELEASE CONSOLE", header)))
