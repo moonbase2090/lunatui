@@ -9,8 +9,8 @@ Every PR adds its entry under **Unreleased**.
 ## [Unreleased]
 
 ### Added
-
 - `SplitTree` for resizable, nestable split panes with a zoomed pane: `split` and `close` change the tree, `layout` gives every pane's cells and every divider's line, `SplitDrag` resizes a divider cell by cell from pointer events (stopping at minimum sizes, with cancel), and `SplitLayout::render_dividers` draws the lines.
+- `Chart` widget, behind the `chart` feature, with `Dataset`, `Axis`, `GraphType` (scatter, line, bar), `Marker` (braille, half block, dot, block), and `LegendPosition`. Axes carry bounds, labels, and titles; a legend lists named datasets and is hidden when it would take more than half the plot, which `hidden_legend_constraints` changes. Series colors cycle through theme tokens and the axes follow `WidgetState`.
 - `Tabs::tab_areas` and `List::row_areas` report where each visible tab or row sits in an area, and `HitMap::push_indexed` with `HitId::index_in` registers those regions as a group and maps a click back to the item index, so what is drawn is what a click reaches. Z-order follows the `HitMap`: a higher layer over the widget takes the click, and a later registration wins at the same layer.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
@@ -20,11 +20,9 @@ Every PR adds its entry under **Unreleased**.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
 ### Changed
-
 - The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
 
 ### Fixed
-
 - `lunatui-widgets` builds with no features enabled; `Table` styling no longer depends on a widget feature being on.
 - A focused `Image` draws its focus ring over the background already in its area instead of the terminal default.
 
