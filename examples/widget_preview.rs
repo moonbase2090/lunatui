@@ -17,7 +17,12 @@ use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
-    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, FieldArea, Form, FormField, Gauge, GraphType, KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, NumberInput, PaneId, Paragraph, PixelSize, RadioFlow, RadioGroup, RenderCx, Scrollbar, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
+    Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, FieldArea, Form,
+    FormField, Gauge, GraphType, KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly,
+    NumberInput, PaneId, Paragraph, PixelSize, RadioFlow, RadioGroup, RenderCx, Scrollbar, Slider,
+    Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag,
+    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -4855,15 +4860,85 @@ fn sl_bands(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {
 
 fn slider_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
-type NumberField = (&'static str, &'static str, f64, f64, f64, f64, u8, &'static str, i32);
+type NumberField = (
+    &'static str,
+    &'static str,
+    f64,
+    f64,
+    f64,
+    f64,
+    u8,
+    &'static str,
+    i32,
+);
 
 const NM_FIELDS: [NumberField; 6] = [
-    ("Width", "Multiple of 16 pixels", 1920.0, 320.0, 7680.0, 16.0, 0, " px", 10),
-    ("Height", "Multiple of 8 pixels", 1080.0, 240.0, 4320.0, 8.0, 0, " px", 10),
-    ("Frame rate", "Frames per second", 24.0, 1.0, 120.0, 0.01, 2, " fps", 0),
-    ("Quality", "Percent, 0 to 100", 70.0, 0.0, 100.0, 1.0, 0, "%", 3),
-    ("Bitrate", "Megabits per second", 8.0, 0.5, 80.0, 0.5, 1, " Mbps", 4),
-    ("Copies", "Files written per export", 1.0, 1.0, 99.0, 1.0, 0, "", 1),
+    (
+        "Width",
+        "Multiple of 16 pixels",
+        1920.0,
+        320.0,
+        7680.0,
+        16.0,
+        0,
+        " px",
+        10,
+    ),
+    (
+        "Height",
+        "Multiple of 8 pixels",
+        1080.0,
+        240.0,
+        4320.0,
+        8.0,
+        0,
+        " px",
+        10,
+    ),
+    (
+        "Frame rate",
+        "Frames per second",
+        24.0,
+        1.0,
+        120.0,
+        0.01,
+        2,
+        " fps",
+        0,
+    ),
+    (
+        "Quality",
+        "Percent, 0 to 100",
+        70.0,
+        0.0,
+        100.0,
+        1.0,
+        0,
+        "%",
+        3,
+    ),
+    (
+        "Bitrate",
+        "Megabits per second",
+        8.0,
+        0.5,
+        80.0,
+        0.5,
+        1,
+        " Mbps",
+        4,
+    ),
+    (
+        "Copies",
+        "Files written per export",
+        1.0,
+        1.0,
+        99.0,
+        1.0,
+        0,
+        "",
+        1,
+    ),
 ];
 
 const NM_EVENTS: [u32; 4] = [15, 20, 25, 30];
@@ -4921,11 +4996,19 @@ fn number_native(
     let mut cx = RenderCx::new(grid, clusters, theme);
     let fill = Style::new().fg(text).bg(surface);
     let dim = fill.with_attrs(Attrs::new().set_dim(true));
-    let head = Style::new().fg(accent).bg(raised).with_attrs(Attrs::new().set_bold(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
     cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
     cx.put_str(area.x + 1, area.y, "Render queue  ·  export settings", head);
     let left = Rect::new(area.x + 2, area.y + 2, 62, 30);
-    let right = Rect::new(left.x + left.width + 1, left.y, area.width.saturating_sub(left.width + 5), 30);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        30,
+    );
     for (title, pane) in [(" Output ", left), (" Estimate ", right)] {
         Block::bordered()
             .border_type(BorderType::Rounded)
@@ -4952,7 +5035,15 @@ fn number_native(
     nm_estimate(&mut cx, right, tick, [fill, dim]);
     StatusBar::new(" ↑↓ field  ●  − + step  ●  type a value  ●  enter commit  ●  q quit")
         .style(Style::new().fg(text).bg(raised))
-        .render(Rect::new(area.x, area.y + area.height.saturating_sub(1), area.width, 1), &mut cx);
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
 }
 
 fn nm_estimate(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {

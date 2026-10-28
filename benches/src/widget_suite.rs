@@ -15,7 +15,10 @@ use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, RadioGroup, RenderCx, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
+    Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly,
+    NumberInput, Paragraph, PixelSize, RadioGroup, RenderCx, Slider, Sparkline, SplitAxis,
+    SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
