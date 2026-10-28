@@ -23,6 +23,7 @@ canvas = ["widget-state"]
 
 barchart = ["widget-state"]
 toast = ["widget-state"]
+form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
@@ -171,3 +172,18 @@ required-features = ["popup"]
 name = "scroll_view"
 path = "tests/scroll_view.rs"
 required-features = ["scroll-view"]
+
+[[test]]
+name = "toggle"
+path = "tests/toggle.rs"
+required-features = ["toggle"]
+
+[[test]]
+name = "radio_group"
+path = "tests/radio_group.rs"
+required-features = ["radio"]
+
+[[test]]
+name = "form"
+path = "tests/form.rs"
+required-features = ["form"]

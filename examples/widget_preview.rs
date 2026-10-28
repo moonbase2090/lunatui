@@ -18,11 +18,11 @@ use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
-    Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
-    KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
-    RadioFlow, RadioGroup, RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree,
-    StatusBar, TabMove, Table, Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Toggle,
-    VecSource, Widget, WidgetState,
+    Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, FieldArea, Form,
+    FormField, Gauge, GraphType, KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly,
+    PaneId, Paragraph, PixelSize, RadioFlow, RadioGroup, RenderCx, Scrollbar, Sparkline, SplitAxis,
+    SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind,
+    ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -87,6 +87,11 @@ const PREVIEWS: &[Preview] = &[
         name: "radio-group",
         native: radio_native,
         baseline: radio_baseline,
+    },
+    Preview {
+        name: "form",
+        native: form_native,
+        baseline: form_baseline,
     },
     Preview {
         name: "calendar",
@@ -4477,6 +4482,212 @@ fn radio_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32)
         (case.ratatui)(buffer, area, tick);
     }
 }
+
+struct FmState {
+    name: String,
+    email: String,
+    password: usize,
+    notes: String,
+    plan: usize,
+    news: bool,
+    focus: Option<usize>,
+    checked: bool,
+    done: bool,
+}
+
+fn fm_prefix(text: &str, count: u32) -> String {
+    text.chars()
+        .take(usize::try_from(count).unwrap_or(0))
+        .collect()
+}
+
+fn fm_state(tick: u32) -> FmState {
+    let password = if tick >= 210 {
+        (6 + (tick - 210) / 3).min(9)
+    } else {
+        ((tick.saturating_sub(52)) / 4).min(6)
+    };
+    let focus = match tick {
+        0..40 => Some(0),
+        40..50 | 160..205 => Some(1),
+        50..80 | 205..232 => Some(2),
+        80..100 => Some(3),
+        100..120 => Some(4),
+        _ => Some(5),
+    };
+    FmState {
+        name: fm_prefix("Ada Lovelace", tick.saturating_sub(4) / 3),
+        email: fm_prefix("ada@example.org", tick.saturating_sub(168) / 2),
+        password: usize::try_from(password).unwrap_or(0),
+        notes: fm_prefix("Beta tester", tick.saturating_sub(124) / 2),
+        plan: usize::from(tick >= 92),
+        news: tick >= 110,
+        focus,
+        checked: tick >= 160,
+        done: tick >= 236,
+    }
+}
+
+fn fm_form(state: &FmState) -> Form {
+    let mut email = FormField::new("Email").required().hint("Used to sign in");
+    let mut password = FormField::new("Password")
+        .required()
+        .hint("At least 8 characters");
+    if state.checked && state.email.is_empty() {
+        email = email.error("Required");
+    }
+    if state.checked && state.password < 8 {
+        password = password.error("Use at least 8 characters");
+    }
+    Form::new([
+        FormField::new("Name")
+            .required()
+            .hint("As it appears on invoices"),
+        email,
+        password,
+        FormField::new("Plan"),
+        FormField::new("Updates"),
+        FormField::new("Notes").hint("Optional"),
+    ])
+    .focus(state.focus)
+}
+
+fn fm_inputs(cx: &mut RenderCx<'_>, areas: &[FieldArea], state: &FmState, colors: [Color; 3]) {
+    let [text, accent, raised] = colors;
+    for area in areas {
+        let focused = state.focus == Some(area.index);
+        let field_bg = if focused {
+            raised
+        } else {
+            cx.token(Token::Surface0)
+        };
+        let field = Style::new().fg(text).bg(field_bg);
+        let input = area.input;
+        match area.index {
+            0 | 1 | 5 => {
+                let value = match area.index {
+                    0 => state.name.clone(),
+                    1 => state.email.clone(),
+                    _ => state.notes.clone(),
+                };
+                let cursor = value.len();
+                TextInput::new(value, cursor)
+                    .style(field)
+                    .field_style(field)
+                    .cursor_style(Style::new().fg(accent).bg(field_bg))
+                    .padding(1)
+                    .show_cursor(focused)
+                    .render(input, cx);
+            }
+            2 => {
+                let dots = "•".repeat(state.password);
+                let cursor = dots.len();
+                TextInput::new(dots, cursor)
+                    .style(field)
+                    .field_style(field)
+                    .cursor_style(Style::new().fg(accent).bg(field_bg))
+                    .padding(1)
+                    .show_cursor(focused)
+                    .render(input, cx);
+            }
+            3 => RadioGroup::new(["Free", "Pro", "Team"])
+                .select(Some(state.plan))
+                .flow(RadioFlow::Horizontal)
+                .gap(3)
+                .focus(focused.then_some(state.plan))
+                .render(input, cx),
+            _ => Toggle::new(state.news)
+                .label("Product news by email")
+                .state(if focused {
+                    WidgetState::Focused
+                } else {
+                    WidgetState::Normal
+                })
+                .render(input, cx),
+        }
+    }
+}
+
+fn form_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Lunatui  ·  Create your account", head);
+    let state = fm_state(tick);
+    let panel = Rect::new(area.x + 2, area.y + 2, 70, 28);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Account details ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(panel, &mut cx);
+    let inner = Rect::new(panel.x + 2, panel.y + 2, panel.width - 4, panel.height - 3);
+    let form = fm_form(&state);
+    let areas = form.layout(inner);
+    form.render(inner, &mut cx);
+    fm_inputs(&mut cx, &areas, &state, [text, accent, raised]);
+    let side = Rect::new(
+        panel.x + panel.width + 1,
+        panel.y,
+        area.width.saturating_sub(panel.width + 5),
+        14,
+    );
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Review ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(side, &mut cx);
+    let plans = ["Free", "Pro", "Team"];
+    for (row, line) in (0_u16..).zip([
+        format!("name      {}", state.name),
+        format!("email     {}", state.email),
+        format!("password  {} characters", state.password),
+        format!("plan      {}", plans[state.plan.min(2)]),
+        format!("updates   {}", if state.news { "on" } else { "off" }),
+        format!("notes     {}", state.notes),
+    ]) {
+        cx.put_str(
+            side.x + 2,
+            side.y + 2 + row,
+            clip_display_prefix(&line, side.width.saturating_sub(4)),
+            fill,
+        );
+    }
+    let attention = usize::from(state.email.is_empty()) + usize::from(state.password < 8);
+    let status = if state.done {
+        String::from(" Account created  ●  welcome email sent")
+    } else if state.checked && attention > 0 {
+        format!(" {attention} field(s) need attention  ●  Tab next  ●  Enter submit")
+    } else {
+        String::from(" Tab next field  ●  Enter submit  ●  Esc cancel")
+    };
+    StatusBar::new(status)
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn form_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];

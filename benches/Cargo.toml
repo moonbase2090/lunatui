@@ -25,7 +25,7 @@ lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
 lunatui-layout = { version = "0.1.14", path = "../lunatui-layout" }
 lunatui-text = { version = "0.1.14", path = "../lunatui-text", features = ["markdown"] }
 lunatui-theme = { version = "0.1.14", path = "../lunatui-theme" }
-lunatui-widgets = { version = "0.1.14", path = "../lunatui-widgets", features = ["barchart", "radio", "toggle", "bigtext", "calendar", "canvas", "chart", "key-hints", "markdown", "popup", "scroll-view", "sparkline", "toast"] }
+lunatui-widgets = { version = "0.1.14", path = "../lunatui-widgets", features = ["barchart", "form", "radio", "toggle", "bigtext", "calendar", "canvas", "chart", "key-hints", "markdown", "popup", "scroll-view", "sparkline", "toast"] }
 lunatui-runtime = { version = "0.1.14", path = "../lunatui-runtime", features = ["keymap"] }
 lunatui-term = { version = "0.1.14", path = "../lunatui-term" }
 lunatui-prismattyc = { version = "0.1.14", path = "../lunatui-prismattyc" }
