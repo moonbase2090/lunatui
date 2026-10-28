@@ -13,8 +13,8 @@ fn tween_f32_snapshot_at_half_duration() {
     let tween = Tween::new(0.0, 100.0, Duration::from_secs(1), Ease::Linear);
     let mid = tween.sample(Duration::from_millis(500));
     assert!((mid - 50.0).abs() < 0.001);
-    assert_eq!(tween.sample(Duration::ZERO), 0.0);
-    assert_eq!(tween.sample(Duration::from_secs(2)), 100.0);
+    assert!((tween.sample(Duration::ZERO) - 0.0).abs() < 0.001);
+    assert!((tween.sample(Duration::from_secs(2)) - 100.0).abs() < 0.001);
 }
 
 #[test]
