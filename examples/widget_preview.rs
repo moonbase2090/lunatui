@@ -4411,7 +4411,7 @@ impl CanvasBoard {
             });
             ctx.layer();
             let angle = sweep.rem_euclid(core::f64::consts::TAU);
-            ctx.marker(Marker::Sextant);
+            ctx.marker(Marker::Braille);
             ctx.draw(&Line {
                 x1: 0.0,
                 y1: 0.0,
@@ -4453,7 +4453,7 @@ impl CanvasBoard {
         let accent = self.accent;
         Canvas::new(move |ctx| {
             let wave = |x: f64| (x * 0.11 + phase).sin() * half_h * 0.64;
-            ctx.marker(Marker::Sextant);
+            ctx.marker(Marker::Braille);
             let mut previous = (-half_w, wave(-half_w));
             let mut x = -half_w + 0.5;
             while x <= half_w {
@@ -4532,7 +4532,7 @@ impl CanvasBoard {
                 style: Style::new().fg(edge),
             });
             ctx.layer();
-            ctx.marker(Marker::Sextant);
+            ctx.marker(Marker::Braille);
             for pair in route.windows(2) {
                 ctx.draw(&Line {
                     x1: pair[0].0,
