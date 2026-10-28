@@ -441,8 +441,9 @@ fn key_hints_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
     let theme = Theme::builtin(Variant::Dark);
     let key = rat_base().fg(rat_color(theme.resolve(lunatui_theme::Token::Accent)));
     let title = rat_base().fg(rat_color(theme.resolve(lunatui_theme::Token::TextPrimary)));
+    let header = rat_text();
     let dim = rat_dim();
-    RatParagraph::new(Line::from(Span::styled("RELEASE CONSOLE", title)))
+    RatParagraph::new(Line::from(Span::styled("RELEASE CONSOLE", header)))
         .style(rat_base())
         .render(RatRect::new(area.x, area.y, area.width, 1), buf);
     RatParagraph::new(Line::from(Span::styled(
