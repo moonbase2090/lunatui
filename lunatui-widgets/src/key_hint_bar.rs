@@ -51,7 +51,7 @@ impl Widget for KeyHintBar<'_> {
                 break;
             }
 
-            let key = format!("[{}]", chord);
+            let key = format!("[{chord}]");
             let key_draw = clip_display_prefix(&key, end - x);
             cx.put_str(x, area.y, key_draw, key_style);
             x = x.saturating_add(u16::try_from(width(key_draw)).unwrap_or(u16::MAX));

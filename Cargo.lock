@@ -1096,6 +1096,7 @@ dependencies = [
  "lunatui-image",
  "lunatui-layout",
  "lunatui-runtime",
+ "lunatui-term",
  "lunatui-test",
  "lunatui-text",
  "lunatui-theme",

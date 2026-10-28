@@ -35,6 +35,7 @@ unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
 lunatui-test = { version = "0.1.12", path = "../lunatui-test" }
+lunatui-term = { version = "0.1.12", path = "../lunatui-term" }
 ratatui = "=0.30.2"
 proptest = "=1.9.0"
 time = { version = "=0.3.55", default-features = false }
