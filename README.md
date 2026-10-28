@@ -145,5 +145,4 @@ A release console. The build log is a `ScrollView` wider and taller than its pan
 
 ![Popup and ScrollView: a release console in the dark theme](docs/media/popup-scrollview.gif)
 
-Screenshot: [docs/media/popup-scrollview.png](docs/media/popup-scrollview.png). Recorded with `scripts/record-showcase.sh` (`CASE=popup-scrollview`, 120×36, dark, 10 seconds at 30 fps). Side by side with ratatui, `tui-popup` and `tui-scrollview` from `scripts/record-widget.sh`: [80×24](docs/media/popup-scrollview-80x24-truecolor.mp4), [200×60](docs/media/popup-scrollview-200x60-truecolor.mp4), and 16 colors at [80×24](docs/media/popup-scrollview-80x24-ansi16.mp4) and [200×60](docs/media/popup-scrollview-200x60-ansi16.mp4).
-
+Screenshot: [docs/media/popup-scrollview.png](docs/media/popup-scrollview.png). Recorded with `scripts/record-showcase.sh` (`CASE=popup-scrollview`, 120×36 at 2× scale, 240 frames at 30 fps, dark, lossless animated WebP, about 10 seconds).
