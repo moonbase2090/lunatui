@@ -15,9 +15,10 @@ use lunatui_core::{
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
-    Alignment, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Date, DateStyle,
-    List, MarkdownView, Monthly, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar,
-    Widget, WidgetState,
+    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Chart,
+    Dataset, Date, DateStyle, GraphType, LegendPosition, List, MarkdownView, Marker, Monthly,
+    Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar, ToastKind, ToastScope,
+    ToastStack, Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -40,6 +41,11 @@ struct Preview {
 
 const PREVIEWS: &[Preview] = &[
     Preview {
+        name: "toast",
+        native: toast_native,
+        baseline: toast_baseline,
+    },
+    Preview {
         name: "calendar",
         native: calendar_native,
         baseline: calendar_baseline,
@@ -48,6 +54,11 @@ const PREVIEWS: &[Preview] = &[
         name: "bigtext",
         native: bigtext_native,
         baseline: bigtext_baseline,
+    },
+    Preview {
+        name: "chart",
+        native: chart_native,
+        baseline: chart_baseline,
     },
     Preview {
         name: "barchart",
@@ -2154,6 +2165,163 @@ fn markdown_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u
     }
 }
 
+const TOAST_TICK: Duration = Duration::from_millis(50);
+const TOAST_SCRIPT: [(u32, u32, ToastScope, ToastKind, &str); 7] = [
+    (
+        20,
+        70,
+        ToastScope::Pane(1),
+        ToastKind::Success,
+        "api 4.12 deployed",
+    ),
+    (
+        45,
+        80,
+        ToastScope::Pane(1),
+        ToastKind::Info,
+        "web: 3 checks queued",
+    ),
+    (
+        70,
+        90,
+        ToastScope::Pane(2),
+        ToastKind::Warning,
+        "Log stream is lagging",
+    ),
+    (
+        95,
+        60,
+        ToastScope::Status,
+        ToastKind::Info,
+        "Syncing with origin",
+    ),
+    (
+        110,
+        100,
+        ToastScope::Pane(1),
+        ToastKind::Error,
+        "jobs: migration failed",
+    ),
+    (
+        130,
+        50,
+        ToastScope::Status,
+        ToastKind::Success,
+        "Synced 14 files",
+    ),
+    (
+        150,
+        70,
+        ToastScope::Pane(2),
+        ToastKind::Info,
+        "Tailing build 4821",
+    ),
+];
+
+fn toast_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    let raised = theme.resolve(Token::Surface1);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let body = Rect::new(area.x, area.y, area.width, area.height.saturating_sub(1));
+    let left = Rect::new(body.x, body.y, body.width / 2, body.height);
+    let right = Rect::new(
+        left.x + left.width,
+        body.y,
+        body.width - left.width,
+        body.height,
+    );
+    for (title, pane) in [(" Pipelines ", left), (" Activity ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let pipelines = [
+        "api", "web", "jobs", "edge", "docs", "search", "billing", "auth",
+    ];
+    for (row, name) in (0_u16..).zip(pipelines) {
+        let y = left.y + 1 + row;
+        if y + 1 >= left.y + left.height {
+            break;
+        }
+        let state = if name == "jobs" && tick >= 110 {
+            "failed "
+        } else {
+            "passing"
+        };
+        let line = format!(
+            " {name:<10}{state}  #{}",
+            4800 + u32::from(row) * 3 + tick / 40
+        );
+        cx.put_str(
+            left.x + 1,
+            y,
+            clip_display_prefix(&line, left.width.saturating_sub(2)),
+            fill,
+        );
+    }
+    for row in 0..right.height.saturating_sub(2) {
+        let second = tick / 4 + u32::from(row);
+        let line = format!(
+            " 12:{:02}:{:02}  worker-{}  ok",
+            (second / 60) % 60,
+            second % 60,
+            row % 5 + 1
+        );
+        cx.put_str(
+            right.x + 1,
+            right.y + 1 + row,
+            clip_display_prefix(&line, right.width.saturating_sub(2)),
+            dim,
+        );
+    }
+    StatusBar::new(" main  ●  3 workers  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(area.x, area.y + body.height, area.width, 1),
+            &mut cx,
+        );
+    let now = TOAST_TICK * tick;
+    let mut stack = ToastStack::new();
+    for (start, ttl, scope, kind, message) in TOAST_SCRIPT {
+        if tick >= start {
+            stack.push(
+                TOAST_TICK * start,
+                Some(TOAST_TICK * ttl),
+                scope,
+                kind,
+                message,
+            );
+        }
+    }
+    let panes = |id: u32| match id {
+        1 => Some(left),
+        2 => Some(right),
+        _ => None,
+    };
+    stack.render(now, area, panes, &mut cx);
+}
+
+fn toast_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "toast") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
 const BAR_REGIONS: [(&str, u32); 6] = [
@@ -2403,6 +2571,219 @@ fn barchart_native(
 
 fn barchart_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "barchart") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+struct ChartBoard {
+    text: Color,
+    surface: Color,
+    edge: Color,
+    tick: u32,
+}
+
+fn chart_wave(tick: u32, index: u32, base: f64, swing: f64, speed: f64, phase: f64) -> f64 {
+    let x = f64::from(index);
+    let t = f64::from(tick) * speed;
+    base + swing * ((x * 0.22 + t + phase).sin() * 0.7 + (x * 0.61 + t * 1.7 + phase).cos() * 0.3)
+}
+
+fn trace(tick: u32, base: f64, swing: f64, speed: f64, phase: f64) -> Vec<(f64, f64)> {
+    (0..64_u32)
+        .map(|index| {
+            (
+                f64::from(index),
+                chart_wave(tick, index, base, swing, speed, phase).max(0.0),
+            )
+        })
+        .collect()
+}
+
+impl ChartBoard {
+    fn new(cx: &RenderCx<'_>, tick: u32) -> Self {
+        Self {
+            text: cx.token(Token::TextPrimary),
+            surface: cx.token(Token::Surface0),
+            edge: cx.token(Token::Surface1),
+            tick,
+        }
+    }
+
+    fn panel(&self, title: &str, area: Rect, cx: &mut RenderCx<'_>) -> Rect {
+        let panel = Block::bordered()
+            .title(format!(" {title} "))
+            .style(Style::new().fg(self.text).bg(self.surface))
+            .border_style(Style::new().fg(self.edge).bg(self.surface))
+            .title_style(Style::new().fg(self.text).bg(self.surface));
+        panel.render(area, cx);
+        let inner = panel.inner(area);
+        Rect::new(
+            inner.x + 1,
+            inner.y,
+            inner.width.saturating_sub(2),
+            inner.height,
+        )
+    }
+
+    fn fill(&self) -> Style {
+        Style::new().fg(self.text).bg(self.surface)
+    }
+
+    fn throughput(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let plot = self.panel("Throughput", area, cx);
+        let requests = trace(self.tick, 330.0, 150.0, 0.11, 0.0);
+        let p95 = trace(self.tick, 190.0, 80.0, 0.09, 2.0);
+        let errors = trace(self.tick, 60.0, 40.0, 0.14, 4.0);
+        let sets = [
+            Dataset::new(&requests)
+                .name("requests")
+                .graph_type(GraphType::Line),
+            Dataset::new(&p95)
+                .name("p95 ms")
+                .graph_type(GraphType::Line),
+            Dataset::new(&errors)
+                .name("errors")
+                .graph_type(GraphType::Line),
+        ];
+        Chart::new(&sets)
+            .background(self.fill())
+            .x_axis(
+                Axis::new()
+                    .title("last 64 s")
+                    .bounds([0.0, 63.0])
+                    .labels(&["-60s", "-30s", "now"]),
+            )
+            .y_axis(
+                Axis::new()
+                    .title("per second")
+                    .bounds([0.0, 500.0])
+                    .labels(&["0", "250", "500"]),
+            )
+            .render(plot, cx);
+    }
+
+    fn scatter(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let plot = self.panel("Latency by request size", area, cx);
+        let point = |index: u32, drift: f64, spread: f64| {
+            let x = f64::from(index) * 0.5 + drift;
+            let y = 20.0
+                + x * 3.4
+                + spread * (f64::from(index) * 2.399 + f64::from(self.tick) * 0.05).sin();
+            (x.rem_euclid(32.0), y)
+        };
+        let fast: Vec<(f64, f64)> = (0..48).map(|index| point(index, 0.0, 14.0)).collect();
+        let slow: Vec<(f64, f64)> = (0..36).map(|index| point(index, 3.0, 30.0)).collect();
+        let sets = [
+            Dataset::new(&fast).name("cached").marker(Marker::Dot),
+            Dataset::new(&slow).name("cold").marker(Marker::Dot),
+        ];
+        Chart::new(&sets)
+            .background(self.fill())
+            .x_axis(
+                Axis::new()
+                    .title("KiB")
+                    .bounds([0.0, 32.0])
+                    .labels(&["0", "16", "32"]),
+            )
+            .y_axis(
+                Axis::new()
+                    .title("ms")
+                    .bounds([0.0, 160.0])
+                    .labels(&["0", "80", "160"]),
+            )
+            .legend_position(Some(LegendPosition::BottomRight))
+            .render(plot, cx);
+    }
+
+    fn histogram(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let plot = self.panel("Requests by hour", area, cx);
+        let bars: Vec<(f64, f64)> = (0..24_u32)
+            .map(|hour| {
+                let day = (f64::from(hour) / 24.0 * std::f64::consts::TAU - 1.9).sin() * 0.5 + 0.5;
+                let beat = (f64::from(self.tick) * 0.12 + f64::from(hour) * 0.7).sin() * 0.06;
+                (
+                    f64::from(hour),
+                    (day * 0.8 + 0.12 + beat).clamp(0.0, 1.0) * 100.0,
+                )
+            })
+            .collect();
+        let sets = [Dataset::new(&bars).graph_type(GraphType::Bar)];
+        Chart::new(&sets)
+            .background(self.fill())
+            .x_axis(
+                Axis::new()
+                    .bounds([0.0, 23.0])
+                    .labels(&["00:00", "12:00", "23:00"]),
+            )
+            .y_axis(Axis::new().bounds([0.0, 100.0]).labels(&["0", "50", "100"]))
+            .render(plot, cx);
+    }
+
+    fn saturation(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let plot = self.panel("Saturation", area, cx);
+        let cpu = trace(self.tick, 62.0, 26.0, 0.1, 1.0);
+        let memory = trace(self.tick, 44.0, 10.0, 0.06, 3.0);
+        let sets = [
+            Dataset::new(&cpu)
+                .name("cpu %")
+                .marker(Marker::HalfBlock)
+                .graph_type(GraphType::Line),
+            Dataset::new(&memory)
+                .name("mem %")
+                .marker(Marker::HalfBlock)
+                .graph_type(GraphType::Line),
+        ];
+        Chart::new(&sets)
+            .background(self.fill())
+            .state(WidgetState::Focused)
+            .x_axis(Axis::new().bounds([0.0, 63.0]).labels(&["-60s", "now"]))
+            .y_axis(Axis::new().bounds([0.0, 100.0]).labels(&["0", "50", "100"]))
+            .legend_position(Some(LegendPosition::TopLeft))
+            .render(plot, cx);
+    }
+}
+
+fn chart_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let board = ChartBoard::new(&cx, tick);
+    let wide = area.width >= 100 && area.height >= 30;
+    let top = (area.height * 55 / 100).max(8);
+    let split = if wide {
+        area.width * 60 / 100
+    } else {
+        area.width
+    };
+    board.throughput(Rect::new(area.x, area.y, split, top), &mut cx);
+    board.histogram(
+        Rect::new(area.x, area.y + top, split, area.height.saturating_sub(top)),
+        &mut cx,
+    );
+    if wide {
+        let rest = area.width - split;
+        board.scatter(Rect::new(area.x + split, area.y, rest, top), &mut cx);
+        board.saturation(
+            Rect::new(
+                area.x + split,
+                area.y + top,
+                rest,
+                area.height.saturating_sub(top),
+            ),
+            &mut cx,
+        );
+    }
+}
+
+fn chart_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "chart") {
         (case.ratatui)(buffer, area, tick);
     }
 }

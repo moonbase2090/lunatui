@@ -146,6 +146,7 @@ impl<'a> RenderCx<'a> {
         feature = "barchart",
         feature = "bigtext",
         feature = "calendar",
+        feature = "chart",
         feature = "image",
         feature = "sparkline"
     ))]
@@ -159,7 +160,7 @@ impl<'a> RenderCx<'a> {
         self.grid.put_char(x, y, patched, glyph, self.clusters);
     }
 
-    #[cfg(feature = "barchart")]
+    #[cfg(any(feature = "barchart", feature = "chart"))]
     pub(crate) fn clear_area(&mut self, area: Rect, style: Style) {
         let blank = lunatui_core::GlyphSlot::inline_scalar(' ');
         for y in area.y..area.y.saturating_add(area.height) {
