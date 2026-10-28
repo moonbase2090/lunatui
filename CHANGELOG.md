@@ -17,6 +17,8 @@ Every PR adds its entry under **Unreleased**.
 
 - The `Table` highlight style now covers the selected row's full width, gaps included, as a ratatui row highlight does.
 
+- An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
+
 ## [0.1.12] - 2026-10-27
 
 ### Added

@@ -18,10 +18,13 @@ line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
+image = ["color-profiles", "dep:lunatui-image", "widget-state"]
+image-decode = ["image", "lunatui-image/decode"]
 
 [dependencies]
 lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
 lunatui-layout = { version = "0.1.12", path = "../lunatui-layout" }
+lunatui-image = { version = "0.1.12", path = "../lunatui-image", optional = true }
 lunatui-text = { version = "0.1.12", path = "../lunatui-text" }
 lunatui-theme = { version = "0.1.12", path = "../lunatui-theme" }
 unicode-segmentation = "=1.13.3"
@@ -90,3 +93,8 @@ required-features = ["sparkline"]
 [[test]]
 name = "spinner_presets"
 path = "tests/spinner_presets.rs"
+
+[[test]]
+name = "image"
+path = "tests/image.rs"
+required-features = ["image"]
