@@ -595,7 +595,7 @@ impl Chart<'_> {
     }
 
     fn draw_axes(&self, area: Rect, plot: Rect, look: &Look, cx: &mut RenderCx<'_>) {
-        let axis_x = plot.x - 1;
+        let axis_x = plot.x.saturating_sub(1);
         let axis_y = plot.y.saturating_add(plot.height);
         let x_style = self.x_axis.style.unwrap_or(look.axis);
         let y_style = self.y_axis.style.unwrap_or(look.axis);
@@ -607,7 +607,7 @@ impl Chart<'_> {
             put_text(cx, plot.x.saturating_add(column), axis_y, "─", x_style);
         }
         let labels = self.y_axis.labels;
-        let gutter = plot.x - 1 - area.x;
+        let gutter = plot.x.saturating_sub(1).saturating_sub(area.x);
         for (index, label) in labels.iter().enumerate() {
             let row = if labels.len() <= 1 {
                 plot.height - 1
@@ -668,7 +668,7 @@ impl Chart<'_> {
                     .saturating_sub(width / 2)
                     .max(plot.x)
             };
-            let start = start.min(right - width);
+            let start = start.min(right.saturating_sub(width));
             if index > 0 && start <= last_end {
                 continue;
             }
@@ -680,7 +680,14 @@ impl Chart<'_> {
             let title_row = axis_y
                 .saturating_add(1)
                 .saturating_add(u16::from(!labels.is_empty()));
-            put_fit(cx, right - width, title_row, width, title, style);
+            put_fit(
+                cx,
+                right.saturating_sub(width),
+                title_row,
+                width,
+                title,
+                style,
+            );
         }
     }
 
@@ -830,8 +837,8 @@ impl Chart<'_> {
             .map(|(_, name)| label_width(name))
             .max()
             .unwrap_or(0)
-            + 4;
-        let width = inner + 2;
+            .saturating_add(4);
+        let width = inner.saturating_add(2);
         let height = u16::try_from(entries.len())
             .unwrap_or(u16::MAX)
             .saturating_add(2);
@@ -904,7 +911,10 @@ impl Widget for Chart<'_> {
             .labels
             .first()
             .map_or(0, |label| label_width(label).saturating_sub(1));
-        let left = y_labels.max(first_x).min(area.width.saturating_sub(2)) + 1;
+        let left = y_labels
+            .max(first_x)
+            .min(area.width.saturating_sub(2))
+            .saturating_add(1);
         if area.width <= left || area.height <= top + bottom {
             return;
         }
