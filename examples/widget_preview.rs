@@ -18,6 +18,9 @@ use lunatui_widgets::{
     Alignment, BigText, Block, BorderType, Date, DateStyle, Monthly, PixelSize, RenderCx,
     Sparkline, Widget, WidgetState,
 };
+
+#[path = "deploy_board.rs"]
+mod deploy_board;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
@@ -49,6 +52,11 @@ const PREVIEWS: &[Preview] = &[
         name: "sparkline",
         native: sparkline_native,
         baseline: sparkline_baseline,
+    },
+    Preview {
+        name: "deploy",
+        native: deploy_native,
+        baseline: deploy_baseline,
     },
 ];
 
@@ -1937,6 +1945,48 @@ fn sparkline_native(
     }
 }
 
+fn deploy_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    _area: Rect,
+    tick: u32,
+) {
+    deploy_board::draw(grid, clusters, theme, u64::from(tick).saturating_mul(100));
+}
+
+fn deploy_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
+    let accent = match theme.resolve(Token::Accent) {
+        Color::Rgb(red, green, blue) => ratatui::style::Color::Rgb(red, green, blue),
+        Color::Indexed(index) => ratatui::style::Color::Indexed(index),
+        _ => ratatui::style::Color::Reset,
+    };
+    let block = ratatui::widgets::Block::default()
+        .title(" production deploy ")
+        .borders(ratatui::widgets::Borders::ALL);
+    let inner = block.inner(area);
+    ratatui::widgets::Widget::render(block, area, buffer);
+    if inner.width == 0 || inner.height == 0 {
+        return;
+    }
+    ratatui::widgets::Widget::render(
+        ratatui::widgets::Paragraph::new("release 2.4.1    us-west-3    rolling"),
+        RatRect::new(inner.x, inner.y, inner.width, 1),
+        buffer,
+    );
+    let ratio = f64::from(tick % 80) / 80.0;
+    let bar_y = inner.y.saturating_add(inner.height.saturating_sub(3));
+    let bar_h = inner.height.min(3);
+    ratatui::widgets::Widget::render(
+        ratatui::widgets::Gauge::default()
+            .ratio(ratio)
+            .label("rollout")
+            .gauge_style(ratatui::style::Style::default().fg(accent)),
+        RatRect::new(inner.x, bar_y, inner.width, bar_h),
+        buffer,
+    );
+}
+
 fn sparkline_baseline(
     buffer: &mut ratatui::buffer::Buffer,
     area: RatRect,
@@ -1979,9 +2029,10 @@ struct Options {
 
 fn main() -> io::Result<()> {
     let options = parse(&env::args().skip(1).collect::<Vec<_>>())?;
-    let Some(case) = CASES.iter().find(|case| case.name == options.case) else {
+    let case = CASES.iter().find(|case| case.name == options.case);
+    if case.is_none() && preview(&options.case).is_none() {
         return Err(invalid(format!("unknown case: {}", options.case)));
-    };
+    }
     pin_color_output();
     let mut out = io::stdout().lock();
     out.write_all(b"\x1b[?1049h\x1b[?25l")?;
@@ -1994,7 +2045,11 @@ fn main() -> io::Result<()> {
     result
 }
 
-fn play_lunatui(out: &mut impl Write, case: &'static Case, options: &Options) -> io::Result<()> {
+fn play_lunatui(
+    out: &mut impl Write,
+    case: Option<&'static Case>,
+    options: &Options,
+) -> io::Result<()> {
     let theme = Theme::builtin(options.variant);
     let area = Rect::new(0, 0, options.width, options.height);
     let mut previous = Grid::new(options.width, options.height);
@@ -2004,9 +2059,10 @@ fn play_lunatui(out: &mut impl Write, case: &'static Case, options: &Options) ->
     let period = Duration::from_secs(1) / options.fps;
     for tick in 0..options.frames {
         let started = Instant::now();
-        match preview(&options.case) {
-            Some(preview) => (preview.native)(&mut next, &mut clusters, &theme, area, tick),
-            None => (case.lunatui)(&mut next, &mut clusters, &theme, area, tick),
+        match (preview(&options.case), case) {
+            (Some(preview), _) => (preview.native)(&mut next, &mut clusters, &theme, area, tick),
+            (None, Some(case)) => (case.lunatui)(&mut next, &mut clusters, &theme, area, tick),
+            (None, None) => return Err(invalid(format!("unknown case: {}", options.case))),
         }
         downsample_grid(&mut next, options.profile);
         out.write_all(encoder.encode_diff(&previous, &next, &clusters, ColorMode::TrueColor))?;
@@ -2017,7 +2073,7 @@ fn play_lunatui(out: &mut impl Write, case: &'static Case, options: &Options) ->
     Ok(())
 }
 
-fn play_ratatui(case: &'static Case, options: &Options) -> io::Result<()> {
+fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()> {
     let area = RatRect::new(0, 0, options.width, options.height);
     let theme = Theme::builtin(options.variant);
     let mut terminal = Terminal::with_options(
@@ -2026,14 +2082,18 @@ fn play_ratatui(case: &'static Case, options: &Options) -> io::Result<()> {
             viewport: Viewport::Fixed(area),
         },
     )?;
+    if preview(&options.case).is_none() && case.is_none() {
+        return Err(invalid(format!("unknown case: {}", options.case)));
+    }
     let period = Duration::from_secs(1) / options.fps;
     for tick in 0..options.frames {
         let started = Instant::now();
         terminal.draw(|frame| {
             let buffer = frame.buffer_mut();
-            match preview(&options.case) {
-                Some(preview) => (preview.baseline)(buffer, area, &theme, tick),
-                None => (case.ratatui)(buffer, area, tick),
+            match (preview(&options.case), case) {
+                (Some(preview), _) => (preview.baseline)(buffer, area, &theme, tick),
+                (None, Some(case)) => (case.ratatui)(buffer, area, tick),
+                (None, None) => {}
             }
             downsample_buffer(buffer, options.profile);
         })?;
