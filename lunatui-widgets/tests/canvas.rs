@@ -58,6 +58,53 @@ fn block_lines_run_cell_by_cell() {
 }
 
 #[test]
+fn braille_line_ties_stay_centered_on_a_shallow_slope() {
+    let rows = show(Marker::Braille, ([0.0, 5.0], [0.0, 14.0]), (3, 2), |ctx| {
+        ctx.draw(&Line {
+            x1: 0.0,
+            y1: 14.0,
+            x2: 4.0,
+            y2: 10.0,
+            style: Style::new(),
+        });
+    });
+
+    assert_eq!(rows, ["⠉⠢⠄", "   "]);
+}
+
+#[test]
+fn braille_lines_keep_one_dot_per_major_tick_when_reversed() {
+    let render = |reverse: bool| {
+        show(Marker::Braille, ([0.0, 4.0], [0.0, 2.0]), (5, 2), |ctx| {
+            let (from, to) = if reverse {
+                ((4.0, 2.0), (0.0, 0.0))
+            } else {
+                ((0.0, 0.0), (4.0, 2.0))
+            };
+            ctx.draw(&Line {
+                x1: from.0,
+                y1: from.1,
+                x2: to.0,
+                y2: to.1,
+                style: Style::new(),
+            });
+        })
+    };
+    let dots = |rows: &[String]| {
+        rows.iter()
+            .flat_map(|row| row.chars())
+            .filter(|glyph| *glyph >= '\u{2800}' && *glyph <= '\u{28ff}')
+            .map(|glyph| (u32::from(glyph) - 0x2800).count_ones())
+            .sum::<u32>()
+    };
+
+    let forward = render(false);
+    let backward = render(true);
+    assert_eq!(forward, backward);
+    assert_eq!(dots(&forward), 10);
+}
+
+#[test]
 fn each_marker_has_its_own_grain() {
     let canvas = |marker| Canvas::new(|_: &mut Context<'_>| {}).marker(marker);
     let _ = canvas(Marker::Braille);
@@ -198,6 +245,27 @@ fn a_later_layer_replaces_the_cell_it_shares() {
     };
     assert_eq!(two_dots(false), ["⢁"]);
     assert_eq!(two_dots(true), ["⢀"]);
+}
+
+#[test]
+fn context_can_use_blocks_for_fills_and_braille_for_lines() {
+    let rows = show(Marker::Braille, UNIT, (3, 1), |ctx| {
+        ctx.marker(Marker::Block);
+        ctx.draw(&Points {
+            coords: &[(0.0, 0.0)],
+            style: Style::new(),
+        });
+        ctx.marker(Marker::Braille);
+        ctx.draw(&Line {
+            x1: 0.5,
+            y1: 0.5,
+            x2: 1.0,
+            y2: 1.0,
+            style: Style::new(),
+        });
+    });
+
+    assert_eq!(rows, ["█⠠⠊"]);
 }
 
 #[test]

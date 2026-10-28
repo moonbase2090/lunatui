@@ -2,8 +2,10 @@
 # Records one widget showcase, lunatui only, for the README gallery: 120x36 by default, a
 # motion run of about 8 seconds at 30 fps, a dark theme, at 2x device scale (about 2056x1450),
 # as a lossless animated WebP that must stay under 3 MB. Also writes a PNG screenshot of the
-# first frame. The frames come straight from the recorded terminal output. Requires asciinema 3,
-# agg, gif2webp (libwebp) and ffmpeg.
+# first frame. The frames come straight from the recorded terminal output, each kept on its slot
+# of the fixed FPS timestep and shown for its exact milliseconds (GIF delays only count
+# hundredths). LINE_HEIGHT is the rendered line height (1.4 by default; 1.0 keeps Braille dots
+# evenly spaced). Requires asciinema 3, agg, img2webp (libwebp) and ffmpeg with ffprobe.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -12,6 +14,8 @@ WIDTH="${WIDTH:-120}"
 HEIGHT="${HEIGHT:-36}"
 FRAMES="${FRAMES:-240}"
 FPS="${FPS:-30}"
+LAST_FRAME_DURATION="${LAST_FRAME_DURATION:-2}"
+LINE_HEIGHT="${LINE_HEIGHT:-1.4}"
 SCALE="${SCALE:-2}"
 PROFILE="${PROFILE:-truecolor}"
 THEME="${THEME:-dark}"
@@ -26,6 +30,7 @@ if (( 10#$MAX_BYTES > HARD_MAX_BYTES )); then
   echo "record-showcase: MAX_BYTES may not exceed ${HARD_MAX_BYTES} (the gallery limit)" >&2
   exit 2
 fi
+if [[ ! "$LINE_HEIGHT" =~ ^[1-2](\.[0-9]{1,2})?$ ]]; then echo "record-showcase: LINE_HEIGHT must be between 1 and 2.99" >&2; exit 2; fi
 case "$PROFILE" in truecolor | ansi256 | ansi16) ;; *) echo "record-showcase: unknown PROFILE" >&2; exit 2 ;; esac
 case "$THEME" in dark | light) ;; *) echo "record-showcase: unknown THEME" >&2; exit 2 ;; esac
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
@@ -38,16 +43,22 @@ asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CA
   "$cast"
 gif="$OUT/${NAME}.gif"
 webp="$OUT/${NAME}.webp"
-python3 "$ROOT/scripts/trim-cast.py" "$cast"
-agg --fps-cap 15 --font-size $((14 * 10#$SCALE)) --last-frame-duration 2 "$cast" "$gif"
-gif2webp -q 100 -m 6 -mt "$gif" -o "$webp" > /dev/null
+python3 "$ROOT/scripts/trim-cast.py" "$cast" "$FPS" "$FRAMES"
+# agg writes no GIF delay under 20 ms, so above 30 fps it renders the cast slowed to 30 fps
+# and gif-to-webp puts each frame back on its real slot.
+TIMELINE_FPS=$(( 10#$FPS < 30 ? 10#$FPS : 30 ))
+SPEED=$(awk -v t="$TIMELINE_FPS" -v f="$FPS" 'BEGIN { printf "%.6f", t / f }')
+# Frames now sit exactly 1/FPS apart; a cap at FPS itself would drop some to rounding.
+agg --speed "$SPEED" --fps-cap "$((10#$FPS * 2))" --font-size $((14 * 10#$SCALE)) --line-height "$LINE_HEIGHT" \
+  --last-frame-duration "$LAST_FRAME_DURATION" "$cast" "$gif"
+python3 "$ROOT/scripts/gif-to-webp.py" "$gif" "$webp" "$FPS" "$LAST_FRAME_DURATION" "$TIMELINE_FPS"
 bytes=$(wc -c < "$webp" | awk '{print $1}')
 if [[ ! "$bytes" =~ ^[0-9]+$ ]]; then
   echo "record-showcase: could not read the size of ${webp}" >&2
   exit 3
 fi
 if (( 10#$bytes > 10#$MAX_BYTES )); then
-  echo "record-showcase: ${webp} is ${bytes} bytes, over the ${MAX_BYTES}-byte limit; shorten FRAMES or lower FPS" >&2
+  echo "record-showcase: ${webp} is ${bytes} bytes, over the ${MAX_BYTES}-byte limit; shorten FRAMES" >&2
   exit 3
 fi
 ffmpeg -loglevel error -y -i "$gif" -frames:v 1 "$OUT/${NAME}.png"

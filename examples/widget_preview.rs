@@ -16,15 +16,16 @@ use lunatui_core::{
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
-use lunatui_widgets::canvas::{Circle, Line};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
-    Breadcrumbs, Canvas, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
+    Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
     KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
     RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
     Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, VecSource, Widget, WidgetState,
 };
 
+#[path = "canvas_showcase.rs"]
+mod canvas_showcase;
 #[path = "deploy_board.rs"]
 mod deploy_board;
 #[path = "release_console.rs"]
@@ -4562,230 +4563,6 @@ fn chart_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32)
     }
 }
 
-struct CanvasBoard {
-    text: Color,
-    surface: Color,
-    edge: Color,
-    accent: Color,
-    ok: Color,
-    warn: Color,
-    focus: Color,
-    tick: u32,
-}
-
-impl CanvasBoard {
-    fn new(cx: &RenderCx<'_>, tick: u32) -> Self {
-        Self {
-            text: cx.token(Token::TextPrimary),
-            surface: cx.token(Token::Surface0),
-            edge: cx.token(Token::Surface1),
-            accent: cx.token(Token::Accent),
-            ok: cx.token(Token::Ok),
-            warn: cx.token(Token::Warn),
-            focus: cx.token(Token::FocusRing),
-            tick,
-        }
-    }
-
-    fn fill(&self) -> Style {
-        Style::new().fg(self.text).bg(self.surface)
-    }
-
-    fn panel(&self, title: &str, area: Rect, cx: &mut RenderCx<'_>) -> Rect {
-        let panel = Block::bordered()
-            .title(format!(" {title} "))
-            .style(self.fill())
-            .border_style(Style::new().fg(self.edge).bg(self.surface))
-            .title_style(self.fill());
-        panel.render(area, cx);
-        panel.inner(area)
-    }
-
-    fn radar(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Radar", area, cx);
-        let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
-        let radius = half_w.min(half_h) - 2.0;
-        let sweep = f64::from(self.tick) * 0.045;
-        let (text, accent, ok, warn) = (self.text, self.accent, self.ok, self.warn);
-        let blips: [(f64, f64, &str); 5] = [
-            (0.62, 0.9, "alpha"),
-            (0.35, 2.2, "bravo"),
-            (0.8, 3.6, "charlie"),
-            (0.5, 4.9, "delta"),
-            (0.7, 5.8, "echo"),
-        ];
-        Canvas::new(move |ctx| {
-            let ring = Style::new().fg(text).with_attrs(Attrs::new().set_dim(true));
-            for fraction in [0.25, 0.5, 0.75, 1.0] {
-                ctx.draw(&Circle {
-                    x: 0.0,
-                    y: 0.0,
-                    radius: radius * fraction,
-                    style: ring,
-                });
-            }
-            ctx.draw(&Line {
-                x1: -radius,
-                y1: 0.0,
-                x2: radius,
-                y2: 0.0,
-                style: ring,
-            });
-            ctx.draw(&Line {
-                x1: 0.0,
-                y1: -radius,
-                x2: 0.0,
-                y2: radius,
-                style: ring,
-            });
-            ctx.layer();
-            let trail = [
-                Style::new().fg(ok).with_attrs(Attrs::new().set_dim(true)),
-                Style::new().fg(ok),
-                Style::new()
-                    .fg(accent)
-                    .with_attrs(Attrs::new().set_dim(true)),
-                Style::new().fg(accent),
-            ];
-            for (step, style) in trail.iter().enumerate() {
-                let behind = f64::from(3_u8 - u8::try_from(step).unwrap_or(0));
-                let angle = sweep - 0.09 * behind;
-                ctx.draw(&Line {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: radius * angle.cos(),
-                    y2: radius * angle.sin(),
-                    style: *style,
-                });
-            }
-            ctx.layer();
-            for &(distance, bearing, name) in &blips {
-                let (x, y) = (
-                    radius * distance * bearing.cos(),
-                    radius * distance * bearing.sin(),
-                );
-                let since = (sweep - bearing).rem_euclid(core::f64::consts::TAU);
-                let hot = since < 1.6;
-                let style = if hot {
-                    Style::new().fg(warn)
-                } else {
-                    Style::new().fg(text).with_attrs(Attrs::new().set_dim(true))
-                };
-                ctx.draw(&Circle {
-                    x,
-                    y,
-                    radius: 1.6,
-                    style,
-                });
-                if hot {
-                    ctx.print(x + 3.0, y, name, style);
-                }
-            }
-        })
-        .x_bounds([-half_w, half_w])
-        .y_bounds([-half_h, half_h])
-        .marker(Marker::Sextant)
-        .background(self.fill())
-        .render(inner, cx);
-    }
-
-    fn scope(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Signals", area, cx);
-        let (half_w, half_h) = (f64::from(inner.width), f64::from(inner.height) * 2.0);
-        let phase = f64::from(self.tick) * 0.05;
-        let (accent, focus, edge) = (self.accent, self.focus, self.edge);
-        Canvas::new(move |ctx| {
-            ctx.draw(&Line {
-                x1: -half_w,
-                y1: 0.0,
-                x2: half_w,
-                y2: 0.0,
-                style: Style::new().fg(edge),
-            });
-            let wave = |x: f64, k: f64, shift: f64| (x * k + shift).sin() * half_h * 0.8;
-            let mut last: [Option<(f64, f64)>; 2] = [None, None];
-            let mut x = -half_w;
-            while x <= half_w {
-                let points = [
-                    (x, wave(x, 0.11, phase)),
-                    (x, wave(x, 0.19, -phase * 1.4) * 0.6),
-                ];
-                for (index, point) in points.iter().enumerate() {
-                    if let Some(previous) = last[index] {
-                        let style = Style::new().fg(if index == 0 { accent } else { focus });
-                        ctx.draw(&Line {
-                            x1: previous.0,
-                            y1: previous.1,
-                            x2: point.0,
-                            y2: point.1,
-                            style,
-                        });
-                    }
-                    last[index] = Some(*point);
-                }
-                x += 1.0;
-            }
-        })
-        .x_bounds([-half_w, half_w])
-        .y_bounds([-half_h, half_h])
-        .marker(Marker::Sextant)
-        .background(self.fill())
-        .render(inner, cx);
-    }
-
-    fn markers(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let inner = self.panel("Markers", area, cx);
-        let names = [
-            ("braille", Marker::Braille),
-            ("sextant", Marker::Sextant),
-            ("quadrant", Marker::Quadrant),
-            ("half block", Marker::HalfBlock),
-            ("block", Marker::Block),
-            ("dot", Marker::Dot),
-        ];
-        let cell_w = inner.width / 3;
-        let cell_h = inner.height / 2;
-        let angle = f64::from(self.tick) * 0.06;
-        let (accent, text) = (self.accent, self.text);
-        for (index, (name, marker)) in (0_u16..).zip(names) {
-            let at = Rect::new(
-                inner.x + (index % 3) * cell_w,
-                inner.y + (index / 3) * cell_h,
-                cell_w.saturating_sub(1),
-                cell_h,
-            );
-            let (half_w, half_h) = (f64::from(at.width), f64::from(at.height) * 2.0);
-            let radius = half_w.min(half_h) * 0.8;
-            Canvas::new(move |ctx| {
-                ctx.draw(&Circle {
-                    x: 0.0,
-                    y: 0.0,
-                    radius,
-                    style: Style::new().fg(accent),
-                });
-                ctx.draw(&Line {
-                    x1: 0.0,
-                    y1: 0.0,
-                    x2: radius * angle.cos(),
-                    y2: radius * angle.sin(),
-                    style: Style::new().fg(text),
-                });
-                ctx.print(
-                    -half_w,
-                    half_h,
-                    name,
-                    Style::new().fg(text).with_attrs(Attrs::new().set_dim(true)),
-                );
-            })
-            .x_bounds([-half_w, half_w])
-            .y_bounds([-half_h, half_h])
-            .marker(marker)
-            .background(self.fill())
-            .render(at, cx);
-        }
-    }
-}
-
 fn canvas_native(
     grid: &mut Grid,
     clusters: &mut ClusterTable,
@@ -4793,27 +4570,7 @@ fn canvas_native(
     area: Rect,
     tick: u32,
 ) {
-    let surface = theme.resolve(Token::Surface0);
-    let text = theme.resolve(Token::TextPrimary);
-    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
-    let mut cx = RenderCx::new(grid, clusters, theme);
-    let board = CanvasBoard::new(&cx, tick);
-    let split = area.width * 55 / 100;
-    board.radar(Rect::new(area.x, area.y, split, area.height), &mut cx);
-    let top = area.height * 40 / 100;
-    board.scope(
-        Rect::new(area.x + split, area.y, area.width - split, top),
-        &mut cx,
-    );
-    board.markers(
-        Rect::new(
-            area.x + split,
-            area.y + top,
-            area.width - split,
-            area.height - top,
-        ),
-        &mut cx,
-    );
+    canvas_showcase::render(grid, clusters, theme, area, tick);
 }
 
 fn canvas_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
@@ -4877,12 +4634,25 @@ fn play_lunatui(
             (None, None) => return Err(invalid(format!("unknown case: {}", options.case))),
         }
         downsample_grid(&mut next, options.profile);
-        out.write_all(encoder.encode_diff(&previous, &next, &clusters, ColorMode::TrueColor))?;
+        let mut frame = b"\x1b[?2026h".to_vec();
+        frame.extend_from_slice(encoder.encode_diff(
+            &previous,
+            &next,
+            &clusters,
+            ColorMode::TrueColor,
+        ));
+        frame.extend_from_slice(b"\x1b[?2026l");
+        out.write_all(&frame)?;
         out.flush()?;
         std::mem::swap(&mut previous, &mut next);
-        thread::sleep((started + period * (tick + 1)).saturating_duration_since(Instant::now()));
+        pace(started, period, tick);
     }
     Ok(())
+}
+
+fn pace(started: Instant, period: Duration, tick: u32) {
+    let due = started + period * tick.saturating_add(1);
+    thread::sleep(due.saturating_duration_since(Instant::now()));
 }
 
 fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()> {
@@ -4909,7 +4679,7 @@ fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()
             }
             downsample_buffer(buffer, options.profile);
         })?;
-        thread::sleep((started + period * (tick + 1)).saturating_duration_since(Instant::now()));
+        pace(started, period, tick);
     }
     Ok(())
 }
