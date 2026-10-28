@@ -2793,8 +2793,8 @@ fn breadcrumbs_native(
         2
     };
     let span = area.width.saturating_sub(4);
-    let squeeze = if (70..150).contains(&tick) {
-        tri(tick - 70, 80, u64::from(span), 44)
+    let squeeze = if (96..176).contains(&tick) {
+        u64::from(span) - tri(tick - 96, 80, 0, u64::from(span.saturating_sub(26)))
     } else {
         u64::from(span)
     };
