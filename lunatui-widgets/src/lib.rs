@@ -32,6 +32,8 @@ mod line_gauge;
 mod list;
 #[cfg(feature = "markdown")]
 mod markdown_view;
+#[cfg(feature = "number-input")]
+mod number_input;
 mod overlay;
 mod padding;
 mod paragraph;
@@ -96,6 +98,8 @@ pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
 #[cfg(feature = "markdown")]
 pub use markdown_view::MarkdownView;
+#[cfg(feature = "number-input")]
+pub use number_input::NumberInput;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
