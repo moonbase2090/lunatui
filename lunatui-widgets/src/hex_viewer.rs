@@ -185,7 +185,7 @@ impl HexViewerState {
         let mut at = self.cursor.saturating_add(rows.saturating_mul(per_row));
         if let Some(len) = self.len {
             let last = len.saturating_sub(1);
-            if at > last && at / per_row > last / per_row {
+            if at / per_row > last / per_row {
                 at = if last / per_row > self.cursor / per_row {
                     last
                 } else {
@@ -220,9 +220,8 @@ impl HexViewerState {
             return;
         }
         let row = self.cursor / per_row.max(1);
-        if row < self.top {
-            self.top = row;
-        } else if row >= self.top + page {
+        self.top = self.top.min(row);
+        if row >= self.top + page {
             self.top = row + 1 - page;
         }
     }
@@ -411,12 +410,12 @@ impl<'a> HexViewer<'a> {
     pub fn byte_at(&self, area: Rect, x: u16, y: u16) -> Option<usize> {
         let area = clip_to_coordinates(area);
         let body = self.body(area);
-        if y < body.y || y >= body.y + body.height || x < area.x || x >= self.text_end(area) {
+        if y < body.y || y >= body.y + body.height || x >= self.text_end(area) {
             return None;
         }
         let row = self.first_row(body) + usize::from(y - body.y);
         let columns = self.columns(self.per_row);
-        let dx = usize::from(x - area.x);
+        let dx = usize::from(x.checked_sub(area.x)?);
         let column = if dx >= columns.ascii {
             Some(dx - columns.ascii).filter(|column| *column < self.per_row)
         } else {
@@ -633,7 +632,7 @@ impl Widget for HexViewer<'_> {
             }
             self.draw_row(cx, area.x, body.y + line, end, row);
         }
-        if self.has_bar(body) && body.height > 0 {
+        if self.has_bar(body) {
             let (track, thumb) = self.bar_styles(cx);
             Scrollbar::vertical(rows, usize::from(body.height), top)
                 .track_style(track)

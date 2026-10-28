@@ -226,6 +226,21 @@ fn the_header_labels_each_column() {
 }
 
 #[test]
+fn header_labels_past_sixteen_columns_count_on() {
+    let viewer = HexViewer::new(SAMPLE).bytes_per_row(18).group(0);
+    let header =
+        "          00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11  0123456789abcdef01";
+    assert_eq!(rows(&viewer.header(true), 90, 3)[0], header);
+}
+
+#[test]
+fn an_area_with_no_rows_draws_nothing() {
+    let viewer = HexViewer::new(SAMPLE).header(true);
+    let (grid, clusters) = draw(&viewer, Rect::new(0, 0, 80, 0), 80, 1);
+    assert_eq!(grid.row_display(0, &clusters).trim_end(), "");
+}
+
+#[test]
 fn a_one_row_area_with_a_header_shows_only_the_header() {
     let viewer = HexViewer::new(SAMPLE).header(true);
     assert_eq!(
@@ -439,6 +454,10 @@ fn measure_fits_the_rows_and_the_scrollbar() {
     assert_eq!(viewer.measure(Size::new(50, 10)), Size::new(50, 2));
     assert_eq!(viewer.measure(Size::new(80, 2)), Size::new(76, 2));
     assert_eq!(viewer.measure(Size::new(80, 1)), Size::new(77, 1));
+    assert_eq!(
+        viewer.clone().header(true).measure(Size::new(80, 2)),
+        Size::new(77, 2)
+    );
     let data = counting(100);
     assert_eq!(
         HexViewer::new(&data).measure(Size::new(80, 3)),
@@ -528,6 +547,13 @@ fn pages_move_by_the_visible_rows() {
     state.page_down(false);
     assert_eq!(state.cursor(), 53);
     assert_eq!(state.top_row(), 1);
+
+    let data = [0u8; 40];
+    let mut state = HexViewerState::new();
+    synced(&data, 3, &mut state);
+    state.move_to(5, false);
+    state.page_down(false);
+    assert_eq!(state.cursor(), 39);
 }
 
 #[test]
@@ -547,6 +573,9 @@ fn row_start_and_end_stay_on_the_row() {
     state.move_to(20, false);
     state.row_start(false);
     assert_eq!(state.cursor(), 16);
+    state.row_end(false);
+    assert_eq!(state.cursor(), 31);
+    state.move_to(20, false);
     state.row_end(false);
     assert_eq!(state.cursor(), 31);
     state.move_to(35, false);
