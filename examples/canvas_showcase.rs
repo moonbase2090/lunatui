@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+use std::cell::RefCell;
 use std::f64::consts::{PI, TAU};
 use std::fmt::Write as _;
 use std::sync::OnceLock;
@@ -10,14 +11,15 @@ use lunatui_theme::{Theme, Token};
 use lunatui_widgets::canvas::{Circle, Context, Line, Points};
 use lunatui_widgets::{Block, BorderType, Canvas, RenderCx, Tabs, Widget};
 
-pub(super) const FPS: u32 = 30;
+pub(super) const FPS: u32 = 60;
+const BOID_RATE: f64 = 30.0;
 const SCENES: [(&str, &str, u32); 6] = [
-    ("Scope", " XY oscilloscope ", 33),
-    ("Globe", " Flight paths ", 36),
-    ("System", " System load ", 33),
-    ("Clock", " Clock and tree ", 45),
-    ("Flock", " Flocking ", 27),
-    ("Pings", " Network pings ", 33),
+    ("Scope", " XY oscilloscope ", 51),
+    ("Globe", " Flight paths ", 57),
+    ("System", " System load ", 51),
+    ("Clock", " Clock and tree ", 69),
+    ("Flock", " Flocking ", 42),
+    ("Pings", " Network pings ", 51),
 ];
 
 pub(super) const LOOP_TICKS: u32 = {
@@ -218,13 +220,13 @@ pub(super) fn render(
 fn scope_ratio(t: f64) -> (f64, f64) {
     const KEYS: [(f64, f64, f64); 6] = [
         (0.0, 3.0, 2.0),
-        (0.07, 3.0, 2.0),
+        (0.06, 3.0, 2.0),
+        (0.27, 5.0, 4.0),
         (0.34, 5.0, 4.0),
-        (0.42, 5.0, 4.0),
-        (0.7, 3.0, 4.0),
-        (0.78, 3.0, 4.0),
+        (0.56, 3.0, 4.0),
+        (0.62, 3.0, 4.0),
     ];
-    const END: (f64, f64, f64) = (1.06, 1.0, 2.0);
+    const END: (f64, f64, f64) = (0.85, 1.0, 2.0);
     let mut previous = KEYS[0];
     for &key in KEYS.iter().skip(1).chain(core::iter::once(&END)) {
         if t < key.0 {
@@ -589,7 +591,7 @@ fn globe(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
 }
 
 const SAMPLE_DOTS: u32 = 3;
-const SCROLL_DOTS: u32 = 2;
+const SCROLL_DOTS: u32 = 1;
 
 fn cpu_user(n: u32) -> f64 {
     let burst = if hash(n / 50 + 11) > 0.6 {
@@ -770,7 +772,7 @@ fn clock_and_tree(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     let center = (-hw * 0.48, hh * 0.04);
     let radius = hh * 0.76;
     let seconds = 8.0 * 60.0 + 42.0 + 2.0 * t;
-    let growth = smooth(t / 1.0) * (f64::from(TREE_DEPTH) + 0.001);
+    let growth = smooth(t / 0.8) * (f64::from(TREE_DEPTH) + 0.001);
     stage.canvas(area, cx, move |ctx| {
         ctx.draw(&Circle {
             x: center.0,
@@ -863,7 +865,7 @@ fn clock_and_tree(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
 }
 
 const BOIDS: u32 = 200;
-const TRAIL: usize = 4;
+const TRAIL: usize = 7;
 
 #[derive(Clone, Copy)]
 struct Boid {
@@ -875,23 +877,41 @@ fn wrap(value: f64, half: f64) -> f64 {
     (value + half).rem_euclid(2.0 * half) - half
 }
 
-fn flock_after(steps: u32, hw: f64, hh: f64) -> Vec<(Boid, Vec<(f64, f64)>)> {
-    let mut boids: Vec<Boid> = (0..BOIDS)
-        .map(|n| {
-            let angle = TAU * hash(n * 2 + 1);
-            Boid {
-                p: (
-                    hw * (hash(n * 2) * 1.8 - 0.9),
-                    hh * (hash(n * 3 + 7) * 1.8 - 0.9),
-                ),
-                v: (0.4 * angle.cos(), 0.4 * angle.sin()),
-            }
-        })
-        .collect();
-    let mut trails: Vec<Vec<(f64, f64)>> = boids.iter().map(|b| vec![b.p]).collect();
-    for _ in 0..steps {
-        let before = boids.clone();
-        for (boid, trail) in boids.iter_mut().zip(&mut trails) {
+struct Flock {
+    boids: Vec<Boid>,
+    trails: Vec<Vec<(f64, f64)>>,
+    steps: u32,
+    half: (f64, f64),
+}
+
+impl Flock {
+    fn new(hw: f64, hh: f64) -> Self {
+        let boids: Vec<Boid> = (0..BOIDS)
+            .map(|n| {
+                let angle = TAU * hash(n * 2 + 1);
+                Boid {
+                    p: (
+                        hw * (hash(n * 2) * 1.8 - 0.9),
+                        hh * (hash(n * 3 + 7) * 1.8 - 0.9),
+                    ),
+                    v: (0.4 * angle.cos(), 0.4 * angle.sin()),
+                }
+            })
+            .collect();
+        let trails = boids.iter().map(|b| vec![b.p]).collect();
+        Self {
+            boids,
+            trails,
+            steps: 0,
+            half: (hw, hh),
+        }
+    }
+
+    fn step(&mut self) {
+        let (hw, hh) = self.half;
+        let dt = BOID_RATE / f64::from(FPS);
+        let before = self.boids.clone();
+        for (boid, trail) in self.boids.iter_mut().zip(&mut self.trails) {
             let (mut sep, mut align, mut mass, mut seen) =
                 ((0.0, 0.0), (0.0, 0.0), (0.0, 0.0), 0.0);
             for other in &before {
@@ -912,14 +932,14 @@ fn flock_after(steps: u32, hw: f64, hh: f64) -> Vec<(Boid, Vec<(f64, f64)>)> {
             }
             let mut v = boid.v;
             if seen > 0.0 {
-                v.0 += 0.06 * (align.0 / seen - v.0) + 0.003 * mass.0 / seen + 0.1 * sep.0;
-                v.1 += 0.06 * (align.1 / seen - v.1) + 0.003 * mass.1 / seen + 0.1 * sep.1;
+                v.0 += dt * (0.06 * (align.0 / seen - v.0) + 0.003 * mass.0 / seen + 0.1 * sep.0);
+                v.1 += dt * (0.06 * (align.1 / seen - v.1) + 0.003 * mass.1 / seen + 0.1 * sep.1);
             }
             let speed = (v.0 * v.0 + v.1 * v.1).sqrt().max(1e-6);
             let clamped = speed.clamp(0.3, 0.55);
             v = (v.0 / speed * clamped, v.1 / speed * clamped);
             boid.v = v;
-            let moved = (boid.p.0 + v.0, boid.p.1 + v.1);
+            let moved = (boid.p.0 + v.0 * dt, boid.p.1 + v.1 * dt);
             boid.p = (wrap(moved.0, hw), wrap(moved.1, hh));
             if (boid.p.0 - moved.0).abs() + (boid.p.1 - moved.1).abs() > 1e-9 {
                 trail.clear();
@@ -929,15 +949,44 @@ fn flock_after(steps: u32, hw: f64, hh: f64) -> Vec<(Boid, Vec<(f64, f64)>)> {
                 trail.remove(0);
             }
         }
+        self.steps += 1;
     }
-    boids.into_iter().zip(trails).collect()
+}
+
+thread_local! {
+    static FLOCK: RefCell<Option<Flock>> = const { RefCell::new(None) };
+}
+
+fn flock_after(steps: u32, hw: f64, hh: f64) -> Vec<(Boid, Vec<(f64, f64)>)> {
+    FLOCK.with_borrow_mut(|cache| {
+        let fresh = cache.as_ref().is_none_or(|flock| {
+            flock.steps > steps
+                || flock.half.0.to_bits() != hw.to_bits()
+                || flock.half.1.to_bits() != hh.to_bits()
+        });
+        if fresh {
+            *cache = Some(Flock::new(hw, hh));
+        }
+        let Some(flock) = cache.as_mut() else {
+            return Vec::new();
+        };
+        while flock.steps < steps {
+            flock.step();
+        }
+        flock
+            .boids
+            .iter()
+            .copied()
+            .zip(flock.trails.iter().cloned())
+            .collect()
+    })
 }
 
 fn flock(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     let Stage {
         ink, hw, hh, tick, ..
     } = stage;
-    let birds = flock_after(tick + 60, hw, hh);
+    let birds = flock_after(tick + 120, hw, hh);
     stage.canvas(area, cx, move |ctx| {
         let trace = ink.shade(ink.line, 0.42);
         for (_, trail) in &birds {
@@ -965,19 +1014,19 @@ fn flock(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     });
 }
 
-const PING_TICKS: u32 = 30;
+const PING_TICKS: u32 = 60;
 
 const PINGS: [(&str, f64, f64, u32, f64); 10] = [
     ("FRA", 50.1, 8.7, 0, 14.0),
-    ("IAD", 38.9, -77.4, 10, 81.0),
-    ("SJC", 37.4, -121.9, 3, 142.0),
-    ("GRU", -23.4, -46.5, 21, 188.0),
-    ("NRT", 35.8, 140.4, 13, 226.0),
-    ("SIN", 1.4, 104.0, 6, 162.0),
-    ("SYD", -33.9, 151.2, 28, 274.0),
-    ("BOM", 19.1, 72.9, 9, 118.0),
-    ("JNB", -26.1, 28.2, 16, 160.0),
-    ("ARN", 59.6, 17.9, 18, 27.0),
+    ("IAD", 38.9, -77.4, 20, 81.0),
+    ("SJC", 37.4, -121.9, 6, 142.0),
+    ("GRU", -23.4, -46.5, 42, 188.0),
+    ("NRT", 35.8, 140.4, 26, 226.0),
+    ("SIN", 1.4, 104.0, 12, 162.0),
+    ("SYD", -33.9, 151.2, 56, 274.0),
+    ("BOM", 19.1, 72.9, 18, 118.0),
+    ("JNB", -26.1, 28.2, 32, 160.0),
+    ("ARN", 59.6, 17.9, 36, 27.0),
 ];
 
 fn pings(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {

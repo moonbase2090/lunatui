@@ -75,11 +75,11 @@ Screenshot: [docs/media/split.png](docs/media/split.png). Recorded with `scripts
 
 ### Canvas
 
-Six scenes drawn with Canvas, each in thin one-dot Braille strokes with no filled areas: an XY oscilloscope whose Lissajous figure glides between frequency ratios with a fading trail over a faint graticule, a slowly turning globe with great-circle flight paths and planes moving along them, CPU, memory, and network history as scrolling lines, an analog clock running at double time with a sweeping second hand beside a tree that grows branch by branch, a flock of 200 boids with short trails, and a world map with fading ping rings. Each frame is drawn for its own time on a fixed 30 fps step.
+Six scenes drawn with Canvas, each in thin one-dot Braille strokes with no filled areas: an XY oscilloscope whose Lissajous figure glides between frequency ratios with a fading trail over a faint graticule, a slowly turning globe with great-circle flight paths and planes moving along them, CPU, memory, and network history as scrolling lines, an analog clock running at double time with a sweeping second hand beside a tree that grows branch by branch, a flock of 200 boids with short trails, and a world map with fading ping rings. Each frame is drawn for its own time on a fixed 60 fps step.
 
 <img src="docs/media/canvas.webp" alt="Canvas widget: an oscilloscope, a globe with flight paths, system graphs, a clock and tree, a flock, and a ping map, in the dark theme" width="1028">
 
-Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas FRAMES=207 HEIGHT=50 LINE_HEIGHT=1.0`, 120×50 at 30 fps, dark, 2× scale, lossless animated WebP, about 6.9 seconds plus a 2-second hold on the last frame; every frame is kept). Coastlines are from Natural Earth (public domain).
+Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas FPS=60 FRAMES=321 HEIGHT=50 LINE_HEIGHT=1.0`, 120×50 at 60 fps, dark, 2× scale, lossless animated WebP, about 5.3 seconds plus a 2-second hold on the last frame; every frame is kept and shown for 16 or 17 ms). Coastlines are from Natural Earth (public domain).
 
 ### Toast
 
