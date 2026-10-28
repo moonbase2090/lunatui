@@ -39,11 +39,15 @@ mod number_input;
 mod overlay;
 mod padding;
 mod paragraph;
+#[cfg(feature = "popup")]
+mod popup;
 #[cfg(feature = "radio")]
 mod radio_group;
 #[cfg(any(feature = "chart", feature = "canvas"))]
 mod raster;
 mod render_cx;
+#[cfg(feature = "scroll-view")]
+mod scroll_view;
 mod scrollbar;
 #[cfg(feature = "search-box")]
 mod search_box;
@@ -109,11 +113,15 @@ pub use number_input::NumberInput;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
+#[cfg(feature = "popup")]
+pub use popup::{Placement, Popup, PopupState};
 #[cfg(feature = "radio")]
 pub use radio_group::{RadioFlow, RadioGroup};
 #[cfg(any(feature = "chart", feature = "canvas"))]
 pub use raster::Marker;
 pub use render_cx::RenderCx;
+#[cfg(feature = "scroll-view")]
+pub use scroll_view::{ScrollView, ScrollViewState, ScrollbarVisibility};
 pub use scrollbar::Scrollbar;
 #[cfg(feature = "search-box")]
 pub use search_box::{SearchBox, SearchMatch};

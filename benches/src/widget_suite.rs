@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::scenes::ratatui::{ColorOutput, set_color_output};
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_layout::Constraint;
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
@@ -17,16 +17,19 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, KeyHintBar, List,
-    MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, RadioGroup, RenderCx,
-    SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
-    ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, Popup, RadioGroup, RenderCx,
+    ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table,
+    Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint as RatConstraint, Layout as RatLayout, Rect as RatRect};
+use ratatui::layout::{
+    Constraint as RatConstraint, Layout as RatLayout, Position as RatPosition, Rect as RatRect,
+    Size as RatSize,
+};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::symbols::Marker as RatMarker;
-use ratatui::text::{Line, Span};
+use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
     Axis as RatAxis, Bar as RatBar, BarChart as RatBarChart, BarGroup as RatBarGroup,
@@ -37,6 +40,11 @@ use ratatui::widgets::{
 };
 use ratatui::{Terminal, TerminalOptions, Viewport};
 use time::{Date as TimeDate, Month};
+use tui_popup::Popup as RatPopup;
+use tui_scrollview::{
+    ScrollView as RatScrollView, ScrollViewState as RatScrollViewState,
+    ScrollbarVisibility as RatScrollbarVisibility,
+};
 
 /// Terminal sizes every case runs at.
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
@@ -48,6 +56,13 @@ const ACCENT: (u8, u8, u8) = (0x7a, 0xa2, 0xf7);
 const ROWS: usize = 500;
 const LOG_LINES: usize = 200;
 const TABS: [&str; 4] = ["Overview", "Lints", "Tests", "Deps"];
+const LOG_WIDTH: u16 = 240;
+const DIALOG: [&str; 4] = [
+    "Deploy build 4812 to production?",
+    "  3 services restart, 0 migrations",
+    "  Rollback window: 30 minutes",
+    "",
+];
 
 const HELP: &[KeyChord] = &[KeyChord::new(KeyCode::Char('?'), Modifiers::new())];
 const QUIT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('q'), Modifiers::new())];
@@ -296,6 +311,20 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: bigtext_lunatui,
         ratatui: bigtext_ratatui,
+    },
+    Case {
+        name: "popup",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: popup_lunatui,
+        ratatui: popup_ratatui,
+    },
+    Case {
+        name: "scrollview",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: scrollview_lunatui,
+        ratatui: scrollview_ratatui,
     },
 ];
 
@@ -1961,4 +1990,105 @@ pub fn gate_failures(
         ));
     }
     failures
+}
+
+fn dialog_lines(tick: u32) -> [String; 4] {
+    let mut lines = DIALOG.map(str::to_owned);
+    lines[3] = format!("  [ Deploy ]   [ Cancel ]   {:>2}s", 30 - tick % 30);
+    lines
+}
+
+fn popup_title(tick: u32) -> String {
+    format!(" Confirm {} ", tick % 10)
+}
+
+fn popup_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let lines = dialog_lines(tick);
+    let width = lines
+        .iter()
+        .map(|line| lunatui_core::width(line))
+        .max()
+        .unwrap_or(0);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    Popup::new(Paragraph::new(lines.join("\n")).style(text_style()))
+        .size(Size::new(u16::try_from(width).unwrap_or(0), 4))
+        .title(popup_title(tick))
+        .border_type(BorderType::Plain)
+        .backdrop(0.0)
+        .style(text_style())
+        .border_style(dim_style())
+        .title_style(dim_style())
+        .render(area, &mut cx);
+}
+
+fn popup_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let lines = dialog_lines(tick);
+    let body = Text::from(
+        lines
+            .iter()
+            .map(|line| Line::raw(line.as_str()))
+            .collect::<Vec<_>>(),
+    );
+    RatPopup::new(body)
+        .title(popup_title(tick))
+        .style(rat_text())
+        .border_style(rat_dim())
+        .render(area, buf);
+}
+
+fn log_offset(tick: u32) -> (u16, u16) {
+    (
+        u16::try_from(tick % 30).unwrap_or(0),
+        u16::try_from(tick * 2 % 150).unwrap_or(0),
+    )
+}
+
+fn log_height() -> u16 {
+    u16::try_from(LOG_LINES).unwrap_or(u16::MAX)
+}
+
+struct LogPage;
+
+impl Widget for LogPage {
+    fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        cx.set_style(area, text_style());
+        Paragraph::new(log_text())
+            .style(text_style())
+            .render(area, cx);
+    }
+
+    fn measure(&self, avail: lunatui_core::Size) -> lunatui_core::Size {
+        avail
+    }
+}
+
+fn scrollview_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let (x, y) = log_offset(tick);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    ScrollView::new(LogPage, Size::new(LOG_WIDTH, log_height()))
+        .scrollbars(ScrollbarVisibility::Never)
+        .offset(x, y)
+        .render(area, &mut cx);
+}
+
+fn scrollview_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let (x, y) = log_offset(tick);
+    let mut view = RatScrollView::new(RatSize::new(LOG_WIDTH, log_height()))
+        .scrollbars_visibility(RatScrollbarVisibility::Never);
+    let page = view.area();
+    view.render_widget(RatParagraph::new(log_text()).style(rat_text()), page);
+    let mut state = RatScrollViewState::with_offset(RatPosition::new(x, y));
+    ratatui::widgets::StatefulWidget::render(view, area, buf, &mut state);
 }

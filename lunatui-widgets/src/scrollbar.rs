@@ -3,11 +3,13 @@
 
 use lunatui_core::{Rect, Size, Style};
 
+use crate::render_cx::clip_to_coordinates;
 use crate::{RenderCx, Widget};
 
-/// Vertical scrollbar for a virtualized viewport.
+/// Scrollbar for a virtualized viewport, vertical by default.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Scrollbar {
+    horizontal: bool,
     content_len: usize,
     viewport_len: usize,
     offset: usize,
@@ -20,11 +22,24 @@ impl Scrollbar {
     #[must_use]
     pub fn vertical(content_len: usize, viewport_len: usize, offset: usize) -> Self {
         Self {
+            horizontal: false,
             content_len,
             viewport_len,
             offset,
             track_style: Style::new(),
             thumb_style: Style::new(),
+        }
+    }
+
+    /// Horizontal scrollbar for `content_len` columns, `viewport_len` visible, scrolled to
+    /// `offset`. It draws along the top row of its area, with `─` for the track and `━` for the
+    /// thumb.
+    #[cfg(feature = "scroll-view")]
+    #[must_use]
+    pub fn horizontal(content_len: usize, viewport_len: usize, offset: usize) -> Self {
+        Self {
+            horizontal: true,
+            ..Self::vertical(content_len, viewport_len, offset)
         }
     }
 
@@ -45,25 +60,33 @@ impl Scrollbar {
 
 impl Widget for Scrollbar {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let area = clip_to_coordinates(area);
         if area.width == 0 || area.height == 0 || self.content_len == 0 {
             return;
         }
-        let track_h = area.height;
-        let thumb_h = thumb_size(self.content_len, usize::from(track_h), self.viewport_len);
-        let thumb_y = thumb_position(
+        let (track_len, track, thumb) = if self.horizontal {
+            (area.width, "─", "━")
+        } else {
+            (area.height, "│", "█")
+        };
+        let thumb_len = thumb_size(self.content_len, usize::from(track_len), self.viewport_len);
+        let thumb_at = thumb_position(
             self.offset,
             self.content_len,
             self.viewport_len,
-            usize::from(track_h),
-            thumb_h,
+            usize::from(track_len),
+            thumb_len,
         );
-        for row in 0..track_h {
-            let y = area.y + row;
-            let thumb = row >= thumb_y && row < thumb_y.saturating_add(thumb_h);
-            if thumb {
-                cx.put_str(area.x, y, "█", self.thumb_style);
+        for step in 0..track_len {
+            let (x, y) = if self.horizontal {
+                (area.x.saturating_add(step), area.y)
             } else {
-                cx.put_str(area.x, y, "│", self.track_style);
+                (area.x, area.y.saturating_add(step))
+            };
+            if step >= thumb_at && step < thumb_at.saturating_add(thumb_len) {
+                cx.put_str(x, y, thumb, self.thumb_style);
+            } else {
+                cx.put_str(x, y, track, self.track_style);
             }
         }
     }
@@ -72,7 +95,11 @@ impl Widget for Scrollbar {
         if avail.width == 0 || avail.height == 0 {
             return Size::new(0, 0);
         }
-        Size::new(1.min(avail.width), avail.height)
+        if self.horizontal {
+            Size::new(avail.width, 1.min(avail.height))
+        } else {
+            Size::new(1.min(avail.width), avail.height)
+        }
     }
 }
 
