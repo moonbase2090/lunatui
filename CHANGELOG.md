@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-10-27
+
 ### Added
 
 - `Layout::limits` and `aspect_fit` in `lunatui-layout`, behind the opt-in `size-limits` feature: each segment can have a floor and a cap (`Limit::at_least`, `at_most`, `between`) so panes keep a usable size on resize, and cells a capped segment cannot take go to the other growing segments. `aspect_fit` returns the largest rectangle of a given shape inside an area, centred.
@@ -17,6 +19,10 @@ Every PR adds its entry under **Unreleased**.
 - `BigTextFont::FiveBySeven`, a compact 5×7 clock font for the digits `0`–`9` and `:`, drawn with full blocks.
 - A CI guard for the site widget gallery: `scripts/check-gallery-real-output.sh` fails when a site capture example writes cells after a widget renders, and `lunatui/tests/site_gallery_repro.rs` re-renders each scene and compares it, and its committed PNG, with a recorded manifest.
 - `CONTRIBUTING.md` and a pull request template carry the rule that demos show real widget output only.
+- `Block::title_inset` keeps border cells between the left corner and a left-aligned title, and `Block::title_at` adds a title with its own position, alignment, and style.
+- `Tabs::boxed` draws the selected tab in a rounded box that opens into a divider line, `Tabs::join_parent_border` joins that divider to a parent block's side borders, and `Tabs::indent` sets the space before the first tab.
+- `TextInput::field_style`, `TextInput::padding`, and `TextInput::show_cursor` style the cells inside the field, inset the text, and hide the cursor of an unfocused field.
+- `Monthly::weekend_style` styles Saturdays and Sundays under event styles, and `Monthly::selected_style` styles the selected day as a chip that covers the blank cell on each side.
 
 ### Changed
 
@@ -26,17 +32,7 @@ Every PR adds its entry under **Unreleased**.
 
 - The PTY integration tests for `lunatui` and `lunatui-test` carry their crate docs on Windows, where the tests are compiled out, so `missing_docs` no longer fails the Windows build.
 - The website hero sky no longer drifts side to side; the sky image is static.
-
-### Fixed
-
 - `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
-
-### Added
-
-- `Block::title_inset` keeps border cells between the left corner and a left-aligned title, and `Block::title_at` adds a title with its own position, alignment, and style.
-- `Tabs::boxed` draws the selected tab in a rounded box that opens into a divider line, `Tabs::join_parent_border` joins that divider to a parent block's side borders, and `Tabs::indent` sets the space before the first tab.
-- `TextInput::field_style`, `TextInput::padding`, and `TextInput::show_cursor` style the cells inside the field, inset the text, and hide the cursor of an unfocused field.
-- `Monthly::weekend_style` styles Saturdays and Sundays under event styles, and `Monthly::selected_style` styles the selected day as a chip that covers the blank cell on each side.
 
 ## [0.1.11] - 2026-10-27
 
