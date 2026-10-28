@@ -34,6 +34,8 @@ mod line_gauge;
 mod list;
 #[cfg(feature = "markdown")]
 mod markdown_view;
+#[cfg(feature = "number-input")]
+mod number_input;
 mod overlay;
 mod padding;
 mod paragraph;
@@ -43,6 +45,8 @@ mod radio_group;
 mod raster;
 mod render_cx;
 mod scrollbar;
+#[cfg(feature = "slider")]
+mod slider;
 #[cfg(feature = "sparkline")]
 mod sparkline;
 mod spinner;
@@ -98,6 +102,8 @@ pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
 #[cfg(feature = "markdown")]
 pub use markdown_view::MarkdownView;
+#[cfg(feature = "number-input")]
+pub use number_input::NumberInput;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
@@ -107,6 +113,8 @@ pub use radio_group::{RadioFlow, RadioGroup};
 pub use raster::Marker;
 pub use render_cx::RenderCx;
 pub use scrollbar::Scrollbar;
+#[cfg(feature = "slider")]
+pub use slider::Slider;
 #[cfg(feature = "sparkline")]
 pub use sparkline::{
     BarSet, Baseline, NINE_LEVELS, RenderDirection, Sparkline, SparklineBar, SparklineValue,

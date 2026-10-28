@@ -152,6 +152,21 @@ A pipeline settings screen: sections with a caret, a title, and a badge open and
 <img src="docs/media/accordion.webp" alt="Accordion: sections opening and closing on a pipeline settings screen in the dark theme" width="1028">
 
 Screenshot: [docs/media/accordion.png](docs/media/accordion.png). Recorded with `scripts/record-showcase.sh` (`CASE=accordion`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+### Number input
+
+A render queue's export settings: each field is a spin box with minus and plus buttons, a step, a range, and decimals, and the screen nudges them one after another while the estimate beside them follows. One field is typed by hand: the empty text shows in the fail color with a caret, digits arrive one at a time, and the committed value snaps to the field's decimals. The widget draws the field and gives back the rules (`nudge`, `parse`, `accepts`, `format`) and the button cells for the app's own key and mouse handling.
+
+<img src="docs/media/number-input.webp" alt="NumberInput: spin boxes stepping and one field being typed on an export settings screen in the dark theme" width="1028">
+
+Screenshot: [docs/media/number-input.png](docs/media/number-input.png). Recorded with `scripts/record-showcase.sh` (`CASE=number-input`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
+### Slider
+
+A studio mixer: eight channel faders with a focus knob and the value beside each, four range sliders for equalizer bands whose two ends drift independently, and an output level that follows the master and music faders. The track fills with half-cell precision, so a fader moves in smaller steps than the cell grid, and the focused channel sweeps while the others hold their positions.
+
+<img src="docs/media/slider.webp" alt="Slider: channel faders and equalizer range sliders with half-cell positions over a mixer screen in the dark theme" width="1028">
+
+Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
 ### Sparkline
 
