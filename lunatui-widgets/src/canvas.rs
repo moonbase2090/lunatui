@@ -50,7 +50,12 @@ impl Painter<'_> {
             return;
         }
         let tag = self.tag(style);
-        self.raster.segment(self.window, self.marker, from, to, tag);
+        if matches!(self.marker, Marker::Braille | Marker::Sextant) {
+            self.raster
+                .segment_centered(self.window, self.marker, from, to, tag);
+        } else {
+            self.raster.segment(self.window, self.marker, from, to, tag);
+        }
     }
 
     /// Dots across and down the canvas, which depends on the marker.
@@ -183,6 +188,12 @@ impl Context<'_> {
             styles: self.styles,
         };
         shape.draw(&mut painter);
+    }
+
+    /// Sets the marker for shapes drawn next. The canvas marker is used initially; switch to a
+    /// block marker for filled regions, then back to braille for outlines and paths.
+    pub fn marker(&mut self, marker: Marker) {
+        self.marker = marker;
     }
 
     /// Starts a new layer. A cell a later layer draws in replaces what an earlier layer drew

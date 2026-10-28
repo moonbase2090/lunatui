@@ -74,11 +74,14 @@ fn markers() -> [(Marker, RatMarker); 6] {
 }
 
 #[test]
-fn shapes_match_the_reference_canvas() {
+fn non_braille_shapes_match_the_reference_canvas() {
     let plain = Style::new();
     for size in [(30, 10), (23, 9), (61, 17)] {
         for bounds in [([0.0, 20.0], [0.0, 10.0]), ([-10.0, 10.0], [-5.0, 5.0])] {
-            for (marker, rat_marker) in markers() {
+            for (marker, rat_marker) in markers()
+                .into_iter()
+                .filter(|(marker, _)| !matches!(marker, Marker::Braille | Marker::Sextant))
+            {
                 let ours_rows = ours(marker, bounds, size, |ctx| {
                     ctx.draw(&Rectangle {
                         x: -4.0,
