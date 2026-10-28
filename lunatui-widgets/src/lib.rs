@@ -10,6 +10,8 @@ mod borders;
 #[cfg(feature = "calendar")]
 mod calendar;
 mod gauge;
+#[cfg(feature = "image")]
+mod image;
 mod lightcycle;
 #[cfg(feature = "line-gauge")]
 mod line_gauge;
@@ -39,11 +41,15 @@ pub use borders::{BorderType, Borders};
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use gauge::Gauge;
+#[cfg(feature = "image")]
+pub use image::Image;
 pub use lightcycle::Lightcycle;
 #[cfg(feature = "line-gauge")]
 pub use line_gauge::{LineGauge, LineSet};
 pub use list::List;
 pub use lunatui_core::Size;
+#[cfg(feature = "image")]
+pub use lunatui_image::{Fit as ImageFit, ImageError, ImageId, ImageSource};
 pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
 pub use overlay::{FocusTrap, Overlay, blend_rgb};

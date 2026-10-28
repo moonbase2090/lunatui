@@ -149,7 +149,16 @@ impl<W: Write> Session<W> {
     ///
     /// Returns [`SessionError::Io`] when the frame write or flush fails.
     pub fn present_frame(&mut self, payload: &[u8]) -> Result<(), SessionError> {
-        compose_frame(&mut self.frame_buf, payload, self.sync_output);
+        self.present_frame_parts(&[payload])
+    }
+
+    /// Writes ordered payload parts as one synchronized frame and one flush.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SessionError::Io`] when the frame write or flush fails.
+    pub fn present_frame_parts(&mut self, payloads: &[&[u8]]) -> Result<(), SessionError> {
+        compose_frame_parts(&mut self.frame_buf, payloads, self.sync_output);
         self.writer
             .write_all(&self.frame_buf)
             .and_then(|()| self.writer.flush())
@@ -215,12 +224,19 @@ fn undo_console_start<W: Write>(writer: &mut W, marks: ConsoleMarks) {
     }
 }
 
+#[cfg(test)]
 fn compose_frame(buffer: &mut Vec<u8>, payload: &[u8], sync: SyncOutput) {
+    compose_frame_parts(buffer, &[payload], sync);
+}
+
+fn compose_frame_parts(buffer: &mut Vec<u8>, payloads: &[&[u8]], sync: SyncOutput) {
     buffer.clear();
     if sync == SyncOutput::Enabled {
         buffer.extend_from_slice(SYNC_BEGIN);
     }
-    buffer.extend_from_slice(payload);
+    for payload in payloads {
+        buffer.extend_from_slice(payload);
+    }
     if sync == SyncOutput::Enabled {
         buffer.extend_from_slice(SYNC_END);
     }
