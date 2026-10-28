@@ -2,8 +2,9 @@
 # Records one widget showcase, lunatui only, for the README gallery: 120x36 by default, a
 # motion run of about 8 seconds at 30 fps, a dark theme, at 2x device scale (about 2056x1450),
 # as a lossless animated WebP that must stay under 3 MB. Also writes a PNG screenshot of the
-# first frame. The frames come straight from the recorded terminal output. Requires asciinema 3,
-# agg, gif2webp (libwebp) and ffmpeg.
+# first frame. The frames come straight from the recorded terminal output, each kept on its slot
+# of the fixed FPS timestep. LINE_HEIGHT is the rendered line height (1.4 by default; 1.0 keeps
+# Braille dots evenly spaced). Requires asciinema 3, agg, gif2webp (libwebp) and ffmpeg.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -13,6 +14,7 @@ HEIGHT="${HEIGHT:-36}"
 FRAMES="${FRAMES:-240}"
 FPS="${FPS:-30}"
 LAST_FRAME_DURATION="${LAST_FRAME_DURATION:-2}"
+LINE_HEIGHT="${LINE_HEIGHT:-1.4}"
 SCALE="${SCALE:-2}"
 PROFILE="${PROFILE:-truecolor}"
 THEME="${THEME:-dark}"
@@ -27,6 +29,7 @@ if (( 10#$MAX_BYTES > HARD_MAX_BYTES )); then
   echo "record-showcase: MAX_BYTES may not exceed ${HARD_MAX_BYTES} (the gallery limit)" >&2
   exit 2
 fi
+if [[ ! "$LINE_HEIGHT" =~ ^[1-2](\.[0-9]{1,2})?$ ]]; then echo "record-showcase: LINE_HEIGHT must be between 1 and 2.99" >&2; exit 2; fi
 case "$PROFILE" in truecolor | ansi256 | ansi16) ;; *) echo "record-showcase: unknown PROFILE" >&2; exit 2 ;; esac
 case "$THEME" in dark | light) ;; *) echo "record-showcase: unknown THEME" >&2; exit 2 ;; esac
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
@@ -39,8 +42,10 @@ asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CA
   "$cast"
 gif="$OUT/${NAME}.gif"
 webp="$OUT/${NAME}.webp"
-python3 "$ROOT/scripts/trim-cast.py" "$cast"
-agg --fps-cap "$FPS" --font-size $((14 * 10#$SCALE)) --last-frame-duration "$LAST_FRAME_DURATION" "$cast" "$gif"
+python3 "$ROOT/scripts/trim-cast.py" "$cast" "$FPS"
+# Frames now sit exactly 1/FPS apart; a cap at FPS itself would drop some to rounding.
+agg --fps-cap "$((10#$FPS * 2))" --font-size $((14 * 10#$SCALE)) --line-height "$LINE_HEIGHT" \
+  --last-frame-duration "$LAST_FRAME_DURATION" "$cast" "$gif"
 gif2webp -q 100 -m 4 -mt "$gif" -o "$webp" > /dev/null
 bytes=$(wc -c < "$webp" | awk '{print $1}')
 if [[ ! "$bytes" =~ ^[0-9]+$ ]]; then
