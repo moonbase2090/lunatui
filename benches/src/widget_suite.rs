@@ -557,7 +557,7 @@ fn chart_lunatui(
             .style(text_style()),
     ];
     Chart::new(&sets)
-        .style(base_style())
+        .background(base_style())
         .x_axis(
             Axis::new()
                 .bounds([0.0, 24.0])

@@ -218,7 +218,7 @@ pub struct Chart<'a> {
     legend: Option<LegendPosition>,
     hidden: (Constraint, Constraint),
     state: WidgetState,
-    base: Option<Style>,
+    background: Option<Style>,
 }
 
 impl<'a> Chart<'a> {
@@ -232,14 +232,15 @@ impl<'a> Chart<'a> {
             legend: Some(LegendPosition::TopRight),
             hidden: (Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)),
             state: WidgetState::Normal,
-            base: None,
+            background: None,
         }
     }
 
-    /// Style applied to the whole area before anything is drawn, such as a background.
+    /// Style the area is reset to before anything is drawn, such as a panel background. Without
+    /// one, cells are reset to the default style.
     #[must_use]
-    pub const fn style(mut self, style: Style) -> Self {
-        self.base = Some(style);
+    pub const fn background(mut self, style: Style) -> Self {
+        self.background = Some(style);
         self
     }
 
@@ -862,7 +863,7 @@ impl Chart<'_> {
 
 impl Widget for Chart<'_> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        cx.clear_area(area);
+        cx.clear_area(area, self.background.unwrap_or_default());
         let y_labels = self
             .y_axis
             .labels
@@ -888,9 +889,6 @@ impl Widget for Chart<'_> {
             area.width - left,
             area.height - top - bottom,
         );
-        if let Some(base) = self.base {
-            cx.set_style(area, base);
-        }
         let look = self.look(cx);
         self.draw_axes(area, rect, &look, cx);
         let mut plot = Plot::new(rect);

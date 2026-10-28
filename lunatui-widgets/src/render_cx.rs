@@ -159,14 +159,14 @@ impl<'a> RenderCx<'a> {
         self.grid.put_char(x, y, patched, glyph, self.clusters);
     }
 
-    pub(crate) fn clear_area(&mut self, area: Rect) {
+    pub(crate) fn clear_area(&mut self, area: Rect, style: Style) {
         let blank = lunatui_core::GlyphSlot::inline_scalar(' ');
         for y in area.y..area.y.saturating_add(area.height) {
             for x in area.x..area.x.saturating_add(area.width) {
                 if let Some(cell) = self.grid.get(x, y)
-                    && Some(cell.glyph()) != blank
+                    && (Some(cell.glyph()) != blank || cell.style() != style)
                 {
-                    self.put_char_patched(x, y, ' ', Style::new());
+                    self.grid.put_char(x, y, style, ' ', self.clusters);
                 }
             }
         }

@@ -468,11 +468,11 @@ fn a_label_style_replaces_the_label_and_title_style() {
 }
 
 #[test]
-fn the_chart_style_fills_the_area_first() {
+fn the_background_fills_the_area() {
     let panel = Style::new().bg(Color::Rgb(10, 20, 30));
     let one = [(0.5, 0.5)];
     let sets = [Dataset::new(&one).marker(Marker::Block)];
-    let chart = unit_axes(Chart::new(&sets)).style(panel);
+    let chart = unit_axes(Chart::new(&sets)).background(panel);
     let (grid, _) = paint(&chart, 4, 3);
     for (x, y) in [(0, 0), (3, 0), (0, 2), (3, 2), (1, 0), (2, 1)] {
         assert_eq!(style_at(&grid, x, y).bg, panel.bg, "background at {x},{y}");
@@ -651,6 +651,7 @@ fn a_legend_wider_or_taller_than_the_plot_is_never_drawn() {
 #[test]
 fn a_second_render_leaves_nothing_of_the_first() {
     let theme = Theme::builtin(Variant::Dark);
+    let panel = Style::new().bg(Color::Rgb(10, 20, 30));
     let drawn = [(0.0, 0.0), (1.0, 1.0)];
     let first = [
         Dataset::new(&drawn).graph_type(GraphType::Line).name("old"),
@@ -658,17 +659,19 @@ fn a_second_render_leaves_nothing_of_the_first() {
     ];
     let second = [Dataset::new(&NONE)];
     let wide = Chart::new(&first)
+        .background(panel)
+        .hidden_legend_constraints(Constraint::Fill(1), Constraint::Fill(1))
         .x_axis(
             Axis::new()
                 .title("long title")
                 .labels(&["start", "middle", "finish"]),
         )
         .y_axis(Axis::new().title("another").labels(&["100", "50", "0"]));
-    let narrow = Chart::new(&second);
+    let narrow = Chart::new(&second).background(panel);
     for (width, height) in [(30, 10), (3, 1), (30, 2)] {
+        let area = Rect::new(0, 0, width, height);
         let mut grid = Grid::new(30, 10);
         let mut clusters = ClusterTable::new();
-        let area = Rect::new(0, 0, width, height);
         let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
         wide.render(Rect::new(0, 0, 30, 10), &mut cx);
         let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
@@ -677,18 +680,12 @@ fn a_second_render_leaves_nothing_of_the_first() {
         let mut fresh_clusters = ClusterTable::new();
         let mut cx = RenderCx::new(&mut fresh, &mut fresh_clusters, &theme);
         narrow.render(area, &mut cx);
-        for row in 0..height {
-            let kept: String = grid
-                .row_display(row, &clusters)
-                .chars()
-                .take(usize::from(width))
-                .collect();
-            let want: String = fresh
-                .row_display(row, &fresh_clusters)
-                .chars()
-                .take(usize::from(width))
-                .collect();
-            assert_eq!(kept, want, "row {row} at {width}x{height}");
-        }
+        let inside = |grid: &Grid| -> Vec<u128> {
+            (0..height)
+                .flat_map(|y| (0..width).map(move |x| (x, y)))
+                .map(|(x, y)| grid.cell_bits(x, y))
+                .collect()
+        };
+        assert_eq!(inside(&grid), inside(&fresh), "{width}x{height}");
     }
 }

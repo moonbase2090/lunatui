@@ -2065,6 +2065,10 @@ impl ChartBoard {
         )
     }
 
+    fn fill(&self) -> Style {
+        Style::new().fg(self.text).bg(self.surface)
+    }
+
     fn throughput(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let plot = self.panel("Throughput", area, cx);
         let requests = trace(self.tick, 330.0, 150.0, 0.11, 0.0);
@@ -2082,6 +2086,7 @@ impl ChartBoard {
                 .graph_type(GraphType::Line),
         ];
         Chart::new(&sets)
+            .background(self.fill())
             .x_axis(
                 Axis::new()
                     .title("last 64 s")
@@ -2113,6 +2118,7 @@ impl ChartBoard {
             Dataset::new(&slow).name("cold").marker(Marker::Dot),
         ];
         Chart::new(&sets)
+            .background(self.fill())
             .x_axis(
                 Axis::new()
                     .title("KiB")
@@ -2143,6 +2149,7 @@ impl ChartBoard {
             .collect();
         let sets = [Dataset::new(&bars).graph_type(GraphType::Bar)];
         Chart::new(&sets)
+            .background(self.fill())
             .x_axis(
                 Axis::new()
                     .bounds([0.0, 23.0])
@@ -2167,6 +2174,7 @@ impl ChartBoard {
                 .graph_type(GraphType::Line),
         ];
         Chart::new(&sets)
+            .background(self.fill())
             .state(WidgetState::Focused)
             .x_axis(Axis::new().bounds([0.0, 63.0]).labels(&["-60s", "now"]))
             .y_axis(Axis::new().bounds([0.0, 100.0]).labels(&["0", "50", "100"]))
