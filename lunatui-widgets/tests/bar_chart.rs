@@ -401,6 +401,31 @@ fn charts_draw_the_same_at_any_offset() {
 }
 
 #[test]
+fn coordinate_edge_areas_do_not_overflow_or_mutate_the_grid() {
+    let bars = [Bar::new(8).label("bar").text_value("8")];
+    let groups = [BarGroup::new(&bars).label("group")];
+    let vertical = BarChart::from_groups(&groups).max(8);
+    let horizontal = BarChart::from_groups(&groups)
+        .direction(BarDirection::Horizontal)
+        .max(8);
+    let edge_areas = [
+        Rect::new(u16::MAX - 5, 0, 10, 4),
+        Rect::new(0, u16::MAX - 5, 4, 10),
+    ];
+
+    for chart in [&vertical, &horizontal] {
+        for area in edge_areas {
+            let theme = Theme::builtin(Variant::Dark);
+            let mut grid = Grid::new(4, 4);
+            let before = grid.clone();
+            let mut clusters = ClusterTable::new();
+            chart.render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+            assert_eq!(grid, before, "area {area:?} escaped the grid");
+        }
+    }
+}
+
+#[test]
 fn value_text_sits_inside_a_bar_that_fills_the_chart() {
     let tall = [Bar::new(8).text_value("9")];
     assert_eq!(rows(&BarChart::from_bars(&tall), 1, 3), ["9", "█", "█"]);

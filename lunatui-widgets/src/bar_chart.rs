@@ -6,6 +6,15 @@ use lunatui_theme::Token;
 
 use crate::{RenderCx, Widget, WidgetState};
 
+fn clip_area_to_coordinates(area: Rect) -> Rect {
+    Rect::new(
+        area.x,
+        area.y,
+        area.width.min(u16::MAX - area.x),
+        area.height.min(u16::MAX - area.y),
+    )
+}
+
 const EIGHTHS_UP: [&str; 9] = [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"];
 const EIGHTHS_ACROSS: [&str; 9] = [" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"];
 
@@ -330,7 +339,7 @@ fn put_clipped(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, text: &str, st
 fn put_centered(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, text: &str, style: Style) {
     let shown = fit(text, width);
     let used = u16::try_from(text_display_width(&shown)).unwrap_or(width);
-    put_styled(cx, x + (width - used) / 2, y, &shown, style);
+    put_styled(cx, x.saturating_add((width - used) / 2), y, &shown, style);
 }
 
 impl BarChart<'_> {
@@ -343,10 +352,10 @@ impl BarChart<'_> {
         let plot = area
             .height
             .saturating_sub(u16::from(has_bar_labels) + u16::from(has_group_labels));
-        let bottom = area.y + plot;
+        let bottom = area.y.saturating_add(plot);
         let bar_label_y = bottom;
-        let group_label_y = bottom + u16::from(has_bar_labels);
-        let right = area.x + area.width;
+        let group_label_y = bottom.saturating_add(u16::from(has_bar_labels));
+        let right = area.x.saturating_add(area.width);
         let mut x = area.x;
         for (group_index, (group_label, bars)) in self.groups().enumerate() {
             if group_index > 0 {
@@ -366,19 +375,25 @@ impl BarChart<'_> {
                 let whole = filled / 8;
                 for row in 0..whole {
                     for column in 0..width {
-                        put_styled(cx, x + column, bottom - 1 - row, "█", style);
+                        put_styled(cx, x.saturating_add(column), bottom - 1 - row, "█", style);
                     }
                 }
                 let partial = usize::from(filled % 8);
                 if partial != 0 {
                     let glyph = EIGHTHS_UP[partial];
                     for column in 0..width {
-                        put_styled(cx, x + column, bottom - 1 - whole, glyph, style);
+                        put_styled(
+                            cx,
+                            x.saturating_add(column),
+                            bottom - 1 - whole,
+                            glyph,
+                            style,
+                        );
                     }
                 }
                 for row in whole + u16::from(partial != 0)..plot {
                     for column in 0..width {
-                        put_styled(cx, x + column, bottom - 1 - row, " ", style);
+                        put_styled(cx, x.saturating_add(column), bottom - 1 - row, " ", style);
                     }
                 }
                 if let Some(text) = self.value_text(bar)
@@ -418,9 +433,13 @@ impl BarChart<'_> {
         let label_width = u16::try_from(label_width)
             .unwrap_or(u16::MAX)
             .min(area.width / 2);
-        let track_x = area.x + label_width + u16::from(label_width > 0);
-        let track = (area.x + area.width).saturating_sub(track_x);
-        let bottom = area.y + area.height;
+        let track_x = area
+            .x
+            .saturating_add(label_width)
+            .saturating_add(u16::from(label_width > 0));
+        let right = area.x.saturating_add(area.width);
+        let track = right.saturating_sub(track_x);
+        let bottom = area.y.saturating_add(area.height);
         let mut y = area.y;
         for (group_index, (group_label, bars)) in self.groups().enumerate() {
             if group_index > 0 {
@@ -431,7 +450,7 @@ impl BarChart<'_> {
                     return;
                 }
                 put_clipped(cx, area.x, y, area.width, label, colors.label);
-                y += 1;
+                y = y.saturating_add(1);
             }
             for (bar_index, bar) in bars.iter().enumerate() {
                 if bar_index > 0 {
@@ -447,26 +466,41 @@ impl BarChart<'_> {
                 let partial = usize::from(filled % 8);
                 for row in 0..height {
                     for column in 0..whole {
-                        put_styled(cx, track_x + column, y + row, "█", style);
+                        put_styled(
+                            cx,
+                            track_x.saturating_add(column),
+                            y.saturating_add(row),
+                            "█",
+                            style,
+                        );
                     }
                     if partial != 0 {
                         let glyph = EIGHTHS_ACROSS[partial];
-                        put_styled(cx, track_x + whole, y + row, glyph, style);
+                        put_styled(
+                            cx,
+                            track_x.saturating_add(whole),
+                            y.saturating_add(row),
+                            glyph,
+                            style,
+                        );
                     }
                 }
                 if let Some(label) = bar.label {
-                    let row = y + (height - 1) / 2;
+                    let row = y.saturating_add((height - 1) / 2);
                     put_clipped(cx, area.x, row, label_width, label, colors.label);
                 }
                 if let Some(text) = self.value_text(bar) {
-                    let row = y + (height - 1) / 2;
+                    let row = y.saturating_add((height - 1) / 2);
                     let used = u16::try_from(text_display_width(&text)).unwrap_or(u16::MAX);
                     if whole >= used.saturating_add(1) {
                         let inside = Style::new().fg(colors.on_bar).bg(style.fg);
                         put_clipped(cx, track_x, row, whole, &text, inside);
                     } else {
-                        let after = track_x + whole + u16::from(partial != 0) + 1;
-                        let room = (area.x + area.width).saturating_sub(after);
+                        let after = track_x
+                            .saturating_add(whole)
+                            .saturating_add(u16::from(partial != 0))
+                            .saturating_add(1);
+                        let room = right.saturating_sub(after);
                         put_clipped(cx, after, row, room, &text, colors.value);
                     }
                 }
@@ -478,6 +512,7 @@ impl BarChart<'_> {
 
 impl Widget for BarChart<'_> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let area = clip_area_to_coordinates(area);
         if area.width == 0 || area.height == 0 {
             return;
         }
