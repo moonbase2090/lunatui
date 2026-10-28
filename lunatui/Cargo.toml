@@ -161,6 +161,12 @@ test = false
 required-features = ["image-decode"]
 
 [[example]]
+name = "kitty_image"
+path = "../examples/kitty_image.rs"
+test = false
+required-features = ["image-presenter", "image-decode"]
+
+[[example]]
 name = "bigtext"
 path = "../examples/bigtext.rs"
 test = true
