@@ -6,6 +6,7 @@ use core::fmt;
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 
 #[cfg(any(
+    feature = "barchart",
     feature = "bigtext",
     feature = "calendar",
     feature = "image",
@@ -149,6 +150,7 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(
+        feature = "barchart",
         feature = "bigtext",
         feature = "calendar",
         feature = "image",
@@ -162,6 +164,20 @@ impl<'a> RenderCx<'a> {
             .unwrap_or_default();
         let patched = patch_style(existing, style);
         self.grid.put_char(x, y, patched, glyph, self.clusters);
+    }
+
+    #[cfg(feature = "barchart")]
+    pub(crate) fn clear_area(&mut self, area: Rect, style: Style) {
+        let blank = lunatui_core::GlyphSlot::inline_scalar(' ');
+        for y in area.y..area.y.saturating_add(area.height) {
+            for x in area.x..area.x.saturating_add(area.width) {
+                if let Some(cell) = self.grid.get(x, y)
+                    && (Some(cell.glyph()) != blank || cell.style() != style)
+                {
+                    self.grid.put_char(x, y, style, ' ', self.clusters);
+                }
+            }
+        }
     }
 
     #[cfg(feature = "calendar")]
@@ -205,6 +221,7 @@ impl<'a> RenderCx<'a> {
 }
 
 #[cfg(any(
+    feature = "barchart",
     feature = "bigtext",
     feature = "calendar",
     feature = "image",
@@ -227,6 +244,7 @@ pub(crate) fn patch_style(base: Style, over: Style) -> Style {
 }
 
 #[cfg(any(
+    feature = "barchart",
     feature = "bigtext",
     feature = "calendar",
     feature = "image",
