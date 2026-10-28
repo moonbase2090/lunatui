@@ -9,6 +9,7 @@ mod bar_chart;
 mod big_text;
 mod block;
 mod borders;
+mod breadcrumbs;
 #[cfg(feature = "calendar")]
 mod calendar;
 /// Shapes for [`Canvas`] and the painter they draw with.
@@ -36,6 +37,7 @@ mod scrollbar;
 mod sparkline;
 mod spinner;
 mod spinner_preset;
+mod split;
 #[cfg(feature = "widget-state")]
 mod state;
 mod status_bar;
@@ -53,6 +55,7 @@ pub use bar_chart::{Bar, BarChart, BarDirection, BarGroup};
 pub use big_text::{BigText, BigTextFont, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
+pub use breadcrumbs::Breadcrumbs;
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 #[cfg(feature = "canvas")]
@@ -87,6 +90,9 @@ pub use sparkline::{
 };
 pub use spinner::{Spinner, SpinnerPattern};
 pub use spinner_preset::SpinnerPreset;
+pub use split::{
+    Divider, DividerId, PaneArea, PaneId, SplitAxis, SplitDrag, SplitLayout, SplitTree,
+};
 #[cfg(feature = "widget-state")]
 pub use state::WidgetState;
 pub use status_bar::StatusBar;

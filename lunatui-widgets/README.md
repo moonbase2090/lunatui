@@ -23,6 +23,10 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 `MarkdownView` is behind the `markdown` feature. It lays a parsed `lunatui_text::markdown::Document` out at the width it is given and draws headings, wrapped paragraphs with emphasis, code, and links, lists with task markers, block quotes, code blocks, tables, and rules. `scroll` moves it by rows and `content_height` sizes a scrollbar; every cell of the area is rewritten, and `background` keeps a panel color.
 
+`Breadcrumbs` draws a one-row path. A path wider than the area collapses its middle to `…`, keeping the first segment and as many of the last as fit, and `segment_areas` gives each shown segment's cells for `HitMap` hit testing.
+
+`SplitTree` holds nested splits: each divides its area between two panes or further splits at a ratio (in thousandths) with optional minimum sizes, and one pane can be zoomed to fill everything. `layout` returns each pane's cells and each divider's one-cell line for drawing and hit testing, `SplitDrag` turns pointer press, drag, and release on a divider into cell-exact resizing that stops at the minimums (and can cancel), and `SplitLayout::render_dividers` draws the lines.
+
 `Canvas` is behind the `canvas` feature. It is a free-form drawing surface: a paint closure draws `canvas::Line`, `Rectangle`, `Circle`, and `Points` shapes (or its own `Shape`) in coordinates of your choosing, starts new layers with `Context::layer`, and prints labels with `Context::print`. `Marker` picks the glyphs: braille, sextant, quadrant, half block, block, or dot. Shapes are clipped to the bounds, every cell of the area is rewritten, and a `background` keeps a panel color.
 
 `ToastStack` is behind the `toast` feature. It holds timed messages and takes the time from the caller (a `Duration`, such as a virtual clock's `now`), so expiry is deterministic. A toast is scoped to a pane (a boxed message in the pane's bottom-right corner, newest nearest the corner) or to the status rows (one line each, right aligned). `placements` returns each shown toast's cells and layer for `HitMap`, and `render` draws them with theme colors for the kind.
