@@ -199,6 +199,33 @@ impl<'a> RenderCx<'a> {
         }
     }
 
+    #[cfg(feature = "image")]
+    pub(crate) fn keep_backgrounds(&mut self, area: Rect, draw: impl FnOnce(&mut Self)) {
+        let end_x = area.x.saturating_add(area.width);
+        let end_y = area.y.saturating_add(area.height);
+        let cells: Vec<(u16, u16)> = (area.y..end_y)
+            .flat_map(|y| (area.x..end_x).map(move |x| (x, y)))
+            .collect();
+        let before: Vec<Color> = cells
+            .iter()
+            .map(|&(x, y)| {
+                self.grid
+                    .get(x, y)
+                    .map_or(Color::Default, |cell| cell.style().bg)
+            })
+            .collect();
+        draw(self);
+        for (&(x, y), bg) in cells.iter().zip(before) {
+            let Some(cell) = self.grid.get(x, y) else {
+                continue;
+            };
+            let style = cell.style();
+            if style.bg == Color::Default && bg != Color::Default {
+                self.grid.set_style(Rect::new(x, y, 1, 1), style.bg(bg));
+            }
+        }
+    }
+
     /// Applies `style` to every cell in `area`, keeping glyphs unchanged.
     pub fn set_style(&mut self, area: Rect, style: Style) {
         self.grid.set_style(area, style);
