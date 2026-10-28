@@ -14,13 +14,13 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Axis, Bar, BarChart, BigText, Block, BorderType, Chart, Dataset, Date, Gauge, GraphType, List,
-    MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline, SplitAxis, SplitTree,
-    Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Widget,
+    Axis, Bar, BarChart, BigText, Block, BorderType, Canvas, Chart, Dataset, Date, Gauge,
+    GraphType, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline,
+    SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint as RatConstraint, Layout as RatLayout, Rect as RatRect};
+use ratatui::layout::{Constraint as RatConstraint, Rect as RatRect};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::symbols::Marker as RatMarker;
 use ratatui::text::{Line, Span};
@@ -160,6 +160,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: markdown_lunatui,
         ratatui: markdown_ratatui,
+    },
+    Case {
+        name: "canvas",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui samples every circle at 360 points, which leaves gaps once a circle spans more than about 90 dots; lunatui adds samples so the outline stays unbroken",
+        ),
+        lunatui: canvas_lunatui,
+        ratatui: canvas_ratatui,
     },
     Case {
         name: "toast",
@@ -725,6 +734,124 @@ fn barchart_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .max(130)
         .bar_style(rat_accent())
         .render(RatRect::new(area.x, area.y, area.width, height), buf);
+}
+
+fn canvas_angle(tick: u32) -> f64 {
+    f64::from(tick) * 0.07
+}
+
+fn canvas_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    use lunatui_widgets::canvas::{Circle, Line, Points, Rectangle};
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let angle = canvas_angle(tick);
+    let (sin, cos) = angle.sin_cos();
+    let accent = accent_style();
+    let text = text_style();
+    Canvas::new(move |ctx| {
+        ctx.draw(&Rectangle {
+            x: -90.0,
+            y: -45.0,
+            width: 180.0,
+            height: 90.0,
+            style: dim_style(),
+        });
+        ctx.draw(&Circle {
+            x: 0.0,
+            y: 0.0,
+            radius: 30.0,
+            style: accent,
+        });
+        ctx.draw(&Circle {
+            x: 40.0 * cos,
+            y: 20.0 * sin,
+            radius: 8.0,
+            style: text,
+        });
+        ctx.draw(&Line {
+            x1: -30.0 * cos,
+            y1: -30.0 * sin,
+            x2: 30.0 * cos,
+            y2: 30.0 * sin,
+            style: accent,
+        });
+        ctx.layer();
+        ctx.draw(&Points {
+            coords: &[
+                (0.0, 0.0),
+                (15.0 * sin, 15.0 * cos),
+                (-60.0, 30.0),
+                (60.0, -30.0),
+            ],
+            style: text,
+        });
+        ctx.print(-85.0, 40.0, "canvas", text);
+    })
+    .x_bounds([-100.0, 100.0])
+    .y_bounds([-50.0, 50.0])
+    .marker(Marker::Braille)
+    .background(base_style())
+    .render(area, &mut cx);
+}
+
+fn canvas_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    use ratatui::text::Line as TextLine;
+    use ratatui::widgets::canvas::{Canvas as RatCanvas, Circle, Line, Points, Rectangle};
+    let angle = canvas_angle(tick);
+    let (sin, cos) = angle.sin_cos();
+    let accent = rat_rgb(ACCENT);
+    let text = rat_rgb(TEXT);
+    let dim = rat_rgb(DIM);
+    RatCanvas::default()
+        .x_bounds([-100.0, 100.0])
+        .y_bounds([-50.0, 50.0])
+        .marker(RatMarker::Braille)
+        .background_color(rat_rgb(BG))
+        .paint(move |ctx| {
+            ctx.draw(&Rectangle {
+                x: -90.0,
+                y: -45.0,
+                width: 180.0,
+                height: 90.0,
+                color: dim,
+            });
+            ctx.draw(&Circle {
+                x: 0.0,
+                y: 0.0,
+                radius: 30.0,
+                color: accent,
+            });
+            ctx.draw(&Circle {
+                x: 40.0 * cos,
+                y: 20.0 * sin,
+                radius: 8.0,
+                color: text,
+            });
+            ctx.draw(&Line {
+                x1: -30.0 * cos,
+                y1: -30.0 * sin,
+                x2: 30.0 * cos,
+                y2: 30.0 * sin,
+                color: accent,
+            });
+            ctx.layer();
+            ctx.draw(&Points {
+                coords: &[
+                    (0.0, 0.0),
+                    (15.0 * sin, 15.0 * cos),
+                    (-60.0, 30.0),
+                    (60.0, -30.0),
+                ],
+                color: text,
+            });
+            ctx.print(-85.0, 40.0, TextLine::styled("canvas", rat_text()));
+        })
+        .render(area, buf);
 }
 
 const CHART_POINTS: usize = 96;
