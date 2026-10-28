@@ -11,7 +11,14 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `Chart` widget, behind the `chart` feature, with `Dataset`, `Axis`, `GraphType` (scatter, line, bar), `Marker` (braille, half block, dot, block), and `LegendPosition`. Axes carry bounds, labels, and titles; a legend lists named datasets and is hidden when it would take more than half the plot, which `hidden_legend_constraints` changes. Series colors cycle through theme tokens and the axes follow `WidgetState`.
+
+- `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
+- `MarkdownView` widget, behind the `markdown` feature: it draws a parsed Markdown `Document` wrapped to the area's width, with headings and rules, lists and task items, block quotes, code blocks, boxed tables, and styled inline text, scrolls by rows, reports its `content_height` for a scrollbar, and follows `WidgetState` and an optional background style.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
+
+### Fixed
+
+- A focused `Image` draws its focus ring over the background already in its area instead of the terminal default.
 
 ## [0.1.12] - 2026-10-27
 

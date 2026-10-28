@@ -13,19 +13,20 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Axis, BigText, Block, BorderType, Chart, Dataset, Date, Gauge, GraphType, List, Marker,
-    Monthly, Paragraph, PixelSize, RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
+    Axis, Bar, BarChart, BigText, Block, BorderType, Chart, Dataset, Date, Gauge, GraphType, List,
+    MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline, Table, Tabs,
+    TextWrap, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint as RatConstraint, Rect as RatRect};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
-use ratatui::symbols::Marker as RatMarker;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
-    Axis as RatAxis, Block as RatBlock, BorderType as RatBorderType, Chart as RatChart,
-    Dataset as RatDataset, Gauge as RatGauge, GraphType as RatGraphType, List as RatList, ListItem,
+    Axis as RatAxis, Bar as RatBar, BarChart as RatBarChart, BarGroup as RatBarGroup,
+    Block as RatBlock, BorderType as RatBorderType, Chart as RatChart, Dataset as RatDataset,
+    Gauge as RatGauge, GraphType as RatGraphType, List as RatList, ListItem, Marker as RatMarker,
     Paragraph as RatParagraph, Row, Sparkline as RatSparkline, Table as RatTable, Tabs as RatTabs,
     Widget as RatWidget, Wrap,
 };
@@ -132,6 +133,22 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: sparkline_lunatui,
         ratatui: sparkline_ratatui,
+    },
+    Case {
+        name: "barchart",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: barchart_lunatui,
+        ratatui: barchart_ratatui,
+    },
+    Case {
+        name: "markdown",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no Markdown widget; its side shows the same source in a wrapped Paragraph",
+        ),
+        lunatui: markdown_lunatui,
+        ratatui: markdown_ratatui,
     },
     Case {
         name: "chart",
@@ -517,6 +534,84 @@ fn sparkline_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     RatSparkline::default()
         .data(spark_window(tick, area.width))
         .style(rat_accent())
+        .render(RatRect::new(area.x, area.y, area.width, height), buf);
+}
+
+const MARKDOWN: &str = "# Release notes\n\nThe **widgets** crate gained a `MarkdownView`: headings, lists, quotes, code, and tables, drawn from a parsed document.\n\n## Checklist\n\n- [x] Parse the source once\n- [x] Lay the rows out at the width\n- [ ] Scroll by rows\n  - nested items indent\n\n> A quote keeps its bar on every row, even when the text wraps to a second or third line.\n\n```rust\nlet view = MarkdownView::new(&document);\nview.render(area, &mut cx);\n```\n\n| widget | state |\n|:--|--:|\n| table | ready |\n| list | ready |\n\n---\n\nMore text follows so the view has something to scroll through when the area is short. Another paragraph with *emphasis*, ~~strikethrough~~, and a [link](https://example.com).\n";
+
+fn markdown_document() -> &'static lunatui_text::markdown::Document {
+    static DOCUMENT: OnceLock<lunatui_text::markdown::Document> = OnceLock::new();
+    DOCUMENT.get_or_init(|| {
+        lunatui_text::markdown::parse(MARKDOWN, lunatui_text::markdown::Options::gfm())
+    })
+}
+
+fn markdown_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    MarkdownView::new(markdown_document())
+        .background(text_style())
+        .scroll(usize::try_from(tick % 20).unwrap_or(0))
+        .render(area, &mut cx);
+}
+
+fn markdown_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    RatParagraph::new(MARKDOWN)
+        .wrap(Wrap { trim: true })
+        .scroll((u16::try_from(tick % 20).unwrap_or(0), 0))
+        .style(rat_text())
+        .render(area, buf);
+}
+
+const BAR_COUNT: usize = 64;
+
+fn bar_values(tick: u32, width: u16) -> Vec<u64> {
+    let columns = usize::from(width).div_ceil(2).min(BAR_COUNT);
+    (0..columns)
+        .map(|index| {
+            let phase = u64::try_from(index).unwrap_or(0) * 3 + u64::from(tick);
+            (phase * 37 % 101) + (phase * 11 % 29)
+        })
+        .collect()
+}
+
+fn barchart_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let height = area.height.min(12);
+    let bars: Vec<Bar<'_>> = bar_values(tick, area.width)
+        .into_iter()
+        .map(Bar::new)
+        .collect();
+    BarChart::from_bars(&bars)
+        .background(base_style())
+        .max(130)
+        .style(accent_style())
+        .render(Rect::new(area.x, area.y, area.width, height), &mut cx);
+}
+
+fn barchart_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let height = area.height.min(12);
+    let bars: Vec<RatBar<'_>> = bar_values(tick, area.width)
+        .into_iter()
+        .map(|value| RatBar::default().value(value).text_value(String::new()))
+        .collect();
+    RatBarChart::default()
+        .data(RatBarGroup::default().bars(&bars))
+        .bar_width(1)
+        .bar_gap(1)
+        .max(130)
+        .bar_style(rat_accent())
         .render(RatRect::new(area.x, area.y, area.width, height), buf);
 }
 

@@ -15,8 +15,9 @@ use lunatui_core::{
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
-    Alignment, Axis, BigText, Block, BorderType, Chart, Dataset, Date, DateStyle, GraphType,
-    LegendPosition, Marker, Monthly, PixelSize, RenderCx, Sparkline, Widget, WidgetState,
+    Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Chart,
+    Dataset, Date, DateStyle, GraphType, LegendPosition, List, MarkdownView, Marker, Monthly,
+    Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar, Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -52,6 +53,16 @@ const PREVIEWS: &[Preview] = &[
         name: "chart",
         native: chart_native,
         baseline: chart_baseline,
+    },
+    Preview {
+        name: "barchart",
+        native: barchart_native,
+        baseline: barchart_baseline,
+    },
+    Preview {
+        name: "markdown",
+        native: markdown_native,
+        baseline: markdown_baseline,
     },
     Preview {
         name: "sparkline",
@@ -2013,6 +2024,392 @@ fn sparkline_baseline(
         area,
         buffer,
     );
+}
+
+const MD_PAGES: [(&str, &str); 3] = [
+    (
+        "Getting started",
+        "# Getting started\n\nLunatui draws terminal interfaces from small **widgets**. Each widget takes an area and a `RenderCx` and writes cells; nothing else is needed to get a frame on screen.\n\n## Install\n\n1. Add the crate with the features you use.\n2. Create a `Grid` and a `ClusterTable`.\n3. Render a widget into the grid.\n4. Diff the grid and write the changes.\n\n```toml\n[dependencies]\nlunatui = \"0.1\"\nlunatui-widgets = { version = \"0.1\", features = [\"markdown\"] }\n```\n\n## Your first frame\n\n> Every widget redraws the whole of its own area, so a frame never shows leftovers from the one before it.\n\n- [x] Block and Paragraph\n- [x] List and Table\n- [ ] Your own widget\n  - implement `Widget`\n  - keep `render` free of side effects\n\n---\n\nRead the *architecture overview* next, or jump to the [widget gallery](https://example.com/gallery).\n",
+    ),
+    (
+        "Layout",
+        "# Layout\n\nA layout splits an area into rectangles from a list of **constraints**. The solver is exact for the common cases and falls back to a general solver only when it must.\n\n## Constraints\n\n| constraint | meaning |\n|:--|--:|\n| `Length(n)` | exactly n cells |\n| `Min(n)` | at least n cells |\n| `Percentage(p)` | p percent of the axis |\n| `Fill(w)` | a weighted share of the rest |\n\n## Flex\n\n- `Start`, `Center`, and `End` place the group\n- `SpaceBetween` spreads the gaps\n  - a lone segment sits at the start\n- `Legacy` keeps the older rules\n\n```rust\nlet [left, right] = Layout::horizontal([Length(24), Fill(1)])\n    .split(area)\n    .into_array();\n```\n\n> Floors and caps are opt in: turn on the `size-limits` feature to bound a segment.\n",
+    ),
+    (
+        "Widgets",
+        "# Widgets\n\nThe widget set covers text, lists, tables, gauges, charts, and now **Markdown**.\n\n## Markdown\n\nThe view lays a parsed document out at the width it is given: headings get rules, lists keep a hanging indent, quotes keep their bar, and tables are boxed. ~~Raw source~~ is never shown.\n\n1. Parse once with `markdown::parse`.\n2. Render with `MarkdownView::new(&document)`.\n3. Scroll with `.scroll(rows)` and size a scrollbar from `content_height`.\n\n### Inline styles\n\nText can be *emphasised*, **strong**, ***both***, ~~struck~~, or `code`, and a [link](https://example.com) is underlined.\n\n| widget | feature |\n|:--|:-:|\n| `Sparkline` | sparkline |\n| `BarChart` | barchart |\n| `Chart` | chart |\n| `MarkdownView` | markdown |\n\n- [x] headings, lists, quotes\n- [x] code blocks and tables\n- [x] task items\n\n---\n\nThat is the whole tour.\n",
+    ),
+];
+
+fn md_documents() -> &'static [lunatui_text::markdown::Document] {
+    static DOCUMENTS: std::sync::OnceLock<Vec<lunatui_text::markdown::Document>> =
+        std::sync::OnceLock::new();
+    DOCUMENTS.get_or_init(|| {
+        MD_PAGES
+            .iter()
+            .map(|(_, source)| {
+                lunatui_text::markdown::parse(source, lunatui_text::markdown::Options::gfm())
+            })
+            .collect()
+    })
+}
+
+fn markdown_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let raised = cx.token(Token::Surface1);
+    let accent = cx.token(Token::Accent);
+    let fill = Style::new().fg(text).bg(surface);
+    let page = usize::try_from(tick / 70).unwrap_or(0) % MD_PAGES.len();
+    let (title, _) = MD_PAGES[page];
+    let document = &md_documents()[page];
+    StatusBar::new(format!(" Docs  ›  {title}"))
+        .style(
+            Style::new()
+                .fg(accent)
+                .bg(raised)
+                .with_attrs(Attrs::new().set_bold(true)),
+        )
+        .render(Rect::new(area.x, area.y, area.width, 1), &mut cx);
+    let body = Rect::new(
+        area.x,
+        area.y + 1,
+        area.width,
+        area.height.saturating_sub(2),
+    );
+    let side_w = 26.min(body.width / 3);
+    let side = Rect::new(body.x, body.y, side_w, body.height);
+    let panel = |title: &str| {
+        Block::bordered()
+            .title(format!(" {title} "))
+            .style(fill)
+            .border_style(Style::new().fg(raised).bg(surface))
+            .title_style(fill)
+    };
+    let side_block = panel("Pages");
+    side_block.render(side, &mut cx);
+    let names: Vec<Vec<String>> = MD_PAGES
+        .iter()
+        .map(|(name, _)| vec![(*name).to_owned()])
+        .collect();
+    let source = lunatui_widgets::VecSource::from_rows(names);
+    List::new(source)
+        .style(fill)
+        .highlight_style(
+            Style::new()
+                .fg(accent)
+                .bg(raised)
+                .with_attrs(Attrs::new().set_bold(true)),
+        )
+        .selected(Some(page))
+        .render(side_block.inner(side), &mut cx);
+    let main = Rect::new(body.x + side_w, body.y, body.width - side_w, body.height);
+    let main_block = panel("Reader");
+    main_block.render(main, &mut cx);
+    let inner = main_block.inner(main);
+    let view = Rect::new(
+        inner.x + 1,
+        inner.y,
+        inner.width.saturating_sub(3),
+        inner.height,
+    );
+    let content = MarkdownView::new(document).content_height(view.width);
+    let travel = content.saturating_sub(usize::from(view.height));
+    let phase = usize::try_from(tick % 70)
+        .unwrap_or(0)
+        .saturating_sub(8)
+        .min(54);
+    let scroll = travel * phase / 54;
+    MarkdownView::new(document)
+        .background(fill)
+        .scroll(scroll)
+        .render(view, &mut cx);
+    Scrollbar::vertical(content, usize::from(view.height), scroll)
+        .track_style(Style::new().fg(raised).bg(surface))
+        .thumb_style(Style::new().fg(accent).bg(surface))
+        .render(
+            Rect::new(inner.x + inner.width - 1, inner.y, 1, inner.height),
+            &mut cx,
+        );
+    let percent = (scroll * 100).checked_div(travel).unwrap_or(100);
+    StatusBar::new(format!(" tab pages   ↑↓ scroll   q quit   {percent}%"))
+        .style(
+            Style::new()
+                .fg(text)
+                .bg(raised)
+                .with_attrs(Attrs::new().set_dim(true)),
+        )
+        .render(
+            Rect::new(area.x, area.y + area.height - 1, area.width, 1),
+            &mut cx,
+        );
+}
+
+fn markdown_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "markdown") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
+const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
+const BAR_REGIONS: [(&str, u32); 6] = [
+    ("us-east", 41),
+    ("us-west", 57),
+    ("eu-west", 73),
+    ("eu-north", 88),
+    ("ap-south", 119),
+    ("ap-east", 96),
+];
+
+fn bar_requests(tick: u32, service: u32, tier: u32) -> u64 {
+    let base = [180, 120, 70][usize::try_from(tier).unwrap_or(0)] + service * 14;
+    let swing = tri(tick + service * 9 + tier * 5, 48, 0, 60);
+    u64::from(base) + swing
+}
+
+fn bar_latency(tick: u32, region: u32, base: u32) -> u64 {
+    u64::from(base) + tri(tick + region * 7, 60, 0, 34)
+}
+
+struct BarBoard {
+    text: Color,
+    surface: Color,
+    edge: Color,
+    ok: Color,
+    accent: Color,
+    warn: Color,
+    focus: Color,
+    tick: u32,
+}
+
+impl BarBoard {
+    fn new(cx: &RenderCx<'_>, tick: u32) -> Self {
+        Self {
+            text: cx.token(Token::TextPrimary),
+            surface: cx.token(Token::Surface0),
+            edge: cx.token(Token::Surface1),
+            ok: cx.token(Token::Ok),
+            accent: cx.token(Token::Accent),
+            warn: cx.token(Token::Warn),
+            focus: cx.token(Token::FocusRing),
+            tick,
+        }
+    }
+
+    fn panel(&self, title: &str, area: Rect, cx: &mut RenderCx<'_>) -> Rect {
+        let panel = Block::bordered()
+            .title(format!(" {title} "))
+            .style(Style::new().fg(self.text).bg(self.surface))
+            .border_style(Style::new().fg(self.edge).bg(self.surface))
+            .title_style(Style::new().fg(self.text).bg(self.surface));
+        panel.render(area, cx);
+        let inner = panel.inner(area);
+        Rect::new(
+            inner.x + 1,
+            inner.y + 1,
+            inner.width.saturating_sub(2),
+            inner.height.saturating_sub(1),
+        )
+    }
+
+    fn label_style(&self) -> Style {
+        Style::new().fg(self.text)
+    }
+
+    fn fill(&self) -> Style {
+        Style::new().fg(self.text).bg(self.surface)
+    }
+
+    fn requests(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let plot = self.panel("Requests per minute", area, cx);
+        let tiers = [self.ok, self.accent, self.warn].map(|color| Style::new().fg(color));
+        let texts: Vec<Vec<String>> = (0..4_u32)
+            .map(|service| {
+                (0..3_u32)
+                    .map(|tier| bar_requests(self.tick, service, tier).to_string())
+                    .collect()
+            })
+            .collect();
+        let bars: Vec<Vec<Bar<'_>>> = (0..4_u32)
+            .map(|service| {
+                (0..3_u32)
+                    .map(|tier| {
+                        let value = bar_requests(self.tick, service, tier);
+                        let (service, tier) = (
+                            usize::try_from(service).unwrap_or(0),
+                            usize::try_from(tier).unwrap_or(0),
+                        );
+                        Bar::new(value)
+                            .label(BAR_PERCENTILES[tier])
+                            .text_value(&texts[service][tier])
+                            .style(tiers[tier])
+                    })
+                    .collect()
+            })
+            .collect();
+        let groups: Vec<BarGroup<'_>> = bars
+            .iter()
+            .zip(BAR_SERVICES)
+            .map(|(group, name)| BarGroup::new(group).label(name))
+            .collect();
+        BarChart::from_groups(&groups)
+            .background(self.fill())
+            .bar_width(4)
+            .bar_gap(1)
+            .group_gap(3)
+            .max(300)
+            .label_style(self.label_style())
+            .render(plot, cx);
+    }
+
+    fn latency(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let plot = self.panel("Latency by region", area, cx);
+        let values: Vec<u64> = BAR_REGIONS
+            .iter()
+            .zip(0_u32..)
+            .map(|((_, base), region)| bar_latency(self.tick, region, *base))
+            .collect();
+        let texts: Vec<String> = values.iter().map(|value| format!("{value} ms")).collect();
+        let bars: Vec<Bar<'_>> = BAR_REGIONS
+            .iter()
+            .zip(&values)
+            .zip(&texts)
+            .map(|(((name, _), value), text)| {
+                let color = if *value > 120 { self.warn } else { self.accent };
+                Bar::new(*value)
+                    .label(name)
+                    .text_value(text)
+                    .style(Style::new().fg(color))
+            })
+            .collect();
+        BarChart::from_bars(&bars)
+            .background(self.fill())
+            .direction(BarDirection::Horizontal)
+            .bar_width(2)
+            .bar_gap(1)
+            .max(160)
+            .label_style(self.label_style())
+            .render(plot, cx);
+    }
+
+    fn runs(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let plot = self.panel("Build time, last runs", area, cx);
+        let columns = usize::from(plot.width / 3).min(24);
+        let bars: Vec<Bar<'_>> = (0..columns)
+            .map(|index| {
+                let run = u32::try_from(index).unwrap_or(0);
+                let value = 40 + tri(run * 5 + self.tick / 2, 37, 0, 50) + u64::from(run % 4) * 6;
+                let color = if index + 1 == columns {
+                    self.focus
+                } else {
+                    self.accent
+                };
+                Bar::new(value).style(Style::new().fg(color))
+            })
+            .collect();
+        BarChart::from_bars(&bars)
+            .background(self.fill())
+            .bar_width(2)
+            .bar_gap(1)
+            .max(130)
+            .render(plot, cx);
+    }
+
+    fn states(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let plot = self.panel("Queue depth by state", area, cx);
+        let cell_w = plot.width / 3;
+        let depth: Vec<Bar<'_>> = (0..8_u32)
+            .map(|index| Bar::new(6 + tri(self.tick + index * 6, 40, 0, 26)))
+            .collect();
+        let states = [
+            ("normal", WidgetState::Normal),
+            ("focused", WidgetState::Focused),
+            ("disabled", WidgetState::Disabled),
+        ];
+        for (index, (name, state)) in (0_u16..).zip(states) {
+            let x = plot.x + index * cell_w;
+            let chart = Rect::new(
+                x,
+                plot.y,
+                cell_w.saturating_sub(1),
+                plot.height.saturating_sub(2),
+            );
+            BarChart::from_bars(&depth)
+                .background(self.fill())
+                .state(state)
+                .max(32)
+                .render(chart, cx);
+            Paragraph::new(name)
+                .style(Style::new().fg(self.text).bg(self.surface))
+                .render(
+                    Rect::new(x, plot.y + plot.height - 1, cell_w.saturating_sub(1), 1),
+                    cx,
+                );
+        }
+    }
+}
+
+fn barchart_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let text = theme.resolve(Token::TextPrimary);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let board = BarBoard::new(&cx, tick);
+    let wide = area.width >= 100 && area.height >= 30;
+    let body = area.height.saturating_sub(1);
+    let top = (body * 55 / 100).max(8);
+    let split = if wide {
+        area.width * 60 / 100
+    } else {
+        area.width
+    };
+    board.requests(Rect::new(area.x, area.y, split, top), &mut cx);
+    board.runs(
+        Rect::new(area.x, area.y + top, split, body.saturating_sub(top)),
+        &mut cx,
+    );
+    if wide {
+        let rest = area.width - split;
+        board.latency(Rect::new(area.x + split, area.y, rest, top), &mut cx);
+        board.states(
+            Rect::new(area.x + split, area.y + top, rest, body.saturating_sub(top)),
+            &mut cx,
+        );
+    }
+    Paragraph::new(
+        "p50 / p95 / p99 per service  |  latency in ms  |  queue depth: normal, focused, disabled",
+    )
+    .style(
+        Style::new()
+            .fg(board.text)
+            .bg(board.surface)
+            .with_attrs(Attrs::new().set_dim(true)),
+    )
+    .render(
+        Rect::new(area.x + 1, area.y + body, area.width.saturating_sub(2), 1),
+        &mut cx,
+    );
+}
+
+fn barchart_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "barchart") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 struct ChartBoard {

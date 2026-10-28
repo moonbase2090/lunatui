@@ -14,10 +14,13 @@ workspace = true
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
+markdown = ["widget-state", "lunatui-text/markdown"]
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
 chart = ["widget-state"]
+
+barchart = ["widget-state"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -33,6 +36,7 @@ unicode-segmentation = "=1.13.3"
 [dev-dependencies]
 lunatui-test = { version = "0.1.12", path = "../lunatui-test" }
 ratatui = "=0.30.2"
+proptest = "=1.9.0"
 time = { version = "=0.3.55", default-features = false }
 
 [[test]]
@@ -105,3 +109,13 @@ required-features = ["chart"]
 name = "chart_ratatui"
 path = "tests/chart_ratatui.rs"
 required-features = ["chart"]
+
+[[test]]
+name = "bar_chart"
+path = "tests/bar_chart.rs"
+required-features = ["barchart"]
+
+[[test]]
+name = "markdown_view"
+path = "tests/markdown_view.rs"
+required-features = ["markdown"]

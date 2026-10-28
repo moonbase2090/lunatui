@@ -23,9 +23,9 @@ gungraun = ["dep:gungraun"]
 gungraun = { version = "0.20.0", optional = true }
 lunatui-core = { version = "0.1.12", path = "../lunatui-core" }
 lunatui-layout = { version = "0.1.12", path = "../lunatui-layout" }
-lunatui-text = { version = "0.1.12", path = "../lunatui-text" }
+lunatui-text = { version = "0.1.12", path = "../lunatui-text", features = ["markdown"] }
 lunatui-theme = { version = "0.1.12", path = "../lunatui-theme" }
-lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["bigtext", "calendar", "chart", "sparkline"] }
+lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "chart", "markdown", "sparkline"] }
 lunatui-term = { version = "0.1.12", path = "../lunatui-term" }
 lunatui-prismattyc = { version = "0.1.12", path = "../lunatui-prismattyc" }
 num-bigint = "0.4"
