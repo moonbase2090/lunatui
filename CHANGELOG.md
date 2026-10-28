@@ -31,6 +31,7 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `Block::title_inset` keeps border cells between the left corner and a left-aligned title, and `Block::title_at` adds a title with its own position, alignment, and style.
+- `Tabs::boxed` draws the selected tab in a rounded box that opens into a divider line, `Tabs::join_parent_border` joins that divider to a parent block's side borders, and `Tabs::indent` sets the space before the first tab.
 
 ## [0.1.11] - 2026-10-27
 
