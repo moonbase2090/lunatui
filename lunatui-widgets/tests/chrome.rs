@@ -6,7 +6,7 @@
 use lunatui_core::{Attrs, Cell, ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Gauge, RenderCx, Spinner, SpinnerPattern, StatusBar, Tabs, TextInput, Widget,
+    Gauge, RenderCx, Spinner, SpinnerPattern, SpinnerPreset, StatusBar, Tabs, TextInput, Widget,
 };
 
 #[test]
@@ -329,4 +329,43 @@ fn status_bar_clips_an_area_at_the_u16_edge() {
         .render(Rect::new(u16::MAX - 5, 0, 10, 1), &mut cx);
 
     assert_eq!(grid.row_display(0, &clusters), "keep");
+}
+
+#[test]
+fn spinner_glyph_matches_the_rendered_frame_and_wraps() {
+    let theme = Theme::builtin(Variant::Dark);
+    for frame in [0_u32, 1, 9] {
+        let spinner = Spinner::new(frame).pattern(SpinnerPattern::BrailleRing);
+        let mut grid = Grid::new(1, 1);
+        let mut clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        spinner.render(Rect::new(0, 0, 1, 1), &mut cx);
+        assert_eq!(
+            grid.row_display(0, &clusters),
+            spinner.glyph(),
+            "frame {frame}"
+        );
+    }
+    assert_eq!(
+        Spinner::new(1).pattern(SpinnerPattern::BrailleRing).glyph(),
+        "⣽"
+    );
+    assert_eq!(
+        Spinner::new(9).pattern(SpinnerPattern::BrailleRing).glyph(),
+        "⣽"
+    );
+}
+
+#[test]
+fn spinner_glyph_matches_preset_frames_and_handles_empty_presets() {
+    assert_eq!(
+        Spinner::new(4).preset(SpinnerPreset::BOUNCE).glyph(),
+        "    ●"
+    );
+    assert_eq!(
+        Spinner::new(0)
+            .preset(SpinnerPreset::new("empty", &[], 1))
+            .glyph(),
+        ""
+    );
 }
