@@ -2554,6 +2554,7 @@ fn tab_drag_state(strip: Rect, tick: u32) -> (Vec<&'static str>, usize, TabsDrag
             if now == step.from {
                 column = center(step.grab);
                 drag.press(&areas, column, strip.y);
+                selected = step.grab;
             } else if now > step.from && now <= step.to {
                 let start = i32::from(center(step.grab));
                 let end = i32::from(center(step.drop));
@@ -2588,7 +2589,7 @@ fn tabs_drag_native(
     let fill = Style::new().fg(text).bg(surface);
     let dim = fill.with_attrs(Attrs::new().set_dim(true));
     let strip = Rect::new(area.x + 2, area.y + 1, area.width.saturating_sub(4), 3);
-    let (titles, selected, drag, column) = tab_drag_state(strip, tick);
+    let (titles, selected, drag, _) = tab_drag_state(strip, tick);
     let tabs = Tabs::new(titles.clone())
         .select(selected)
         .style(dim)
@@ -2600,26 +2601,6 @@ fn tabs_drag_native(
         )
         .boxed(Style::new().fg(accent).bg(surface), dim);
     tabs.render(strip, &mut cx);
-    let areas = tabs.tab_areas(strip);
-    let target_area = drag
-        .target()
-        .and_then(|target| areas.iter().find(|(index, _)| *index == target));
-    if let Some((_, rect)) = target_area {
-        cx.put_str(
-            rect.x + rect.width / 2,
-            strip.y.saturating_sub(1),
-            "▼",
-            Style::new().fg(accent).bg(surface),
-        );
-    }
-    if drag.is_dragging() {
-        cx.put_str(
-            column,
-            strip.y + 1,
-            "◆",
-            Style::new().fg(accent).bg(surface),
-        );
-    }
     let body = Rect::new(
         area.x + 2,
         strip.y + 3,

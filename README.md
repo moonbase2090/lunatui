@@ -83,7 +83,7 @@ Screenshot: [docs/media/toast.png](docs/media/toast.png). Recorded with `scripts
 
 ### Tab reordering
 
-A boxed tab strip whose tabs are dragged with the pointer: a marker shows where the grabbed tab would land, releasing moves it there, and the selected tab (Logs) stays selected wherever it ends up, whether the dragged tab passes it or not.
+A boxed tab strip whose tabs are dragged with the pointer: pressing a tab selects it, the status line says a drag is under way, and releasing over another tab moves it there with the selection following the tab. Three drags run: forward, to the front, and back.
 
 <img src="docs/media/tabs-drag.webp" alt="TabsDrag: tabs dragged into a new order while the selected tab stays selected, in the dark theme" width="1028">
 
