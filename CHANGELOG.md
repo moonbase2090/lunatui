@@ -14,7 +14,6 @@ Every PR adds its entry under **Unreleased**.
 - `KeyHintBar`, behind the `key-hints` feature, renders the first registered shortcut for each command in the active `Keymap`.
 - `kitty_image` demonstrates a sharp 1920×1920 NASA Blue Marble image through Kitty graphics at native source resolution, with cell fallback elsewhere; the image is credited in `NOTICE`.
 - `List::highlight_symbol`, `List::icons`, and `List::marks` add a selection marker, a styled icon before each item, and a right-aligned mark per row.
-- `kitty_image` example runs the `Image` widget through Kitty graphics when available and uses its cell fallback in other terminals.
 - `Overlay::shadow` draws a drop shadow one cell right and down behind the modal.
 
 ### Changed
