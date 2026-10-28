@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Accordion` widget, behind the `accordion` feature: collapsible sections with a caret, title, and badge per header, body rectangles for the caller's content, a per-section reveal fraction for animated opening and closing, `layout` for hit testing, `step` for tab-order focus, and widget states.
 - `lunatui-widgets` gets an `all-widgets` feature that turns on every widget needing no extra dependency, so test and example setups no longer list each widget.
 - `SearchBox` widget, behind the `search-box` feature: a one-row search field with a prompt, placeholder, caret, match count, and clear button, plus `filter` (smart case, every term must match, highlight ranges), `step`, and `put_highlighted` for filtering and drawing a list.
 - `NumberInput` widget, behind the `number-input` feature: a spin box with minus and plus buttons, a range, a step, decimals, a prefix and suffix, and a text-editing display with a caret, plus `nudge`, `parse`, `accepts`, and `format` rules and button and field areas for hit testing.
