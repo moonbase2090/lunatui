@@ -21,11 +21,11 @@ pub enum RecordedTerminal {
 
 const XTERM: &[u8] = b"\x1bP>|xterm(384)\x1b\\\x1b[?2026;0$y\x1b[?2027;0$y\x1b[?2004;2$y\x1b[?1004;2$y\x1b[?64;1;2;6;9;15;18;21;22c";
 
-const KITTY: &[u8] = b"\x1bP>|kitty(0.36.4)\x1b\\\x1b[?2026;2$y\x1b[?2027;2$y\x1b[?2004;1$y\x1b[?1004;2$y\x1b[?31u\x1b_Ga=q,i=1,OK\x1b\\\x1b]11;rgb:0000/0000/0000\x1b\\\x1b[?62c";
+const KITTY: &[u8] = b"\x1bP>|kitty(0.36.4)\x1b\\\x1b[?2026;2$y\x1b[?2027;2$y\x1b[?2004;1$y\x1b[?1004;2$y\x1b[?31u\x1b_Gi=31;OK\x1b\\\x1b]11;rgb:0000/0000/0000\x1b\\\x1b[?62c";
 
 const WEZTERM: &[u8] = b"\x1bP>|WezTerm 20240203-110809-5046fc22\x1b\\\x1b[?2026;1$y\x1b[?2027;1$y\x1b[?2004;2$y\x1b[?1004;1$y\x1b[?1u\x1b]11;rgb:ffff/ffff/ffff\x1b\\\x1b[?65;c";
 
-const GHOSTTY: &[u8] = b"\x1bP>|ghostty 1.1.3\x1b\\\x1b[?2026;2$y\x1b[?2027;2$y\x1b[?2004;2$y\x1b[?1004;0$y\x1b[?0u\x1b_Ga=q,OK\x1b\\\x1b[?62;52c";
+const GHOSTTY: &[u8] = b"\x1bP>|ghostty 1.1.3\x1b\\\x1b[?2026;2$y\x1b[?2027;2$y\x1b[?2004;2$y\x1b[?1004;0$y\x1b[?0u\x1b_Gi=31;OK\x1b\\\x1b[?62;52c";
 
 const ITERM2: &[u8] = b"\x1bP>|iTerm2 3.5.4\x1b\\\x1b[?2026;2$y\x1b[?2027;0$y\x1b[?2004;2$y\x1b[?1004;2$y\x1b]11;rgb:0000/0000/0000\x1b\\\x1b[?64;1;2c";
 

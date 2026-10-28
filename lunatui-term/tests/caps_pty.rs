@@ -11,7 +11,9 @@ use std::os::unix::net::UnixStream;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use lunatui_term::{PrivateMode, ProbeEnv, ProbeReply, QUERIES, RecordedTerminal, probe_fd};
+use lunatui_term::{
+    GraphicsProtocol, PrivateMode, ProbeEnv, ProbeReply, QUERIES, RecordedTerminal, probe_fd,
+};
 
 fn env_256() -> ProbeEnv {
     ProbeEnv {
@@ -74,6 +76,7 @@ fn probe_on_a_pty_enables_mode_2027_for_the_kitty_reply() -> io::Result<()> {
     let (reply, output) = exchange(RecordedTerminal::Kitty.replies())?;
     assert!(reply.saw_device_attributes);
     assert_eq!(reply.caps.identity.program, "kitty");
+    assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Kitty);
     assert_eq!(reply.caps.modes.grapheme_clusters, PrivateMode::Reset);
     assert_eq!(
         reply.caps.grapheme_enable(),
@@ -83,6 +86,10 @@ fn probe_on_a_pty_enables_mode_2027_for_the_kitty_reply() -> io::Result<()> {
     assert!(contains(&output, b"\x1b[?2027$p"));
     assert!(contains(&output, b"\x1b[?2027h"));
     assert!(output.starts_with(QUERIES));
+    assert!(contains(
+        &output,
+        b"\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\"
+    ));
     Ok(())
 }
 

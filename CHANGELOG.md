@@ -21,6 +21,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `List` clears every row of its area and paints the selected row's highlight across the full width.
 
+### Fixed
+
+- Kitty graphics detection sends a valid one-pixel query and recognizes its `i=31;OK` response, enabling the pixel presenter instead of falling back to cells.
+
 ## [0.1.13] - 2026-10-28
 
 ### Added

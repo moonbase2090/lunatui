@@ -17,7 +17,7 @@ use std::time::Duration;
 pub const PROBE_BUDGET: Duration = Duration::from_millis(200);
 
 /// Startup queries in one write, ending with primary device attributes (`CSI c`).
-pub const QUERIES: &[u8] = b"\x1b[>0q\x1b[?2026$p\x1b[?2027$p\x1b[?2004$p\x1b[?1004$p\x1b[?u\x1b_Ga=q\x1b\\\x1b]10;?\x1b\\\x1b]11;?\x1b\\\x1b[c";
+pub const QUERIES: &[u8] = b"\x1b[>0q\x1b[?2026$p\x1b[?2027$p\x1b[?2004$p\x1b[?1004$p\x1b[?u\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b]10;?\x1b\\\x1b]11;?\x1b\\\x1b[c";
 
 /// `CSI ? 2027 h`, sent when grapheme-cluster mode is supported and currently reset.
 pub const GRAPHEME_ENABLE: &[u8] = b"\x1b[?2027h";
