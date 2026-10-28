@@ -33,6 +33,8 @@ mod padding;
 mod paragraph;
 #[cfg(feature = "popup")]
 mod popup;
+#[cfg(feature = "radio")]
+mod radio_group;
 #[cfg(any(feature = "chart", feature = "canvas"))]
 mod raster;
 mod render_cx;
@@ -91,6 +93,8 @@ pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
 #[cfg(feature = "popup")]
 pub use popup::{Placement, Popup, PopupState};
+#[cfg(feature = "radio")]
+pub use radio_group::{RadioFlow, RadioGroup};
 #[cfg(any(feature = "chart", feature = "canvas"))]
 pub use raster::Marker;
 pub use render_cx::RenderCx;
