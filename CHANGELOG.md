@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
 
+### Fixed
+
+- A focused `Image` draws its focus ring over the background already in its area instead of the terminal default.
+
 ## [0.1.12] - 2026-10-27
 
 ### Added
