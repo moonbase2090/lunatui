@@ -18,6 +18,7 @@ subcell = ["lunatui-core/subcell"]
 graphite-tokens = ["lunatui-theme/graphite-tokens", "lunatui-theme/color-profiles"]
 # Graphite pixel-buffer frames through the Kitty PixelLayer; off by default.
 graphite-pixels = ["dep:graphite-core"]
+text-area = ["lunatui-widgets/text-area"]
 # gungraun needs Linux and valgrind, so its benchmarks are opt-in.
 gungraun = ["dep:gungraun"]
 
