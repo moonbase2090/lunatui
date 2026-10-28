@@ -27,13 +27,14 @@ lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-image = { path = "../lunatui-image" }
 lunatui-term = { path = "../lunatui-term" }
-lunatui-theme = { path = "../lunatui-theme" }
+lunatui-theme = { path = "../lunatui-theme", features = ["graphite-tokens"] }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "image", "sparkline"] }
+lunatui-widgets = { version = "0.1.12", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "image", "sparkline", "nested-menu"] }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
 lunatui-prismattyc = { version = "0.1.12", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"
+tui-menu = "=0.3.1"
 time = { version = "=0.3.55", default-features = false }
 libc = "0.2.190"
 

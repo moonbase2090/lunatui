@@ -12,6 +12,7 @@ Every PR adds its entry under **Unreleased**.
 
 - `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
+- `Menu`, `MenuItem`, `MenuState`, and `MenuEvent`, behind the opt-in `nested-menu` feature, with keyboard navigation, cascading submenus, disabled items, and queued leaf actions styled with Graphite tokens.
 
 ## [0.1.12] - 2026-10-27
 

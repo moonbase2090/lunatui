@@ -11,10 +11,10 @@ use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_layout::Constraint;
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
-use lunatui_theme::{Theme, Variant};
+use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Bar, BarChart, BigText, Block, BorderType, Date, Gauge, List, Monthly, Paragraph, PixelSize,
-    RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
+    Bar, BarChart, BigText, Block, BorderType, Date, Gauge, List, Menu, MenuItem, MenuState,
+    Monthly, Paragraph, PixelSize, RenderCx, Sparkline, Table, Tabs, TextWrap, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -30,6 +30,7 @@ use ratatui::widgets::{
 };
 use ratatui::{Terminal, TerminalOptions, Viewport};
 use time::{Date as TimeDate, Month};
+use tui_menu::{Menu as RatMenu, MenuItem as RatMenuItem, MenuState as RatMenuState};
 
 /// Terminal sizes every case runs at.
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
@@ -108,6 +109,13 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: tabs_lunatui,
         ratatui: tabs_ratatui,
+    },
+    Case {
+        name: "nested-menu",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: nested_menu_lunatui,
+        ratatui: nested_menu_ratatui,
     },
     Case {
         name: "calendar",
@@ -372,6 +380,138 @@ fn tabs_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .padding("", "")
         .divider(" ")
         .render(RatRect::new(area.x, area.y, area.width, 1), buf);
+}
+
+fn benchmark_menu_items() -> Vec<MenuItem<&'static str>> {
+    vec![
+        MenuItem::group(
+            "File",
+            vec![
+                MenuItem::item("New", "new"),
+                MenuItem::item("Open", "open"),
+                MenuItem::group(
+                    "Open recent",
+                    vec![
+                        MenuItem::item("file_1.txt", "recent-1"),
+                        MenuItem::item("file_2.txt", "recent-2"),
+                    ],
+                ),
+                MenuItem::item("Save as", "save-as"),
+            ],
+        ),
+        MenuItem::group(
+            "Edit",
+            vec![
+                MenuItem::item("Copy", "copy"),
+                MenuItem::item("Cut", "cut"),
+                MenuItem::item("Paste", "paste"),
+            ],
+        ),
+        MenuItem::group(
+            "About",
+            vec![
+                MenuItem::item("Author", "author"),
+                MenuItem::item("Help", "help"),
+            ],
+        ),
+    ]
+}
+
+fn benchmark_menu_state() -> MenuState<&'static str> {
+    let mut state = MenuState::new(benchmark_menu_items());
+    state.activate();
+    state.down();
+    state.down();
+    state.down();
+    state.right();
+    state
+}
+
+fn benchmark_rat_menu_state() -> RatMenuState<&'static str> {
+    let mut state = RatMenuState::new(vec![
+        RatMenuItem::group(
+            "File",
+            vec![
+                RatMenuItem::item("New", "new"),
+                RatMenuItem::item("Open", "open"),
+                RatMenuItem::group(
+                    "Open recent",
+                    vec![
+                        RatMenuItem::item("file_1.txt", "recent-1"),
+                        RatMenuItem::item("file_2.txt", "recent-2"),
+                    ],
+                ),
+                RatMenuItem::item("Save as", "save-as"),
+            ],
+        ),
+        RatMenuItem::group(
+            "Edit",
+            vec![
+                RatMenuItem::item("Copy", "copy"),
+                RatMenuItem::item("Cut", "cut"),
+                RatMenuItem::item("Paste", "paste"),
+            ],
+        ),
+        RatMenuItem::group(
+            "About",
+            vec![
+                RatMenuItem::item("Author", "author"),
+                RatMenuItem::item("Help", "help"),
+            ],
+        ),
+    ]);
+    state.activate();
+    state.down();
+    state.down();
+    state.down();
+    state.right();
+    state
+}
+
+fn nested_menu_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    _tick: u32,
+) {
+    let state = benchmark_menu_state();
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    Menu::new(&state)
+        .state(WidgetState::Focused)
+        .render(area, &mut cx);
+}
+
+fn nested_menu_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
+    static STYLES: OnceLock<(RatStyle, RatStyle)> = OnceLock::new();
+    let (normal, selected) = *STYLES.get_or_init(|| {
+        let theme = Theme::builtin(Variant::Dark);
+        let normal = RatStyle::new()
+            .fg(rat_color_for_token(&theme, Token::TextPrimary))
+            .bg(rat_color_for_token(&theme, Token::SurfaceRaised));
+        let selected = RatStyle::new()
+            .fg(rat_color_for_token(&theme, Token::TextMutedOnFocus))
+            .bg(rat_color_for_token(&theme, Token::FocusFill));
+        (normal, selected)
+    });
+    let mut state = benchmark_rat_menu_state();
+    ratatui::widgets::StatefulWidget::render(
+        RatMenu::new()
+            .default_style(normal)
+            .highlight(selected)
+            .dropdown_width(20),
+        area,
+        buf,
+        &mut state,
+    );
+}
+
+fn rat_color_for_token(theme: &Theme, token: Token) -> RatColor {
+    match theme.resolve(token) {
+        Color::Default | Color::Token(_) => RatColor::Reset,
+        Color::Rgb(red, green, blue) => RatColor::Rgb(red, green, blue),
+        Color::Indexed(index) => RatColor::Indexed(index),
+    }
 }
 
 fn calendar_month(tick: u32) -> u8 {

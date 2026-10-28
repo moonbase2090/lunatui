@@ -74,3 +74,11 @@ A media library for an observatory archive. Each thumbnail is an `Image` with `I
 ![Image widget: a media library in the dark theme](docs/media/image-120x36-truecolor-dark.gif)
 
 Screenshot: [docs/media/image-120x36-truecolor-dark.png](docs/media/image-120x36-truecolor-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=image`, 120×36, dark, 10 seconds at 30 fps). The recording shows the half-block cell fallback, two image pixels per cell. The recorder captures terminal text and cannot capture Kitty graphics, so the Kitty path is not shown.
+
+### Nested menu
+
+A keyboard-driven File menu opens a cascading Recent submenu over a workspace panel. This recording shows the Lunatui side at 80×24 in the dark theme.
+
+![Nested menu with its Recent submenu open](docs/media/nested-menu.gif)
+
+Screenshot: [truecolor, dark](docs/media/nested-menu-80x24-truecolor-dark.png) · [ANSI16, light](docs/media/nested-menu-80x24-ansi16-light.png). Side-by-side Lunatui/Ratatui recordings: [80×24](docs/media/nested-menu-80x24-side-by-side.mp4) · [200×60](docs/media/nested-menu-200x60-side-by-side.mp4). Recorded with `scripts/record-widget.sh` (`CASE=nested-menu`, 50 frames at 10 fps); the larger capture uses ANSI16 and the light theme.

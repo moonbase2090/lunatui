@@ -14,6 +14,7 @@ workspace = true
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
+nested-menu = ["widget-state", "lunatui-theme/graphite-tokens"]
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
 sparkline = ["widget-state"]
@@ -33,6 +34,7 @@ unicode-segmentation = "=1.13.3"
 [dev-dependencies]
 lunatui-test = { version = "0.1.12", path = "../lunatui-test" }
 ratatui = "=0.30.2"
+tui-menu = "=0.3.1"
 time = { version = "=0.3.55", default-features = false }
 
 [[test]]
@@ -71,6 +73,11 @@ path = "tests/overlay.rs"
 name = "calendar"
 path = "tests/calendar.rs"
 required-features = ["calendar"]
+
+[[test]]
+name = "nested_menu"
+path = "tests/nested_menu.rs"
+required-features = ["nested-menu"]
 
 [[test]]
 name = "status_dot_color_profiles"

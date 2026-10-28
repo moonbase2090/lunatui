@@ -27,4 +27,31 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 `Lightcycle::new(elapsed)` draws an eight-way Braille sub-cell trail for the supplied elapsed time. It does not own a clock; the application supplies each frame's time and schedules redraws.
 
+`Menu`, `MenuItem`, `MenuState`, and `MenuEvent` are behind the opt-in `nested-menu` feature. Build a recursive item tree, keep `MenuState` in the application, forward key presses to its navigation methods, and drain selected actions after rendering:
+
+```rust,ignore
+let mut state = MenuState::new(vec![
+    MenuItem::group("File", vec![
+        MenuItem::item("Open", Action::Open),
+        MenuItem::group("Recent", vec![
+            MenuItem::item("notes.txt", Action::OpenRecent),
+        ]),
+    ]),
+]);
+
+// In the application's key handler:
+state.activate(); // Enter
+state.down();     // Down
+state.right();    // Right / open group
+state.select();   // Enter / queue a leaf action
+
+for event in state.drain_events() {
+    match event {
+        MenuEvent::Selected(action) => handle(action),
+    }
+}
+```
+
+Render with `Menu::new(&state)` and provide a `WidgetState` for token-based styling. The feature enables Graphite token support; applications choose their own key bindings and event loop.
+
 Snapshot tests use `lunatui_test::styled_snapshot`. See [Getting started](../docs/getting-started.md).
