@@ -23,10 +23,9 @@ fi
 PROFILE="${PROFILE:-truecolor}"
 THEME="${THEME:-dark}"
 OUT="${OUT:-$ROOT/target/widget-recordings}"
+MAX_BYTES="${MAX_BYTES:-2000000}"
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
-cargo build -q --release -p lunatui --features color-profiles --example widget_preview
-BIN="$ROOT/target/release/examples/widget_preview"
 for value in "$WIDTH" "$HEIGHT" "$FRAMES" "$FPS"; do
   if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
     echo "record-widget: sizes, frames and fps must be positive integers" >&2
@@ -74,6 +73,8 @@ if [[ "$CASE" == "image" ]]; then
   echo "Image showcase: ${GIF} (${BYTES} bytes, ${DURATION}s), screenshot: ${PNG}"
   exit 0
 fi
+cargo build -q --release -p lunatui --features color-profiles --example widget_preview
+BIN="$ROOT/target/release/examples/widget_preview"
 ARGS=(--case "$CASE" --width "$WIDTH" --height "$HEIGHT" --frames "$FRAMES" --fps "$FPS" --profile "$PROFILE" --theme "$THEME")
 for side in lunatui ratatui; do
   asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "${side} ${CASE}" \
