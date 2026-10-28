@@ -13,15 +13,16 @@ use lunatui_core::{
     Attrs, ClusterTable, Color, Grid, Rect, Style, UnderlineStyle, clip_display_prefix,
     width as cols,
 };
-use lunatui_term::{ColorMode, Encoder};
+use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
+use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::canvas::{Circle, Line};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType,
     Breadcrumbs, Canvas, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
-    LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize, RenderCx,
-    Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs,
-    TabsDrag, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
+    KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
+    RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
+    Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
@@ -62,6 +63,11 @@ const PREVIEWS: &[Preview] = &[
         name: "breadcrumbs",
         native: breadcrumbs_native,
         baseline: breadcrumbs_baseline,
+    },
+    Preview {
+        name: "key-hints",
+        native: key_hints_native,
+        baseline: key_hints_baseline,
     },
     Preview {
         name: "calendar",
@@ -3570,6 +3576,304 @@ fn breadcrumbs_native(
 
 fn breadcrumbs_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "breadcrumbs") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+const KH_MOVE: &[KeyChord] = &[KeyChord::new(KeyCode::Down, Modifiers::new())];
+const KH_OPEN: &[KeyChord] = &[KeyChord::new(KeyCode::Enter, Modifiers::new())];
+const KH_SEARCH: &[KeyChord] = &[KeyChord::new(KeyCode::Char('/'), Modifiers::new())];
+const KH_PUBLISH: &[KeyChord] = &[KeyChord::new(KeyCode::Char('p'), Modifiers::new())];
+const KH_QUIT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('q'), Modifiers::new())];
+const KH_ESC: &[KeyChord] = &[KeyChord::new(KeyCode::Esc, Modifiers::new())];
+const KH_CLEAR: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('u'),
+    Modifiers::new().control(),
+)];
+const KH_YES: &[KeyChord] = &[KeyChord::new(KeyCode::Char('y'), Modifiers::new())];
+const KH_NO: &[KeyChord] = &[KeyChord::new(KeyCode::Char('n'), Modifiers::new())];
+
+fn kh_keymap(mode: usize) -> Keymap {
+    let mut keymap = Keymap::new();
+    let commands: &[Command] = match mode {
+        0 => &[
+            Command::new("move", "Move", KH_MOVE),
+            Command::new("open", "Open log", KH_OPEN),
+            Command::new("search", "Search checks", KH_SEARCH),
+            Command::new("publish", "Publish", KH_PUBLISH),
+            Command::new("quit", "Quit", KH_QUIT),
+        ],
+        1 => &[
+            Command::new("apply", "Apply filter", KH_OPEN),
+            Command::new("clear", "Clear", KH_CLEAR),
+            Command::new("cancel", "Cancel", KH_ESC),
+        ],
+        _ => &[
+            Command::new("yes", "Publish v0.1.13", KH_YES),
+            Command::new("no", "Go back", KH_NO),
+            Command::new("cancel", "Cancel", KH_ESC),
+        ],
+    };
+    for command in commands {
+        keymap.register(*command);
+    }
+    keymap
+}
+
+const KH_CHECKS: [(&str, &str); 8] = [
+    ("fmt", "18 s"),
+    ("clippy", "41 s"),
+    ("test", "2 m 12 s"),
+    ("msrv", "49 s"),
+    ("deny", "2 m 22 s"),
+    ("docs", "25 s"),
+    ("bench", "3 m 32 s"),
+    ("scorecard", "1 m 54 s"),
+];
+
+fn kh_state(tick: u32) -> (usize, String, usize) {
+    let mode = if (150..200).contains(&tick) {
+        2
+    } else {
+        usize::from((60..130).contains(&tick))
+    };
+    let query = if mode == 1 {
+        let typed = usize::try_from((tick - 60) / 14).unwrap_or(0).min(4);
+        "test".chars().take(typed.min(4)).collect()
+    } else if (130..150).contains(&tick) {
+        String::from("test")
+    } else {
+        String::new()
+    };
+    (mode, query, usize::try_from(tick / 12).unwrap_or(0))
+}
+
+fn key_hints_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let (mode, query, step) = kh_state(tick);
+    let header = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), header);
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Release console  ·  lunatui v0.1.13",
+        header,
+    );
+    let shown: Vec<(&str, &str)> = KH_CHECKS
+        .iter()
+        .copied()
+        .filter(|(name, _)| query.is_empty() || name.contains(query.as_str()))
+        .collect();
+    let panes = Rect::new(area.x + 2, area.y + 2, area.width.saturating_sub(4), 15);
+    kh_log(
+        &mut cx,
+        Rect::new(
+            area.x + 2,
+            area.y + 17,
+            area.width.saturating_sub(4),
+            area.height.saturating_sub(19),
+        ),
+        tick,
+        [fill, dim],
+        [accent, raised],
+    );
+    kh_panes(
+        &mut cx,
+        panes,
+        &shown,
+        (mode, &query, step),
+        [fill, dim],
+        [accent, raised],
+    );
+    if mode == 2 {
+        kh_confirm(&mut cx, area, [fill, dim], accent);
+    }
+    let bar = Rect::new(
+        area.x,
+        area.y + area.height.saturating_sub(1),
+        area.width,
+        1,
+    );
+    cx.put_str(
+        bar.x,
+        bar.y,
+        &" ".repeat(usize::from(bar.width)),
+        Style::new().fg(text).bg(raised),
+    );
+    KeyHintBar::new(&kh_keymap(mode)).gap(3).render(
+        Rect::new(bar.x + 1, bar.y, bar.width.saturating_sub(2), 1),
+        &mut cx,
+    );
+}
+
+fn kh_panes(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    shown: &[(&str, &str)],
+    state: (usize, &str, usize),
+    styles: [Style; 2],
+    colors: [Color; 2],
+) {
+    let (mode, query, step) = state;
+    let [fill, dim] = styles;
+    let [accent, raised] = colors;
+    let left = Rect::new(area.x, area.y, 46, area.height);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        area.y,
+        area.width.saturating_sub(left.width + 1),
+        area.height,
+    );
+    let title = if mode == 1 {
+        format!(" Checks  /{query}▏ ")
+    } else {
+        String::from(" Checks ")
+    };
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(title)
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(left, cx);
+    let selected = if shown.is_empty() {
+        0
+    } else {
+        step % shown.len()
+    };
+    for (row, (name, took)) in (0_u16..).zip(shown) {
+        let y = left.y + 2 + row;
+        let picked = usize::from(row) == selected && mode != 1;
+        let style = if picked {
+            Style::new().fg(fill.fg).bg(raised)
+        } else {
+            fill
+        };
+        cx.put_str(
+            left.x + 1,
+            y,
+            &" ".repeat(usize::from(left.width - 2)),
+            style,
+        );
+        cx.put_str(left.x + 2, y, &format!("✔ {name:<14}{took:>20}"), style);
+    }
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Release notes ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(right, cx);
+    let (name, took) = shown.get(selected).copied().unwrap_or(("none", ""));
+    for (row, line) in (0_u16..).zip([
+        format!("check      {name}"),
+        format!("duration   {took}"),
+        String::from("branch     main"),
+        String::from("head       9c2b269"),
+        String::new(),
+        String::from("Changes since v0.1.12"),
+        String::from("  • ToastStack, Canvas, SplitTree widgets"),
+        String::from("  • Breadcrumbs and TabsDrag"),
+        String::from("  • No-feature build fixed"),
+    ]) {
+        cx.put_str(
+            right.x + 2,
+            right.y + 2 + row,
+            clip_display_prefix(&line, right.width.saturating_sub(4)),
+            if row == 5 { fill.fg(accent) } else { fill },
+        );
+    }
+}
+
+fn kh_log(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2], colors: [Color; 2]) {
+    let [fill, dim] = styles;
+    let [accent, _] = colors;
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Run log ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(area, cx);
+    let steps = [
+        "checkout main",
+        "cargo fmt --check",
+        "cargo clippy -D warnings",
+        "cargo test --locked",
+        "cargo deny check",
+        "cargo xtask bench",
+        "build release artifacts",
+        "sign checksums",
+    ];
+    let rows = usize::from(area.height.saturating_sub(2));
+    let count = usize::try_from(tick / 6).unwrap_or(0) + 1;
+    let start = count.saturating_sub(rows);
+    for (row, index) in (0_u16..).zip(start..count) {
+        let step = steps[index % steps.len()];
+        let line = format!(
+            "12:{:02}:{:02}  ok   {step}",
+            (index * 7 / 60) % 60,
+            index * 7 % 60
+        );
+        cx.put_str(
+            area.x + 2,
+            area.y + 1 + row,
+            clip_display_prefix(&line, area.width.saturating_sub(4)),
+            if index + 1 == count { fill } else { dim },
+        );
+    }
+}
+
+fn kh_confirm(cx: &mut RenderCx<'_>, area: Rect, styles: [Style; 2], accent: Color) {
+    let [fill, dim] = styles;
+    let modal = Rect::new(
+        area.x + area.width / 2 - 22,
+        area.y + area.height / 2 - 3,
+        44,
+        6,
+    );
+    for row in 0..modal.height {
+        cx.put_str(modal.x, modal.y + row, &" ".repeat(44), fill);
+    }
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Publish ")
+        .style(fill)
+        .border_style(Style::new().fg(accent).bg(fill.bg))
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(modal, cx);
+    cx.put_str(
+        modal.x + 2,
+        modal.y + 2,
+        "Tag and publish lunatui v0.1.13?",
+        fill,
+    );
+    cx.put_str(
+        modal.x + 2,
+        modal.y + 3,
+        "All eight checks are passing.",
+        dim,
+    );
+}
+
+fn key_hints_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "key-hints") {
         (case.ratatui)(buffer, area, tick);
     }
 }

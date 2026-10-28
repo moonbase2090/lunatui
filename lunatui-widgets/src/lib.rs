@@ -20,6 +20,8 @@ mod chart;
 mod gauge;
 #[cfg(feature = "image")]
 mod image;
+#[cfg(feature = "key-hints")]
+mod key_hint_bar;
 mod lightcycle;
 #[cfg(feature = "line-gauge")]
 mod line_gauge;
@@ -65,6 +67,8 @@ pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
 pub use gauge::Gauge;
 #[cfg(feature = "image")]
 pub use image::Image;
+#[cfg(feature = "key-hints")]
+pub use key_hint_bar::KeyHintBar;
 pub use lightcycle::Lightcycle;
 #[cfg(feature = "line-gauge")]
 pub use line_gauge::LineGauge;

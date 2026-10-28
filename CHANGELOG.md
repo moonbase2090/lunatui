@@ -11,6 +11,7 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `TabsDrag` turns pointer press, drag, and release over the regions from `Tabs::tab_areas` into a `TabMove` that reorders tabs: dropping on another tab moves the dragged tab there, a press that stays on its own tab is a click, and leaving the strip or `cancel` drops nothing. `TabMove::apply` reorders a `Vec` and `TabMove::selection` keeps the selection on the same tab.
+- `KeyHintBar`, behind the `key-hints` feature, renders the first registered shortcut for each command in the active `Keymap`.
 
 ## [0.1.13] - 2026-10-28
 
@@ -25,6 +26,7 @@ Every PR adds its entry under **Unreleased**.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
 - `StatusBar::left` and `StatusBar::right` draw styled segments from each edge over a row filled with the bar style.
+- `Spinner::glyph` returns the glyph a spinner draws at its frame, for use inside text such as a table cell.
 - `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
 - `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - `MarkdownView` widget, behind the `markdown` feature: it draws a parsed Markdown `Document` wrapped to the area's width, with headings and rules, lists and task items, block quotes, code blocks, boxed tables, and styled inline text, scrolls by rows, reports its `content_height` for a scrollbar, and follows `WidgetState` and an optional background style.
@@ -67,11 +69,6 @@ Every PR adds its entry under **Unreleased**.
 - The PTY integration tests for `lunatui` and `lunatui-test` carry their crate docs on Windows, where the tests are compiled out, so `missing_docs` no longer fails the Windows build.
 - The website hero sky no longer drifts side to side; the sky image is static.
 - `RenderCx::put_str` keeps text attributes such as bold, so widgets given a bold style now draw bold text.
-
-
-
-
-
 
 ## [0.1.11] - 2026-10-27
 
