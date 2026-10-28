@@ -7,3 +7,7 @@
 #
 # A helper may not write cells itself. The cell-writing calls stay forbidden
 # everywhere in scope, so listing a helper never lets it paint.
+helper render_case # builds one site gallery scene from widgets and hands each its area
+helper label # renders a one-row Paragraph sized to its text
+helper band # renders a Block whose style fills the area background
+helper rule # renders a top-border-only Block as a horizontal line

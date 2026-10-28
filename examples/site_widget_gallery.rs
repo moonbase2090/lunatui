@@ -9,8 +9,8 @@ use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, text_display_w
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Alignment, BarChart, BigText, BigTextFont, Block, BorderType, Borders, Constraint, Date, Gauge,
-    Lightcycle, LineGauge, List, Monthly, Overlay, Padding, Paragraph, RenderCx, Scrollbar,
+    Alignment, Bar, BarChart, BigText, BigTextFont, Block, BorderType, Borders, Constraint, Date,
+    Gauge, Lightcycle, LineGauge, List, Monthly, Overlay, Padding, Paragraph, RenderCx, Scrollbar,
     Sparkline, SparklineBar, Spinner, SpinnerPattern, StatusBar, StatusDot, StatusState, Table,
     Tabs, TextInput, TextWrap, TitlePosition, VecSource, WeekStart, Widget,
 };
@@ -414,18 +414,23 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 label(&mut cx, 33, y, &format!("{percent:>3}%"), style(DIM));
             }
             let week = [
-                400_000, 700_000, 550_000, 900_000, 650_000, 300_000, 800_000,
+                ("M", 400_000),
+                ("T", 700_000),
+                ("W", 550_000),
+                ("T", 900_000),
+                ("F", 650_000),
+                ("S", 300_000),
+                ("S", 800_000),
             ];
-            let mut day_styles = [fg(LAV2); 7];
-            day_styles[3] = fg(LAV);
-            BarChart::new(&week)
+            let days = week
+                .map(|(day, value)| Bar::new(value).label(day).style(fg(LAV2).bg(PANEL_RAISED)));
+            let mut days = days;
+            days[3] = days[3].style(fg(LAV).bg(PANEL_RAISED));
+            BarChart::from_bars(&days)
                 .max(1_000_000)
                 .bar_width(2)
                 .bar_gap(1)
-                .style(fg(LAV2))
-                .bar_styles(&day_styles)
-                .track_style(Style::new().bg(PANEL_RAISED))
-                .labels(&["M", "T", "W", "T", "F", "S", "S"])
+                .background(style(DIM))
                 .label_style(style(DIM))
                 .render(Rect::new(42, 16, 20, 7), &mut cx);
         }
@@ -1070,14 +1075,14 @@ fn render_case(name: &str, grid: &mut Grid, clusters: &mut ClusterTable, theme: 
                 100_000, 300_000, 700_000, 1_000_000, 800_000, 450_000, 250_000, 120_000, 60_000,
                 30_000,
             ];
-            let mut bar_styles = [fg(LAV2); 10];
-            bar_styles[3] = fg(LAV);
-            BarChart::new(&distribution)
+            let mut bars = distribution.map(Bar::new);
+            bars[3] = bars[3].style(fg(LAV).bg(BG));
+            BarChart::from_bars(&bars)
                 .max(1_000_000)
                 .bar_width(2)
                 .bar_gap(0)
-                .style(fg(LAV2))
-                .bar_styles(&bar_styles)
+                .style(fg(LAV2).bg(BG))
+                .background(style(DIM))
                 .render(Rect::new(34, 17, 20, 4), &mut cx);
             label(&mut cx, 3, 21, "9 rows", style(DIM));
             label(&mut cx, 12, 21, "· sorted by median ↓", style(DIM));
