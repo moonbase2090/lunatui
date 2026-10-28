@@ -5,6 +5,7 @@ use std::cell::Cell;
 use std::io::{self, LineWriter, Write};
 use std::rc::Rc;
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use crate::scenes::ratatui::{ColorOutput, set_color_output};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
@@ -15,20 +16,23 @@ use lunatui_theme::{Theme, Variant};
 #[cfg(feature = "line-gauge")]
 use lunatui_widgets::LineGauge;
 use lunatui_widgets::{
-    Bar, BarChart, BigText, Block, BorderType, Date, Gauge, List, MarkdownView, Monthly, Paragraph,
-    PixelSize, RenderCx, Sparkline, Table, Tabs, TextWrap, Widget,
+    Axis, Bar, BarChart, BigText, Block, BorderType, Canvas, Chart, Dataset, Date, Gauge,
+    GraphType, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline,
+    Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Constraint as RatConstraint, Rect as RatRect};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
+use ratatui::symbols::Marker as RatMarker;
 use ratatui::text::{Line, Span};
 #[cfg(feature = "line-gauge")]
 use ratatui::widgets::LineGauge as RatLineGauge;
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
 use ratatui::widgets::{
-    Bar as RatBar, BarChart as RatBarChart, BarGroup as RatBarGroup, Block as RatBlock,
-    BorderType as RatBorderType, Gauge as RatGauge, List as RatList, ListItem,
+    Axis as RatAxis, Bar as RatBar, BarChart as RatBarChart, BarGroup as RatBarGroup,
+    Block as RatBlock, BorderType as RatBorderType, Chart as RatChart, Clear as RatClear,
+    Dataset as RatDataset, Gauge as RatGauge, GraphType as RatGraphType, List as RatList, ListItem,
     Paragraph as RatParagraph, Row, Sparkline as RatSparkline, Table as RatTable, Tabs as RatTabs,
     Widget as RatWidget, Wrap,
 };
@@ -159,6 +163,31 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: markdown_lunatui,
         ratatui: markdown_ratatui,
+    },
+    Case {
+        name: "canvas",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui samples every circle at 360 points, which leaves gaps once a circle spans more than about 90 dots; lunatui adds samples so the outline stays unbroken",
+        ),
+        lunatui: canvas_lunatui,
+        ratatui: canvas_ratatui,
+    },
+    Case {
+        name: "toast",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no toast widget; its side draws the same three boxes by hand, in plain colors where lunatui uses theme tokens",
+        ),
+        lunatui: toast_lunatui,
+        ratatui: toast_ratatui,
+    },
+    Case {
+        name: "chart",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: chart_lunatui,
+        ratatui: chart_ratatui,
     },
     Case {
         name: "bigtext",
@@ -592,6 +621,51 @@ fn markdown_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .render(area, buf);
 }
 
+const TOAST_TEXTS: [&str; 3] = ["Saved", "Build finished", "Disk almost full"];
+
+fn toast_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let mut stack = ToastStack::new();
+    let now = Duration::from_millis(u64::from(tick) * 100);
+    for (index, text) in (0_u64..).zip(TOAST_TEXTS) {
+        stack.push(
+            now,
+            Some(Duration::from_secs(60 + index)),
+            ToastScope::Pane(0),
+            ToastKind::Info,
+            text,
+        );
+    }
+    stack.render(now, area, |_| Some(area), &mut cx);
+}
+
+fn toast_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
+    let bottom = area.y + area.height;
+    for (depth, text) in TOAST_TEXTS.iter().rev().enumerate() {
+        let wide = (u16::try_from(text.len()).unwrap_or(u16::MAX) + 4).min(area.width);
+        let lift = u16::try_from(depth).unwrap_or(0) * 3;
+        let Some(top) = bottom.checked_sub(3 + lift) else {
+            break;
+        };
+        let rect = RatRect::new(area.x + area.width - wide, top, wide, 3);
+        RatClear.render(rect, buf);
+        RatBlock::bordered()
+            .border_type(RatBorderType::Rounded)
+            .style(rat_text())
+            .render(rect, buf);
+        RatParagraph::new(*text).style(rat_text()).render(
+            RatRect::new(rect.x + 2, rect.y + 1, wide.saturating_sub(4), 1),
+            buf,
+        );
+    }
+}
+
 const BAR_COUNT: usize = 64;
 
 fn bar_values(tick: u32, width: u16) -> Vec<u64> {
@@ -637,6 +711,211 @@ fn barchart_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .max(130)
         .bar_style(rat_accent())
         .render(RatRect::new(area.x, area.y, area.width, height), buf);
+}
+
+fn canvas_angle(tick: u32) -> f64 {
+    f64::from(tick) * 0.07
+}
+
+fn canvas_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    use lunatui_widgets::canvas::{Circle, Line, Points, Rectangle};
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let angle = canvas_angle(tick);
+    let (sin, cos) = angle.sin_cos();
+    let accent = accent_style();
+    let text = text_style();
+    Canvas::new(move |ctx| {
+        ctx.draw(&Rectangle {
+            x: -90.0,
+            y: -45.0,
+            width: 180.0,
+            height: 90.0,
+            style: dim_style(),
+        });
+        ctx.draw(&Circle {
+            x: 0.0,
+            y: 0.0,
+            radius: 30.0,
+            style: accent,
+        });
+        ctx.draw(&Circle {
+            x: 40.0 * cos,
+            y: 20.0 * sin,
+            radius: 8.0,
+            style: text,
+        });
+        ctx.draw(&Line {
+            x1: -30.0 * cos,
+            y1: -30.0 * sin,
+            x2: 30.0 * cos,
+            y2: 30.0 * sin,
+            style: accent,
+        });
+        ctx.layer();
+        ctx.draw(&Points {
+            coords: &[
+                (0.0, 0.0),
+                (15.0 * sin, 15.0 * cos),
+                (-60.0, 30.0),
+                (60.0, -30.0),
+            ],
+            style: text,
+        });
+        ctx.print(-85.0, 40.0, "canvas", text);
+    })
+    .x_bounds([-100.0, 100.0])
+    .y_bounds([-50.0, 50.0])
+    .marker(Marker::Braille)
+    .background(base_style())
+    .render(area, &mut cx);
+}
+
+fn canvas_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    use ratatui::text::Line as TextLine;
+    use ratatui::widgets::canvas::{Canvas as RatCanvas, Circle, Line, Points, Rectangle};
+    let angle = canvas_angle(tick);
+    let (sin, cos) = angle.sin_cos();
+    let accent = rat_rgb(ACCENT);
+    let text = rat_rgb(TEXT);
+    let dim = rat_rgb(DIM);
+    RatCanvas::default()
+        .x_bounds([-100.0, 100.0])
+        .y_bounds([-50.0, 50.0])
+        .marker(RatMarker::Braille)
+        .background_color(rat_rgb(BG))
+        .paint(move |ctx| {
+            ctx.draw(&Rectangle {
+                x: -90.0,
+                y: -45.0,
+                width: 180.0,
+                height: 90.0,
+                color: dim,
+            });
+            ctx.draw(&Circle {
+                x: 0.0,
+                y: 0.0,
+                radius: 30.0,
+                color: accent,
+            });
+            ctx.draw(&Circle {
+                x: 40.0 * cos,
+                y: 20.0 * sin,
+                radius: 8.0,
+                color: text,
+            });
+            ctx.draw(&Line {
+                x1: -30.0 * cos,
+                y1: -30.0 * sin,
+                x2: 30.0 * cos,
+                y2: 30.0 * sin,
+                color: accent,
+            });
+            ctx.layer();
+            ctx.draw(&Points {
+                coords: &[
+                    (0.0, 0.0),
+                    (15.0 * sin, 15.0 * cos),
+                    (-60.0, 30.0),
+                    (60.0, -30.0),
+                ],
+                color: text,
+            });
+            ctx.print(-85.0, 40.0, TextLine::styled("canvas", rat_text()));
+        })
+        .render(area, buf);
+}
+
+const CHART_POINTS: usize = 96;
+const CHART_LABELS: [&str; 3] = ["0", "5", "9"];
+
+fn chart_series(tick: u32, phase: f64) -> Vec<(f64, f64)> {
+    (0..CHART_POINTS)
+        .map(|index| {
+            let x = f64::from(u32::try_from(index).unwrap_or(0)) * 0.25;
+            let shift = f64::from(tick) * 0.15 + phase;
+            (
+                x,
+                5.0 + 3.5 * (x * 0.55 + shift).sin() + 1.2 * (x * 1.7 + shift).cos(),
+            )
+        })
+        .collect()
+}
+
+fn chart_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let first = chart_series(tick, 0.0);
+    let second = chart_series(tick, 2.0);
+    let sets = [
+        Dataset::new(&first)
+            .marker(Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(accent_style()),
+        Dataset::new(&second)
+            .marker(Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(text_style()),
+    ];
+    Chart::new(&sets)
+        .background(base_style())
+        .x_axis(
+            Axis::new()
+                .bounds([0.0, 24.0])
+                .labels(&CHART_LABELS)
+                .style(dim_style())
+                .label_style(base_style()),
+        )
+        .y_axis(
+            Axis::new()
+                .bounds([0.0, 10.0])
+                .labels(&CHART_LABELS)
+                .style(dim_style())
+                .label_style(base_style()),
+        )
+        .render(area, &mut cx);
+}
+
+fn chart_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let first = chart_series(tick, 0.0);
+    let second = chart_series(tick, 2.0);
+    let sets = vec![
+        RatDataset::default()
+            .marker(RatMarker::Braille)
+            .graph_type(RatGraphType::Line)
+            .style(rat_accent())
+            .data(&first),
+        RatDataset::default()
+            .marker(RatMarker::Braille)
+            .graph_type(RatGraphType::Line)
+            .style(rat_text())
+            .data(&second),
+    ];
+    RatChart::new(sets)
+        .style(rat_base())
+        .x_axis(
+            RatAxis::default()
+                .bounds([0.0, 24.0])
+                .labels(CHART_LABELS)
+                .style(rat_dim()),
+        )
+        .y_axis(
+            RatAxis::default()
+                .bounds([0.0, 10.0])
+                .labels(CHART_LABELS)
+                .style(rat_dim()),
+        )
+        .render(area, buf);
 }
 
 fn gauge_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
