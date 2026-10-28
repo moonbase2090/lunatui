@@ -83,6 +83,26 @@ fn half_blocks_split_a_cell_in_two() {
 }
 
 #[test]
+fn coordinate_edge_areas_do_not_overflow_or_mutate_the_grid() {
+    let points = [(0.0, 0.0), (1.0, 1.0)];
+    let datasets = [Dataset::new(&points).marker(Marker::Block)];
+    let chart = unit_axes(Chart::new(&datasets));
+    let edge_areas = [
+        Rect::new(u16::MAX - 5, 0, 10, 4),
+        Rect::new(0, u16::MAX - 5, 6, 10),
+    ];
+
+    for area in edge_areas {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut grid = Grid::new(6, 4);
+        let before = grid.clone();
+        let mut clusters = ClusterTable::new();
+        chart.render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+        assert_eq!(grid, before, "area {area:?} escaped the grid");
+    }
+}
+
+#[test]
 fn braille_marks_one_dot_per_point() {
     let third = 1.0 / 3.0;
     let dots: Vec<(f64, f64)> = (0..4)

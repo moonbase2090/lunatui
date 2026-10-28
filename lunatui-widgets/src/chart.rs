@@ -7,6 +7,15 @@ use lunatui_theme::Token;
 
 use crate::{Block, BorderType, RenderCx, Widget, WidgetState};
 
+fn clip_area_to_coordinates(area: Rect) -> Rect {
+    Rect::new(
+        area.x,
+        area.y,
+        area.width.min(u16::MAX - area.x),
+        area.height.min(u16::MAX - area.y),
+    )
+}
+
 const SERIES: [Token; 6] = [
     Token::Accent,
     Token::FocusRing,
@@ -587,15 +596,15 @@ impl Chart<'_> {
 
     fn draw_axes(&self, area: Rect, plot: Rect, look: &Look, cx: &mut RenderCx<'_>) {
         let axis_x = plot.x - 1;
-        let axis_y = plot.y + plot.height;
+        let axis_y = plot.y.saturating_add(plot.height);
         let x_style = self.x_axis.style.unwrap_or(look.axis);
         let y_style = self.y_axis.style.unwrap_or(look.axis);
         for row in 0..plot.height {
-            put_text(cx, axis_x, plot.y + row, "│", y_style);
+            put_text(cx, axis_x, plot.y.saturating_add(row), "│", y_style);
         }
         put_text(cx, axis_x, axis_y, "└", x_style);
         for column in 0..plot.width {
-            put_text(cx, plot.x + column, axis_y, "─", x_style);
+            put_text(cx, plot.x.saturating_add(column), axis_y, "─", x_style);
         }
         let labels = self.y_axis.labels;
         let gutter = plot.x - 1 - area.x;
@@ -611,8 +620,8 @@ impl Chart<'_> {
             let width = label_width(label).min(gutter);
             put_fit(
                 cx,
-                area.x + gutter - width,
-                plot.y + row,
+                area.x.saturating_add(gutter).saturating_sub(width),
+                plot.y.saturating_add(row),
                 width,
                 label,
                 self.y_axis.label_style.unwrap_or(look.text),
@@ -641,8 +650,8 @@ impl Chart<'_> {
     ) {
         let labels = self.x_axis.labels;
         let style = self.x_axis.label_style.unwrap_or(look.text);
-        let row = axis_y + 1;
-        let right = plot.x + plot.width;
+        let row = axis_y.saturating_add(1);
+        let right = plot.x.saturating_add(plot.width);
         let mut last_end = plot.x;
         for (index, label) in labels.iter().enumerate() {
             let width = label_width(label).min(plot.width);
@@ -654,18 +663,23 @@ impl Chart<'_> {
             let start = if index == 0 {
                 plot.x.saturating_sub(width).max(area.x)
             } else {
-                (plot.x + anchor).saturating_sub(width / 2).max(plot.x)
+                plot.x
+                    .saturating_add(anchor)
+                    .saturating_sub(width / 2)
+                    .max(plot.x)
             };
             let start = start.min(right - width);
             if index > 0 && start <= last_end {
                 continue;
             }
             put_fit(cx, start, row, width, label, style);
-            last_end = start + width;
+            last_end = start.saturating_add(width);
         }
         if let Some(title) = self.x_axis.title {
             let width = label_width(title).min(plot.width);
-            let title_row = axis_y + 1 + u16::from(!labels.is_empty());
+            let title_row = axis_y
+                .saturating_add(1)
+                .saturating_add(u16::from(!labels.is_empty()));
             put_fit(cx, right - width, title_row, width, title, style);
         }
     }
@@ -789,8 +803,8 @@ impl Chart<'_> {
                 let text = glyph(spot).encode_utf8(&mut buffer);
                 put_text(
                     cx,
-                    plot.rect.x + column,
-                    plot.rect.y + row,
+                    plot.rect.x.saturating_add(column),
+                    plot.rect.y.saturating_add(row),
                     text,
                     self.series_style(cx, spot.series),
                 );
@@ -828,10 +842,10 @@ impl Chart<'_> {
         {
             return;
         }
-        let (left, middle) = (plot.x, plot.x + (plot.width - width) / 2);
-        let right = plot.x + plot.width - width;
-        let (top, center) = (plot.y, plot.y + (plot.height - height) / 2);
-        let bottom = plot.y + plot.height - height;
+        let (left, middle) = (plot.x, plot.x.saturating_add((plot.width - width) / 2));
+        let right = plot.x.saturating_add(plot.width).saturating_sub(width);
+        let (top, center) = (plot.y, plot.y.saturating_add((plot.height - height) / 2));
+        let bottom = plot.y.saturating_add(plot.height).saturating_sub(height);
         let (x, y) = match position {
             LegendPosition::Top => (middle, top),
             LegendPosition::TopRight => (right, top),
@@ -846,7 +860,7 @@ impl Chart<'_> {
         let blank = " ".repeat(usize::from(width));
         let panel = Style::new().fg(look.text.fg).bg(look.legend_bg);
         for row in 0..height {
-            cx.put_str(x, y + row, &blank, panel);
+            cx.put_str(x, y.saturating_add(row), &blank, panel);
         }
         Block::bordered()
             .border_type(BorderType::Rounded)
@@ -855,14 +869,25 @@ impl Chart<'_> {
             .render(area, cx);
         for (row, (index, name)) in (0_u16..).zip(&entries) {
             let swatch = self.series_style(cx, *index).bg(look.legend_bg);
-            put_text(cx, x + 2, y + 1 + row, "■", swatch);
-            put_text(cx, x + 4, y + 1 + row, name, look.text.bg(look.legend_bg));
+            let label_y = y.saturating_add(1).saturating_add(row);
+            put_text(cx, x.saturating_add(2), label_y, "■", swatch);
+            put_text(
+                cx,
+                x.saturating_add(4),
+                label_y,
+                name,
+                look.text.bg(look.legend_bg),
+            );
         }
     }
 }
 
 impl Widget for Chart<'_> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let area = clip_area_to_coordinates(area);
+        if area.width == 0 || area.height == 0 {
+            return;
+        }
         cx.clear_area(area, self.background.unwrap_or_default());
         let y_labels = self
             .y_axis
@@ -884,8 +909,8 @@ impl Widget for Chart<'_> {
             return;
         }
         let rect = Rect::new(
-            area.x + left,
-            area.y + top,
+            area.x.saturating_add(left),
+            area.y.saturating_add(top),
             area.width - left,
             area.height - top - bottom,
         );
