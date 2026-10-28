@@ -20,7 +20,7 @@ use lunatui_widgets::{
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint as RatConstraint, Rect as RatRect};
+use ratatui::layout::{Constraint as RatConstraint, Layout as RatLayout, Rect as RatRect};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::symbols::Marker as RatMarker;
 use ratatui::text::{Line, Span};
