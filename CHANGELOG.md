@@ -11,6 +11,7 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `ToastStack` widget, behind the `toast` feature: timed toasts scoped to a pane (boxed, stacked up from the pane's bottom-right corner) or to the status rows (one line each), with `ToastKind` colors from theme tokens. The caller supplies the time, so expiry follows a virtual clock exactly; `placements` gives each shown toast's rectangle and layer so clicks can be routed through `HitMap`, with newer toasts above older ones and status toasts above pane toasts.
+- `Tabs::tab_areas` and `List::row_areas` report where each visible tab or row sits in an area, and `HitMap::push_indexed` with `HitId::index_in` registers those regions as a group and maps a click back to the item index, so what is drawn is what a click reaches. Z-order follows the `HitMap`: a higher layer over the widget takes the click, and a later registration wins at the same layer.
 - `Gauge::sub_cell` draws the fractional end of the fill as a left eighth block, and `Gauge::track_style` styles the unfilled cells.
 - A `LineGauge` widget behind the off-by-default `line-gauge` feature: a one-row `━`/`─` progress line with filled and unfilled styles.
 - `Table` gains a header row, per-column styles and alignments, per-cell styles through the new `CellStyle` trait, a highlight symbol, an odd-row style, and a row gap.
