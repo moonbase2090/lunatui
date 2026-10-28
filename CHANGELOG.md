@@ -13,6 +13,7 @@ Every PR adds its entry under **Unreleased**.
 - `TabsDrag` turns pointer press, drag, and release over the regions from `Tabs::tab_areas` into a `TabMove` that reorders tabs: dropping on another tab moves the dragged tab there, a press that stays on its own tab is a click, and leaving the strip or `cancel` drops nothing. `TabMove::apply` reorders a `Vec` and `TabMove::selection` keeps the selection on the same tab.
 - `KeyHintBar`, behind the `key-hints` feature, renders the first registered shortcut for each command in the active `Keymap`.
 - `kitty_image` demonstrates a sharp 1920×1920 NASA Blue Marble image through Kitty graphics at native source resolution, with cell fallback elsewhere; the image is credited in `NOTICE`.
+- `Popup` and `ScrollView` containers in `lunatui-widgets`, behind the opt-in `popup` and `scroll-view` features. `Popup` is a titled, bordered panel on `Overlay`: centred, at a point, or anchored beside a rectangle (flipping when there is no room), draggable through `PopupState`, with a backdrop that fades what is behind toward the surface. `ScrollView` draws a widget into an offscreen grid larger than the screen and shows part of it, with vertical and horizontal scrollbars and `ScrollViewState` for scrolling and paging. Both take their colors from theme tokens and the `WidgetState`. `Grid::blit` (opt-in `blit` feature in `lunatui-core`) copies a region between grids, and `Scrollbar::horizontal` comes with `scroll-view`.
 
 ## [0.1.13] - 2026-10-28
 
