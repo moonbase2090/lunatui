@@ -26,6 +26,8 @@ Every PR adds its entry under **Unreleased**.
 
 - `StatusBar` fills its whole row with the bar style before drawing, so shorter text or a text-only render no longer leaves the previous status behind.
 
+- A focused `Image` draws its focus ring over the background already in its area instead of the terminal default.
+
 ## [0.1.12] - 2026-10-27
 
 ### Added
