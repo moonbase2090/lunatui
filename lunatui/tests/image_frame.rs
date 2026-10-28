@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+#![doc = include_str!("../README.md")]
+
 use lunatui_core::{ClusterTable, Color, DecodedGlyph, Grid, Rect};
 use lunatui_image::{ImageId, ImageSource};
 use lunatui_runtime::{App, ControlFlow, RenderFrame, render_once};
