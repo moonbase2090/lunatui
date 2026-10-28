@@ -12,12 +12,12 @@ use lunatui_widgets::{Block, BorderType, Canvas, RenderCx, Tabs, Widget};
 
 pub(super) const FPS: u32 = 30;
 const SCENES: [(&str, &str, u32); 6] = [
-    ("Scope", " XY oscilloscope ", 39),
-    ("Globe", " Flight paths ", 42),
-    ("System", " System load ", 39),
-    ("Clock", " Clock and tree ", 54),
-    ("Flock", " Flocking ", 33),
-    ("Pings", " Network pings ", 45),
+    ("Scope", " XY oscilloscope ", 33),
+    ("Globe", " Flight paths ", 36),
+    ("System", " System load ", 33),
+    ("Clock", " Clock and tree ", 45),
+    ("Flock", " Flocking ", 27),
+    ("Pings", " Network pings ", 33),
 ];
 
 pub(super) const LOOP_TICKS: u32 = {
@@ -216,13 +216,15 @@ pub(super) fn render(
 }
 
 fn scope_ratio(t: f64) -> (f64, f64) {
-    const KEYS: [(f64, f64, f64); 4] = [
+    const KEYS: [(f64, f64, f64); 6] = [
         (0.0, 3.0, 2.0),
-        (0.15, 3.0, 2.0),
-        (0.62, 5.0, 4.0),
-        (0.8, 5.0, 4.0),
+        (0.07, 3.0, 2.0),
+        (0.34, 5.0, 4.0),
+        (0.42, 5.0, 4.0),
+        (0.7, 3.0, 4.0),
+        (0.78, 3.0, 4.0),
     ];
-    const END: (f64, f64, f64) = (1.28, 3.0, 4.0);
+    const END: (f64, f64, f64) = (1.06, 1.0, 2.0);
     let mut previous = KEYS[0];
     for &key in KEYS.iter().skip(1).chain(core::iter::once(&END)) {
         if t < key.0 {
@@ -241,11 +243,11 @@ fn scope(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     let Stage { ink, hh, t, .. } = stage;
     let div = hh * 1.8 / 8.0;
     let (a, b) = scope_ratio(t);
-    let phase = PI / 4.0 + 0.3 * t;
-    let head = t * TAU * 0.4;
+    let phase = PI / 4.0 + 0.55 * t;
+    let head = t * TAU * 0.7;
     let (ax, ay) = (div * 4.2, div * 3.3);
     stage.canvas(area, cx, move |ctx| {
-        let grid = ink.shade(ink.text, 0.1);
+        let grid = ink.shade(ink.text, 0.12);
         for i in -5_i32..=5 {
             let x = f64::from(i) * div;
             let style = if i == 0 {
@@ -280,7 +282,7 @@ fn scope(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
                 ctx,
                 older,
                 point,
-                ink.shade(ink.line, 0.15 + 0.85 * ((fresh * 4.0).ceil() / 4.0).powi(2)),
+                ink.shade(ink.line, 0.22 + 0.78 * ((fresh * 4.0).ceil() / 4.0).powi(2)),
             );
             older = point;
         }
@@ -501,14 +503,14 @@ impl Globe {
                 f64::from(n) / f64::from(samples),
                 f64::from(n + 1) / f64::from(samples),
             );
-            leg(ctx, s0, s1, ink.shade(ink.warm, 0.32));
+            leg(ctx, s0, s1, ink.shade(ink.warm, 0.42));
         }
         let tail = 0.14;
         for n in 0..12_u32 {
             let (k0, k1) = (f64::from(n) / 12.0, f64::from(n + 1) / 12.0);
             let (s0, s1) = (progress - tail * (1.0 - k0), progress - tail * (1.0 - k1));
             if s0 >= 0.0 && s1 <= 1.0 {
-                leg(ctx, s0, s1, ink.shade(ink.warm, 0.35 + 0.65 * k1));
+                leg(ctx, s0, s1, ink.shade(ink.warm, 0.45 + 0.55 * k1));
             }
         }
         let tip = at(progress);
@@ -524,19 +526,19 @@ impl Globe {
 fn globe(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     let Stage { ink, hw, hh, t, .. } = stage;
     let globe = Globe {
-        view: View::new(-30.0 + 5.0 * t, 24.0),
+        view: View::new(-30.0 + 9.0 * t, 24.0),
         radius: hh * 0.76,
         center: (-hw * 0.3, 0.0),
     };
-    let progress = FLIGHTS.map(|(_, _, offset)| ((t * 0.42 + offset) % 1.2).min(1.0));
+    let progress = FLIGHTS.map(|(_, _, offset)| ((t * 0.75 + offset) % 1.2).min(1.0));
     stage.canvas(area, cx, move |ctx| {
         ctx.draw(&Circle {
             x: globe.center.0,
             y: globe.center.1,
             radius: globe.radius,
-            style: ink.shade(ink.line, 0.5),
+            style: ink.shade(ink.line, 0.62),
         });
-        let guide = ink.shade(ink.text, 0.13);
+        let guide = ink.shade(ink.text, 0.16);
         for meridian in (0..12_i32).map(|m| f64::from(m) * 30.0) {
             let path = (0..=60_i32).map(|step| (f64::from(step) * 3.0 - 90.0, meridian));
             globe.trace(ctx, path, guide);
@@ -546,7 +548,7 @@ fn globe(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
             globe.trace(ctx, path, guide);
         }
         ctx.layer();
-        let coast = ink.shade(ink.text, 0.62);
+        let coast = ink.shade(ink.text, 0.75);
         for line in coastlines() {
             globe.trace(
                 ctx,
@@ -587,6 +589,7 @@ fn globe(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
 }
 
 const SAMPLE_DOTS: u32 = 3;
+const SCROLL_DOTS: u32 = 2;
 
 fn cpu_user(n: u32) -> f64 {
     let burst = if hash(n / 50 + 11) > 0.6 {
@@ -620,7 +623,7 @@ type Series = (fn(u32) -> f64, Color, &'static str);
 
 fn system(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     let Stage { ink, tick, .. } = stage;
-    let now = tick + 600;
+    let now = tick * SCROLL_DOTS + 600;
     let rows = area.height / 3;
     let graphs: [(&str, &str, [Option<Series>; 2]); 3] = [
         (
@@ -728,14 +731,14 @@ fn grow(ctx: &mut Context<'_>, ink: Ink, branch: &Branch, growth: f64, t: f64) {
         return;
     }
     let depth = f64::from(branch.depth) / f64::from(TREE_DEPTH);
-    let angle = branch.angle + 0.035 * depth * (t * 1.9 + f64::from(branch.depth)).sin();
+    let angle = branch.angle + 0.035 * depth * (t * 3.2 + f64::from(branch.depth)).sin();
     let reach = branch.length * part;
     let end = (
         branch.at.0 + reach * angle.cos(),
         branch.at.1 + reach * angle.sin(),
     );
     let color = mix(ink.text, ink.leaf, depth);
-    segment(ctx, branch.at, end, ink.shade(color, 0.42 + 0.5 * depth));
+    segment(ctx, branch.at, end, ink.shade(color, 0.55 + 0.45 * depth));
     if part < 1.0 {
         return;
     }
@@ -766,14 +769,14 @@ fn clock_and_tree(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     let Stage { ink, hw, hh, t, .. } = stage;
     let center = (-hw * 0.48, hh * 0.04);
     let radius = hh * 0.76;
-    let seconds = 8.0 * 60.0 + 42.0 + t;
-    let growth = smooth(t / 1.6) * (f64::from(TREE_DEPTH) + 0.001);
+    let seconds = 8.0 * 60.0 + 42.0 + 2.0 * t;
+    let growth = smooth(t / 1.0) * (f64::from(TREE_DEPTH) + 0.001);
     stage.canvas(area, cx, move |ctx| {
         ctx.draw(&Circle {
             x: center.0,
             y: center.1,
             radius,
-            style: ink.shade(ink.line, 0.55),
+            style: ink.shade(ink.line, 0.7),
         });
         let polar = |angle: f64, r: f64| (center.0 + r * angle.cos(), center.1 + r * angle.sin());
         for mark in 0..60_u32 {
@@ -781,7 +784,7 @@ fn clock_and_tree(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
             let (inner, style) = if mark % 5 == 0 {
                 (0.84, ink.shade(ink.text, 0.8))
             } else {
-                (0.93, ink.shade(ink.text, 0.3))
+                (0.93, ink.shade(ink.text, 0.4))
             };
             segment(
                 ctx,
@@ -860,7 +863,7 @@ fn clock_and_tree(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
 }
 
 const BOIDS: u32 = 200;
-const TRAIL: usize = 5;
+const TRAIL: usize = 4;
 
 #[derive(Clone, Copy)]
 struct Boid {
@@ -881,7 +884,7 @@ fn flock_after(steps: u32, hw: f64, hh: f64) -> Vec<(Boid, Vec<(f64, f64)>)> {
                     hw * (hash(n * 2) * 1.8 - 0.9),
                     hh * (hash(n * 3 + 7) * 1.8 - 0.9),
                 ),
-                v: (0.25 * angle.cos(), 0.25 * angle.sin()),
+                v: (0.4 * angle.cos(), 0.4 * angle.sin()),
             }
         })
         .collect();
@@ -913,7 +916,7 @@ fn flock_after(steps: u32, hw: f64, hh: f64) -> Vec<(Boid, Vec<(f64, f64)>)> {
                 v.1 += 0.06 * (align.1 / seen - v.1) + 0.003 * mass.1 / seen + 0.1 * sep.1;
             }
             let speed = (v.0 * v.0 + v.1 * v.1).sqrt().max(1e-6);
-            let clamped = speed.clamp(0.18, 0.32);
+            let clamped = speed.clamp(0.3, 0.55);
             v = (v.0 / speed * clamped, v.1 / speed * clamped);
             boid.v = v;
             let moved = (boid.p.0 + v.0, boid.p.1 + v.1);
@@ -936,7 +939,7 @@ fn flock(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     } = stage;
     let birds = flock_after(tick + 60, hw, hh);
     stage.canvas(area, cx, move |ctx| {
-        let trace = ink.shade(ink.line, 0.3);
+        let trace = ink.shade(ink.line, 0.42);
         for (_, trail) in &birds {
             stroke(ctx, trail, trace);
         }
@@ -962,19 +965,19 @@ fn flock(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     });
 }
 
-const PING_TICKS: u32 = 54;
+const PING_TICKS: u32 = 30;
 
 const PINGS: [(&str, f64, f64, u32, f64); 10] = [
     ("FRA", 50.1, 8.7, 0, 14.0),
     ("IAD", 38.9, -77.4, 10, 81.0),
-    ("SJC", 37.4, -121.9, 33, 142.0),
+    ("SJC", 37.4, -121.9, 3, 142.0),
     ("GRU", -23.4, -46.5, 21, 188.0),
-    ("NRT", 35.8, 140.4, 43, 226.0),
+    ("NRT", 35.8, 140.4, 13, 226.0),
     ("SIN", 1.4, 104.0, 6, 162.0),
     ("SYD", -33.9, 151.2, 28, 274.0),
-    ("BOM", 19.1, 72.9, 39, 118.0),
+    ("BOM", 19.1, 72.9, 9, 118.0),
     ("JNB", -26.1, 28.2, 16, 160.0),
-    ("ARN", 59.6, 17.9, 48, 27.0),
+    ("ARN", 59.6, 17.9, 18, 27.0),
 ];
 
 fn pings(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
@@ -982,7 +985,7 @@ fn pings(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
     let scale = hw * 0.96 / 180.0;
     let place = move |lat: f64, lon: f64| (lon * scale, (lat - 13.0) * scale);
     stage.canvas(area, cx, move |ctx| {
-        let faint = ink.shade(ink.text, 0.08);
+        let faint = ink.shade(ink.text, 0.1);
         for lon in (-6_i32..=6).map(|k| f64::from(k) * 30.0) {
             segment(ctx, place(-58.0, lon), place(84.0, lon), faint);
         }
@@ -996,7 +999,7 @@ fn pings(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
             ink.shade(ink.text, 0.16),
         );
         ctx.layer();
-        let coast = ink.shade(ink.text, 0.55);
+        let coast = ink.shade(ink.text, 0.7);
         for line in coastlines() {
             if line.iter().all(|&(_, lat)| lat < -56.0) {
                 continue;
@@ -1018,7 +1021,7 @@ fn pings(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
                 x: at.0,
                 y: at.1,
                 radius: 0.5 + age * 4.2,
-                style: ink.shade(ink.warm, 0.85 * fade),
+                style: ink.shade(ink.warm, fade),
             });
         }
         ctx.layer();
