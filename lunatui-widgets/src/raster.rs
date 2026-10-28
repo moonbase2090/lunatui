@@ -174,6 +174,55 @@ impl Raster {
         );
     }
 
+    #[cfg(feature = "canvas")]
+    pub(crate) fn segment_centered(
+        &mut self,
+        window: Window,
+        marker: Marker,
+        a: (f64, f64),
+        b: (f64, f64),
+        series: usize,
+    ) {
+        let Some((a, b)) = window.clip(a, b) else {
+            return;
+        };
+        let (sub_w, sub_h) = self.resolution(marker);
+        let (x0, y0) = (window.column(a.0, sub_w), window.row(a.1, sub_h));
+        let (x1, y1) = (window.column(b.0, sub_w), window.row(b.1, sub_h));
+        let (dx, dy) = ((x1 - x0).abs(), (y1 - y0).abs());
+        if dx == 0 && dy == 0 {
+            self.mark(marker, x0, y0, series);
+            return;
+        }
+        if dx >= dy {
+            let ((x0, y0), (_x1, y1)) = if x0 > x1 {
+                ((x1, y1), (x0, y0))
+            } else {
+                ((x0, y0), (x1, y1))
+            };
+            let sy = if y0 < y1 { 1 } else { -1 };
+            for offset in 0..=dx {
+                let x = x0 + offset;
+                let minor = round_ratio_to_even(offset * dy, dx);
+                self.mark(marker, x, y0 + sy * minor, series);
+            }
+        } else {
+            let ((x0, y0), (x1, _y1)) = if y0 > y1 {
+                ((x1, y1), (x0, y0))
+            } else {
+                ((x0, y0), (x1, y1))
+            };
+            let sx = if x0 < x1 { 1 } else { -1 };
+            for offset in 0..=dy {
+                let minor = round_ratio_to_even(offset * dx, dy);
+                let x = x0 + sx * minor;
+                let y = y0 + offset;
+                self.mark(marker, x, y, series);
+            }
+        }
+    }
+
+    #[cfg(any(feature = "canvas", feature = "chart"))]
     pub(crate) fn segment(
         &mut self,
         window: Window,
@@ -222,6 +271,17 @@ impl Raster {
                 error += 2 * dx;
             }
         }
+    }
+}
+
+#[cfg(feature = "canvas")]
+fn round_ratio_to_even(numerator: i64, denominator: i64) -> i64 {
+    let quotient = numerator / denominator;
+    let remainder = numerator % denominator;
+    match (remainder * 2).cmp(&denominator) {
+        core::cmp::Ordering::Less => quotient,
+        core::cmp::Ordering::Greater => quotient + 1,
+        core::cmp::Ordering::Equal => quotient + (quotient % 2),
     }
 }
 
