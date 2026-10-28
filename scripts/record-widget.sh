@@ -12,7 +12,7 @@ fi
 if [[ "$CASE" == "image" ]]; then
   WIDTH="${WIDTH:-120}"
   HEIGHT="${HEIGHT:-36}"
-  FRAMES="${FRAMES:-200}"
+  FRAMES="${FRAMES:-300}"
   FPS="${FPS:-30}"
 else
   WIDTH="${WIDTH:-80}"
@@ -58,7 +58,7 @@ if [[ "$CASE" == "image" ]]; then
     -c "$(printf '%q ' "$BIN" --width "$WIDTH" --height "$HEIGHT" --frames "$FRAMES" --fps "$FPS")" \
     "$CAST"
   python3 "$ROOT/scripts/trim-cast.py" "$CAST"
-  agg --fps-cap 15 --font-size 14 "$CAST" "$GIF"
+  agg --fps-cap 15 --font-size 14 --last-frame-duration 1 "$CAST" "$GIF"
   BYTES="$(wc -c < "$GIF" | awk '{print $1}')"
   if [[ ! "$BYTES" =~ ^[0-9]+$ ]] || (( BYTES > MAX_BYTES )); then
     echo "record-widget: ${GIF} exceeds the ${MAX_BYTES}-byte limit" >&2

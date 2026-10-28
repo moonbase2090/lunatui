@@ -61,8 +61,8 @@ Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scr
 
 ### Image
 
-A live observatory console renders a deep-sky image through the Image widget's cell fallback. Frame count, exposure, tracking drift, and integration progress update while the image stays in view.
+A media library for an observatory archive. Each thumbnail is an `Image` with `ImageFit::Cover`. The selected one is drawn focused, and the two imports are drawn disabled until they finish. The preview switches between `ImageFit::Contain` and `ImageFit::Cover`, and the details panel shows each frame's tone bands. The pictures are the website's sky, hills and moon art, resized, tinted and layered by the example.
 
-![Image widget observatory console](docs/media/image-120x36-truecolor-dark.gif)
+![Image widget: a media library in the dark theme](docs/media/image-120x36-truecolor-dark.gif)
 
-Screenshot from the same recording: [docs/media/image-120x36-truecolor-dark.png](docs/media/image-120x36-truecolor-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=image`, 120×36, 200 frames at 30 fps, dark theme).
+Screenshot: [docs/media/image-120x36-truecolor-dark.png](docs/media/image-120x36-truecolor-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=image`, 120×36, dark, 10 seconds at 30 fps). The recording shows the half-block cell fallback, two image pixels per cell. The recorder captures terminal text and cannot capture Kitty graphics, so the Kitty path is not shown.
