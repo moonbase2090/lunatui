@@ -45,6 +45,8 @@ mod render_cx;
 #[cfg(feature = "scroll-view")]
 mod scroll_view;
 mod scrollbar;
+#[cfg(feature = "slider")]
+mod slider;
 #[cfg(feature = "sparkline")]
 mod sparkline;
 mod spinner;
@@ -111,6 +113,8 @@ pub use render_cx::RenderCx;
 #[cfg(feature = "scroll-view")]
 pub use scroll_view::{ScrollView, ScrollViewState, ScrollbarVisibility};
 pub use scrollbar::Scrollbar;
+#[cfg(feature = "slider")]
+pub use slider::Slider;
 #[cfg(feature = "sparkline")]
 pub use sparkline::{
     BarSet, Baseline, NINE_LEVELS, RenderDirection, Sparkline, SparklineBar, SparklineValue,
