@@ -17,8 +17,8 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
     Form, FormField, Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph,
-    PixelSize, RadioGroup, RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap,
-    ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    PixelSize, ProgressBar, RadioGroup, RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs,
+    TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -188,6 +188,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: form_lunatui,
         ratatui: form_ratatui,
+    },
+    Case {
+        name: "progress-bar",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no progress bar with eighth-block precision, segments, or an indeterminate mode; its side draws the same single-segment bar by hand as styled spans",
+        ),
+        lunatui: progress_lunatui,
+        ratatui: progress_ratatui,
     },
     Case {
         name: "calendar",
@@ -867,6 +876,61 @@ fn tooltip_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
                     buf,
                 );
         }
+    }
+}
+
+const PROGRESS_ROWS: usize = 4;
+
+fn progress_eighths(tick: u32, row: usize, total: u16) -> u16 {
+    let phase = (tick * 3 + u32::try_from(row).unwrap_or(0) * 29) % 200;
+    let phase = if phase > 100 { 200 - phase } else { phase };
+    u16::try_from(u32::from(total) * phase / 100).unwrap_or(total)
+}
+
+fn progress_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let total = area.width.saturating_mul(8);
+    for row in 0..PROGRESS_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let eighths = progress_eighths(tick, row, total);
+        ProgressBar::new()
+            .ratio(f64::from(eighths) / f64::from(total.max(1)))
+            .render(Rect::new(area.x, y, area.width, 1), &mut cx);
+    }
+}
+
+fn progress_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let fill = color(lunatui_theme::Token::Accent);
+    let track = color(lunatui_theme::Token::Surface1);
+    let partial = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
+    let total = area.width.saturating_mul(8);
+    for row in 0..PROGRESS_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let eighths = progress_eighths(tick, row, total);
+        let spans: Vec<Span<'_>> = (0..area.width)
+            .map(|cell| {
+                let base = cell * 8;
+                if base + 8 <= eighths {
+                    Span::styled("█", RatStyle::new().fg(fill))
+                } else if eighths <= base {
+                    Span::styled("█", RatStyle::new().fg(track))
+                } else {
+                    Span::styled(
+                        partial[usize::from(eighths - base - 1)],
+                        RatStyle::new().fg(fill).bg(track),
+                    )
+                }
+            })
+            .collect();
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
     }
 }
 

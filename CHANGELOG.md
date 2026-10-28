@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `ProgressBar` widget, behind the `progress` feature: a bar of eighth blocks that is determinate (`ratio`), stacked in accent, ok, warn, or fail segments (`segment`), or indeterminate (a block bouncing along the track), with an optional label and percentage, widget states, and `percent` and `track_area` for the numbers and cells.
 - `Tooltip` widget, behind the `tooltip` feature: a short hint beside an anchor rectangle that never covers it, opening on a chosen side and flipping or sliding to stay inside the area, with text wrapped to a maximum width, theme-token colors, `area` for hit testing, and `TooltipState` for the hover delay and dismissal with caller-supplied time.
 - `Form` container, behind the `form` feature: labelled fields with a label column, an input area for the caller's own widget, and a message row; required markers, dim hints, and fail-colored validation messages from theme tokens; `layout` for drawing and hit testing; `step` for tab-order focus that wraps and skips disabled fields; and `check_required`, `is_valid`, and `first_error` for validation.
 

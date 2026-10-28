@@ -23,6 +23,7 @@ canvas = ["widget-state"]
 
 barchart = ["widget-state"]
 toast = ["widget-state"]
+progress = ["widget-state"]
 form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
@@ -181,3 +182,8 @@ required-features = ["form"]
 name = "tooltip"
 path = "tests/tooltip.rs"
 required-features = ["tooltip"]
+
+[[test]]
+name = "progress_bar"
+path = "tests/progress_bar.rs"
+required-features = ["progress"]

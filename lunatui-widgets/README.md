@@ -6,7 +6,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 - [`Widget`](src/widget.rs): `render(&self, area, &mut RenderCx)` and `measure(&self, avail: Size) -> Size`.
 - [`RenderCx`](src/render_cx.rs): grid, cluster table, and theme for token-aware drawing. Optional `color-profiles` feature adds `profile` for ANSI16/256 downsampling in `token`.
-- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `markdown`, `sparkline`, and `radio`, `form`, `toast`, and `toggle` forward it. `line-gauge` reserves the same feature.
+- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `markdown`, `sparkline`, and `radio`, `form`, `progress`, `toast`, and `toggle` forward it. `line-gauge` reserves the same feature.
 - `KeyHintBar` is behind the `key-hints` feature. Construct it from the keymap active for the current screen or mode; it renders the first chord registered for each command.
 - [`Size`](https://docs.rs/lunatui-core/latest/lunatui_core/struct.Size.html) lives in `lunatui-core` and is re-exported here.
 
@@ -39,6 +39,8 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 `Form` is behind the `form` feature. It lays out labelled fields (a label column, an input area for your own widget, and a message row) and draws the labels, `*` markers for required fields, dim hints, and fail-colored validation messages. `FormField` sets a label, required, disabled, hint, error, and input height; `Form::layout` returns each part's cells for drawing inputs and for hit testing; `Form::step` moves focus in tab order, wrapping and skipping disabled fields; and `check_required` fills "Required" for empty required fields.
 
 `Tooltip` is behind the `tooltip` feature. It draws a short hint beside an anchor rectangle and never covers it: it opens on its side (below by default), flips to the opposite side and then to the other two when there is no room, slides along the side to stay inside the area, and is not drawn when no side fits. The text wraps at spaces to `max_width`, padding included, and the tooltip is as wide as its widest row; rendering does not allocate. `Tooltip::area` gives the covered cells for `HitMap`. `TooltipState` shows it after the pointer rests on the anchor for a delay (half a second by default), hides it when the pointer leaves, and `dismiss` hides it until the pointer comes back, with time passed in by the caller.
+
+`ProgressBar` is behind the `progress` feature. It draws a bar of eighth blocks in three modes: one `ratio` segment, stacked `segment`s in accent, ok, warn, or fail (a cell where two segments meet shows both colors), or an `indeterminate` block that bounces along the track a tick at a time. A label can go before the bar and the percentage after it, the bar fills every row of its area, and `percent` and `track_area` report the numbers and cells.
 
 `ToastStack` is behind the `toast` feature. It holds timed messages and takes the time from the caller (a `Duration`, such as a virtual clock's `now`), so expiry is deterministic. A toast is scoped to a pane (a boxed message in the pane's bottom-right corner, newest nearest the corner) or to the status rows (one line each, right aligned). `placements` returns each shown toast's cells and layer for `HitMap`, and `render` draws them with theme colors for the kind.
 

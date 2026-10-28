@@ -35,6 +35,8 @@ mod markdown_view;
 mod overlay;
 mod padding;
 mod paragraph;
+#[cfg(feature = "progress")]
+mod progress_bar;
 #[cfg(feature = "radio")]
 mod radio_group;
 #[cfg(any(feature = "chart", feature = "canvas"))]
@@ -97,6 +99,8 @@ pub use markdown_view::MarkdownView;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
+#[cfg(feature = "progress")]
+pub use progress_bar::{ProgressBar, ProgressTone};
 #[cfg(feature = "radio")]
 pub use radio_group::{RadioFlow, RadioGroup};
 #[cfg(any(feature = "chart", feature = "canvas"))]
