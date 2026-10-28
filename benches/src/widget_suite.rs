@@ -14,9 +14,9 @@ use lunatui_term::{ColorMode, Encoder};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Axis, Bar, BarChart, BigText, Block, BorderType, Canvas, Chart, Dataset, Date, Gauge, GraphType,
-    List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline, Table, Tabs,
-    TextWrap, ToastKind, ToastScope, ToastStack, Widget,
+    Axis, Bar, BarChart, BigText, Block, BorderType, Canvas, Chart, Dataset, Date, Gauge,
+    GraphType, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize, RenderCx, Sparkline,
+    Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;

@@ -18,8 +18,8 @@ use lunatui_widgets::canvas::{Circle, Line};
 use lunatui_widgets::{
     Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText, Block, BorderType, Canvas,
     Chart, Dataset, Date, DateStyle, GraphType, LegendPosition, List, MarkdownView, Marker,
-    Monthly, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar, Widget, WidgetState,
-    ToastKind, ToastScope, ToastStack,
+    Monthly, Paragraph, PixelSize, RenderCx, Scrollbar, Sparkline, StatusBar, ToastKind,
+    ToastScope, ToastStack, Widget, WidgetState,
 };
 
 #[path = "deploy_board.rs"]
