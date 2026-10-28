@@ -25,7 +25,7 @@ lunatui-core = { version = "0.1.13", path = "../lunatui-core" }
 lunatui-layout = { version = "0.1.13", path = "../lunatui-layout" }
 lunatui-text = { version = "0.1.13", path = "../lunatui-text", features = ["markdown"] }
 lunatui-theme = { version = "0.1.13", path = "../lunatui-theme" }
-lunatui-widgets = { version = "0.1.13", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "canvas", "chart", "key-hints", "markdown", "sparkline", "toast"] }
+lunatui-widgets = { version = "0.1.13", path = "../lunatui-widgets", features = ["barchart", "bigtext", "calendar", "canvas", "chart", "key-hints", "markdown", "popup", "scroll-view", "sparkline", "toast"] }
 lunatui-runtime = { version = "0.1.13", path = "../lunatui-runtime", features = ["keymap"] }
 lunatui-term = { version = "0.1.13", path = "../lunatui-term" }
 lunatui-prismattyc = { version = "0.1.13", path = "../lunatui-prismattyc" }
@@ -34,6 +34,8 @@ num-traits = "0.2"
 ratatui = "=0.30.2"
 time = { version = "=0.3.55", default-features = false }
 libc = "0.2.190"
+tui-popup = "=0.7.7"
+tui-scrollview = "=0.6.8"
 
 [dev-dependencies]
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }

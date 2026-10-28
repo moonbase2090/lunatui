@@ -33,7 +33,11 @@ mod padding;
 mod paragraph;
 #[cfg(any(feature = "chart", feature = "canvas"))]
 mod raster;
+#[cfg(feature = "popup")]
+mod popup;
 mod render_cx;
+#[cfg(feature = "scroll-view")]
+mod scroll_view;
 mod scrollbar;
 #[cfg(feature = "sparkline")]
 mod sparkline;
@@ -85,7 +89,11 @@ pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
 #[cfg(any(feature = "chart", feature = "canvas"))]
 pub use raster::Marker;
+#[cfg(feature = "popup")]
+pub use popup::{Placement, Popup, PopupState};
 pub use render_cx::RenderCx;
+#[cfg(feature = "scroll-view")]
+pub use scroll_view::{ScrollView, ScrollViewState, ScrollbarVisibility};
 pub use scrollbar::Scrollbar;
 #[cfg(feature = "sparkline")]
 pub use sparkline::{

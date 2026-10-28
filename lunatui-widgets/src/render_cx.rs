@@ -213,8 +213,85 @@ impl<'a> RenderCx<'a> {
             let style = cell.style();
             if style.bg == Color::Default && bg != Color::Default {
                 self.grid.set_style(Rect::new(x, y, 1, 1), style.bg(bg));
+    #[cfg(feature = "popup")]
+    pub(crate) fn fill(&mut self, area: Rect, style: Style) {
+        self.grid.fill(area, style, ' ', self.clusters);
+    }
+
+    #[cfg(feature = "popup")]
+    pub(crate) fn inherit(&mut self, area: Rect, style: Style) {
+        for row in area.y..area.y.saturating_add(area.height) {
+            for col in area.x..area.x.saturating_add(area.width) {
+                let Some(cell) = self.grid.get(col, row) else {
+                    continue;
+                };
+                let own = cell.style();
+                if own.fg != Color::Default && own.bg != Color::Default {
+                    continue;
+                }
+                let filled = Style {
+                    fg: if own.fg == Color::Default {
+                        style.fg
+                    } else {
+                        own.fg
+                    },
+                    bg: if own.bg == Color::Default {
+                        style.bg
+                    } else {
+                        own.bg
+                    },
+                    attrs: own.attrs,
+                };
+                self.grid.set_style(Rect::new(col, row, 1, 1), filled);
             }
         }
+    }
+
+    #[cfg(feature = "popup")]
+    pub(crate) fn fade_fg(&mut self, area: Rect, alpha: f32, toward: Color) {
+        let toward_rgb = resolve_rgb(toward, self.theme);
+        for row in area.y..area.y.saturating_add(area.height) {
+            for col in area.x..area.x.saturating_add(area.width) {
+                let Some(cell) = self.grid.get(col, row) else {
+                    continue;
+                };
+                let style = cell.style();
+                let fg = if style.fg == Color::Default {
+                    self.theme.resolve(Token::TextPrimary)
+                } else {
+                    style.fg
+                };
+                let faded = blend_rgb(resolve_rgb(fg, self.theme), toward_rgb, alpha);
+                self.grid.set_style(
+                    Rect::new(col, row, 1, 1),
+                    style.fg(Color::Rgb(faded.0, faded.1, faded.2)),
+                );
+            }
+        }
+    }
+
+    #[cfg(feature = "scroll-view")]
+    pub(crate) fn offscreen(&mut self, grid: &mut Grid, draw: impl FnOnce(&mut RenderCx<'_>)) {
+        let mut cx = RenderCx {
+            grid,
+            clusters: self.clusters,
+            theme: self.theme,
+            #[cfg(feature = "color-profiles")]
+            palette: self.palette,
+        };
+        draw(&mut cx);
+    }
+
+    #[cfg(feature = "scroll-view")]
+    pub(crate) fn bg_at(&self, x: u16, y: u16) -> Color {
+        self.grid
+            .get(x, y)
+            .map_or(Color::Default, |cell| cell.style().bg)
+    }
+
+    #[cfg(feature = "scroll-view")]
+    pub(crate) fn blit(&mut self, src: &Grid, from: Rect, x: u16, y: u16) {
+        self.grid.blit(src, from, x, y);
     }
 
     /// Applies `style` to every cell in `area`, keeping glyphs unchanged.

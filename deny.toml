@@ -19,6 +19,8 @@ confidence-threshold = 0.9
 multiple-versions = "warn"
 wildcards = "deny"
 allow-wildcard-paths = true
+# tui-popup and tui-scrollview (with derive-getters and derive_setters) are
+# ratatui-side baselines for the Popup and ScrollView bench cases only.
 # PRD M16: only these external crates may appear in the dependency graph,
 # including transitive and platform-specific ones. Adding one, and any
 # dependency bump (Cargo.lock), needs MB2090 sign-off (.github/CODEOWNERS).
@@ -77,8 +79,10 @@ allow = [
     "darling_core",
     "darling_macro",
     "deranged",
+    "derive-getters",
     "derive_more",
     "derive_more-impl",
+    "derive_setters",
     "document-features",
     "either",
     "either-or-both",
@@ -188,6 +192,8 @@ allow = [
     "time-core",
     "tempfile",
     "tinytemplate",
+    "tui-popup",
+    "tui-scrollview",
     "unarray",
     "unicode-ident",
     "unicode-segmentation",

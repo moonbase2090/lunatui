@@ -13,6 +13,7 @@ workspace = true
 [features]
 default = []
 subcell = []
+blit = []
 render-color = ["dep:libm"]
 
 [dependencies]
@@ -43,3 +44,8 @@ required-features = ["subcell"]
 name = "subcell_preview"
 path = "../examples/subcell_preview.rs"
 required-features = ["subcell"]
+
+[[test]]
+name = "blit"
+path = "tests/blit.rs"
+required-features = ["blit"]

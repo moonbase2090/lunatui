@@ -27,6 +27,8 @@ bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["dep:lunatui-runtime"]
+popup = ["widget-state"]
+scroll-view = ["widget-state", "lunatui-core/blit"]
 
 [dependencies]
 lunatui-core = { version = "0.1.13", path = "../lunatui-core" }
@@ -153,3 +155,13 @@ required-features = ["toast"]
 name = "key_hint_bar"
 path = "tests/key_hint_bar.rs"
 required-features = ["key-hints"]
+
+[[test]]
+name = "popup"
+path = "tests/popup.rs"
+required-features = ["popup"]
+
+[[test]]
+name = "scroll_view"
+path = "tests/scroll_view.rs"
+required-features = ["scroll-view"]
