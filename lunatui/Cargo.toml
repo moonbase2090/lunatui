@@ -25,6 +25,7 @@ lunatui-runtime = { version = "0.1.12", path = "../lunatui-runtime", optional = 
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-term = { path = "../lunatui-term" }
+lunatui-layout = { path = "../lunatui-layout" }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
@@ -143,6 +144,12 @@ test = true
 [[example]]
 name = "widget_preview"
 path = "../examples/widget_preview.rs"
+test = false
+required-features = ["color-profiles", "line-gauge"]
+
+[[example]]
+name = "nightshift_board"
+path = "../examples/nightshift_board.rs"
 test = false
 required-features = ["color-profiles", "line-gauge"]
 

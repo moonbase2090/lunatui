@@ -61,15 +61,16 @@ Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scr
 
 ### LineGauge
 
-A live service health board rendered by Lunatui and Ratatui side by side. Each row uses a real LineGauge widget, with the selected row, disabled state, value label, threshold colors, and line styles visible in the recording.
+A live service health board rendered by Lunatui. Each row uses a real LineGauge widget, with the selected row, disabled state, value label, threshold colors, and line styles visible in the recording.
 
 ![LineGauge service health board](docs/media/line-gauge-120x36-truecolor-dark-lunatui.gif)
 
-Screenshot from the same 120×36 capture: [Lunatui and Ratatui side by side](docs/media/line-gauge-120x36-truecolor-dark-side-by-side.png). Recorded with `scripts/record-widget.sh` (`CASE=line-gauge`, 120×36, 240 frames at 30 fps, dark theme); the GIF is 699 KB and runs for about 11.8 seconds.
+Screenshot from the same Lunatui capture: [docs/media/line-gauge-120x36-truecolor-dark-lunatui.png](docs/media/line-gauge-120x36-truecolor-dark-lunatui.png). Recorded with `scripts/record-widget.sh` (`CASE=line-gauge`, 120×36, 240 frames at 30 fps, dark theme); the GIF is 699 KB and runs for about 11.8 seconds.
 
-| Terminal | Truecolor | ANSI-16 |
-|---|---|---|
-| 80×24 | [Screenshot](docs/media/line-gauge-80x24-truecolor.png) · [Recording](docs/media/line-gauge-80x24-truecolor.mp4) | [Screenshot](docs/media/line-gauge-80x24-ansi16.png) · [Recording](docs/media/line-gauge-80x24-ansi16.mp4) |
-| 200×60 | [Screenshot](docs/media/line-gauge-200x60-truecolor.png) · [Recording](docs/media/line-gauge-200x60-truecolor.mp4) | [Screenshot](docs/media/line-gauge-200x60-ansi16.png) · [Recording](docs/media/line-gauge-200x60-ansi16.mp4) |
+### Release control screen
 
-Recorded from the real widget preview with `scripts/record-widget.sh` (`CASE=line-gauge`, dark theme, 180 frames at 30 fps). The screenshot is extracted from the side-by-side recording. Light theme spot-check at 80×24: [screenshot](docs/media/line-gauge-80x24-light-truecolor.png) · [recording](docs/media/line-gauge-80x24-light-truecolor.mp4).
+A realistic Lunatui app screen combines the Monday-first calendar with selected-day and weekend styles, a styled deployment table, sub-cell Gauge, LineGauge, segmented StatusBar, marked on-call List, and a dimmed approval Overlay with shadow. Every region is rendered by its widget; the capture does not overwrite widget cells.
+
+![Night shift release control screen](docs/media/nightshift-board-120x36-dark.gif)
+
+Screenshot from the same recording: [docs/media/nightshift-board-120x36-dark.png](docs/media/nightshift-board-120x36-dark.png). Recorded with `scripts/record-app-screen.sh` at 120×36 for about 10 seconds in the dark theme.

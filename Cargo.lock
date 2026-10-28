@@ -864,6 +864,7 @@ dependencies = [
  "libc",
  "lunatui-bench",
  "lunatui-core",
+ "lunatui-layout",
  "lunatui-prismattyc",
  "lunatui-ratatui",
  "lunatui-runtime",
