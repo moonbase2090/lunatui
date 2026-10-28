@@ -14,10 +14,16 @@ workspace = true
 default = []
 # Per-segment floors and caps (`Layout::limits`) and `aspect_fit`.
 size-limits = []
+# Wrapped splits (`Layout::split_wrapped`) and the `Layout::gap` setting.
+flex-wrap = []
 
 [[test]]
 name = "size_limits"
 required-features = ["size-limits"]
+
+[[test]]
+name = "flex_wrap"
+required-features = ["flex-wrap"]
 
 [dependencies]
 lunatui-core = { version = "0.1.11", path = "../lunatui-core" }

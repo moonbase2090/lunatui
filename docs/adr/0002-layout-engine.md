@@ -158,6 +158,16 @@ Added behind the `size-limits` Cargo feature, which is off by default. §4.9 (wr
 - **Leftover a capped segment cannot take** goes to the gaps as flex says. `Legacy` still covers the area, and so does a lone segment under `SpaceBetween`; both can push the last segment past its cap.
 - **`aspect_fit(area, cols, rows)`** returns the largest `cols : rows` rectangle inside `area`, centred, rounding down, with the odd cell after it. Aspect is not a constraint because a one-axis split does not know the other axis's final size. Fit a segment's rectangle after the split. Terminal cells are about twice as tall as wide, so a shape that looks square is `2 : 1`.
 
+### 4.9 Wrapped splits (opt-in `flex-wrap`)
+
+Added after PR 16, behind the `flex-wrap` Cargo feature, which is off by default. `Layout::split` is unchanged.
+
+- **`Layout::split_wrapped(area, line)`** breaks the constraint list into lines, then splits each line with the closed form above, using the layout's flex and spacing. Rows wrap onto more rows; a vertical layout wraps into more columns.
+- **Line breaking is greedy.** A segment joins the current line when its natural size, plus the spacing before it, fits in what is left. Natural size is the cell count of `Length`, `Min`, and `Max`, the share of the full axis for `Percentage` and `Ratio` (floored), and zero for `Fill`. A `Fill` still needs one free cell to join a line. The first segment of a line always stays, so a segment longer than the axis gets a line of its own and is clipped like any other overflow.
+- **Lines on the cross axis.** `line` is one `Constraint` applied to every line, solved on the cross axis with `Flex::Start`: `Length(3)` gives three-cell rows, `Fill(1)` shares the cross axis equally. Lines that do not fit are clipped from the end, the same tail clip as §9.1.
+- **`Layout::gap(n)`** sets segment spacing and the gap between lines to `n` in one call. Spacing above `i16::MAX` is clamped.
+- **Output.** `Wrapped` holds one rectangle per constraint in order, one `WrappedLine` per line (its band and the range of segment indexes on it), and `needs_solver` if any line split or the cross split had to break a minimum. Wrapped splits return no spacers.
+
 ## 5. Invariants
 
 These become the PR 14 property tests. Spacing below is non-negative unless a row says otherwise.

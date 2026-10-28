@@ -15,11 +15,15 @@ mod flex;
 #[cfg(feature = "size-limits")]
 mod limit;
 mod solve_fast;
+#[cfg(feature = "flex-wrap")]
+mod wrap;
 
 pub use constraint::Constraint;
 pub use flex::{Axis, Flex};
 #[cfg(feature = "size-limits")]
 pub use limit::{Limit, aspect_fit};
+#[cfg(feature = "flex-wrap")]
+pub use wrap::{Wrapped, WrappedLine};
 
 /// Segments and the gaps around them.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,6 +42,8 @@ pub struct Layout {
     axis: Axis,
     flex: Flex,
     spacing: i16,
+    #[cfg(feature = "flex-wrap")]
+    line_gap: u16,
     horizontal_margin: u16,
     vertical_margin: u16,
     constraints: Vec<Constraint>,
@@ -69,6 +75,18 @@ impl Layout {
     #[must_use]
     pub const fn spacing(mut self, spacing: i16) -> Self {
         self.spacing = spacing;
+        self
+    }
+
+    /// Cells between segments and between wrapped lines.
+    ///
+    /// This sets [`Layout::spacing`] and the line gap used by [`Layout::split_wrapped`] together.
+    /// Values above `i16::MAX` are clamped for segment spacing.
+    #[cfg(feature = "flex-wrap")]
+    #[must_use]
+    pub fn gap(mut self, gap: u16) -> Self {
+        self.spacing = i16::try_from(gap).unwrap_or(i16::MAX);
+        self.line_gap = gap;
         self
     }
 
@@ -120,11 +138,40 @@ impl Layout {
         }
     }
 
+    /// Split `area` along this layout's axis, starting a new line when the next segment does not
+    /// fit.
+    ///
+    /// A segment fits when its natural size, plus the spacing before it, fits in what is left of
+    /// the line. The natural size is the cell count of `Length`, `Min` and `Max`, the share of the
+    /// full axis for `Percentage` and `Ratio`, and nothing for `Fill`, which only needs one free
+    /// cell. A segment longer than the axis gets a line of its own. Each line is then split like
+    /// [`Layout::split`] with this layout's flex and spacing, so `Fill` segments share what their
+    /// line leaves over.
+    ///
+    /// Lines stack on the cross axis. `line` sizes every line, and [`Layout::gap`] sets the cells
+    /// between lines. Lines that do not fit are clipped from the end, the same as segments in
+    /// [`Layout::split`]. Margins apply before the split.
+    #[cfg(feature = "flex-wrap")]
+    #[must_use]
+    pub fn split_wrapped(&self, area: Rect, line: Constraint) -> Wrapped {
+        let inner = solve_fast::inset(area, self.horizontal_margin, self.vertical_margin);
+        let spec = wrap::WrapSpec {
+            axis: self.axis,
+            flex: self.flex,
+            spacing: self.spacing,
+            line_gap: self.line_gap,
+            constraints: &self.constraints,
+        };
+        wrap::split(inner, &spec, line)
+    }
+
     fn new(axis: Axis, constraints: impl IntoIterator<Item = Constraint>) -> Self {
         Self {
             axis,
             flex: Flex::Start,
             spacing: 0,
+            #[cfg(feature = "flex-wrap")]
+            line_gap: 0,
             horizontal_margin: 0,
             vertical_margin: 0,
             constraints: constraints.into_iter().collect(),
