@@ -21,7 +21,7 @@ use lunatui_widgets::{
     Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId, Gauge, GraphType,
     KeyHintBar, LegendPosition, List, MarkdownView, Marker, Monthly, PaneId, Paragraph, PixelSize,
     RenderCx, Scrollbar, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
-    Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, Widget, WidgetState,
+    Tabs, TabsDrag, ToastKind, ToastScope, ToastStack, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -69,6 +69,11 @@ const PREVIEWS: &[Preview] = &[
         name: "key-hints",
         native: key_hints_native,
         baseline: key_hints_baseline,
+    },
+    Preview {
+        name: "list-icons",
+        native: list_icons_native,
+        baseline: list_icons_baseline,
     },
     Preview {
         name: "calendar",
@@ -3878,6 +3883,212 @@ fn key_hints_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: 
         (case.ratatui)(buffer, area, tick);
     }
 }
+
+const LS_TITLES: [(&str, &str); 28] = [
+    ("Record the MarkdownView demo at 2x", "platform"),
+    ("Add a key hint bar widget", "widgets"),
+    ("Add TabsDrag for reordering tabs", "widgets"),
+    ("Add SplitTree for resizable split panes", "widgets"),
+    ("Clear table rows below the last data row", "widgets"),
+    ("Add the Breadcrumbs widget", "widgets"),
+    ("Add the Canvas widget", "widgets"),
+    ("Add the ToastStack widget", "widgets"),
+    ("Add the Chart widget", "widgets"),
+    ("Expose the glyph a Spinner draws", "widgets"),
+    ("Add left and right StatusBar segments", "widgets"),
+    ("Build lunatui-widgets with no features", "build"),
+    ("Rename the X10 mouse bytes binding", "term"),
+    ("Use epsilon checks for animation floats", "runtime"),
+    ("Remove redundant deploy board empty check", "examples"),
+    ("Add a runnable Kitty Image demo", "image"),
+    ("Keep the background under a focused Image ring", "image"),
+    ("Add the MarkdownView widget", "widgets"),
+    ("Make the Markdown parser linear-time", "text"),
+    ("Add a Markdown parser to lunatui-text", "text"),
+    ("Add the BarChart widget", "widgets"),
+    ("Add named spinner presets", "widgets"),
+    ("Guard the site gallery against painted frames", "site"),
+    ("Release v0.1.12", "release"),
+    ("Add Layout::split_wrapped", "layout"),
+    ("Add Layout::limits and aspect_fit", "layout"),
+    ("Style Table headers and cells", "widgets"),
+    ("Add boxed Tabs", "widgets"),
+];
+
+fn ls_status(index: usize, tick: u32) -> (&'static str, Token, &'static str) {
+    let flipped = index == 3 && tick >= 80;
+    match (index % 4, flipped) {
+        (0 | 3, false) => ("●", Token::Ok, "open"),
+        (1, _) | (_, true) => ("✔", Token::Accent, "merged"),
+        (2, _) => ("✖", Token::Fail, "closed"),
+        _ => ("◐", Token::Warn, "draft"),
+    }
+}
+
+fn ls_rows(tick: u32) -> Vec<(String, usize)> {
+    let fresh = usize::from(tick >= 120);
+    let mut rows = Vec::new();
+    if fresh == 1 {
+        rows.push((String::from("Add a toast for failed uploads"), 28));
+    }
+    for (index, (title, _)) in LS_TITLES.iter().enumerate() {
+        rows.push(((*title).to_owned(), index));
+    }
+    rows
+}
+
+fn list_icons_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Pull requests  ·  moonbase2090/lunatui",
+        head,
+    );
+    let rows = ls_rows(tick);
+    let left = Rect::new(area.x + 2, area.y + 2, 76, area.height.saturating_sub(5));
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        left.height,
+    );
+    ls_list(&mut cx, left, &rows, tick, [fill, dim], [accent, raised]);
+    ls_detail(&mut cx, right, &rows, tick, [fill, dim], accent);
+    StatusBar::new(" j/k move  ●  Enter open  ●  m merge  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn ls_selected(tick: u32, count: usize) -> usize {
+    usize::try_from(tick / 9).unwrap_or(0) % count
+}
+
+fn ls_list(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    rows: &[(String, usize)],
+    tick: u32,
+    styles: [Style; 2],
+    colors: [Color; 2],
+) {
+    let [fill, dim] = styles;
+    let [accent, raised] = colors;
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Open and recent ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(area, cx);
+    let inner = Rect::new(
+        area.x + 1,
+        area.y + 1,
+        area.width.saturating_sub(2),
+        area.height.saturating_sub(2),
+    );
+    let selected = ls_selected(tick, rows.len());
+    let visible = usize::from(inner.height);
+    let offset = selected
+        .saturating_sub(visible.saturating_sub(4))
+        .min(rows.len().saturating_sub(visible));
+    let numbers: Vec<usize> = rows.iter().map(|(_, index)| *index).collect();
+    let icons: Vec<(String, Style)> = numbers
+        .iter()
+        .map(|index| {
+            let (glyph, token, _) = ls_status(*index, tick);
+            ((*glyph).to_owned(), Style::new().fg(cx.token(token)))
+        })
+        .collect();
+    let marks: Vec<Option<(String, Style)>> = rows
+        .iter()
+        .map(|(_, index)| {
+            let label = LS_TITLES.get(*index).map_or("new", |(_, tag)| tag);
+            Some((
+                format!("#{}  {label}", 200_usize.saturating_sub(*index)),
+                dim,
+            ))
+        })
+        .collect();
+    let source = VecSource::from_rows(rows.iter().map(|(title, _)| vec![title.clone()]).collect());
+    List::new(source)
+        .style(fill)
+        .highlight_style(Style::new().fg(fill.fg).bg(raised))
+        .highlight_symbol("▸", Style::new().fg(accent).bg(raised))
+        .icons(icons)
+        .marks(marks, 2)
+        .offset(offset)
+        .selected(Some(selected))
+        .render(inner, cx);
+}
+
+fn ls_detail(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    rows: &[(String, usize)],
+    tick: u32,
+    styles: [Style; 2],
+    accent: Color,
+) {
+    let [fill, dim] = styles;
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Details ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(area, cx);
+    let selected = ls_selected(tick, rows.len());
+    let (title, index) = &rows[selected];
+    let (_, _, state) = ls_status(*index, tick);
+    let tag = LS_TITLES.get(*index).map_or("new", |(_, tag)| tag);
+    for (row, line) in (0_u16..).zip([
+        title.clone(),
+        String::new(),
+        format!("state     {state}"),
+        format!("number    #{}", 200_usize.saturating_sub(*index)),
+        format!("area      {tag}"),
+        String::from("author    Moonbase 2090"),
+        String::from("checks    12 of 12 passing"),
+        String::from("review    approved"),
+    ]) {
+        let style = if row == 0 { fill.fg(accent) } else { fill };
+        cx.put_str(
+            area.x + 2,
+            area.y + 1 + row,
+            clip_display_prefix(&line, area.width.saturating_sub(4)),
+            style,
+        );
+    }
+}
+
+fn list_icons_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
