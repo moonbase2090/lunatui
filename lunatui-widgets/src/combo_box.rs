@@ -219,7 +219,6 @@ impl<'a> ComboBox<'a> {
             return;
         }
         let first = self.first_row(found.len(), list.height);
-        let active = self.active.filter(|active| *active < found.len());
         let accent = cx.token(Token::Accent);
         for row in 0..list.height {
             let position = first + usize::from(row);
@@ -228,7 +227,7 @@ impl<'a> ComboBox<'a> {
                 cx.put_str(list.x, y, &blank, base);
                 continue;
             };
-            let current = active == Some(position);
+            let current = self.active == Some(position);
             let (row_base, mark) = if current {
                 let selected = Style::new().fg(surface).bg(accent);
                 (selected, Style::new().fg(accent).bg(surface))

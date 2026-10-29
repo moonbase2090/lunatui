@@ -331,3 +331,13 @@ fn a_box_one_row_tall_draws_nothing_below_it() {
     combo.render(Rect::new(0, 0, 20, 1), &mut cx);
     assert_eq!(style_at(&cells, 1, 1), Style::default());
 }
+
+#[test]
+fn the_caret_stops_at_the_last_cell_of_the_field() {
+    let inside = ComboBox::new("abcdefgh", 7, &FRUIT).state(WidgetState::Focused);
+    let cells = grid(&inside, 12, 1);
+    assert_eq!(style_at(&cells, 8, 0).bg, color(Token::Accent));
+    let past = ComboBox::new("abcdefgh", 8, &FRUIT).state(WidgetState::Focused);
+    let cells = grid(&past, 12, 1);
+    assert_eq!(style_at(&cells, 9, 0).bg, color(Token::Surface1));
+}
