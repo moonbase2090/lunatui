@@ -395,12 +395,16 @@ impl Screen {
     }
 
     fn samples(&amp;self) -&gt; [u64; 48] {
-        let tick = self.tick();
+        const TRAFFIC: [u64; 48] = [
+            14, 15, 16, 18, 22, 27, 24, 19, 17, 16, 18, 21, 29, 36, 33, 26, 22, 19, 18, 17, 16, 18,
+            20, 23, 21, 19, 17, 15, 16, 19, 25, 31, 28, 23, 20, 18, 17, 16, 18, 22, 26, 24, 21, 19,
+            17, 16, 15, 14,
+        ];
+        let shift = usize::try_from(self.tick() % 48).unwrap_or(0);
         let mut samples = [0; 48];
         for (index, sample) in samples.iter_mut().enumerate() {
-            let step = u64::try_from(index).unwrap_or(0);
-            let wave = step.wrapping_add(tick) % 12;
-            *sample = 4 + wave.saturating_mul(3);
+            let src = (index + shift) % TRAFFIC.len();
+            *sample = TRAFFIC.get(src).copied().unwrap_or(0);
         }
         samples
     }
