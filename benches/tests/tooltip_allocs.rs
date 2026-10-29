@@ -6,7 +6,7 @@
 use std::hint::black_box;
 
 use lunatui_bench::CountingAllocator;
-use lunatui_core::{ClusterTable, Grid, Rect};
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{AnchorSide, RenderCx, Tooltip, Widget};
 
@@ -26,6 +26,8 @@ fn rendering_a_wrapped_tooltip_allocates_nothing() {
     .side(AnchorSide::Below)
     .max_width(30);
     tooltip.render(screen, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+    grid.fill(screen, Style::new(), ' ', &mut clusters);
+    assert_eq!(grid.row_display(3, &clusters).trim_end(), "");
     let (drawn, stats) = ALLOC.measure(|| {
         let mut drawn = 0_u32;
         for _ in 0..100 {

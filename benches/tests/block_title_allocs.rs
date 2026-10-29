@@ -32,6 +32,8 @@ fn rendering_a_titled_block_allocates_nothing() {
             Style::new(),
         );
     block.render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+    grid.fill(area, Style::new(), ' ', &mut clusters);
+    assert_eq!(grid.row_display(0, &clusters).trim_end(), "");
     let ((), stats) = ALLOC.measure(|| {
         for _ in 0..100 {
             let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
