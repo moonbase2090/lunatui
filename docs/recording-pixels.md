@@ -12,7 +12,7 @@ Record the bundled full-resolution NASA image, switching Contain and Cover with 
 
 ```sh
 EXAMPLE=kitty_image FEATURES=image-presenter,image-decode \
-WIDTH=100 HEIGHT=32 FONT_SIZE=24 FPS=30 SECONDS_TO_RECORD=8 \
+WIDTH=100 HEIGHT=32 FONT_SIZE=20 FPS=30 SECONDS_TO_RECORD=8 \
 KEYS=2:f,5:f scripts/record-pixels.sh
 ```
 
