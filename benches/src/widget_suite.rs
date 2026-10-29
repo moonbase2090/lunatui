@@ -17,12 +17,12 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Canvas, Chart, Dataset, Date, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer,
-    KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
-    MenuState, Monthly, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup,
-    ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider,
-    Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack,
-    Toggle, Tooltip, Widget, WidgetState,
+    Canvas, Chart, ComboBox, Dataset, Date, Diff, DiffView, Form, FormField, Gauge, GraphType,
+    HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker,
+    Menu, MenuItem, MenuState, Monthly, NumberInput, Paragraph, PieChart, PieSlice, PixelSize,
+    Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox,
+    Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope,
+    ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -285,6 +285,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: search_box_lunatui,
         ratatui: search_box_ratatui,
+    },
+    Case {
+        name: "combo-box",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no combo box with a filtered drop-down list, match highlight, or active-row scrolling; its side draws the field and the first rows of the list by hand as styled lines",
+        ),
+        lunatui: combo_box_lunatui,
+        ratatui: combo_box_ratatui,
     },
     Case {
         name: "log-view",
@@ -2785,4 +2794,79 @@ fn scrollview_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     view.render_widget(RatParagraph::new(log_text()).style(rat_text()), page);
     let mut state = RatScrollViewState::with_offset(RatPosition::new(x, y));
     ratatui::widgets::StatefulWidget::render(view, area, buf, &mut state);
+}
+
+const COMBO_FRUIT: [&str; 8] = [
+    "apple",
+    "apricot",
+    "avocado",
+    "banana",
+    "blueberry",
+    "cherry",
+    "grape",
+    "mango",
+];
+const COMBO_TEXT: [&str; 4] = ["", "a", "ap", "b"];
+
+fn combo_box_text(tick: u32) -> &'static str {
+    COMBO_TEXT[usize::try_from(tick / 25).unwrap_or(0) % COMBO_TEXT.len()]
+}
+
+fn combo_box_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let text = combo_box_text(tick);
+    ComboBox::new(text, text.len(), &COMBO_FRUIT)
+        .placeholder("Pick a fruit")
+        .open(true)
+        .active(Some(usize::try_from(tick / 5).unwrap_or(0) % 2))
+        .render(Rect::new(area.x, area.y, area.width.min(30), 7), &mut cx);
+}
+
+fn combo_box_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let field = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let list = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface0));
+    let active = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Surface0))
+        .bg(color(lunatui_theme::Token::Accent));
+    let dim = field.add_modifier(ratatui::style::Modifier::DIM);
+    let text = combo_box_text(tick);
+    let width = area.width.min(30);
+    let shown = if text.is_empty() {
+        "Pick a fruit"
+    } else {
+        text
+    };
+    RatParagraph::new(Line::from(vec![
+        Span::styled(" ", field),
+        Span::styled(shown, if text.is_empty() { dim } else { field }),
+    ]))
+    .style(field)
+    .render(RatRect::new(area.x, area.y, width, 1), buf);
+    let pick = usize::try_from(tick / 5).unwrap_or(0) % 2;
+    let lines: Vec<Line<'_>> = COMBO_FRUIT
+        .iter()
+        .filter(|fruit| fruit.contains(text))
+        .take(6)
+        .enumerate()
+        .map(|(row, fruit)| {
+            let style = if row == pick { active } else { list };
+            Line::from(Span::styled(format!(" {fruit}"), style))
+        })
+        .collect();
+    let rows = u16::try_from(lines.len()).unwrap_or(0);
+    RatParagraph::new(lines)
+        .style(list)
+        .render(RatRect::new(area.x, area.y + 1, width, rows), buf);
 }
