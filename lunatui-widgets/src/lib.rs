@@ -21,6 +21,8 @@ mod calendar;
 pub mod canvas;
 #[cfg(feature = "chart")]
 mod chart;
+#[cfg(feature = "diff-view")]
+mod diff_view;
 #[cfg(feature = "form")]
 mod form;
 mod gauge;
@@ -98,6 +100,8 @@ pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use canvas::Canvas;
 #[cfg(feature = "chart")]
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
+#[cfg(feature = "diff-view")]
+pub use diff_view::{Diff, DiffHunk, DiffKind, DiffLayout, DiffLine, DiffView};
 #[cfg(feature = "form")]
 pub use form::{FieldArea, Form, FormField};
 pub use gauge::Gauge;

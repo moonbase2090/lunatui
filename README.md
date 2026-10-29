@@ -183,6 +183,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Diff view
+
+A code review: a unified diff of a grid change with hunk headers, two line-number columns, removed and added lines in their own colors, and the changed part of each paired line inverted. It scrolls through both hunks, then switches to the side-by-side layout, where each removed line sits across from the line that replaced it.
+
+<img src="docs/media/diff.webp" alt="DiffView: a code review scrolling a unified diff and then a side-by-side diff with highlighted changes in the dark theme" width="1028">
+
+Screenshot: [docs/media/diff.png](docs/media/diff.png). Recorded with `scripts/record-showcase.sh` (`CASE=diff`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds).
+
 ### Log view
 
 A service console: log lines stream into a ring buffer and scroll in from the bottom with a level label, a time, and a target column. The level filter then rises to warnings and errors, and a text filter keeps only the lines that mention the database, highlights the match, and scrolls back through the history before returning to follow the newest line.
