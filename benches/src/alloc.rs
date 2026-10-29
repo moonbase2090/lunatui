@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use std::alloc::{GlobalAlloc, Layout, System};
+use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Allocation counts, either running totals or the difference between two
@@ -35,8 +36,10 @@ impl AllocStats {
 /// Wraps an allocator and counts every allocation, reallocation and
 /// deallocation made through it.
 ///
-/// Counts are process-wide: [`measure`](Self::measure) includes allocations
-/// made by other threads while the closure runs.
+/// [`snapshot`](Self::snapshot) returns process-wide totals.
+/// [`measure`](Self::measure) counts only the calling thread, so allocations
+/// made by other threads while the closure runs, such as the test harness's
+/// own bookkeeping, are not included.
 ///
 /// ```
 /// use lunatui_bench::CountingAllocator;
@@ -89,31 +92,64 @@ impl<A> CountingAllocator<A> {
         }
     }
 
-    /// Runs `work` and returns its result with the allocations it made.
+    /// Runs `work` and returns its result with the allocations it made on the
+    /// calling thread.
     pub fn measure<R>(&self, work: impl FnOnce() -> R) -> (R, AllocStats) {
-        let before = self.snapshot();
+        let before = THREAD_TOTALS.with(Cell::get);
         let result = work();
-        (result, self.snapshot().since(before))
+        (result, THREAD_TOTALS.with(Cell::get).since(before))
     }
 
     fn record_allocation(&self, bytes: usize) {
         self.allocations.fetch_add(1, Ordering::Relaxed);
         self.bytes_allocated.fetch_add(bytes, Ordering::Relaxed);
+        record_on_thread(|totals| {
+            totals.allocations = totals.allocations.wrapping_add(1);
+            totals.bytes_allocated = totals.bytes_allocated.wrapping_add(bytes);
+        });
     }
 
     fn record_reallocation(&self, bytes: usize) {
         self.reallocations.fetch_add(1, Ordering::Relaxed);
         self.bytes_allocated.fetch_add(bytes, Ordering::Relaxed);
+        record_on_thread(|totals| {
+            totals.reallocations = totals.reallocations.wrapping_add(1);
+            totals.bytes_allocated = totals.bytes_allocated.wrapping_add(bytes);
+        });
     }
 
     fn record_deallocation(&self) {
         self.deallocations.fetch_add(1, Ordering::Relaxed);
+        record_on_thread(|totals| {
+            totals.deallocations = totals.deallocations.wrapping_add(1);
+        });
     }
+}
+
+thread_local! {
+    static THREAD_TOTALS: Cell<AllocStats> = const {
+        Cell::new(AllocStats {
+            allocations: 0,
+            reallocations: 0,
+            deallocations: 0,
+            bytes_allocated: 0,
+        })
+    };
+}
+
+fn record_on_thread(update: impl FnOnce(&mut AllocStats)) {
+    let _ = THREAD_TOTALS.try_with(|cell| {
+        let mut totals = cell.get();
+        update(&mut totals);
+        cell.set(totals);
+    });
 }
 
 // SAFETY: every method forwards its arguments unchanged to `inner`, which
 // upholds the `GlobalAlloc` contract, and returns its result unchanged. The
-// counter updates neither allocate nor touch the memory being managed.
+// counter updates neither allocate nor touch the memory being managed: the
+// per-thread totals are a const-initialized `Cell` with no destructor, so
+// reading or writing them never allocates.
 unsafe impl<A: GlobalAlloc> GlobalAlloc for CountingAllocator<A> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         self.record_allocation(layout.size());

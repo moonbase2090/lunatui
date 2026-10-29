@@ -96,6 +96,7 @@ section.block{padding:72px 0}
 .gallery{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px}
 .gallery .tile{grid-column:span 2}
 .gallery .tile:nth-child(n+4){grid-column:span 3}
+.gallery .tile:nth-child(n+4):last-child:nth-child(even){grid-column:2/6}
 .tile{padding:14px;transition:border-color .2s,box-shadow .2s}
 .tile:hover{border-color:var(--edge-hi);box-shadow:inset 0 1px 0 rgba(185,167,240,.3),0 22px 56px rgba(2,4,14,.6),0 0 0 1px rgba(143,168,255,.18)}
 .tile-h{display:flex;align-items:center;gap:9px;font-weight:500;margin-bottom:10px}
@@ -160,7 +161,7 @@ footer nav a:hover{color:var(--lav)}
 /* motion */
 .reveal{animation:up 1.8s ease-out both}
 @keyframes up{from{opacity:.94;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (max-width:1000px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery .tile,.gallery .tile:nth-child(n+4){grid-column:auto}.gallery .tile:last-child:nth-child(odd){grid-column:1/-1}.tech{grid-template-columns:1fr 1fr}.speed{grid-template-columns:1fr}}
+@media (max-width:1000px){.gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery .tile,.gallery .tile:nth-child(n+4),.gallery .tile:nth-child(n+4):last-child:nth-child(even){grid-column:auto}.gallery .tile:last-child:nth-child(odd){grid-column:1/-1}.tech{grid-template-columns:1fr 1fr}.speed{grid-template-columns:1fr}}
 @media (max-width:767px){
  .container{padding:0 20px}
  .nav ul{display:none}
@@ -223,6 +224,7 @@ footer nav a:hover{color:var(--lav)}
 
 /* Site interactions and media. */
 .widget-demo{display:block;width:100%;height:auto;aspect-ratio:5/3;object-fit:contain;background:var(--term);border:1px solid rgba(143,168,255,.22);border-radius:8px}
+.widget-demo[data-gif$=".webp"]{aspect-ratio:2057/1450}
 .method{max-width:690px;margin-top:16px;color:var(--ink2);font-size:13px;text-wrap:pretty}
 .method a,.source{color:var(--lav);text-underline-offset:3px}
 .source{display:inline-block;margin-top:12px;font:12px var(--mono)}
@@ -287,8 +289,21 @@ footer nav a:hover{color:var(--lav)}
   <article class="tile panel"><div class="tile-h"><span>Sparkline</span></div><img class="widget-demo" data-static="assets/media/sparkline.gif" data-gif="assets/media/sparkline.gif" alt="Sparkline widget drawing a live data trend" loading="lazy" decoding="async" width="240" height="170"></article>
   <article class="tile panel"><div class="tile-h"><span>Spinner</span></div><img class="widget-demo" data-static="assets/media/spinner.gif" data-gif="assets/media/spinner.gif" alt="Spinner widget cycling its frame patterns" loading="lazy" decoding="async" width="240" height="170"></article>
   <article class="tile panel"><div class="tile-h"><span>TextInput</span></div><img class="widget-demo" data-static="assets/media/textinput.gif" data-gif="assets/media/textinput.gif" alt="TextInput widget with a block cursor and a bar cursor" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Toggle</span></div><img class="widget-demo" data-static="assets/media/toggle.png" data-gif="assets/media/toggle.webp" alt="Toggle: a settings screen with on/off switches flipping while a settings file view updates, in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>RadioGroup</span></div><img class="widget-demo" data-static="assets/media/radio-group.png" data-gif="assets/media/radio-group.webp" alt="RadioGroup: three radio groups stepping through their options with a preview pane following, in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Form</span></div><img class="widget-demo" data-static="assets/media/form.png" data-gif="assets/media/form.webp" alt="Form: an account form with required markers, hints, and validation messages around text, radio, and toggle inputs, in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Tooltip</span></div><img class="widget-demo" data-static="assets/media/tooltip.png" data-gif="assets/media/tooltip.webp" alt="Tooltip: hints appearing beside toolbar buttons, a gutter warning and status items in an editor screen, in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Slider</span></div><img class="widget-demo" data-static="assets/media/slider.png" data-gif="assets/media/slider.webp" alt="Slider: channel faders and equalizer range sliders with half-cell positions over a mixer screen in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>NumberInput</span></div><img class="widget-demo" data-static="assets/media/number-input.png" data-gif="assets/media/number-input.webp" alt="NumberInput: spin boxes stepping and one field being typed on an export settings screen in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Accordion</span></div><img class="widget-demo" data-static="assets/media/accordion.png" data-gif="assets/media/accordion.webp" alt="Accordion: sections opening and closing on a pipeline settings screen in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>Popup and ScrollView</span></div><img class="widget-demo" data-static="assets/media/popup-scrollview.png" data-gif="assets/media/popup-scrollview.webp" alt="Popup and ScrollView: a release console in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>ProgressBar</span></div><img class="widget-demo" data-static="assets/media/progress-bar.png" data-gif="assets/media/progress-bar.webp" alt="ProgressBar: determinate, stacked, and indeterminate bars across a release pipeline in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>SearchBox</span></div><img class="widget-demo" data-static="assets/media/search-box.png" data-gif="assets/media/search-box.webp" alt="SearchBox: a catalog filtered live with highlighted matches and a match count in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>HexViewer</span></div><img class="widget-demo" data-static="assets/media/hex-viewer.png" data-gif="assets/media/hex-viewer.webp" alt="HexViewer: a cursor and selection moving through a firmware image in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>LogView</span></div><img class="widget-demo" data-static="assets/media/logs.png" data-gif="assets/media/logs.webp" alt="LogView: a service console following new log lines, then filtering by level and text with a highlighted match in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
+  <article class="tile panel"><div class="tile-h"><span>PieChart</span></div><img class="widget-demo" data-static="assets/media/pie-chart.png" data-gif="assets/media/pie-chart.webp" alt="PieChart: a storage donut and a braille pie of live request shares on a cluster overview screen in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
  </div>
- <div class="dots" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show Calendar"></button><button type="button" aria-label="Show BigText"></button><button type="button" aria-label="Show Sparkline"></button><button type="button" aria-label="Show Spinner"></button><button type="button" aria-label="Show TextInput"></button></div>
+ <div class="dots" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show Calendar"></button><button type="button" aria-label="Show Spinner"></button><button type="button" aria-label="Show Form"></button><button type="button" aria-label="Show NumberInput"></button><button type="button" aria-label="Show SearchBox"></button><button type="button" aria-label="Show PieChart"></button></div>
 </div></section>
 
 <section class="block" id="speed"><div class="container">

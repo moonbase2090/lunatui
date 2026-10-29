@@ -17,11 +17,12 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
-    LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
-    Monthly, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popup, ProgressBar, RadioGroup,
-    RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis, SplitTree,
-    Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
+    Canvas, Chart, Dataset, Date, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer,
+    KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
+    MenuState, Monthly, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popup, ProgressBar,
+    RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis,
+    SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -284,6 +285,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: log_view_lunatui,
         ratatui: log_view_ratatui,
+    },
+    Case {
+        name: "diff-view",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no diff view with hunks, paired side-by-side rows, or intra-line highlights; its side parses the same text and draws the unified lines by hand as styled spans",
+        ),
+        lunatui: diff_view_lunatui,
+        ratatui: diff_view_ratatui,
     },
     Case {
         name: "calendar",
@@ -1297,6 +1307,57 @@ fn log_view_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     lines.drain(..lines.len().saturating_sub(keep));
     let blank = keep.saturating_sub(lines.len());
     lines.splice(0..0, std::iter::repeat_n(Line::from(""), blank));
+    RatParagraph::new(lines).style(text).render(area, buf);
+}
+
+const DIFF_TEXT: &str = "@@ -1,8 +1,9 @@ fn render\n fn render(grid: &mut Grid) {\n-    let width = grid.width();\n-    let height = grid.height();\n+    let (width, height) = grid.size();\n     for y in 0..height {\n         for x in 0..width {\n-            grid.set(x, y, Cell::EMPTY);\n+            grid.set(x, y, Cell::BLANK);\n+            grid.mark(x, y);\n         }\n     }\n }\n";
+
+fn diff_view_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let diff = Diff::parse(DIFF_TEXT);
+    DiffView::new(&diff)
+        .scroll(usize::try_from(tick % 3).unwrap_or(0))
+        .render(area, &mut cx);
+}
+
+fn diff_view_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let text = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface0));
+    let dim = text.add_modifier(ratatui::style::Modifier::DIM);
+    let header = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Accent))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let mut lines = vec![Line::from(Span::styled(
+        "@@ -1,8 +1,9 @@ fn render",
+        header,
+    ))];
+    let (mut old, mut new) = (1_u32, 1_u32);
+    for line in DIFF_TEXT.lines().skip(1) {
+        let (marker, body) = line.split_at(1);
+        let (shown_old, shown_new, style) = match marker {
+            "-" => (Some(old), None, text.fg(color(lunatui_theme::Token::Fail))),
+            "+" => (None, Some(new), text.fg(color(lunatui_theme::Token::Ok))),
+            _ => (Some(old), Some(new), text),
+        };
+        old += u32::from(shown_old.is_some());
+        new += u32::from(shown_new.is_some());
+        let number = |value: Option<u32>| value.map_or_else(|| " ".to_owned(), |n| n.to_string());
+        lines.push(Line::from(vec![
+            Span::styled(format!("{} {} ", number(shown_old), number(shown_new)), dim),
+            Span::styled(format!("{marker} {body}"), style),
+        ]));
+    }
+    let skip = usize::try_from(tick % 3).unwrap_or(0).min(lines.len());
+    lines.drain(..skip);
     RatParagraph::new(lines).style(text).render(area, buf);
 }
 
