@@ -16,7 +16,7 @@ WIDTH=100 HEIGHT=32 FONT_SIZE=20 FPS=30 SECONDS_TO_RECORD=8 \
 KEYS=2:f,5:f scripts/record-pixels.sh
 ```
 
-The script starts an isolated Xvfb display and a Kitty window, builds the example, lets the terminal initialize before the app probes it, records the window, and closes both processes when finished. `OUT` selects the output directory. `KEYS` is an optional comma-separated list of elapsed seconds and alphanumeric X11 key names. `CARGO_TARGET_DIR` can select an absolute Cargo build directory.
+The script starts an isolated Xvfb display and a Kitty window, builds the example, lets the terminal initialize before the app probes it, records the window, and closes both processes when finished. `OUT` selects the output directory. `KEYS` is an optional comma-separated list of elapsed seconds and alphanumeric X11 key names. `CARGO_TARGET_DIR` can select an absolute Cargo build directory. Arguments after the script name are passed unchanged to the example and recorded in the receipt.
 
 Inspect `terminal.png` and `terminal.webp` before publishing. `capture.json` records the source commit, whether tracked files were clean, terminal and encoder versions, dimensions, duration, distinct frame count, input sequence, and artifact hashes. The script rejects a capture whose dimensions differ from the terminal window, an unchanged scripted recording, or a WebP above the 3 MB gallery limit. `terminal.mkv` keeps the original lossless framebuffer video.
 

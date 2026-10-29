@@ -42,7 +42,7 @@ kitty --config NONE --listen-on "unix:$OUT/kitty.sock" --title 'Lunatui Image de
   -o linux_display_server=x11 -o allow_remote_control=yes -o remember_window_size=no \
   -o "initial_window_width=${WIDTH}c" -o "initial_window_height=${HEIGHT}c" \
   -o "font_size=$FONT_SIZE" -o window_padding_width=0 -o hide_window_decorations=yes \
-  /bin/sh -c 'sleep 1; exec "$1"' capture "$TARGET_DIR/release/examples/$EXAMPLE" >"$OUT/kitty.log" 2>&1 &
+  /bin/sh -c 'sleep 1; exec "$@"' capture "$TARGET_DIR/release/examples/$EXAMPLE" "$@" >"$OUT/kitty.log" 2>&1 &
 K_PID=$!
 WINDOW=''
 for _ in {1..100}; do WINDOW="$(xdotool search --onlyvisible --pid "$K_PID" 2>/dev/null | head -1 || true)"; [[ -n "$WINDOW" ]] && break; sleep 0.05; done
@@ -67,7 +67,7 @@ ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -framerate "$FPS" \
 ffmpeg -nostdin -loglevel error -y -sseof -0.1 -i "$OUT/terminal.mkv" -frames:v 1 "$OUT/terminal.png"
 ffmpeg -nostdin -loglevel error -y -i "$OUT/terminal.mkv" -c:v libwebp_anim -lossless 1 -loop 0 "$OUT/terminal.webp"
 ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate -show_entries format=duration -of json "$OUT/terminal.mkv" > "$OUT/capture.json"
-python3 - "$OUT" "$EXAMPLE" "$KEYS" <<'PY'
+python3 - "$OUT" "$EXAMPLE" "$KEYS" "$@" <<'PY'
 import hashlib,json,pathlib,subprocess,sys
 out=pathlib.Path(sys.argv[1]); receipt=json.loads((out/'capture.json').read_text())
 geometry=dict(line.split('=',1) for line in (out/'geometry.txt').read_text().splitlines())
@@ -79,6 +79,7 @@ if sys.argv[3]: assert len(frames)>1, 'scripted input must change the real termi
 assert (out/'terminal.webp').stat().st_size <= 3000000, 'recording exceeds the gallery limit'
 receipt['distinct_frames']=len(frames)
 receipt['keys']=sys.argv[3]
+receipt['args']=sys.argv[4:]
 receipt['example']=sys.argv[2]
 receipt['source']='Actual Kitty X11 window captured by ffmpeg x11grab; no compositing.'
 receipt['head']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
