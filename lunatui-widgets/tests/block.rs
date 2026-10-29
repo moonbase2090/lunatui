@@ -118,3 +118,26 @@ fn title_style_attributes_reach_the_title_cells() {
     assert!(!border.attrs.bold());
     assert_eq!(border.fg, Color::Rgb(46, 53, 96));
 }
+
+#[test]
+fn titles_on_one_edge_sit_one_cell_apart_and_center_on_the_border() {
+    let theme = Theme::builtin(Variant::Dark);
+    let block = Block::bordered()
+        .title("ab")
+        .title("cd")
+        .title_top_aligned("mid", Alignment::Center)
+        .title_top_aligned("x", Alignment::Right)
+        .title_top_aligned("yz", Alignment::Right)
+        .title_at("c1", TitlePosition::Bottom, Alignment::Center, Style::new())
+        .title_at("c2", TitlePosition::Bottom, Alignment::Center, Style::new())
+        .title_at("q", TitlePosition::Bottom, Alignment::Right, Style::new());
+    let rows = |width: u16| {
+        let mut grid = Grid::new(width, 3);
+        let mut clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        block.render(Rect::new(0, 0, width, 3), &mut cx);
+        [0, 2].map(|y| grid.row_display(y, &clusters))
+    };
+    assert_eq!(rows(20), ["┌ab─cd──mid────x─yz┐", "└──────c1─c2──────q┘"]);
+    assert_eq!(rows(21), ["┌ab─cd───mid────x─yz┐", "└───────c1─c2──────q┘"]);
+}

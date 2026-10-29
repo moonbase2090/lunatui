@@ -3,6 +3,10 @@
 
 #![doc = include_str!("../README.md")]
 
+#[cfg(feature = "accordion")]
+mod accordion;
+#[cfg(feature = "tooltip")]
+mod anchor;
 #[cfg(feature = "barchart")]
 mod bar_chart;
 #[cfg(feature = "bigtext")]
@@ -17,7 +21,11 @@ mod calendar;
 pub mod canvas;
 #[cfg(feature = "chart")]
 mod chart;
+#[cfg(feature = "form")]
+mod form;
 mod gauge;
+#[cfg(feature = "hex-viewer")]
+mod hex_viewer;
 #[cfg(feature = "image")]
 mod image;
 #[cfg(feature = "key-hints")]
@@ -28,13 +36,27 @@ mod line_gauge;
 mod list;
 #[cfg(feature = "markdown")]
 mod markdown_view;
+#[cfg(feature = "number-input")]
+mod number_input;
 mod overlay;
 mod padding;
 mod paragraph;
+#[cfg(feature = "popup")]
+mod popup;
+#[cfg(feature = "progress")]
+mod progress_bar;
+#[cfg(feature = "radio")]
+mod radio_group;
 #[cfg(any(feature = "chart", feature = "canvas"))]
 mod raster;
 mod render_cx;
+#[cfg(feature = "scroll-view")]
+mod scroll_view;
 mod scrollbar;
+#[cfg(feature = "search-box")]
+mod search_box;
+#[cfg(feature = "slider")]
+mod slider;
 #[cfg(feature = "sparkline")]
 mod sparkline;
 mod spinner;
@@ -49,8 +71,16 @@ mod tabs;
 mod text_input;
 #[cfg(feature = "toast")]
 mod toast;
+#[cfg(feature = "toggle")]
+mod toggle;
+#[cfg(feature = "tooltip")]
+mod tooltip;
 mod widget;
 
+#[cfg(feature = "accordion")]
+pub use accordion::{Accordion, AccordionSection, SectionArea};
+#[cfg(feature = "tooltip")]
+pub use anchor::AnchorSide;
 #[cfg(feature = "barchart")]
 pub use bar_chart::{Bar, BarChart, BarDirection, BarGroup};
 #[cfg(feature = "bigtext")]
@@ -64,7 +94,11 @@ pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use canvas::Canvas;
 #[cfg(feature = "chart")]
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
+#[cfg(feature = "form")]
+pub use form::{FieldArea, Form, FormField};
 pub use gauge::Gauge;
+#[cfg(feature = "hex-viewer")]
+pub use hex_viewer::{HexViewer, HexViewerState};
 #[cfg(feature = "image")]
 pub use image::Image;
 #[cfg(feature = "key-hints")]
@@ -80,13 +114,27 @@ pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
 #[cfg(feature = "markdown")]
 pub use markdown_view::MarkdownView;
+#[cfg(feature = "number-input")]
+pub use number_input::NumberInput;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
+#[cfg(feature = "popup")]
+pub use popup::{Placement, Popup, PopupState};
+#[cfg(feature = "progress")]
+pub use progress_bar::{ProgressBar, ProgressTone};
+#[cfg(feature = "radio")]
+pub use radio_group::{RadioFlow, RadioGroup};
 #[cfg(any(feature = "chart", feature = "canvas"))]
 pub use raster::Marker;
 pub use render_cx::RenderCx;
+#[cfg(feature = "scroll-view")]
+pub use scroll_view::{ScrollView, ScrollViewState, ScrollbarVisibility};
 pub use scrollbar::Scrollbar;
+#[cfg(feature = "search-box")]
+pub use search_box::{SearchBox, SearchMatch};
+#[cfg(feature = "slider")]
+pub use slider::Slider;
 #[cfg(feature = "sparkline")]
 pub use sparkline::{
     BarSet, Baseline, NINE_LEVELS, RenderDirection, Sparkline, SparklineBar, SparklineValue,
@@ -106,4 +154,8 @@ pub use tabs::{TabMove, Tabs, TabsDrag};
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]
 pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};
+#[cfg(feature = "toggle")]
+pub use toggle::Toggle;
+#[cfg(feature = "tooltip")]
+pub use tooltip::{Tooltip, TooltipState};
 pub use widget::Widget;

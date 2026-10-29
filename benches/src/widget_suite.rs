@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::scenes::ratatui::{ColorOutput, set_color_output};
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_layout::Constraint;
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
@@ -17,17 +17,21 @@ use lunatui_theme::{Theme, Variant};
 #[cfg(feature = "line-gauge")]
 use lunatui_widgets::LineGauge;
 use lunatui_widgets::{
-    Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs, Canvas, Chart, Dataset, Date,
-    Gauge, GraphType, KeyHintBar, List, MarkdownView, Marker, Monthly, Paragraph, PixelSize,
-    RenderCx, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope,
-    ToastStack, Widget,
+    Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
+    Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
+    MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, Popup, ProgressBar,
+    RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis,
+    SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Constraint as RatConstraint, Layout as RatLayout, Rect as RatRect};
+use ratatui::layout::{
+    Constraint as RatConstraint, Layout as RatLayout, Position as RatPosition, Rect as RatRect,
+    Size as RatSize,
+};
 use ratatui::style::{Color as RatColor, Style as RatStyle};
 use ratatui::symbols::Marker as RatMarker;
-use ratatui::text::{Line, Span};
+use ratatui::text::{Line, Span, Text};
 #[cfg(feature = "line-gauge")]
 use ratatui::widgets::LineGauge as RatLineGauge;
 use ratatui::widgets::calendar::{DateStyler, Monthly as RatMonthly};
@@ -40,6 +44,11 @@ use ratatui::widgets::{
 };
 use ratatui::{Terminal, TerminalOptions, Viewport};
 use time::{Date as TimeDate, Month};
+use tui_popup::Popup as RatPopup;
+use tui_scrollview::{
+    ScrollView as RatScrollView, ScrollViewState as RatScrollViewState,
+    ScrollbarVisibility as RatScrollbarVisibility,
+};
 
 /// Terminal sizes every case runs at.
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
@@ -51,6 +60,13 @@ const ACCENT: (u8, u8, u8) = (0x7a, 0xa2, 0xf7);
 const ROWS: usize = 500;
 const LOG_LINES: usize = 200;
 const TABS: [&str; 4] = ["Overview", "Lints", "Tests", "Deps"];
+const LOG_WIDTH: u16 = 240;
+const DIALOG: [&str; 4] = [
+    "Deploy build 4812 to production?",
+    "  3 services restart, 0 migrations",
+    "  Rollback window: 30 minutes",
+    "",
+];
 
 const HELP: &[KeyChord] = &[KeyChord::new(KeyCode::Char('?'), Modifiers::new())];
 const QUIT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('q'), Modifiers::new())];
@@ -158,6 +174,94 @@ pub static CASES: &[Case] = &[
         ratatui: key_hints_ratatui,
     },
     Case {
+        name: "toggle",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no toggle switch; its side draws the same knob and track glyphs by hand as styled spans",
+        ),
+        lunatui: toggle_lunatui,
+        ratatui: toggle_ratatui,
+    },
+    Case {
+        name: "tooltip",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no tooltip; its side fills the rectangle Tooltip::area picks and prints the padded hint with a Paragraph",
+        ),
+        lunatui: tooltip_lunatui,
+        ratatui: tooltip_ratatui,
+    },
+    Case {
+        name: "radio-group",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no radio group; its side draws the same glyphs and labels by hand, one paragraph line per option",
+        ),
+        lunatui: radio_lunatui,
+        ratatui: radio_ratatui,
+    },
+    Case {
+        name: "form",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no form container; its side draws the same labels, required markers and messages by hand, one paragraph line each",
+        ),
+        lunatui: form_lunatui,
+        ratatui: form_ratatui,
+    },
+    Case {
+        name: "progress-bar",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no progress bar with eighth-block precision, segments, or an indeterminate mode; its side draws the same single-segment bar by hand as styled spans",
+        ),
+        lunatui: progress_lunatui,
+        ratatui: progress_ratatui,
+    },
+    Case {
+        name: "hex-viewer",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: hex_viewer_lunatui,
+        ratatui: hex_viewer_ratatui,
+    },
+    Case {
+        name: "accordion",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no collapsible section widget; its side draws each header and open body by hand as paragraphs",
+        ),
+        lunatui: accordion_lunatui,
+        ratatui: accordion_ratatui,
+    },
+    Case {
+        name: "slider",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no slider; its side draws the same half-cell track glyphs by hand as styled spans",
+        ),
+        lunatui: slider_lunatui,
+        ratatui: slider_ratatui,
+    },
+    Case {
+        name: "number-input",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no number field with step buttons, range clamping, or typed-text validation; its side draws the buttons and the right-aligned value by hand as styled spans",
+        ),
+        lunatui: number_input_lunatui,
+        ratatui: number_input_ratatui,
+    },
+    Case {
+        name: "search-box",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no search field with a placeholder, match count, clear button, or smart-case filtering; its side draws the prompt, query, and count by hand as styled spans",
+        ),
+        lunatui: search_box_lunatui,
+        ratatui: search_box_ratatui,
+    },
+    Case {
         name: "calendar",
         gated: true,
         parity: Parity::Exact,
@@ -235,6 +339,20 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: bigtext_lunatui,
         ratatui: bigtext_ratatui,
+    },
+    Case {
+        name: "popup",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: popup_lunatui,
+        ratatui: popup_ratatui,
+    },
+    Case {
+        name: "scrollview",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: scrollview_lunatui,
+        ratatui: scrollview_ratatui,
     },
 ];
 
@@ -603,6 +721,702 @@ fn key_hints_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
         ),
         buf,
     );
+}
+
+const TOGGLES: [&str; 4] = ["Dark mode", "Notifications", "Auto update", "Telemetry"];
+
+fn toggle_on(tick: u32, index: usize) -> bool {
+    !(tick / 4 + u32::try_from(index).unwrap_or(0)).is_multiple_of(3)
+}
+
+fn toggle_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for (index, label) in TOGGLES.iter().enumerate() {
+        let y = area.y.saturating_add(u16::try_from(index).unwrap_or(0));
+        Toggle::new(toggle_on(tick, index))
+            .label(*label)
+            .render(Rect::new(area.x, y, area.width, 1), &mut cx);
+    }
+}
+
+fn toggle_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    for (index, label) in TOGGLES.iter().enumerate() {
+        let y = area.y.saturating_add(u16::try_from(index).unwrap_or(0));
+        let on = toggle_on(tick, index);
+        let (rail, rail_style) = if on {
+            (
+                "━━━",
+                RatStyle::new().fg(color(lunatui_theme::Token::Accent)),
+            )
+        } else {
+            (
+                "───",
+                RatStyle::new()
+                    .fg(color(lunatui_theme::Token::TextPrimary))
+                    .add_modifier(ratatui::style::Modifier::DIM),
+            )
+        };
+        let knob = RatStyle::new().fg(color(if on {
+            lunatui_theme::Token::Ok
+        } else {
+            lunatui_theme::Token::TextPrimary
+        }));
+        let line = if on {
+            Line::from(vec![
+                Span::styled(rail, rail_style),
+                Span::styled("●", knob),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled("●", knob),
+                Span::styled(rail, rail_style),
+            ])
+        };
+        let mut spans = line.spans;
+        spans.push(Span::raw(" "));
+        spans.push(Span::styled(
+            *label,
+            RatStyle::new().fg(color(lunatui_theme::Token::TextPrimary)),
+        ));
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
+}
+
+const NUMBER_ROWS: usize = 4;
+
+fn number_input_value(tick: u32, row: usize) -> f64 {
+    f64::from((tick * 7 + u32::try_from(row).unwrap_or(0) * 13) % 1000) / 10.0
+}
+
+fn number_input_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for row in 0..NUMBER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        NumberInput::new(number_input_value(tick, row))
+            .range(0.0, 100.0)
+            .decimals(1)
+            .suffix(" %")
+            .render(Rect::new(area.x, y, area.width.min(24), 1), &mut cx);
+    }
+}
+
+fn number_input_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let field = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let button = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Accent))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let width = usize::from(area.width.min(24));
+    for row in 0..NUMBER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let text = format!("{:.1} %", number_input_value(tick, row));
+        let inner = width.saturating_sub(8);
+        let line = Line::from(vec![
+            Span::styled(" − ", button),
+            Span::styled(format!(" {text:>inner$} "), field),
+            Span::styled(" + ", button),
+        ]);
+        RatParagraph::new(line).render(
+            RatRect::new(area.x, y, u16::try_from(width).unwrap_or(0), 1),
+            buf,
+        );
+    }
+}
+
+const HEX_DATA: [u8; 2048] = hex_data();
+
+const fn hex_data() -> [u8; 2048] {
+    let text = b"lunatui hex viewer: offsets, bytes and text\n";
+    let mut out = [0u8; 2048];
+    let mut seed: u32 = 0x9e37_79b9;
+    let mut index = 0;
+    while index < out.len() {
+        out[index] = match index % 256 {
+            0..96 => text[index % text.len()],
+            96..128 => 0,
+            _ => {
+                seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                seed.to_be_bytes()[0]
+            }
+        };
+        index += 1;
+    }
+    out
+}
+
+fn hex_view(per_row: usize, rows: u16, tick: u32) -> (usize, usize, std::ops::Range<usize>) {
+    let tick = usize::try_from(tick).unwrap_or(0);
+    let len = HEX_DATA.len();
+    let span = len
+        .div_ceil(per_row)
+        .saturating_sub(usize::from(rows))
+        .max(1);
+    let top = (tick * 3) % span;
+    let cursor = ((top + 1) * per_row + tick % per_row).min(len - 1);
+    let start = top * per_row + 5;
+    (top, cursor, start..(start + per_row + 9).min(len))
+}
+
+fn hex_viewer_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let viewer = HexViewer::new(&HEX_DATA).header(true).scrollbar(false);
+    let per_row = viewer.fitting_bytes_per_row(usize::from(area.width));
+    let (top, cursor, selection) = hex_view(per_row, area.height.saturating_sub(1), tick);
+    viewer
+        .bytes_per_row(per_row)
+        .top_row(top)
+        .cursor(Some(cursor))
+        .selection(Some(selection))
+        .render(area, &mut cx);
+}
+
+fn hex_pairs() -> &'static [String] {
+    static PAIRS: OnceLock<Vec<String>> = OnceLock::new();
+    PAIRS.get_or_init(|| (0..=255u8).map(|byte| format!("{byte:02x}")).collect())
+}
+
+fn hex_viewer_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    use lunatui_theme::Token;
+    use ratatui::style::Modifier;
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let text = RatStyle::new().fg(color(Token::TextPrimary));
+    let dim = text.add_modifier(Modifier::DIM);
+    let shade = RatStyle::new().bg(color(Token::Surface1));
+    let mark = RatStyle::new()
+        .fg(color(Token::Surface0))
+        .bg(color(Token::Accent))
+        .add_modifier(Modifier::BOLD);
+    let byte_style = |byte: u8| match byte {
+        0 => dim,
+        0x20..=0x7e => text,
+        0x80..=0xff => RatStyle::new().fg(color(Token::Accent)),
+        _ => RatStyle::new().fg(color(Token::Warn)),
+    };
+    let fits = |bytes: usize| 11 + 4 * bytes + (bytes - 1) / 8 <= usize::from(area.width);
+    let mut per_row = 1;
+    let mut bytes = 8;
+    while fits(bytes) {
+        per_row = bytes;
+        bytes += 8;
+    }
+    let body = area.height.saturating_sub(1);
+    let (top, cursor, selection) = hex_view(per_row, body, tick);
+    let ascii_at = 10 + 3 * per_row - 1 + (per_row - 1) / 8 + 2;
+    let gap = |column: usize| if column.is_multiple_of(8) { "  " } else { " " };
+    let pairs = hex_pairs();
+
+    let mut header = vec![Span::raw(" ".repeat(10))];
+    for column in 0..per_row {
+        if column > 0 {
+            header.push(Span::raw(gap(column)));
+        }
+        header.push(Span::styled(pairs[column & 0xff].as_str(), dim));
+    }
+    header.push(Span::raw("  "));
+    for column in 0..per_row {
+        header.push(Span::styled(&pairs[column & 0xf][1..], dim));
+    }
+    let mut lines = vec![Line::from(header)];
+
+    let rows = HEX_DATA.len().div_ceil(per_row);
+    for row in top..(top + usize::from(body)).min(rows) {
+        let start = row * per_row;
+        let bytes = &HEX_DATA[start..(start + per_row).min(HEX_DATA.len())];
+        let styles: Vec<RatStyle> = bytes
+            .iter()
+            .enumerate()
+            .map(|(column, &byte)| {
+                let index = start + column;
+                if index == cursor {
+                    mark
+                } else if selection.contains(&index) {
+                    byte_style(byte).patch(shade)
+                } else {
+                    byte_style(byte)
+                }
+            })
+            .collect();
+        let mut spans = vec![Span::styled(format!("{start:08x}"), dim), Span::raw("  ")];
+        let mut x = 10;
+        for (column, &byte) in bytes.iter().enumerate() {
+            if column > 0 {
+                let index = start + column;
+                let between = if selection.contains(&(index - 1)) && selection.contains(&index) {
+                    shade
+                } else {
+                    RatStyle::new()
+                };
+                spans.push(Span::styled(gap(column), between));
+                x += gap(column).len();
+            }
+            spans.push(Span::styled(
+                pairs[usize::from(byte)].as_str(),
+                styles[column],
+            ));
+            x += 2;
+        }
+        spans.push(Span::raw(" ".repeat(ascii_at - x)));
+        for (column, &byte) in bytes.iter().enumerate() {
+            let shown = if (0x20..=0x7e).contains(&byte) {
+                char::from(byte)
+            } else {
+                '.'
+            };
+            spans.push(Span::styled(shown.to_string(), styles[column]));
+        }
+        lines.push(Line::from(spans));
+    }
+    RatParagraph::new(lines).render(area, buf);
+}
+
+const ACCORDION: [(&str, &str, u16); 4] = [
+    ("Build", "3 settings", 3),
+    ("Environment", "4 variables", 4),
+    ("Dependencies", "212 crates", 4),
+    ("Tests", "3 suites", 3),
+];
+
+fn accordion_open(tick: u32, index: usize) -> bool {
+    (tick / 20 + u32::try_from(index).unwrap_or(0)).is_multiple_of(2)
+}
+
+fn accordion_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let accordion = Accordion::new(ACCORDION.iter().enumerate().map(
+        |(index, (title, badge, rows))| {
+            AccordionSection::new(*title, *rows)
+                .open(accordion_open(tick, index))
+                .badge(*badge)
+        },
+    ));
+    accordion.render(area, &mut cx);
+    for section in accordion.layout(area) {
+        for row in 0..section.body.height {
+            cx.put_str(
+                section.body.x,
+                section.body.y + row,
+                &format!("setting {}", row + 1),
+                Style::new(),
+            );
+        }
+    }
+}
+
+fn accordion_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let text = RatStyle::new().fg(rat_color(theme.resolve(lunatui_theme::Token::TextPrimary)));
+    let dim = text.add_modifier(ratatui::style::Modifier::DIM);
+    let end = area.y.saturating_add(area.height);
+    let mut y = area.y;
+    for (index, (title, badge, rows)) in ACCORDION.iter().enumerate() {
+        if y >= end {
+            break;
+        }
+        let open = accordion_open(tick, index);
+        let caret = if open { "▾" } else { "▸" };
+        let pad = usize::from(area.width)
+            .saturating_sub(2 + title.chars().count() + badge.chars().count());
+        RatParagraph::new(Line::from(vec![
+            Span::styled(format!("{caret} {title}"), text),
+            Span::raw(" ".repeat(pad)),
+            Span::styled(*badge, dim),
+        ]))
+        .render(RatRect::new(area.x, y, area.width, 1), buf);
+        y += 1;
+        if !open {
+            continue;
+        }
+        for row in 0..(*rows).min(end.saturating_sub(y)) {
+            let indent = 2.min(area.width);
+            RatParagraph::new(Line::from(format!("setting {}", row + 1))).render(
+                RatRect::new(area.x + indent, y + row, area.width - indent, 1),
+                buf,
+            );
+        }
+        y = y.saturating_add(*rows);
+    }
+}
+
+const SEARCH_QUERIES: [&str; 4] = ["sl", "tab", "on sw", ""];
+
+fn search_box_query(tick: u32) -> &'static str {
+    SEARCH_QUERIES[usize::try_from(tick / 25).unwrap_or(0) % SEARCH_QUERIES.len()]
+}
+
+fn search_box_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let query = search_box_query(tick);
+    SearchBox::new(query, query.len())
+        .placeholder("Filter widgets")
+        .matches(None, query.len())
+        .render(Rect::new(area.x, area.y, area.width.min(40), 1), &mut cx);
+}
+
+fn search_box_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let base = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let accent = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Accent))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let dim = base.add_modifier(ratatui::style::Modifier::DIM);
+    let query = search_box_query(tick);
+    let width = usize::from(area.width.min(40));
+    let shown = if query.is_empty() {
+        "Filter widgets"
+    } else {
+        query
+    };
+    let count = if query.is_empty() {
+        String::new()
+    } else {
+        format!("{} matches", query.len())
+    };
+    let used = 3 + shown.chars().count() + count.chars().count() + 3;
+    let pad = width.saturating_sub(used);
+    let mut spans = vec![
+        Span::styled(" / ", accent),
+        Span::styled(shown, if query.is_empty() { dim } else { base }),
+        Span::styled(" ".repeat(pad), base),
+        Span::styled(count, dim),
+    ];
+    if !query.is_empty() {
+        spans.push(Span::styled(" × ", accent));
+    }
+    RatParagraph::new(Line::from(spans)).render(
+        RatRect::new(area.x, area.y, u16::try_from(width).unwrap_or(0), 1),
+        buf,
+    );
+}
+
+const RADIO_OPTIONS: [&str; 4] = ["Small", "Medium", "Large", "Extra large"];
+
+fn radio_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    RadioGroup::new(RADIO_OPTIONS)
+        .select(Some(usize::try_from(tick / 4 % 4).unwrap_or(0)))
+        .render(area, &mut cx);
+}
+
+fn radio_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let selected = usize::try_from(tick / 4 % 4).unwrap_or(0);
+    for (index, label) in RADIO_OPTIONS.iter().enumerate() {
+        let y = area.y.saturating_add(u16::try_from(index).unwrap_or(0));
+        let (glyph, token) = if index == selected {
+            ("◉", lunatui_theme::Token::Accent)
+        } else {
+            ("○", lunatui_theme::Token::TextPrimary)
+        };
+        let line = Line::from(vec![
+            Span::styled(glyph, RatStyle::new().fg(color(token))),
+            Span::raw(" "),
+            Span::styled(
+                *label,
+                RatStyle::new().fg(color(lunatui_theme::Token::TextPrimary)),
+            ),
+        ]);
+        RatParagraph::new(line).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
+}
+
+const FORM_LABELS: [&str; 3] = ["Name", "Email", "Notes"];
+
+fn form_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let focus = usize::try_from(tick / 4 % 3).unwrap_or(0);
+    let fields = [
+        FormField::new(FORM_LABELS[0])
+            .required()
+            .hint("As on invoices"),
+        FormField::new(FORM_LABELS[1]).required().error("Required"),
+        FormField::new(FORM_LABELS[2]).hint("Optional"),
+    ];
+    Form::new(fields).focus(Some(focus)).render(area, &mut cx);
+}
+
+fn form_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let focus = usize::try_from(tick / 4 % 3).unwrap_or(0);
+    let messages = ["As on invoices", "✖ Required", "Optional"];
+    for (index, label) in FORM_LABELS.iter().enumerate() {
+        let y = area.y.saturating_add(u16::try_from(index).unwrap_or(0) * 3);
+        let mut name = RatStyle::new().fg(color(if index == focus {
+            lunatui_theme::Token::Accent
+        } else {
+            lunatui_theme::Token::TextPrimary
+        }));
+        if index == focus {
+            name = name.add_modifier(ratatui::style::Modifier::BOLD);
+        }
+        let mut spans = vec![Span::styled(*label, name)];
+        if index < 2 {
+            spans.push(Span::styled(
+                " *",
+                RatStyle::new().fg(color(lunatui_theme::Token::Fail)),
+            ));
+        }
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+        let message_style = if index == 1 {
+            RatStyle::new().fg(color(lunatui_theme::Token::Fail))
+        } else {
+            RatStyle::new()
+                .fg(color(lunatui_theme::Token::TextPrimary))
+                .add_modifier(ratatui::style::Modifier::DIM)
+        };
+        RatParagraph::new(Line::from(Span::styled(messages[index], message_style))).render(
+            RatRect::new(
+                area.x.saturating_add(9),
+                y.saturating_add(1),
+                area.width.saturating_sub(9),
+                1,
+            ),
+            buf,
+        );
+    }
+}
+
+const TOOLBAR: [(&str, &str); 4] = [
+    ("Save", "Save the open file"),
+    ("Open", "Open a file from disk"),
+    ("Find", "Search every open file"),
+    ("Close", "Close the current tab"),
+];
+
+fn toolbar_slots(area: Rect) -> impl Iterator<Item = (Rect, &'static str, &'static str)> {
+    let mut x = area.x;
+    TOOLBAR.iter().map(move |&(label, tip)| {
+        let width = u16::try_from(label.len()).unwrap_or(0).saturating_add(2);
+        let slot = Rect::new(x, area.y, width, 1);
+        x = x.saturating_add(width).saturating_add(1);
+        (slot, label, tip)
+    })
+}
+
+fn toolbar_hovered(tick: u32) -> usize {
+    usize::try_from(tick / 6).unwrap_or(0) % TOOLBAR.len()
+}
+
+fn tooltip_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let hovered = toolbar_hovered(tick);
+    let mut shown = None;
+    for (index, (slot, label, tip)) in toolbar_slots(area).enumerate() {
+        Paragraph::new(label).render(
+            Rect::new(slot.x.saturating_add(1), slot.y, slot.width - 2, 1),
+            &mut cx,
+        );
+        if index == hovered {
+            shown = Some(Tooltip::new(tip, slot));
+        }
+    }
+    if let Some(tooltip) = shown {
+        tooltip.render(area, &mut cx);
+    }
+}
+
+fn tooltip_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let screen = Rect::new(area.x, area.y, area.width, area.height);
+    let hovered = toolbar_hovered(tick);
+    for (index, (slot, label, tip)) in toolbar_slots(screen).enumerate() {
+        RatParagraph::new(label).render(
+            RatRect::new(slot.x.saturating_add(1), slot.y, slot.width - 2, 1),
+            buf,
+        );
+        if index != hovered {
+            continue;
+        }
+        if let Some(bubble) = Tooltip::new(tip, slot).area(screen) {
+            RatParagraph::new(format!(" {tip}"))
+                .style(
+                    RatStyle::new()
+                        .fg(color(lunatui_theme::Token::TextPrimary))
+                        .bg(color(lunatui_theme::Token::Surface1)),
+                )
+                .render(
+                    RatRect::new(bubble.x, bubble.y, bubble.width, bubble.height),
+                    buf,
+                );
+        }
+    }
+}
+
+const SLIDER_ROWS: usize = 4;
+
+fn slider_value(tick: u32, row: usize) -> f64 {
+    let step = (u64::from(tick) * 3 + u64::try_from(row).unwrap_or(0) * 17) % 200;
+    let step = if step > 100 { 200 - step } else { step };
+    f64::from(u32::try_from(step).unwrap_or(0))
+}
+
+fn slider_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for row in 0..SLIDER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        Slider::new(0.0, 100.0)
+            .value(slider_value(tick, row))
+            .render(Rect::new(area.x, y, area.width, 1), &mut cx);
+    }
+}
+
+fn slider_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let fill = RatStyle::new().fg(color(lunatui_theme::Token::Accent));
+    let rest = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .add_modifier(ratatui::style::Modifier::DIM);
+    let total = usize::from(area.width) * 2;
+    for row in 0..SLIDER_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let value = slider_value(tick, row);
+        let halves = (0..=total)
+            .min_by(|a, b| {
+                let want = value / 100.0;
+                let da = (f64::from(u32::try_from(*a).unwrap_or(0))
+                    / f64::from(u32::try_from(total).unwrap_or(1))
+                    - want)
+                    .abs();
+                let db = (f64::from(u32::try_from(*b).unwrap_or(0))
+                    / f64::from(u32::try_from(total).unwrap_or(1))
+                    - want)
+                    .abs();
+                da.total_cmp(&db)
+            })
+            .unwrap_or(0);
+        let spans: Vec<Span<'_>> = (0..usize::from(area.width))
+            .map(|cell| {
+                let (left, right) = (cell * 2 < halves, cell * 2 + 1 < halves);
+                match (left, right) {
+                    (true, true) => Span::styled("━", fill),
+                    (true, false) => Span::styled("╸", fill),
+                    _ => Span::styled("─", rest),
+                }
+            })
+            .collect();
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
+}
+
+const PROGRESS_ROWS: usize = 4;
+
+fn progress_eighths(tick: u32, row: usize, total: u16) -> u16 {
+    let phase = (tick * 3 + u32::try_from(row).unwrap_or(0) * 29) % 200;
+    let phase = if phase > 100 { 200 - phase } else { phase };
+    u16::try_from(u32::from(total) * phase / 100).unwrap_or(total)
+}
+
+fn progress_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let total = area.width.saturating_mul(8);
+    for row in 0..PROGRESS_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let eighths = progress_eighths(tick, row, total);
+        ProgressBar::new()
+            .ratio(f64::from(eighths) / f64::from(total.max(1)))
+            .render(Rect::new(area.x, y, area.width, 1), &mut cx);
+    }
+}
+
+fn progress_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let fill = color(lunatui_theme::Token::Accent);
+    let track = color(lunatui_theme::Token::Surface1);
+    let partial = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
+    let total = area.width.saturating_mul(8);
+    for row in 0..PROGRESS_ROWS {
+        let y = area.y.saturating_add(u16::try_from(row).unwrap_or(0));
+        let eighths = progress_eighths(tick, row, total);
+        let spans: Vec<Span<'_>> = (0..area.width)
+            .map(|cell| {
+                let base = cell * 8;
+                if base + 8 <= eighths {
+                    Span::styled("█", RatStyle::new().fg(fill))
+                } else if eighths <= base {
+                    Span::styled("█", RatStyle::new().fg(track))
+                } else {
+                    Span::styled(
+                        partial[usize::from(eighths - base - 1)],
+                        RatStyle::new().fg(fill).bg(track),
+                    )
+                }
+            })
+            .collect();
+        RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
 }
 
 fn tabs_lunatui(
@@ -1446,4 +2260,105 @@ pub fn gate_failures(
         ));
     }
     failures
+}
+
+fn dialog_lines(tick: u32) -> [String; 4] {
+    let mut lines = DIALOG.map(str::to_owned);
+    lines[3] = format!("  [ Deploy ]   [ Cancel ]   {:>2}s", 30 - tick % 30);
+    lines
+}
+
+fn popup_title(tick: u32) -> String {
+    format!(" Confirm {} ", tick % 10)
+}
+
+fn popup_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let lines = dialog_lines(tick);
+    let width = lines
+        .iter()
+        .map(|line| lunatui_core::width(line))
+        .max()
+        .unwrap_or(0);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    Popup::new(Paragraph::new(lines.join("\n")).style(text_style()))
+        .size(Size::new(u16::try_from(width).unwrap_or(0), 4))
+        .title(popup_title(tick))
+        .border_type(BorderType::Plain)
+        .backdrop(0.0)
+        .style(text_style())
+        .border_style(dim_style())
+        .title_style(dim_style())
+        .render(area, &mut cx);
+}
+
+fn popup_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let lines = dialog_lines(tick);
+    let body = Text::from(
+        lines
+            .iter()
+            .map(|line| Line::raw(line.as_str()))
+            .collect::<Vec<_>>(),
+    );
+    RatPopup::new(body)
+        .title(popup_title(tick))
+        .style(rat_text())
+        .border_style(rat_dim())
+        .render(area, buf);
+}
+
+fn log_offset(tick: u32) -> (u16, u16) {
+    (
+        u16::try_from(tick % 30).unwrap_or(0),
+        u16::try_from(tick * 2 % 150).unwrap_or(0),
+    )
+}
+
+fn log_height() -> u16 {
+    u16::try_from(LOG_LINES).unwrap_or(u16::MAX)
+}
+
+struct LogPage;
+
+impl Widget for LogPage {
+    fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        cx.set_style(area, text_style());
+        Paragraph::new(log_text())
+            .style(text_style())
+            .render(area, cx);
+    }
+
+    fn measure(&self, avail: lunatui_core::Size) -> lunatui_core::Size {
+        avail
+    }
+}
+
+fn scrollview_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let (x, y) = log_offset(tick);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    ScrollView::new(LogPage, Size::new(LOG_WIDTH, log_height()))
+        .scrollbars(ScrollbarVisibility::Never)
+        .offset(x, y)
+        .render(area, &mut cx);
+}
+
+fn scrollview_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let (x, y) = log_offset(tick);
+    let mut view = RatScrollView::new(RatSize::new(LOG_WIDTH, log_height()))
+        .scrollbars_visibility(RatScrollbarVisibility::Never);
+    let page = view.area();
+    view.render_widget(RatParagraph::new(log_text()).style(rat_text()), page);
+    let mut state = RatScrollViewState::with_offset(RatPosition::new(x, y));
+    ratatui::widgets::StatefulWidget::render(view, area, buf, &mut state);
 }

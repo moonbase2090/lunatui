@@ -13,6 +13,7 @@ workspace = true
 [features]
 default = []
 subcell = []
+blit = []
 render-color = ["dep:libm"]
 
 [dependencies]
@@ -20,7 +21,7 @@ libm = { version = "=0.2.16", optional = true }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.13", path = "../lunatui-test" }
+lunatui-test = { version = "0.1.15", path = "../lunatui-test" }
 proptest = "=1.9.0"
 unicode-width = "=0.2.2"
 
@@ -43,3 +44,8 @@ required-features = ["subcell"]
 name = "subcell_preview"
 path = "../examples/subcell_preview.rs"
 required-features = ["subcell"]
+
+[[test]]
+name = "blit"
+path = "tests/blit.rs"
+required-features = ["blit"]
