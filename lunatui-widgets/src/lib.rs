@@ -42,6 +42,8 @@ mod list;
 mod log_view;
 #[cfg(feature = "markdown")]
 mod markdown_view;
+#[cfg(feature = "nested-menu")]
+mod nested_menu;
 #[cfg(feature = "number-input")]
 mod number_input;
 mod overlay;
@@ -126,6 +128,8 @@ pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
 #[cfg(feature = "markdown")]
 pub use markdown_view::MarkdownView;
+#[cfg(feature = "nested-menu")]
+pub use nested_menu::{Menu, MenuEvent, MenuItem, MenuState};
 #[cfg(feature = "number-input")]
 pub use number_input::NumberInput;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};

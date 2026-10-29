@@ -6,7 +6,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 
 - [`Widget`](src/widget.rs): `render(&self, area, &mut RenderCx)` and `measure(&self, avail: Size) -> Size`.
 - [`RenderCx`](src/render_cx.rs): grid, cluster table, and theme for token-aware drawing. Optional `color-profiles` feature adds `profile` for ANSI16/256 downsampling in `token`.
-- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `diff-view`, `markdown`, `popup`, `scroll-view`, `sparkline`, and `radio`, `form`, `accordion`, `hex-viewer`, `log-view`, `number-input`, `progress`, `search-box`, `slider`, `toast`, and `toggle` forward it. `line-gauge` reserves the same feature. `all-widgets` turns on every widget that needs no extra dependency in one go; new widget features are added to it, so test setups do not need to list each widget.
+- `WidgetState` (normal, focused, disabled) sits behind the off-by-default `widget-state` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `diff-view`, `markdown`, `nested-menu`, `popup`, `scroll-view`, `sparkline`, and `radio`, `form`, `accordion`, `hex-viewer`, `log-view`, `number-input`, `pie-chart`, `progress`, `search-box`, `slider`, `toast`, and `toggle` forward it. `line-gauge` reserves the same feature. `all-widgets` turns on every widget that needs no extra dependency in one go; new widget features are added to it, so test setups do not need to list each widget.
 - `KeyHintBar` is behind the `key-hints` feature. Construct it from the keymap active for the current screen or mode; it renders the first chord registered for each command.
 - [`Size`](https://docs.rs/lunatui-core/latest/lunatui_core/struct.Size.html) lives in `lunatui-core` and is re-exported here.
 
@@ -69,5 +69,35 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 `Image`, `ImageSource`, and `ImageFit` are behind the `image` feature. `ImageSource::rgba8` accepts validated immutable RGBA8 data; `ImageSource::decode` is also available with `image-decode`, for PNG, JPEG, GIF, and WebP. The widget draws a half-block fallback with alpha composited over the `surface.0` theme token. A focused image gets a rounded `focus.ring` border; a disabled image is dimmed over the surface. `ImageFit::Contain`, `Cover`, `Stretch`, and `Native` share pixel-space geometry from `lunatui-image`. To use the off-by-default runtime Kitty presenter, enable `image-presenter`, override `App::render_frame`, and pass its image sink to `RenderCx::image_sink`. Give each image a stable nonzero `ImageId`; increment its generation whenever source pixels change. Other protocols and Prismattyc-native presentation are not implemented yet, so the runtime uses the half-block fallback unless Kitty support was queried successfully.
 
 `Lightcycle::new(elapsed)` draws an eight-way Braille sub-cell trail for the supplied elapsed time. It does not own a clock; the application supplies each frame's time and schedules redraws.
+
+`Menu`, `MenuItem`, `MenuState`, and `MenuEvent` are behind the opt-in `nested-menu` feature. Build a recursive item tree, keep `MenuState` in the application, forward key presses to its navigation methods, and drain selected actions after rendering:
+
+```rust
+# #[cfg(feature = "nested-menu")]
+# {
+use lunatui_widgets::{MenuEvent, MenuItem, MenuState};
+
+let mut state = MenuState::new(vec![
+    MenuItem::group("File", vec![
+        MenuItem::item("Open", "open"),
+        MenuItem::group("Recent", vec![
+            MenuItem::item("notes.txt", "open-recent"),
+        ]),
+    ]),
+]);
+
+state.activate();
+state.down();
+state.down();
+state.right();
+state.select();
+assert_eq!(
+    state.drain_events().collect::<Vec<_>>(),
+    [MenuEvent::Selected("open-recent")],
+);
+# }
+```
+
+Render with `Menu::new(&state)` and provide a `WidgetState` for token-based styling. The feature enables Graphite token support; applications choose their own key bindings and event loop.
 
 Snapshot tests use `lunatui_test::styled_snapshot`. See [Getting started](../docs/getting-started.md).

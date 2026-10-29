@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Menu`, `MenuItem`, `MenuState`, and `MenuEvent`, behind the opt-in `nested-menu` feature, with keyboard navigation, cascading submenus, disabled items, and queued leaf actions styled with Graphite tokens.
 - `DiffView` widget and `Diff::parse`, behind the `diff-view` feature: a unified diff parsed into hunks and drawn with hunk headers, line numbers, added and removed colors, and the changed part of paired lines inverted, in a unified or side-by-side layout with scrolling and row counts for an app's own scrollbar.
 - `PieChart` widget, behind the `pie-chart` feature: pie and donut charts of labelled slices drawn with half-block, quadrant, sextant, or braille sub-cell glyphs (two slice colors per cell where slices meet), a legend with whole percentages that add up to 100, a start angle, a reveal sweep with a track for animated intros, a pulled-out highlight, center text and a caption for donuts, a cell aspect setting, `slice_at` for hit testing, slice colors from theme tokens kept apart from each other and from the surfaces (also under a 16-color profile), and widget states.
 - `LogView` widget and `LogBuffer` ring buffer, behind the `log-view` feature: log lines with a level-colored label, a target column, and a time label, filtered by minimum level, target prefix, and a smart-case text query with the match highlighted, following the newest entry or scrolled back, with `matching`, `max_scroll`, and per-level counts for an app's own scrollbar and header.

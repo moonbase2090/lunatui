@@ -1018,6 +1018,7 @@ dependencies = [
  "lunatui-widgets",
  "ratatui",
  "time",
+ "tui-menu",
  "tui-popup",
  "tui-scrollview",
 ]
@@ -1041,6 +1042,7 @@ dependencies = [
  "num-traits",
  "ratatui",
  "time",
+ "tui-menu",
  "tui-popup",
  "tui-scrollview",
 ]
@@ -1165,6 +1167,7 @@ dependencies = [
  "proptest",
  "ratatui",
  "time",
+ "tui-menu",
  "unicode-segmentation",
 ]
 
@@ -2319,6 +2322,16 @@ name = "toml_write"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
+
+[[package]]
+name = "tui-menu"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6d7f10ff29b3543148afcaba50642850082840adc4e8169c7f2c9d2bcdba3b6"
+dependencies = [
+ "ratatui-core",
+ "ratatui-widgets",
+]
 
 [[package]]
 name = "tui-popup"

@@ -22,16 +22,19 @@ use lunatui_widgets::{
     Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, Diff, DiffLayout,
     DiffView, DividerId, FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState,
     KeyHintBar, LegendPosition, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker,
-    Monthly, NumberInput, PaneId, Paragraph, PieChart, PieSlice, PixelSize, ProgressBar,
-    ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Slider,
-    Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag,
-    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    Menu, MenuItem, MenuState, Monthly, NumberInput, PaneId, Paragraph, PieChart, PieSlice,
+    PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox,
+    SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
+    Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget,
+    WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
 mod canvas_showcase;
 #[path = "deploy_board.rs"]
 mod deploy_board;
+#[path = "menu_showcase.rs"]
+mod menu_showcase;
 #[path = "release_console.rs"]
 mod release_console;
 #[path = "tooltip_showcase.rs"]
@@ -40,8 +43,14 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect as RatRect;
 use ratatui::style::Color as RatColor;
+use ratatui::style::Style as RatStyle;
+use ratatui::widgets::StatefulWidget;
+use ratatui::widgets::{
+    Block as RatBlock, BorderType as RatBorderType, Paragraph as RatParagraph, Widget as RatWidget,
+};
 use ratatui::{Terminal, TerminalOptions, Viewport};
 use time::{Date as TimeDate, Month};
+use tui_menu::{Menu as RatMenu, MenuItem as RatMenuItem, MenuState as RatMenuState};
 
 type NativeDraw = fn(&mut Grid, &mut ClusterTable, &Theme, Rect, u32);
 type BaselineDraw = fn(&mut Buffer, RatRect, &Theme, u32);
@@ -189,6 +198,11 @@ const PREVIEWS: &[Preview] = &[
         baseline: deploy_baseline,
     },
     Preview {
+        name: "nested-menu",
+        native: nested_menu_native,
+        baseline: nested_menu_baseline,
+    },
+    Preview {
         name: "popup-scrollview",
         native: release_console::draw,
         baseline: release_console::baseline,
@@ -197,6 +211,219 @@ const PREVIEWS: &[Preview] = &[
 
 fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)
+}
+
+fn native_preview(name: &str) -> Option<NativeDraw> {
+    if name == "menu-editor" {
+        Some(menu_showcase::draw)
+    } else {
+        preview(name).map(|preview| preview.native)
+    }
+}
+
+fn preview_menu_state(tick: u32) -> MenuState<&'static str> {
+    let mut state = MenuState::new(vec![
+        MenuItem::group(
+            "File",
+            vec![
+                MenuItem::item("New", "new"),
+                MenuItem::item("Open", "open"),
+                MenuItem::item("Save as", "save-as"),
+                MenuItem::group(
+                    "Recent",
+                    vec![
+                        MenuItem::item("file_1.txt", "recent-1"),
+                        MenuItem::item("file_2.txt", "recent-2"),
+                    ],
+                ),
+            ],
+        ),
+        MenuItem::group(
+            "Edit",
+            vec![
+                MenuItem::item("Copy", "copy"),
+                MenuItem::item("Cut", "cut"),
+                MenuItem::item("Paste", "paste"),
+            ],
+        ),
+        MenuItem::group(
+            "About",
+            vec![
+                MenuItem::item("Author", "author"),
+                MenuItem::item("Help", "help"),
+            ],
+        ),
+    ]);
+    let phase = (tick / 60 + 2) % 3;
+    if phase > 0 {
+        state.activate();
+    }
+    if phase > 1 {
+        state.down();
+        state.down();
+        state.down();
+        state.down();
+        state.right();
+    }
+    state
+}
+
+fn preview_rat_menu_state(tick: u32) -> RatMenuState<&'static str> {
+    let mut state = RatMenuState::new(vec![
+        RatMenuItem::group(
+            "File",
+            vec![
+                RatMenuItem::item("New", "new"),
+                RatMenuItem::item("Open", "open"),
+                RatMenuItem::item("Save as", "save-as"),
+                RatMenuItem::group(
+                    "Recent",
+                    vec![
+                        RatMenuItem::item("file_1.txt", "recent-1"),
+                        RatMenuItem::item("file_2.txt", "recent-2"),
+                    ],
+                ),
+            ],
+        ),
+        RatMenuItem::group(
+            "Edit",
+            vec![
+                RatMenuItem::item("Copy", "copy"),
+                RatMenuItem::item("Cut", "cut"),
+                RatMenuItem::item("Paste", "paste"),
+            ],
+        ),
+        RatMenuItem::group(
+            "About",
+            vec![
+                RatMenuItem::item("Author", "author"),
+                RatMenuItem::item("Help", "help"),
+            ],
+        ),
+    ]);
+    let phase = (tick / 60 + 2) % 3;
+    if phase > 0 {
+        state.activate();
+    }
+    if phase > 1 {
+        state.down();
+        state.down();
+        state.down();
+        state.down();
+        state.right();
+    }
+    state
+}
+
+fn nested_menu_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let text = Style::new()
+        .fg(cx.token(Token::TextPrimary))
+        .bg(cx.token(Token::Surface0));
+    let body = Rect::new(
+        area.x,
+        area.y.saturating_add(1),
+        area.width,
+        area.height.saturating_sub(1),
+    );
+    let block = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title("Workspace")
+        .style(text)
+        .border_style(text.fg(cx.token(Token::TextMuted)))
+        .title_style(text.fg(cx.token(Token::Accent)))
+        .title_alignment(lunatui_widgets::Alignment::Right);
+    let inner = block.inner(body);
+    block.render(body, &mut cx);
+    let content_x = inner.x.saturating_add(2);
+    let content_width = inner.width.saturating_sub(4);
+    Paragraph::new("Project: lunatui").style(text).render(
+        Rect::new(content_x, inner.y.saturating_add(8), content_width, 1),
+        &mut cx,
+    );
+    Paragraph::new("Changes staged: 4 files")
+        .style(text)
+        .render(
+            Rect::new(content_x, inner.y.saturating_add(10), content_width, 1),
+            &mut cx,
+        );
+    Paragraph::new("Ready to commit")
+        .style(
+            Style::new()
+                .fg(cx.token(Token::Ok))
+                .bg(cx.token(Token::Surface0)),
+        )
+        .render(
+            Rect::new(content_x, inner.y.saturating_add(12), content_width, 1),
+            &mut cx,
+        );
+    Menu::new(&preview_menu_state(tick))
+        .state(WidgetState::Focused)
+        .render(area, &mut cx);
+}
+
+fn nested_menu_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
+    let text = RatStyle::new()
+        .fg(rat_color(theme.resolve(Token::TextPrimary)))
+        .bg(rat_color(theme.resolve(Token::Surface0)));
+    let body = RatRect::new(
+        area.x,
+        area.y.saturating_add(1),
+        area.width,
+        area.height.saturating_sub(1),
+    );
+    let block = RatBlock::bordered()
+        .border_type(RatBorderType::Rounded)
+        .title("Workspace")
+        .style(text)
+        .border_style(text.fg(rat_color(theme.resolve(Token::TextMuted))))
+        .title_style(text.fg(rat_color(theme.resolve(Token::Accent))))
+        .title_alignment(ratatui::layout::Alignment::Right);
+    let inner = block.inner(body);
+    RatWidget::render(block, body, buffer);
+    let content_x = inner.x.saturating_add(2);
+    let content_width = inner.width.saturating_sub(4);
+    RatWidget::render(
+        RatParagraph::new("Project: lunatui").style(text),
+        RatRect::new(content_x, inner.y.saturating_add(8), content_width, 1),
+        buffer,
+    );
+    RatWidget::render(
+        RatParagraph::new("Changes staged: 4 files").style(text),
+        RatRect::new(content_x, inner.y.saturating_add(10), content_width, 1),
+        buffer,
+    );
+    RatWidget::render(
+        RatParagraph::new("Ready to commit").style(
+            RatStyle::new()
+                .fg(rat_color(theme.resolve(Token::Ok)))
+                .bg(rat_color(theme.resolve(Token::Surface0))),
+        ),
+        RatRect::new(content_x, inner.y.saturating_add(12), content_width, 1),
+        buffer,
+    );
+    let selected = RatStyle::new()
+        .fg(rat_color(theme.resolve(Token::TextMutedOnFocus)))
+        .bg(rat_color(theme.resolve(Token::FocusFill)));
+    StatefulWidget::render(
+        RatMenu::new()
+            .default_style(
+                RatStyle::new()
+                    .fg(rat_color(theme.resolve(Token::TextPrimary)))
+                    .bg(rat_color(theme.resolve(Token::SurfaceRaised))),
+            )
+            .highlight(selected)
+            .dropdown_width(20),
+        area,
+        buffer,
+        &mut preview_rat_menu_state(tick),
+    );
 }
 
 const DAY_HOLD: u32 = 11;
@@ -6955,7 +7182,7 @@ fn main() -> io::Result<()> {
     let options = parse(&env::args().skip(1).collect::<Vec<_>>())?;
     PROFILE.get_or_init(|| options.profile);
     let case = CASES.iter().find(|case| case.name == options.case);
-    if case.is_none() && preview(&options.case).is_none() {
+    if case.is_none() && native_preview(&options.case).is_none() {
         return Err(invalid(format!("unknown case: {}", options.case)));
     }
     pin_color_output();
@@ -6984,8 +7211,8 @@ fn play_lunatui(
     let period = Duration::from_secs(1) / options.fps;
     let started = Instant::now();
     for tick in 0..options.frames {
-        match (preview(&options.case), case) {
-            (Some(preview), _) => (preview.native)(&mut next, &mut clusters, &theme, area, tick),
+        match (native_preview(&options.case), case) {
+            (Some(draw), _) => draw(&mut next, &mut clusters, &theme, area, tick),
             (None, Some(case)) => (case.lunatui)(&mut next, &mut clusters, &theme, area, tick),
             (None, None) => return Err(invalid(format!("unknown case: {}", options.case))),
         }
