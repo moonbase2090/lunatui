@@ -6,7 +6,7 @@
 use std::hint::black_box;
 
 use lunatui_bench::CountingAllocator;
-use lunatui_core::{ClusterTable, Grid, Rect, Size};
+use lunatui_core::{ClusterTable, Grid, Rect, Size, Style};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{Block, Popover, RenderCx, Widget};
 
@@ -21,6 +21,8 @@ fn placing_and_drawing_an_untitled_popover_allocates_nothing() {
     let screen = Rect::new(0, 0, 40, 12);
     let popover = Popover::new(Block::new(), Rect::new(30, 0, 6, 1)).size(Size::new(12, 2));
     popover.render(screen, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+    grid.fill(screen, Style::new(), ' ', &mut clusters);
+    assert_eq!(grid.row_display(1, &clusters).trim_end(), "");
     let (placed, stats) = ALLOC.measure(|| {
         let mut placed = 0_u32;
         for _ in 0..100 {
