@@ -45,7 +45,14 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         ));
     }
     #[cfg(feature = "image-presenter")]
-    let images = probe_pixel_layer();
+    let (images, pending_input) = if options.pixel_images {
+        probe_pixel_layer()
+    } else {
+        (PixelLayer::new(PixelMode::Cells), Vec::new())
+    };
+    #[cfg(feature = "image-presenter")]
+    let mut input = Input::open_prefixed(pending_input)?;
+    #[cfg(not(feature = "image-presenter"))]
     let mut input = Input::open()?;
     let mut session = Session::enter_with_options(
         io::stdout(),
@@ -231,25 +238,25 @@ pub fn render_once<A: App>(app: &mut A, width: u16, height: u16) -> (Grid, Clust
 }
 
 #[cfg(all(feature = "image-presenter", unix))]
-fn probe_pixel_layer() -> PixelLayer {
+fn probe_pixel_layer() -> (PixelLayer, Vec<u8>) {
     use std::fs::OpenOptions;
     use std::os::fd::AsFd;
 
     use lunatui_term::{ProbeEnv, probe_fd};
 
     let Ok(tty) = OpenOptions::new().read(true).write(true).open("/dev/tty") else {
-        return PixelLayer::new(PixelMode::Cells);
+        return (PixelLayer::new(PixelMode::Cells), Vec::new());
     };
     let environment = ProbeEnv::from_process();
     probe_fd(tty.as_fd(), &environment).map_or_else(
-        |_| PixelLayer::new(PixelMode::Cells),
-        |reply| PixelLayer::from_caps(&reply.caps),
+        |_| (PixelLayer::new(PixelMode::Cells), Vec::new()),
+        |reply| (PixelLayer::from_caps(&reply.caps), reply.pending_input),
     )
 }
 
 #[cfg(all(feature = "image-presenter", not(unix)))]
-fn probe_pixel_layer() -> PixelLayer {
-    PixelLayer::new(PixelMode::Cells)
+fn probe_pixel_layer() -> (PixelLayer, Vec<u8>) {
+    (PixelLayer::new(PixelMode::Cells), Vec::new())
 }
 
 #[cfg(test)]

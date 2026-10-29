@@ -5,6 +5,7 @@ use std::io;
 use std::os::fd::{AsRawFd, BorrowedFd};
 use std::time::Instant;
 
+use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
 use rustix::io::Errno;
 use rustix::termios::OptionalActions;
 use rustix::termios::{Termios, isatty, tcgetattr, tcsetattr};
@@ -21,9 +22,14 @@ use super::{PROBE_BUDGET, ProbeEnv, ProbeReply, QUERIES};
 ///
 /// Returns an error when the write, the read, or restoring the terminal mode fails.
 pub fn probe_fd(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
+    let flags = fcntl_getfl(fd)?;
     let saved = prepare(fd)?;
-    let result = exchange(fd, env);
-    match (result, restore(fd, saved.as_ref())) {
+    let result = fcntl_setfl(fd, flags | OFlags::NONBLOCK)
+        .map_err(io::Error::from)
+        .and_then(|()| exchange(fd, env));
+    let restored_flags = fcntl_setfl(fd, flags).map_err(io::Error::from);
+    let restored_terminal = restore(fd, saved.as_ref());
+    match (result, restored_flags.and(restored_terminal)) {
         (Ok(reply), Ok(())) => Ok(reply),
         (Err(err), _) | (Ok(_), Err(err)) => Err(err),
     }

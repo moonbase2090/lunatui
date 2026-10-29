@@ -387,3 +387,13 @@ fn scaled_cell_report_uses_physical_retina_pixels_over_the_point_report()
     }
     Ok(())
 }
+
+#[test]
+fn probe_keeps_typed_keys_between_capability_replies() {
+    let reply = ProbeReply::from_replies(
+        &env_256(),
+        b"q\x1b_Gi=31;OK\x1b\\\x1bOP\x1b[?0u\x1b[99;5u\x1b]11;rgb:0000/0000/0000\x1b\\\x1b[?62cZ",
+    );
+    assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Kitty);
+    assert_eq!(reply.pending_input, b"q\x1bOP\x1b[99;5uZ");
+}

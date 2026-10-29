@@ -171,3 +171,22 @@ fn immediate_protocol_retains_existing_text_and_kitty_requests_underlay_for_cent
     assert_eq!(images.requests, Vec::new());
     Ok(())
 }
+
+#[test]
+fn explicit_pixel_opt_out_renders_braille_without_submission()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut images = sink();
+    let actual = draw(
+        &widget(chart())?.pixels(false),
+        &mut images,
+        Color::Rgb(0, 0, 0),
+    );
+    let expected = draw(
+        &chart().marker(Marker::Braille),
+        &mut sink(),
+        Color::Rgb(0, 0, 0),
+    );
+    assert_eq!(actual, expected);
+    assert_eq!(images.requests, Vec::new());
+    Ok(())
+}

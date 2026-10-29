@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = []
+default = ["pixel-pie-chart"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
@@ -33,7 +33,7 @@ progress = ["widget-state"]
 accordion = ["widget-state"]
 hex-viewer = ["widget-state"]
 pie-chart = ["widget-state"]
-pixel-pie-chart = ["pie-chart", "image", "dep:tiny-skia"]
+pixel-pie-chart = ["pie-chart", "image"]
 form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
@@ -57,7 +57,7 @@ lunatui-theme = { version = "0.1.15", path = "../lunatui-theme" }
 lunatui-runtime = { version = "0.1.15", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
 unicode-segmentation = "=1.13.3"
 
-tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"], optional = true }
+tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"] }
 
 [dev-dependencies]
 lunatui-test = { version = "0.1.15", path = "../lunatui-test" }

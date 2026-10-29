@@ -47,6 +47,19 @@ impl Input {
         }
     }
 
+    #[cfg(feature = "image-presenter")]
+    pub(crate) fn open_prefixed(bytes: Vec<u8>) -> io::Result<Self> {
+        #[cfg(unix)]
+        {
+            Self::from_reader(io::Cursor::new(bytes).chain(io::stdin()))
+        }
+        #[cfg(not(unix))]
+        {
+            let _bytes = bytes;
+            Self::open()
+        }
+    }
+
     /// Starts a worker that reads terminal bytes from `reader`.
     ///
     /// # Errors

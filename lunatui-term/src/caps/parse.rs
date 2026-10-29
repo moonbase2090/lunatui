@@ -15,8 +15,12 @@ pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
     let mut sixel = false;
     let mut live_iterm = false;
     let mut scaled_cells = None;
+    let mut consumed = vec![false; replies.len()];
     let mut scan = Scan::new(replies);
     while let Some(event) = scan.next_event() {
+        if is_probe_response(&event) {
+            consumed[scan.event_start..scan.index].fill(true);
+        }
         match event {
             Event::Csi {
                 params,
@@ -83,6 +87,11 @@ pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
     ProbeReply {
         caps,
         saw_device_attributes,
+        pending_input: replies
+            .iter()
+            .zip(consumed)
+            .filter_map(|(byte, consumed)| (!consumed).then_some(*byte))
+            .collect(),
     }
 }
 
@@ -358,6 +367,31 @@ fn parse_u16(bytes: &[u8]) -> Option<u16> {
     Some(value)
 }
 
+fn is_probe_response(event: &Event<'_>) -> bool {
+    match event {
+        Event::Csi {
+            params,
+            intermediates,
+            final_byte,
+        } => {
+            *final_byte == b'c'
+                || *final_byte == b't'
+                || (*final_byte == b'u' && params.starts_with(b"?"))
+                || (*final_byte == b'y' && *intermediates == b"$")
+        }
+        Event::Dcs(data) => xtversion_text(data).is_some(),
+        Event::Osc(data) => [
+            b"10;".as_slice(),
+            b"11;",
+            b"1337;Capabilities=",
+            b"1337;ReportCellSize=",
+        ]
+        .iter()
+        .any(|prefix| data.starts_with(prefix)),
+        Event::Apc(data) => data.starts_with(b"G"),
+    }
+}
+
 enum Event<'a> {
     Csi {
         params: &'a [u8],
@@ -372,11 +406,16 @@ enum Event<'a> {
 struct Scan<'a> {
     bytes: &'a [u8],
     index: usize,
+    event_start: usize,
 }
 
 impl<'a> Scan<'a> {
     fn new(bytes: &'a [u8]) -> Self {
-        Self { bytes, index: 0 }
+        Self {
+            bytes,
+            index: 0,
+            event_start: 0,
+        }
     }
 
     fn next_event(&mut self) -> Option<Event<'a>> {
@@ -387,6 +426,7 @@ impl<'a> Scan<'a> {
                 continue;
             }
             let intro = bytes.get(self.index + 1).copied()?;
+            self.event_start = self.index;
             let start = self.index + 2;
             match intro {
                 b'[' => match take_csi(bytes, start) {

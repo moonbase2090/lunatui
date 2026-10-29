@@ -16,6 +16,8 @@ Kitty retains uploads and placements. iTerm2 and Sixel redraw current images aft
 
 An owned wrapper was preferred over adding image identity and a caller-maintained revision to PieChart. Theme and background changes can occur outside chart setters, so caller revision tracking risks stale pictures. The wrapper preserves PieChart's existing value semantics and marker defaults. The alternative contributed coverage accumulation at shared edges and explicit resource bounds.
 
+Pixel rendering and the runtime presenter are enabled by default by owner decision. Both the widget and run options expose `pixels(false)` for an explicit cell fallback. Existing Braille/text chart specifications remain available for mirrored views.
+
 ## Tradeoffs
 
 The cache uses private interior mutability to implement `Widget::render(&self)`. App interaction state remains outside it. Immediate protocols retransmit images and repaint cells for correctness. Arbitrary text composition, terminal resizing, and multiplexer passthrough are separate work.

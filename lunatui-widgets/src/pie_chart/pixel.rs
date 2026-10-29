@@ -13,7 +13,7 @@ use crate::{Marker, RenderCx, Widget};
 
 /// An antialiased pie or donut, using the frame's image presenter when available.
 ///
-/// Enable `pixel-pie-chart` and attach an image sink to [`RenderCx`]. The chart uses
+/// Pixel support is enabled by default. Attach an image sink to [`RenderCx`]. The chart uses
 /// measured physical pixels and preserves the backgrounds in its cell rectangle.
 /// Missing metrics, unsupported images, resource limits, or rejected requests use
 /// Braille automatically. iTerm2/Sixel also use Braille for center/caption text or
@@ -27,6 +27,7 @@ use crate::{Marker, RenderCx, Widget};
 pub struct PixelPieChart {
     chart: PieChart,
     id: ImageId,
+    pixels: bool,
     cache: RefCell<Option<RasterCache>>,
 }
 
@@ -53,8 +54,16 @@ impl PixelPieChart {
         Self {
             chart,
             id,
+            pixels: true,
             cache: RefCell::new(None),
         }
+    }
+
+    /// Enables pixel rendering (the default), or explicitly selects the Braille fallback.
+    #[must_use]
+    pub const fn pixels(mut self, enabled: bool) -> Self {
+        self.pixels = enabled;
+        self
     }
 
     /// The chart specification, including layout and cell-center hit testing.
@@ -165,7 +174,7 @@ impl PixelPieChart {
 
 impl Widget for PixelPieChart {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        if !self.draw_pixels(area, cx) {
+        if !self.pixels || !self.draw_pixels(area, cx) {
             self.chart.clone().marker(Marker::Braille).render(area, cx);
         }
     }

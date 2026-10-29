@@ -331,6 +331,8 @@ pub struct ProbeReply {
     pub caps: Caps,
     /// A primary device-attributes reply (`CSI` … `c`) was present.
     pub saw_device_attributes: bool,
+    /// Non-probe bytes consumed during the exchange, in order. Replay before new input.
+    pub pending_input: Vec<u8>,
 }
 
 impl ProbeReply {
@@ -339,6 +341,7 @@ impl ProbeReply {
         Self {
             caps: Caps::from_env(env),
             saw_device_attributes: false,
+            pending_input: Vec::new(),
         }
     }
 

@@ -243,3 +243,13 @@ fn q_quits_the_example() -> io::Result<()> {
     assert!(status.success(), "example exited with {status}");
     Ok(())
 }
+
+#[test]
+fn q_typed_during_startup_probe_is_replayed() -> io::Result<()> {
+    let mut pty = Pty::spawn()?;
+    assert!(pty.wait_for("Gi=31,s=1"), "startup query never arrived");
+    pty.send(b"q")?;
+    let status = pty.wait_exit()?;
+    assert!(status.success(), "startup key was not handled: {status}");
+    Ok(())
+}

@@ -12,7 +12,7 @@ autoexamples = false
 workspace = true
 
 [features]
-default = []
+default = ["image-presenter"]
 color-profiles = ["lunatui-theme/color-profiles"]
 app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
 image-presenter = ["app", "lunatui-runtime/image-presenter"]
