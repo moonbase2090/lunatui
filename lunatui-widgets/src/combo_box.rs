@@ -213,9 +213,7 @@ impl<'a> ComboBox<'a> {
         let blank = " ".repeat(usize::from(list.width));
         if found.is_empty() {
             let dim = base.with_attrs(Attrs::new().set_dim(true));
-            for row in 0..list.height {
-                cx.put_str(list.x, list.y + row, &blank, base);
-            }
+            cx.put_str(list.x, list.y, &blank, base);
             let message = clip_display_prefix("No matches", list.width.saturating_sub(2));
             cx.put_str(list.x + 1, list.y, message, dim);
             return;

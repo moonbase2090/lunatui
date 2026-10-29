@@ -303,3 +303,31 @@ fn an_empty_area_draws_nothing() {
     combo.render(Rect::new(0, 0, 10, 0), &mut cx);
     assert_eq!(cells, Grid::new(10, 3));
 }
+
+#[test]
+fn option_at_finds_nothing_in_the_no_matches_row() {
+    let combo = ComboBox::new("zz", 2, &FRUIT).open(true);
+    let area = Rect::new(0, 0, 20, 4);
+    assert_eq!(combo.option_at(area, 3, 1), None);
+}
+
+#[test]
+fn an_active_row_equal_to_the_match_count_scrolls_like_none() {
+    let combo = ComboBox::new("", 0, &FRUIT)
+        .open(true)
+        .max_rows(2)
+        .active(Some(5));
+    assert_eq!(rows(&combo, 20, 3)[1..], [" apple", " apricot"]);
+    assert_eq!(combo.option_at(Rect::new(0, 0, 20, 3), 3, 1), Some(0));
+}
+
+#[test]
+fn a_box_one_row_tall_draws_nothing_below_it() {
+    let combo = ComboBox::new("zz", 2, &FRUIT).open(true);
+    let theme = Theme::builtin(Variant::Dark);
+    let mut cells = Grid::new(20, 2);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut cells, &mut clusters, &theme);
+    combo.render(Rect::new(0, 0, 20, 1), &mut cx);
+    assert_eq!(style_at(&cells, 1, 1), Style::default());
+}
