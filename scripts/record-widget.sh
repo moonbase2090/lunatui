@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Records parity widgets side by side; CASE=image records the Lunatui Image
-# cell fallback as a standalone gallery clip. AGG names the agg binary; it must pass
-# scripts/check-box-joins.py. Requires asciinema 3, agg, ffmpeg.
+# cell fallback as a standalone gallery clip. AGG names the agg binary, which must be the pinned
+# build from moonbase2090/agg (AGG_PIN below; see record-showcase.sh). Requires asciinema 3, agg,
+# ffmpeg.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -25,6 +26,12 @@ PROFILE="${PROFILE:-truecolor}"
 THEME="${THEME:-dark}"
 OUT="${OUT:-$ROOT/target/widget-recordings}"
 AGG="${AGG:-agg}"
+AGG_PIN="agg 1.9.0+lunatui.2"
+AGG_INSTALL="cargo install --git https://github.com/moonbase2090/agg --rev 42d70620cc4f24f5754df4c57b27081350fad118 --locked"
+if [[ "$("$AGG" --version 2>/dev/null)" != "$AGG_PIN" ]]; then
+  echo "record-widget: $AGG is not $AGG_PIN; install it with: $AGG_INSTALL" >&2
+  exit 2
+fi
 python3 -I "$ROOT/scripts/check-box-joins.py" "$AGG" 1.4
 MAX_BYTES="${MAX_BYTES:-2000000}"
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
