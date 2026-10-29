@@ -18,9 +18,9 @@ use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
     LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Monthly, NumberInput, Paragraph,
-    PixelSize, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility,
-    SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
-    ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    PieChart, PieSlice, PixelSize, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView,
+    ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap,
+    ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -221,6 +221,15 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: hex_viewer_lunatui,
         ratatui: hex_viewer_ratatui,
+    },
+    Case {
+        name: "pie-chart",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no pie chart; its side sorts every braille dot into a slice with atan2 and draws one canvas point set per slice, so cells where slices meet take the last slice drawn instead of the slice covering most of the cell",
+        ),
+        lunatui: pie_lunatui,
+        ratatui: pie_ratatui,
     },
     Case {
         name: "accordion",
@@ -989,6 +998,93 @@ fn hex_viewer_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         lines.push(Line::from(spans));
     }
     RatParagraph::new(lines).render(area, buf);
+}
+
+const PIE: [(&str, f64); 5] = [
+    ("api", 38.0),
+    ("web", 24.0),
+    ("jobs", 17.0),
+    ("edge", 12.0),
+    ("cron", 9.0),
+];
+
+fn pie_values(tick: u32) -> [f64; 5] {
+    let phase = f64::from(tick) * 0.1;
+    let mut values = [0.0; 5];
+    let mut offset = 0.0;
+    for (value, (_, base)) in values.iter_mut().zip(PIE) {
+        *value = base * (1.0 + 0.2 * (phase + offset).sin());
+        offset += 1.0;
+    }
+    values
+}
+
+fn pie_reveal(tick: u32) -> f64 {
+    (f64::from(tick) / 30.0).min(1.0)
+}
+
+fn pie_lunatui(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let slices = PIE
+        .iter()
+        .zip(pie_values(tick))
+        .map(|((label, _), value)| PieSlice::new(*label, value));
+    PieChart::new(slices)
+        .marker(Marker::Braille)
+        .legend(false)
+        .reveal(pie_reveal(tick))
+        .render(area, &mut cx);
+}
+
+fn pie_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    use lunatui_theme::Token;
+    use ratatui::widgets::canvas::{Canvas as RatCanvas, Points};
+    let theme = Theme::builtin(Variant::Dark);
+    let colors = [
+        Token::Accent,
+        Token::FocusRing,
+        Token::Warn,
+        Token::Fail,
+        Token::Ok,
+    ]
+    .map(|token| rat_color(theme.resolve(token)));
+    let values = pie_values(tick);
+    let total: f64 = values.iter().sum();
+    let reveal = pie_reveal(tick);
+    let mut ends = [0.0; 5];
+    let mut done = 0.0;
+    for (end, value) in ends.iter_mut().zip(values) {
+        done += value / total;
+        *end = done * reveal;
+    }
+    let (width, height) = (f64::from(area.width), f64::from(area.height) * 2.0);
+    let radius = width.min(height) / 2.0;
+    let (middle_x, middle_y) = (width / 2.0, height / 2.0);
+    let mut points: [Vec<(f64, f64)>; 5] = Default::default();
+    for row in 0..u32::from(area.height) * 4 {
+        for column in 0..u32::from(area.width) * 2 {
+            let x = f64::from(column).mul_add(0.5, 0.25);
+            let y = f64::from(row).mul_add(0.5, 0.25);
+            let (dx, dy) = (x - middle_x, y - middle_y);
+            if dx * dx + dy * dy > radius * radius {
+                continue;
+            }
+            let turn = dx.atan2(-dy).rem_euclid(std::f64::consts::TAU) / std::f64::consts::TAU;
+            if let Some(slice) = ends.iter().position(|end| turn < *end) {
+                points[slice].push((x, height - y));
+            }
+        }
+    }
+    RatCanvas::default()
+        .x_bounds([0.0, width])
+        .y_bounds([0.0, height])
+        .marker(RatMarker::Braille)
+        .paint(move |ctx| {
+            for (coords, color) in points.iter().zip(colors) {
+                ctx.draw(&Points { coords, color });
+            }
+        })
+        .render(area, buf);
 }
 
 const ACCORDION: [(&str, &str, u16); 4] = [

@@ -45,13 +45,15 @@ mod number_input;
 mod overlay;
 mod padding;
 mod paragraph;
+#[cfg(feature = "pie-chart")]
+mod pie_chart;
 #[cfg(feature = "popup")]
 mod popup;
 #[cfg(feature = "progress")]
 mod progress_bar;
 #[cfg(feature = "radio")]
 mod radio_group;
-#[cfg(any(feature = "chart", feature = "canvas"))]
+#[cfg(any(feature = "chart", feature = "canvas", feature = "pie-chart"))]
 mod raster;
 mod render_cx;
 #[cfg(feature = "scroll-view")]
@@ -125,13 +127,15 @@ pub use number_input::NumberInput;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
+#[cfg(feature = "pie-chart")]
+pub use pie_chart::{PieChart, PieLayout, PieSlice};
 #[cfg(feature = "popup")]
 pub use popup::{Placement, Popup, PopupState};
 #[cfg(feature = "progress")]
 pub use progress_bar::{ProgressBar, ProgressTone};
 #[cfg(feature = "radio")]
 pub use radio_group::{RadioFlow, RadioGroup};
-#[cfg(any(feature = "chart", feature = "canvas"))]
+#[cfg(any(feature = "chart", feature = "canvas", feature = "pie-chart"))]
 pub use raster::Marker;
 pub use render_cx::RenderCx;
 #[cfg(feature = "scroll-view")]
