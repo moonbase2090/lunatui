@@ -17,13 +17,15 @@ Method and limits: [docs/performance.md](docs/performance.md).
 
 ## Quick start
 
+Draw a first screen and quit on `q`. The steps and a program under 30 lines are in [Getting started](docs/getting-started.md). The crates are not on crates.io yet, so the commands run from this repository.
+
+From this repository:
+
 ```sh
-git clone https://github.com/moonbase2090/lunatui
-cd lunatui
-cargo run --example live_dashboard
+cargo run --example template_minimal
 ```
 
-The dashboard draws 240 frames (about four seconds) and exits. Add `-- --bench` for a headless timing run. More examples are listed in [examples/README.md](examples/README.md).
+Six copy-paste templates (a list, a form, a dashboard, a popover, and a layout skeleton, plus the minimal app) are indexed in [examples/README.md](examples/README.md). `cargo run --example live_dashboard` still runs the longer dashboard demo.
 
 See the [review policy](REVIEW_POLICY.md) for PR classification, proof and merge requirements.
 

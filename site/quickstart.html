@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quickstart — Lunatui</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="A Lunatui quickstart and six copy-paste templates.">
+<style>
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:600;font-display:swap;src:url('assets/fonts/CormorantGaramond-SemiBold.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/Inter-Regular.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:500;font-display:swap;src:url('assets/fonts/Inter-Medium.woff2') format('woff2')}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/JetBrainsMono-Regular.woff2') format('woff2')}
+:root{--night:#0b1026;--ink:#ece7da;--ink2:#aab0cc;--lav:#b9a7f0;--peri:#8fa8ff;--line:rgba(160,150,230,.22);--term:#0a0d1c;--card:#090c22;--card-top:#161b48;--edge:rgba(185,167,240,.3);--serif:"Cormorant Garamond",Georgia,serif;--sans:Inter,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--night);color:var(--ink);font:16px/1.6 var(--sans)}
+a{color:inherit}
+.nav{border-bottom:1px solid var(--line)}
+.nav .bar{max-width:1180px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:76px}
+.logo{font:600 28px var(--serif);text-decoration:none}
+.nav a.back{color:var(--ink2);text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+main{max-width:1180px;margin:0 auto;padding:48px 32px 80px}
+h1{font:600 64px/1 var(--serif)}
+.lede{color:var(--ink2);max-width:640px;margin:14px 0 36px}
+.card{background:linear-gradient(180deg,var(--card-top),var(--card) 62%);border:1px solid var(--edge);border-radius:14px;padding:22px;margin:0 0 28px}
+h2{font:600 36px var(--serif);margin-bottom:8px}
+.run{font:15px var(--mono);color:var(--lav);margin-bottom:8px}
+.card p{color:var(--ink2)}
+img{display:block;max-width:100%;height:auto;margin:16px 0;border-radius:8px;background:var(--term)}
+pre{overflow:auto;max-height:480px;background:var(--term);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+code{font:13px/1.5 var(--mono)}
+footer{border-top:1px solid var(--line);color:var(--ink2);padding:28px 32px 40px}
+footer .bar{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer nav{display:flex;gap:16px}
+footer a{text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+</style>
+</head>
+<body>
+<header class="nav"><div class="bar">
+ <a class="logo" href="index.html">Lunatui</a>
+ <a class="back" href="index.html">Back to the site</a>
+</div></header>
+<main>
+ <h1>Quickstart</h1>
+ <p class="lede">Six copy-paste templates. Each picture is one frame from running that example. The guide is <a href="https://github.com/moonbase2090/lunatui/blob/main/docs/getting-started.md">Getting started</a>.</p>
+<article class="card" id="minimal">
+ <h2>Minimal</h2>
+ <p class="run"><code>cargo run --example template_minimal</code></p>
+ <p>A titled box. Press q to quit.</p>
+ <img src="assets/media/quickstart-minimal.png" alt="Minimal template: a bordered box that says hello" width="960">
+ <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!(&quot;../README.md&quot;)]
+
+use std::env;
+use std::io::{self, Write};
+
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_term::Event;
+use lunatui_theme::{Theme, Token, Variant};
+use lunatui_widgets::{Block, Paragraph, RenderCx, Widget};
+
+const WIDTH: u16 = 48;
+const HEIGHT: u16 = 10;
+
+struct Hello;
+
+impl App for Hello {
+    fn update(&amp;mut self, event: &amp;Event) -&gt; ControlFlow {
+        if is_quit(event) {
+            ControlFlow::Break
+        } else {
+            ControlFlow::Continue
+        }
+    }
+
+    fn render(&amp;mut self, grid: &amp;mut Grid, area: Rect, clusters: &amp;mut ClusterTable) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &amp;theme);
+        let text = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface0));
+        let accent = Style::new()
+            .fg(cx.token(Token::Accent))
+            .bg(cx.token(Token::Surface0));
+        let block = Block::bordered()
+            .title(&quot; hello &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        block.render(area, &amp;mut cx);
+        Paragraph::new(&quot;Hello. Press q to quit.&quot;)
+            .style(text)
+            .render(block.inner(area), &amp;mut cx);
+    }
+}
+
+fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = Hello;
+    if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
+        let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
+        io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
+        return Ok(());
+    }
+    run(app, RunOptions::new(WIDTH, HEIGHT))
+}
+</code></pre>
+</article>
+<article class="card" id="list">
+ <h2>List</h2>
+ <p class="run"><code>cargo run --example template_list</code></p>
+ <p>Up and down move the selection.</p>
+ <img src="assets/media/quickstart-list.png" alt="List template: five widgets with Gauge selected" width="960">
+ <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!(&quot;../README.md&quot;)]
+
+use std::env;
+use std::io::{self, Write};
+
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_term::{Event, KeyCode};
+use lunatui_theme::{Theme, Token, Variant};
+use lunatui_widgets::{Block, List, Paragraph, RenderCx, VecSource, Widget};
+
+const WIDTH: u16 = 42;
+const HEIGHT: u16 = 14;
+const ITEMS: [&amp;str; 5] = [&quot;Calendar&quot;, &quot;Gauge&quot;, &quot;Table&quot;, &quot;Sparkline&quot;, &quot;Form&quot;];
+
+struct Screen {
+    selected: usize,
+}
+
+impl Screen {
+    fn new() -&gt; Self {
+        Self { selected: 1 }
+    }
+
+    fn move_selection(&amp;mut self, later: bool) {
+        if later {
+            self.selected = self
+                .selected
+                .saturating_add(1)
+                .min(ITEMS.len().saturating_sub(1));
+        } else {
+            self.selected = self.selected.saturating_sub(1);
+        }
+    }
+
+    fn source() -&gt; VecSource {
+        let mut source = VecSource::new();
+        for item in ITEMS {
+            source.push_row(vec![String::from(item)]);
+        }
+        source
+    }
+}
+
+impl App for Screen {
+    fn update(&amp;mut self, event: &amp;Event) -&gt; ControlFlow {
+        if is_quit(event) {
+            return ControlFlow::Break;
+        }
+        if let Event::Key(key) = event {
+            match key.code {
+                KeyCode::Up | KeyCode::Char(&#x27;k&#x27;) =&gt; self.move_selection(false),
+                KeyCode::Down | KeyCode::Char(&#x27;j&#x27;) =&gt; self.move_selection(true),
+                _ =&gt; {}
+            }
+        }
+        ControlFlow::Continue
+    }
+
+    fn render(&amp;mut self, grid: &amp;mut Grid, area: Rect, clusters: &amp;mut ClusterTable) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &amp;theme);
+        let text = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface0));
+        let accent = Style::new()
+            .fg(cx.token(Token::Accent))
+            .bg(cx.token(Token::Surface0));
+        let raised = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface1));
+        Block::new().style(text).render(area, &amp;mut cx);
+        let list_area = Rect::new(0, 0, area.width, area.height.saturating_sub(1));
+        let block = Block::bordered()
+            .title(&quot; items &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        block.render(list_area, &amp;mut cx);
+        List::new(Self::source())
+            .selected(Some(self.selected))
+            .style(text)
+            .highlight_style(raised)
+            .highlight_symbol(&quot;&gt; &quot;, accent)
+            .render(block.inner(list_area), &amp;mut cx);
+        let hint = Rect::new(
+            1,
+            area.height.saturating_sub(1),
+            area.width.saturating_sub(2),
+            1,
+        );
+        Paragraph::new(&quot;Up and down move the row. q quits.&quot;)
+            .style(text)
+            .render(hint, &amp;mut cx);
+    }
+}
+
+fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = Screen::new();
+    if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
+        let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
+        io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
+        return Ok(());
+    }
+    run(app, RunOptions::new(WIDTH, HEIGHT))
+}
+</code></pre>
+</article>
+<article class="card" id="form">
+ <h2>Form</h2>
+ <p class="run"><code>cargo run --example template_form</code></p>
+ <p>Tab moves focus. Typed keys edit the focused field.</p>
+ <img src="assets/media/quickstart-form.png" alt="Form template: a name and a role, with the name filled in" width="960">
+ <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!(&quot;../README.md&quot;)]
+
+use std::env;
+use std::io::{self, Write};
+
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_term::{Event, KeyCode};
+use lunatui_theme::{Theme, Token, Variant};
+use lunatui_widgets::{Block, Form, FormField, RenderCx, TextInput, Widget};
+
+const WIDTH: u16 = 56;
+const HEIGHT: u16 = 12;
+
+struct Screen {
+    name: String,
+    role: String,
+    focus: usize,
+}
+
+impl Screen {
+    fn new() -&gt; Self {
+        Self {
+            name: String::from(&quot;Ada&quot;),
+            role: String::new(),
+            focus: 0,
+        }
+    }
+
+    fn form(&amp;self) -&gt; Form {
+        Form::new([
+            FormField::new(&quot;Name&quot;).required(),
+            FormField::new(&quot;Role&quot;).hint(&quot;shown on the card&quot;),
+        ])
+        .focus(Some(self.focus))
+    }
+
+    fn field_mut(&amp;mut self) -&gt; &amp;mut String {
+        if self.focus == 0 {
+            &amp;mut self.name
+        } else {
+            &amp;mut self.role
+        }
+    }
+}
+
+impl App for Screen {
+    fn update(&amp;mut self, event: &amp;Event) -&gt; ControlFlow {
+        if is_quit(event) {
+            return ControlFlow::Break;
+        }
+        if let Event::Key(key) = event {
+            match key.code {
+                KeyCode::Tab | KeyCode::Down =&gt; {
+                    if let Some(next) = self.form().step(Some(self.focus), true) {
+                        self.focus = next;
+                    }
+                }
+                KeyCode::Up =&gt; {
+                    if let Some(next) = self.form().step(Some(self.focus), false) {
+                        self.focus = next;
+                    }
+                }
+                KeyCode::Backspace =&gt; {
+                    self.field_mut().pop();
+                }
+                KeyCode::Char(ch) if ch.is_ascii_graphic() =&gt; {
+                    let field = self.field_mut();
+                    if field.len() &lt; 24 {
+                        field.push(ch);
+                    }
+                }
+                _ =&gt; {}
+            }
+        }
+        ControlFlow::Continue
+    }
+
+    fn render(&amp;mut self, grid: &amp;mut Grid, area: Rect, clusters: &amp;mut ClusterTable) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &amp;theme);
+        let text = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface0));
+        let accent = Style::new()
+            .fg(cx.token(Token::Accent))
+            .bg(cx.token(Token::Surface0));
+        let block = Block::bordered()
+            .title(&quot; account &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        block.render(area, &amp;mut cx);
+        let inner = block.inner(area);
+        let form = self.form();
+        form.render(inner, &amp;mut cx);
+        for field in form.layout(inner) {
+            let value = if field.index == 0 {
+                self.name.as_str()
+            } else {
+                self.role.as_str()
+            };
+            if field.input.width == 0 || field.input.height == 0 {
+                continue;
+            }
+            TextInput::new(value, value.len())
+                .show_cursor(field.index == self.focus)
+                .style(text)
+                .field_style(text)
+                .render(field.input, &amp;mut cx);
+        }
+    }
+}
+
+fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = Screen::new();
+    if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
+        let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
+        io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
+        return Ok(());
+    }
+    run(app, RunOptions::new(WIDTH, HEIGHT))
+}
+</code></pre>
+</article>
+<article class="card" id="dashboard">
+ <h2>Dashboard</h2>
+ <p class="run"><code>cargo run --example template_dashboard</code></p>
+ <p>A sparkline, a gauge, and a table. The samples advance while it runs.</p>
+ <img src="assets/media/quickstart-dashboard.png" alt="Dashboard template: a sparkline, a capacity gauge, and a service table" width="960">
+ <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!(&quot;../README.md&quot;)]
+
+use std::env;
+use std::io::{self, Write};
+use std::time::Instant;
+
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_layout::Constraint;
+use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_term::Event;
+use lunatui_theme::{Theme, Token, Variant};
+use lunatui_widgets::{Block, Gauge, RenderCx, Sparkline, Table, VecSource, Widget};
+
+const WIDTH: u16 = 72;
+const HEIGHT: u16 = 22;
+
+struct Screen {
+    started: Instant,
+}
+
+impl Screen {
+    fn new() -&gt; Self {
+        Self {
+            started: Instant::now(),
+        }
+    }
+
+    fn tick(&amp;self) -&gt; u64 {
+        u64::try_from(self.started.elapsed().as_millis() / 200).unwrap_or(0)
+    }
+
+    fn samples(&amp;self) -&gt; [u64; 48] {
+        const TRAFFIC: [u64; 48] = [
+            14, 15, 16, 18, 22, 27, 24, 19, 17, 16, 18, 21, 29, 36, 33, 26, 22, 19, 18, 17, 16, 18,
+            20, 23, 21, 19, 17, 15, 16, 19, 25, 31, 28, 23, 20, 18, 17, 16, 18, 22, 26, 24, 21, 19,
+            17, 16, 15, 14,
+        ];
+        let shift = usize::try_from(self.tick() % 48).unwrap_or(0);
+        let mut samples = [0; 48];
+        for (index, sample) in samples.iter_mut().enumerate() {
+            let src = (index + shift) % TRAFFIC.len();
+            *sample = TRAFFIC.get(src).copied().unwrap_or(0);
+        }
+        samples
+    }
+
+    fn ratio(&amp;self) -&gt; f32 {
+        let step = u8::try_from(self.tick() % 8).unwrap_or(0);
+        0.25 + f32::from(step) * 0.08
+    }
+
+    fn table() -&gt; VecSource {
+        let mut source = VecSource::new();
+        for (service, state, latency) in [
+            (&quot;api&quot;, &quot;ok&quot;, &quot;12 ms&quot;),
+            (&quot;worker&quot;, &quot;warn&quot;, &quot;40 ms&quot;),
+            (&quot;edge&quot;, &quot;ok&quot;, &quot;9 ms&quot;),
+        ] {
+            source.push_row(vec![
+                String::from(service),
+                String::from(state),
+                String::from(latency),
+            ]);
+        }
+        source
+    }
+}
+
+impl App for Screen {
+    fn update(&amp;mut self, event: &amp;Event) -&gt; ControlFlow {
+        if is_quit(event) {
+            ControlFlow::Break
+        } else {
+            ControlFlow::Continue
+        }
+    }
+
+    fn render(&amp;mut self, grid: &amp;mut Grid, area: Rect, clusters: &amp;mut ClusterTable) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &amp;theme);
+        let text = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface0));
+        let accent = Style::new()
+            .fg(cx.token(Token::Accent))
+            .bg(cx.token(Token::Surface0));
+        let warn = Style::new()
+            .fg(cx.token(Token::Warn))
+            .bg(cx.token(Token::Surface0));
+        let raised = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface1));
+        let rows = lunatui_layout::Layout::vertical([
+            Constraint::Length(8),
+            Constraint::Length(3),
+            Constraint::Fill(1),
+        ])
+        .split(area);
+        let Some(spark_area) = rows.segments.first().copied() else {
+            return;
+        };
+        let Some(gauge_area) = rows.segments.get(1).copied() else {
+            return;
+        };
+        let Some(table_area) = rows.segments.get(2).copied() else {
+            return;
+        };
+        let spark = Block::bordered()
+            .title(&quot; requests &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        spark.render(spark_area, &amp;mut cx);
+        let samples = self.samples();
+        Sparkline::new(&amp;samples)
+            .style(accent)
+            .render(spark.inner(spark_area), &amp;mut cx);
+        let gauge = Block::bordered()
+            .title(&quot; capacity &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        gauge.render(gauge_area, &amp;mut cx);
+        Gauge::new(self.ratio())
+            .gauge_style(accent)
+            .track_style(text)
+            .render(gauge.inner(gauge_area), &amp;mut cx);
+        let table = Block::bordered()
+            .title(&quot; services &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        table.render(table_area, &amp;mut cx);
+        let selected = usize::try_from(self.tick() % 3).unwrap_or(0);
+        Table::new(
+            Self::table(),
+            vec![
+                Constraint::Length(12),
+                Constraint::Length(8),
+                Constraint::Fill(1),
+            ],
+        )
+        .header([(&quot;service&quot;, text), (&quot;state&quot;, text), (&quot;latency&quot;, text)])
+        .selected(Some(selected))
+        .style(text)
+        .highlight_style(if selected == 1 { warn } else { raised })
+        .render(table.inner(table_area), &amp;mut cx);
+    }
+
+    fn needs_animation_frames(&amp;self) -&gt; bool {
+        true
+    }
+}
+
+fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = Screen::new();
+    if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
+        let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
+        io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
+        return Ok(());
+    }
+    run(app, RunOptions::new(WIDTH, HEIGHT))
+}
+</code></pre>
+</article>
+<article class="card" id="popover">
+ <h2>Popover</h2>
+ <p class="run"><code>cargo run --example template_popover</code></p>
+ <p>A panel beside an anchor. Enter toggles it.</p>
+ <img src="assets/media/quickstart-popover.png" alt="Popover template: a filters panel open under a views anchor" width="960">
+ <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!(&quot;../README.md&quot;)]
+
+use std::env;
+use std::io::{self, Write};
+
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_term::{Event, KeyCode};
+use lunatui_theme::{Theme, Token, Variant};
+use lunatui_widgets::{Block, Paragraph, Popover, RenderCx, Size, Widget};
+
+const WIDTH: u16 = 56;
+const HEIGHT: u16 = 16;
+
+struct Screen {
+    open: bool,
+}
+
+impl Screen {
+    fn new() -&gt; Self {
+        Self { open: true }
+    }
+}
+
+impl App for Screen {
+    fn update(&amp;mut self, event: &amp;Event) -&gt; ControlFlow {
+        if is_quit(event) {
+            return ControlFlow::Break;
+        }
+        if let Event::Key(key) = event {
+            match key.code {
+                KeyCode::Enter =&gt; self.open = !self.open,
+                KeyCode::Esc =&gt; self.open = false,
+                _ =&gt; {}
+            }
+        }
+        ControlFlow::Continue
+    }
+
+    fn render(&amp;mut self, grid: &amp;mut Grid, area: Rect, clusters: &amp;mut ClusterTable) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &amp;theme);
+        let text = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface0));
+        let accent = Style::new()
+            .fg(cx.token(Token::Accent))
+            .bg(cx.token(Token::Surface0));
+        Block::new().style(text).render(area, &amp;mut cx);
+        let anchor = Rect::new(2, 1, 16, 3);
+        let button = Block::bordered()
+            .title(&quot; views &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        button.render(anchor, &amp;mut cx);
+        if self.open {
+            Popover::new(Paragraph::new(&quot;Open items\nAssigned to me\nClosed&quot;), anchor)
+                .title(&quot; filters &quot;)
+                .size(Size::new(20, 5))
+                .style(text)
+                .border_style(accent)
+                .title_style(accent)
+                .render(area, &amp;mut cx);
+        }
+        let hint = Rect::new(
+            2,
+            area.height.saturating_sub(2),
+            area.width.saturating_sub(4),
+            1,
+        );
+        Paragraph::new(&quot;Enter toggles the panel. q quits.&quot;)
+            .style(text)
+            .render(hint, &amp;mut cx);
+    }
+}
+
+fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = Screen::new();
+    if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
+        let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
+        io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
+        return Ok(());
+    }
+    run(app, RunOptions::new(WIDTH, HEIGHT))
+}
+</code></pre>
+</article>
+<article class="card" id="layout">
+ <h2>Layout</h2>
+ <p class="run"><code>cargo run --example template_layout</code></p>
+ <p>Header, sidebar, body, and a status bar.</p>
+ <img src="assets/media/quickstart-layout.png" alt="Layout template: header, sidebar, body, and a status bar" width="960">
+ <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!(&quot;../README.md&quot;)]
+
+use std::env;
+use std::io::{self, Write};
+
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_layout::{Constraint, Layout};
+use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_term::Event;
+use lunatui_theme::{Theme, Token, Variant};
+use lunatui_widgets::{Block, List, Paragraph, RenderCx, StatusBar, VecSource, Widget};
+
+const WIDTH: u16 = 72;
+const HEIGHT: u16 = 22;
+
+struct Screen;
+
+impl Screen {
+    fn nav() -&gt; VecSource {
+        let mut source = VecSource::new();
+        for item in [&quot;Templates&quot;, &quot;Gallery&quot;, &quot;Docs&quot;] {
+            source.push_row(vec![String::from(item)]);
+        }
+        source
+    }
+}
+
+impl App for Screen {
+    fn update(&amp;mut self, event: &amp;Event) -&gt; ControlFlow {
+        if is_quit(event) {
+            ControlFlow::Break
+        } else {
+            ControlFlow::Continue
+        }
+    }
+
+    fn render(&amp;mut self, grid: &amp;mut Grid, area: Rect, clusters: &amp;mut ClusterTable) {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &amp;theme);
+        let text = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface0));
+        let accent = Style::new()
+            .fg(cx.token(Token::Accent))
+            .bg(cx.token(Token::Surface0));
+        let raised = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface1));
+        let rows = Layout::vertical([
+            Constraint::Length(3),
+            Constraint::Fill(1),
+            Constraint::Length(1),
+        ])
+        .split(area);
+        let Some(header) = rows.segments.first().copied() else {
+            return;
+        };
+        let Some(middle) = rows.segments.get(1).copied() else {
+            return;
+        };
+        let Some(status) = rows.segments.get(2).copied() else {
+            return;
+        };
+        let columns =
+            Layout::horizontal([Constraint::Length(22), Constraint::Fill(1)]).split(middle);
+        let Some(sidebar) = columns.segments.first().copied() else {
+            return;
+        };
+        let Some(body) = columns.segments.get(1).copied() else {
+            return;
+        };
+        let header_block = Block::bordered()
+            .title(&quot; header &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        header_block.render(header, &amp;mut cx);
+        Paragraph::new(&quot;Quickstart&quot;)
+            .style(text)
+            .render(header_block.inner(header), &amp;mut cx);
+        let side_block = Block::bordered()
+            .title(&quot; sidebar &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        side_block.render(sidebar, &amp;mut cx);
+        List::new(Self::nav())
+            .selected(Some(0))
+            .style(text)
+            .highlight_style(raised)
+            .render(side_block.inner(sidebar), &amp;mut cx);
+        let body_block = Block::bordered()
+            .title(&quot; body &quot;)
+            .style(text)
+            .border_style(accent)
+            .title_style(accent);
+        body_block.render(body, &amp;mut cx);
+        Paragraph::new(&quot;The body fills the space beside the sidebar.&quot;)
+            .style(text)
+            .render(body_block.inner(body), &amp;mut cx);
+        StatusBar::new(&quot;  ready&quot;)
+            .style(raised)
+            .left([(&quot;templates&quot;, accent)])
+            .render(status, &amp;mut cx);
+    }
+}
+
+fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = Screen;
+    if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
+        let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
+        io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
+        return Ok(());
+    }
+    run(app, RunOptions::new(WIDTH, HEIGHT))
+}
+</code></pre>
+</article>
+</main>
+<footer><div class="bar">
+ <div>Rust terminal UI library · MIT License</div>
+ <nav aria-label="Footer"><a href="index.html">Home</a><a href="https://github.com/moonbase2090/lunatui">Source</a></nav>
+</div></footer>
+</body></html>
