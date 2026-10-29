@@ -1,4 +1,7 @@
-//! Contract tests for the feature-gated Graphite render adapters.
+// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!("../README.md")]
 
 use lunatui_core::Rect as CellRect;
 use lunatui_theme::Token;
@@ -7,8 +10,8 @@ use std::num::NonZeroU16;
 
 fn cell_size(width: u16, height: u16) -> CellSize {
     CellSize::new(
-        NonZeroU16::new(width).unwrap(),
-        NonZeroU16::new(height).unwrap(),
+        NonZeroU16::new(width).unwrap_or(NonZeroU16::MIN),
+        NonZeroU16::new(height).unwrap_or(NonZeroU16::MIN),
     )
 }
 

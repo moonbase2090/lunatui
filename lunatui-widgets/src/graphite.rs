@@ -1,4 +1,7 @@
-//! Backend-neutral adapters for Graphite's pixel-based render contracts.
+// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!("../README.md")]
 
 use core::num::NonZeroU16;
 
@@ -116,6 +119,19 @@ impl CellTextMetrics {
 
 impl TextMetrics for CellTextMetrics {
     fn width(&self, _face: Face, _px: f32, text: &str) -> f32 {
-        lunatui_core::width(text) as f32 * f32::from(self.cell_size.width_px())
+        usize_as_f32(lunatui_core::width(text)) * f32::from(self.cell_size.width_px())
     }
+}
+
+fn usize_as_f32(mut value: usize) -> f32 {
+    let mut result = 0.0;
+    let mut place = 1.0;
+    while value != 0 {
+        if value & 1 != 0 {
+            result += place;
+        }
+        value >>= 1;
+        place *= 2.0;
+    }
+    result
 }
