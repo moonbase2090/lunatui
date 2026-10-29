@@ -506,9 +506,8 @@ impl PieChart {
         for (line, (text, style)) in (0_u16..).zip(shown) {
             let text = clip_display_prefix(text, room);
             let used = u16::try_from(width(text)).unwrap_or(u16::MAX);
-            let x = pie.x + pie.width.saturating_sub(used) / 2;
-            let row = Rect::new(x, top + line, used, 1);
-            cx.keep_backgrounds(row, |cx| cx.put_str(x, top + line, text, style));
+            let (x, y) = (pie.x + pie.width.saturating_sub(used) / 2, top + line);
+            cx.keep_backgrounds(Rect::new(x, y, used, 1), |cx| cx.put_str(x, y, text, style));
         }
     }
 

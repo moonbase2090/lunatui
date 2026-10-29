@@ -800,3 +800,47 @@ fn a_cell_takes_the_slice_covering_most_of_it() {
         fg(Token::FocusRing).bg(color(Token::Accent))
     );
 }
+
+#[test]
+fn spare_room_is_split_evenly_around_the_disc() {
+    let five = PieChart::new(["A", "B", "C", "D", "E"].map(|label| PieSlice::new(label, 1.0)));
+    assert_eq!(
+        five.layout(Rect::new(3, 2, 30, 14)),
+        PieLayout {
+            pie: Rect::new(3, 4, 20, 10),
+            legend: Rect::new(25, 6, 8, 5),
+        }
+    );
+    let two = PieChart::new([PieSlice::new("A", 1.0), PieSlice::new("Bb", 1.0)]).cell_aspect(1.0);
+    assert_eq!(
+        two.layout(Rect::new(5, 4, 31, 30)),
+        PieLayout {
+            pie: Rect::new(7, 4, 27, 27),
+            legend: Rect::new(16, 32, 9, 2),
+        }
+    );
+}
+
+#[test]
+fn a_tiny_area_keeps_what_fits_of_the_legend() {
+    let chart = PieChart::new([PieSlice::new("A", 1.0), PieSlice::new("Bb", 1.0)]);
+    assert_eq!(
+        chart.layout(Rect::new(0, 0, 5, 1)),
+        PieLayout {
+            pie: Rect::new(0, 0, 0, 0),
+            legend: Rect::new(2, 0, 3, 1),
+        }
+    );
+    assert_eq!(rows(&chart, 5, 1), ["  ●  "]);
+}
+
+#[test]
+fn center_text_follows_an_offset_area() {
+    let chart = full().donut(0.5).center("7");
+    let theme = dark();
+    let mut grid = Grid::new(12, 5);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    chart.render(Rect::new(4, 1, 6, 3), &mut cx);
+    assert_eq!(text_at(&grid, &clusters, 4, 2, 6), "██7 ██");
+}
