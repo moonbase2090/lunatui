@@ -1170,13 +1170,19 @@ fn log_view_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .iter()
         .filter(|entry| entry.level >= LogLevel::Info)
         .map(|entry| {
-            let (label, token) = match entry.level {
-                LogLevel::Info => (" INFO", lunatui_theme::Token::Ok),
-                LogLevel::Warn => (" WARN", lunatui_theme::Token::Warn),
-                _ => ("ERROR", lunatui_theme::Token::Fail),
+            let (label, token, bold) = match entry.level {
+                LogLevel::Info => (" INFO", lunatui_theme::Token::Ok, false),
+                LogLevel::Warn => (" WARN", lunatui_theme::Token::Warn, true),
+                _ => ("ERROR", lunatui_theme::Token::Fail, true),
+            };
+            let label_style = text.fg(color(token));
+            let label_style = if bold {
+                label_style.add_modifier(ratatui::style::Modifier::BOLD)
+            } else {
+                label_style
             };
             Line::from(vec![
-                Span::styled(label, text.fg(color(token))),
+                Span::styled(label, label_style),
                 Span::styled(format!(" {:<5} ", entry.target), dim),
                 Span::styled(entry.message.clone(), text),
             ])
@@ -1184,7 +1190,9 @@ fn log_view_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .collect();
     let keep = usize::from(area.height);
     lines.drain(..lines.len().saturating_sub(keep));
-    RatParagraph::new(lines).render(area, buf);
+    let blank = keep.saturating_sub(lines.len());
+    lines.splice(0..0, std::iter::repeat_n(Line::from(""), blank));
+    RatParagraph::new(lines).style(text).render(area, buf);
 }
 
 const RADIO_OPTIONS: [&str; 4] = ["Small", "Medium", "Large", "Extra large"];
