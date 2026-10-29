@@ -28,9 +28,10 @@ cleanup() {
   if [[ -n "$EVENTS_PID" ]]; then kill "$EVENTS_PID" 2>/dev/null || true; wait "$EVENTS_PID" 2>/dev/null || true; fi
   if [[ -n "$K_PID" ]]; then kill "$K_PID" 2>/dev/null || true; wait "$K_PID" 2>/dev/null || true; fi
   if [[ -n "$X_PID" ]]; then kill "$X_PID" 2>/dev/null || true; wait "$X_PID" 2>/dev/null || true; fi
-  rm -f "$OUT/kitty.sock"
+  rm -f "$OUT/kitty.sock" "$OUT/start-app"
 }
 trap cleanup EXIT INT TERM
+rm -f "$OUT/start-app"
 : > "$OUT/display.txt"
 Xvfb -displayfd 3 -screen 0 2800x1800x24 -nolisten tcp 3>"$OUT/display.txt" >"$OUT/xvfb.log" 2>&1 &
 X_PID=$!
@@ -43,12 +44,17 @@ kitty --config NONE --listen-on "unix:$OUT/kitty.sock" --title 'Lunatui Image de
   -o linux_display_server=x11 -o allow_remote_control=yes -o remember_window_size=no \
   -o "initial_window_width=${WIDTH}c" -o "initial_window_height=${HEIGHT}c" \
   -o "font_size=$FONT_SIZE" -o window_padding_width=0 -o hide_window_decorations=yes \
-  /bin/sh -c 'sleep 1; exec "$@"' capture "$TARGET_DIR/release/examples/$EXAMPLE" "$@" >"$OUT/kitty.log" 2>&1 &
+  /bin/sh -c 'while [ ! -f "$1" ]; do sleep 0.05; done; shift; exec "$@"' capture "$OUT/start-app" "$TARGET_DIR/release/examples/$EXAMPLE" "$@" >"$OUT/kitty.log" 2>&1 &
 K_PID=$!
 WINDOW=''
 for _ in {1..100}; do WINDOW="$(xdotool search --onlyvisible --pid "$K_PID" 2>/dev/null | head -1 || true)"; [[ -n "$WINDOW" ]] && break; sleep 0.05; done
 if [[ -z "$WINDOW" ]]; then echo 'record-pixels: Kitty window did not appear' >&2; exit 3; fi
 xdotool getwindowgeometry --shell "$WINDOW" > "$OUT/geometry.txt"
+if ! kitty @ --to "unix:$OUT/kitty.sock" get-colors > /dev/null 2>"$OUT/readiness.log"; then
+  echo 'record-pixels: Kitty did not answer the readiness check' >&2
+  exit 3
+fi
+touch "$OUT/start-app"
 sleep 2
 if [[ -n "$KEYS" ]]; then
   python3 - "$WINDOW" "$KEYS" <<'PYKEYS' &
