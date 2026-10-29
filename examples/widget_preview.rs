@@ -6450,6 +6450,23 @@ fn pc_rates(tick: u32) -> [f64; 5] {
     rates
 }
 
+fn pc_storage(tick: u32, picked: Option<usize>) -> PieChart {
+    PieChart::new(
+        PC_STORAGE
+            .iter()
+            .map(|(label, size)| PieSlice::new(*label, *size)),
+    )
+    .marker(Marker::Octant)
+    .antialias(true)
+    .cell_aspect(2.3)
+    .donut(0.55)
+    .center("412 GB")
+    .caption("of 512 GB")
+    .reveal(pc_ease(tick, 4, 44))
+    .highlight(picked)
+    .state(WidgetState::Focused)
+}
+
 fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
     let surface = theme.resolve(Token::Surface0);
     let raised = theme.resolve(Token::Surface1);
@@ -6488,21 +6505,7 @@ fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area:
             .render(pane, &mut cx);
     }
     let picked = (tick >= 60).then(|| usize::try_from((tick - 60) / 36).unwrap_or(0) % 5);
-    PieChart::new(
-        PC_STORAGE
-            .iter()
-            .map(|(label, size)| PieSlice::new(*label, *size)),
-    )
-    .marker(Marker::Octant)
-    .antialias(true)
-    .cell_aspect(2.3)
-    .donut(0.55)
-    .center("412 GB")
-    .caption("of 512 GB")
-    .reveal(pc_ease(tick, 4, 44))
-    .highlight(picked)
-    .state(WidgetState::Focused)
-    .render(
+    pc_storage(tick, picked).render(
         Rect::new(left.x + 2, left.y + 2, left.width - 4, 22),
         &mut cx,
     );
