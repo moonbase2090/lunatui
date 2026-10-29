@@ -20,6 +20,10 @@ Every PR adds its entry under **Unreleased**.
 
 - The `log-view` benchmark case now draws its reference rows bottom-aligned with bold warn and error labels, the way `LogView` does.
 
+### Fixed
+
+- Turning on `nested-menu` (and so `all-widgets`) no longer switches `Theme::builtin` to the Graphite palette. A new `lunatui-theme` feature, `graphite-extensions`, adds the extra Graphite tokens over the default palette, and `nested-menu` uses it; `graphite-tokens` still selects the full Graphite palette.
+
 ## [0.1.15] - 2026-10-28
 
 ### Added
