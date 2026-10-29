@@ -771,3 +771,85 @@ fn bytes_keep_the_background_under_the_viewer() {
     assert_eq!(style_at(&grid, 18, 0), selected(Style::new()));
     assert_eq!(style_at(&grid, 10, 0), cursor(Token::Accent));
 }
+
+fn cursor_style(theme: &Theme, state: WidgetState) -> Style {
+    let mut grid = Grid::new(80, 2);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, theme);
+    HexViewer::new(SAMPLE)
+        .cursor(Some(0))
+        .state(state)
+        .render(Rect::new(0, 0, 80, 2), &mut cx);
+    style_at(&grid, 10, 0)
+}
+
+#[test]
+fn cursor_text_takes_the_more_readable_of_the_two_text_tokens() {
+    let dark = Theme::builtin(Variant::Dark);
+    let light = Theme::builtin(Variant::Light);
+    for (theme, state, ring, text) in [
+        (&dark, WidgetState::Normal, Token::Accent, Token::Surface0),
+        (
+            &dark,
+            WidgetState::Focused,
+            Token::FocusRing,
+            Token::Surface0,
+        ),
+        (
+            &light,
+            WidgetState::Normal,
+            Token::Accent,
+            Token::TextPrimary,
+        ),
+        (
+            &light,
+            WidgetState::Focused,
+            Token::FocusRing,
+            Token::TextPrimary,
+        ),
+    ] {
+        let want = Style::new()
+            .fg(theme.resolve(text))
+            .bg(theme.resolve(ring))
+            .with_attrs(Attrs::new().set_bold(true));
+        assert_eq!(cursor_style(theme, state), want, "{state:?} on {ring:?}");
+    }
+}
+
+#[test]
+fn a_dark_fill_takes_light_text_and_a_light_fill_dark_text() {
+    let light_text = Color::Rgb(0xf0, 0xf0, 0xf0);
+    let dark_text = Color::Rgb(0x10, 0x10, 0x10);
+    let mut theme = Theme::builtin(Variant::Dark);
+    theme.set_token(Token::Surface0, dark_text);
+    theme.set_token(Token::TextPrimary, light_text);
+    for (fill, want) in [
+        (Color::Rgb(0x20, 0x20, 0x60), light_text),
+        (Color::Rgb(0xe0, 0xe0, 0x90), dark_text),
+        (Color::Rgb(0x00, 0x90, 0x00), dark_text),
+        (Color::Rgb(0x00, 0x00, 0xff), light_text),
+        (Color::Rgb(0xff, 0x00, 0x00), dark_text),
+        (Color::Rgb(0x90, 0x00, 0x00), light_text),
+        (Color::Rgb(0x75, 0x75, 0x75), dark_text),
+        (Color::Rgb(0x6c, 0x6c, 0x6c), light_text),
+    ] {
+        theme.set_token(Token::Accent, fill);
+        assert_eq!(
+            cursor_style(&theme, WidgetState::Normal).fg,
+            want,
+            "{fill:?}"
+        );
+    }
+}
+
+#[test]
+fn colors_without_rgb_values_keep_surface_text_on_the_cursor() {
+    let mut theme = Theme::builtin(Variant::Light);
+    theme.set_token(Token::Accent, Color::Indexed(4));
+    let surface = theme.resolve(Token::Surface0);
+    assert_eq!(cursor_style(&theme, WidgetState::Normal).fg, surface);
+    let mut theme = Theme::builtin(Variant::Light);
+    theme.set_token(Token::TextPrimary, Color::Indexed(0));
+    let surface = theme.resolve(Token::Surface0);
+    assert_eq!(cursor_style(&theme, WidgetState::Normal).fg, surface);
+}

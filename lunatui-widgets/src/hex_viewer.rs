@@ -3,7 +3,7 @@
 
 use std::ops::Range;
 
-use lunatui_core::{Attrs, Rect, Size, Style};
+use lunatui_core::{Attrs, Color, Rect, Size, Style};
 use lunatui_theme::Token;
 
 use crate::render_cx::clip_to_coordinates;
@@ -239,11 +239,12 @@ impl HexViewerState {
 ///
 /// Colors come from theme tokens and the [`WidgetState`]. Offsets and zero bytes are dimmed
 /// `text.primary`, printable ASCII (space included) is `text.primary`, other control bytes such as
-/// tabs and newlines are `warn`, and bytes from `0x80` up are `accent`. Selected bytes sit on `surface.1`, and the cursor
-/// is `surface.0` on `accent`, or on `focus.ring` when focused. A disabled viewer dims every byte
-/// and shows no cursor or selection. Cells keep the background under the viewer except where the
-/// selection or cursor sets one. A vertical scrollbar takes the right column when the rows do not
-/// fit.
+/// tabs and newlines are `warn`, and bytes from `0x80` up are `accent`. Selected bytes sit on
+/// `surface.1`. The cursor is filled with `accent`, or `focus.ring` when focused, and its text is
+/// whichever of `surface.0` and `text.primary` contrasts more with that fill. A disabled viewer
+/// dims every byte and shows no cursor or selection. Cells keep the background under the viewer
+/// except where the selection or cursor sets one. A vertical scrollbar takes the right column when
+/// the rows do not fit.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HexViewer<'a> {
     data: &'a [u8],
@@ -505,9 +506,10 @@ impl<'a> HexViewer<'a> {
             } else {
                 Token::Accent
             };
+            let fill = cx.token(bg);
             return Style::new()
-                .fg(cx.token(Token::Surface0))
-                .bg(cx.token(bg))
+                .fg(readable_on(cx, fill))
+                .bg(fill)
                 .with_attrs(Attrs::new().set_bold(true));
         }
         if self.selected(index) {
@@ -593,6 +595,28 @@ impl<'a> HexViewer<'a> {
         };
         (track, thumb)
     }
+}
+
+fn readable_on(cx: &RenderCx<'_>, fill: Color) -> Color {
+    let dark = cx.token(Token::Surface0);
+    let light = cx.token(Token::TextPrimary);
+    match (contrast(fill, dark), contrast(fill, light)) {
+        (Some(on_dark), Some(on_light)) if on_light > on_dark => light,
+        _ => dark,
+    }
+}
+
+fn contrast(a: Color, b: Color) -> Option<f64> {
+    let (a, b) = (luminance(a)?, luminance(b)?);
+    Some((a.max(b) + 0.05) / (a.min(b) + 0.05))
+}
+
+fn luminance(color: Color) -> Option<f64> {
+    let Color::Rgb(red, green, blue) = color else {
+        return None;
+    };
+    let linear = |channel: u8| (f64::from(channel) / 255.0).powf(2.2);
+    Some(0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue))
 }
 
 fn at(x: u16, offset: usize) -> u16 {
