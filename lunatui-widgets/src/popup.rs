@@ -378,15 +378,15 @@ impl<W: Widget> Widget for Panel<'_, W> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let (panel, border, title) = self.styles;
         cx.fill(area, panel, ' ');
-        let mut block = Block::bordered()
+        let block = Block::bordered()
             .border_type(self.popup.border_type)
             .style(panel)
             .border_style(border)
             .title_style(title);
-        if let Some(text) = &self.popup.title {
-            block = block.title(text.clone());
+        match &self.popup.title {
+            Some(text) => block.render_with_title(area, text, cx),
+            None => block.render(area, cx),
         }
-        block.render(area, cx);
         let inner = block.inner(area);
         if inner.width > 0 && inner.height > 0 {
             self.popup.content.render(inner, cx);

@@ -378,6 +378,21 @@ impl Block {
         }
     }
 
+    #[cfg(feature = "popup")]
+    pub(crate) fn render_with_title(&self, area: Rect, title: &str, cx: &mut RenderCx<'_>) {
+        self.render(area, cx);
+        if area.width == 0 || area.height == 0 {
+            return;
+        }
+        let band = self.titles_band(area, self.titles_position);
+        if band.width == 0 {
+            return;
+        }
+        let x = band.x.saturating_add(self.title_inset.min(band.width));
+        let text = clip_display_prefix(title, band.x + band.width - x);
+        put_symbol(cx, x, band.y, text, self.titles_style);
+    }
+
     fn titles_band(&self, area: Rect, position: TitlePosition) -> Rect {
         let left_border = u16::from(self.borders.contains(Borders::LEFT));
         let right_border = u16::from(self.borders.contains(Borders::RIGHT));
@@ -423,5 +438,63 @@ fn str_display_width(text: &str) -> u16 {
 fn put_symbol(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, style: Style) {
     if !text.is_empty() {
         cx.put_str(x, y, text, style);
+    }
+}
+
+#[cfg(all(test, feature = "popup"))]
+mod tests {
+    use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Style};
+    use lunatui_theme::{Theme, Variant};
+
+    use super::{Block, TitlePosition};
+    use crate::{BorderType, RenderCx, Widget};
+
+    fn draw(paint: impl Fn(&mut RenderCx<'_>)) -> Vec<(String, Vec<Style>)> {
+        let theme = Theme::builtin(Variant::Dark);
+        let mut grid = Grid::new(16, 5);
+        let mut clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        for y in 0..5 {
+            cx.put_str(0, y, "................", Style::new());
+        }
+        paint(&mut cx);
+        (0..5)
+            .map(|y| {
+                let styles = (0..16)
+                    .map(|x| grid.get(x, y).map(Cell::style).unwrap_or_default())
+                    .collect();
+                (grid.row_display(y, &clusters), styles)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_borrowed_title_draws_like_an_owned_one() {
+        let mut compared = 0;
+        for title in ["", "Deploy", "Deploy settings", "日本語ab"] {
+            for position in [TitlePosition::Top, TitlePosition::Bottom] {
+                for inset in 0..4 {
+                    for width in 0..14 {
+                        for height in 0..4 {
+                            let area = Rect::new(1, 1, width, height);
+                            let block = Block::bordered()
+                                .border_type(BorderType::Rounded)
+                                .title_position(position)
+                                .title_inset(inset)
+                                .title_style(Style::new().fg(Color::Rgb(9, 8, 7)));
+                            let owned = block.clone().title(title);
+                            let expected = draw(|cx| owned.render(area, cx));
+                            let actual = draw(|cx| block.render_with_title(area, title, cx));
+                            assert_eq!(
+                                actual, expected,
+                                "{title:?} {position:?} inset {inset} {width}x{height}"
+                            );
+                            compared += 1;
+                        }
+                    }
+                }
+            }
+        }
+        assert_eq!(compared, 4 * 2 * 4 * 14 * 4);
     }
 }

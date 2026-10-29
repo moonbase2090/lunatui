@@ -20,6 +20,7 @@ Every PR adds its entry under **Unreleased**.
 ### Changed
 
 - The `log-view` benchmark case now draws its reference rows bottom-aligned with bold warn and error labels, the way `LogView` does.
+- A titled `Popup` draws its title without copying it, so rendering a titled `Popup` no longer allocates.
 
 ### Fixed
 
