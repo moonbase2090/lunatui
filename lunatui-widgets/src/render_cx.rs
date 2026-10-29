@@ -147,6 +147,7 @@ impl<'a> RenderCx<'a> {
         feature = "bigtext",
         feature = "calendar",
         feature = "chart",
+        feature = "hex-viewer",
         feature = "image",
         feature = "sparkline"
     ))]

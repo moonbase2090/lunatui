@@ -24,6 +24,8 @@ mod chart;
 #[cfg(feature = "form")]
 mod form;
 mod gauge;
+#[cfg(feature = "hex-viewer")]
+mod hex_viewer;
 #[cfg(feature = "image")]
 mod image;
 #[cfg(feature = "key-hints")]
@@ -95,6 +97,8 @@ pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
 #[cfg(feature = "form")]
 pub use form::{FieldArea, Form, FormField};
 pub use gauge::Gauge;
+#[cfg(feature = "hex-viewer")]
+pub use hex_viewer::{HexViewer, HexViewerState};
 #[cfg(feature = "image")]
 pub use image::Image;
 #[cfg(feature = "key-hints")]

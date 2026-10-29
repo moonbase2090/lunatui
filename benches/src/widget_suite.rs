@@ -16,7 +16,7 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, KeyHintBar, List,
+    Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
     MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, Popup, ProgressBar,
     RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis,
     SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
@@ -213,6 +213,13 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: progress_lunatui,
         ratatui: progress_ratatui,
+    },
+    Case {
+        name: "hex-viewer",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: hex_viewer_lunatui,
+        ratatui: hex_viewer_ratatui,
     },
     Case {
         name: "accordion",
@@ -819,6 +826,159 @@ fn number_input_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             buf,
         );
     }
+}
+
+const HEX_DATA: [u8; 2048] = hex_data();
+
+const fn hex_data() -> [u8; 2048] {
+    let text = b"lunatui hex viewer: offsets, bytes and text\n";
+    let mut out = [0u8; 2048];
+    let mut seed: u32 = 0x9e37_79b9;
+    let mut index = 0;
+    while index < out.len() {
+        out[index] = match index % 256 {
+            0..96 => text[index % text.len()],
+            96..128 => 0,
+            _ => {
+                seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+                seed.to_be_bytes()[0]
+            }
+        };
+        index += 1;
+    }
+    out
+}
+
+fn hex_view(per_row: usize, rows: u16, tick: u32) -> (usize, usize, std::ops::Range<usize>) {
+    let tick = usize::try_from(tick).unwrap_or(0);
+    let len = HEX_DATA.len();
+    let span = len
+        .div_ceil(per_row)
+        .saturating_sub(usize::from(rows))
+        .max(1);
+    let top = (tick * 3) % span;
+    let cursor = ((top + 1) * per_row + tick % per_row).min(len - 1);
+    let start = top * per_row + 5;
+    (top, cursor, start..(start + per_row + 9).min(len))
+}
+
+fn hex_viewer_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let viewer = HexViewer::new(&HEX_DATA).header(true).scrollbar(false);
+    let per_row = viewer.fitting_bytes_per_row(usize::from(area.width));
+    let (top, cursor, selection) = hex_view(per_row, area.height.saturating_sub(1), tick);
+    viewer
+        .bytes_per_row(per_row)
+        .top_row(top)
+        .cursor(Some(cursor))
+        .selection(Some(selection))
+        .render(area, &mut cx);
+}
+
+fn hex_pairs() -> &'static [String] {
+    static PAIRS: OnceLock<Vec<String>> = OnceLock::new();
+    PAIRS.get_or_init(|| (0..=255u8).map(|byte| format!("{byte:02x}")).collect())
+}
+
+fn hex_viewer_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    use lunatui_theme::Token;
+    use ratatui::style::Modifier;
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let text = RatStyle::new().fg(color(Token::TextPrimary));
+    let dim = text.add_modifier(Modifier::DIM);
+    let shade = RatStyle::new().bg(color(Token::Surface1));
+    let mark = RatStyle::new()
+        .fg(color(Token::Surface0))
+        .bg(color(Token::Accent))
+        .add_modifier(Modifier::BOLD);
+    let byte_style = |byte: u8| match byte {
+        0 => dim,
+        0x20..=0x7e => text,
+        0x80..=0xff => RatStyle::new().fg(color(Token::Accent)),
+        _ => RatStyle::new().fg(color(Token::Warn)),
+    };
+    let fits = |bytes: usize| 11 + 4 * bytes + (bytes - 1) / 8 <= usize::from(area.width);
+    let mut per_row = 1;
+    let mut bytes = 8;
+    while fits(bytes) {
+        per_row = bytes;
+        bytes += 8;
+    }
+    let body = area.height.saturating_sub(1);
+    let (top, cursor, selection) = hex_view(per_row, body, tick);
+    let ascii_at = 10 + 3 * per_row - 1 + (per_row - 1) / 8 + 2;
+    let gap = |column: usize| if column.is_multiple_of(8) { "  " } else { " " };
+    let pairs = hex_pairs();
+
+    let mut header = vec![Span::raw(" ".repeat(10))];
+    for column in 0..per_row {
+        if column > 0 {
+            header.push(Span::raw(gap(column)));
+        }
+        header.push(Span::styled(pairs[column & 0xff].as_str(), dim));
+    }
+    header.push(Span::raw("  "));
+    for column in 0..per_row {
+        header.push(Span::styled(&pairs[column & 0xf][1..], dim));
+    }
+    let mut lines = vec![Line::from(header)];
+
+    let rows = HEX_DATA.len().div_ceil(per_row);
+    for row in top..(top + usize::from(body)).min(rows) {
+        let start = row * per_row;
+        let bytes = &HEX_DATA[start..(start + per_row).min(HEX_DATA.len())];
+        let styles: Vec<RatStyle> = bytes
+            .iter()
+            .enumerate()
+            .map(|(column, &byte)| {
+                let index = start + column;
+                if index == cursor {
+                    mark
+                } else if selection.contains(&index) {
+                    byte_style(byte).patch(shade)
+                } else {
+                    byte_style(byte)
+                }
+            })
+            .collect();
+        let mut spans = vec![Span::styled(format!("{start:08x}"), dim), Span::raw("  ")];
+        let mut x = 10;
+        for (column, &byte) in bytes.iter().enumerate() {
+            if column > 0 {
+                let index = start + column;
+                let between = if selection.contains(&(index - 1)) && selection.contains(&index) {
+                    shade
+                } else {
+                    RatStyle::new()
+                };
+                spans.push(Span::styled(gap(column), between));
+                x += gap(column).len();
+            }
+            spans.push(Span::styled(
+                pairs[usize::from(byte)].as_str(),
+                styles[column],
+            ));
+            x += 2;
+        }
+        spans.push(Span::raw(" ".repeat(ascii_at - x)));
+        for (column, &byte) in bytes.iter().enumerate() {
+            let shown = if (0x20..=0x7e).contains(&byte) {
+                char::from(byte)
+            } else {
+                '.'
+            };
+            spans.push(Span::styled(shown.to_string(), styles[column]));
+        }
+        lines.push(Line::from(spans));
+    }
+    RatParagraph::new(lines).render(area, buf);
 }
 
 const ACCORDION: [(&str, &str, u16); 4] = [
