@@ -249,14 +249,14 @@ function setGalleryImage(image) {
   if (source && image.getAttribute('src') !== source) image.src = source;
 }
 const galleryLoader = new IntersectionObserver((entries, observer) => {
-  if (!entries.some((entry) => entry.isIntersecting)) return;
-  galleryImages.forEach((image) => {
-    image.dataset.loaded = 'true';
-    setGalleryImage(image);
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    entry.target.dataset.loaded = 'true';
+    setGalleryImage(entry.target);
+    observer.unobserve(entry.target);
   });
-  observer.disconnect();
-}, { rootMargin: '0px 0px -250px 0px' });
-galleryLoader.observe(document.querySelector('#gallery'));
+}, { rootMargin: '200px' });
+galleryImages.forEach((image) => galleryLoader.observe(image));
 updateMotionToggle();
 updateHeroMotion();
 
