@@ -14,6 +14,7 @@ workspace = true
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
+nested-menu = ["widget-state", "lunatui-theme/graphite-tokens"]
 markdown = ["widget-state", "lunatui-text/markdown"]
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
@@ -43,7 +44,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "number-input", "pie-chart", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.15", path = "../lunatui-core" }
@@ -58,6 +59,7 @@ unicode-segmentation = "=1.13.3"
 lunatui-test = { version = "0.1.15", path = "../lunatui-test" }
 lunatui-term = { version = "0.1.15", path = "../lunatui-term" }
 ratatui = "=0.30.2"
+tui-menu = "=0.3.1"
 proptest = "=1.9.0"
 time = { version = "=0.3.55", default-features = false }
 
@@ -115,6 +117,11 @@ path = "tests/overlay.rs"
 name = "calendar"
 path = "tests/calendar.rs"
 required-features = ["calendar"]
+
+[[test]]
+name = "nested_menu"
+path = "tests/nested_menu.rs"
+required-features = ["nested-menu"]
 
 [[test]]
 name = "status_dot_color_profiles"
