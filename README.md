@@ -147,7 +147,7 @@ Screenshot: [docs/media/tooltip.png](docs/media/tooltip.png). Recorded with `scr
 
 ### PieChart
 
-A cluster overview: a storage donut sweeps in with an eased reveal, then the highlight steps through each volume, pulling its slice out and following it in the legend and the detail line, while a high-resolution braille pie of requests by region redraws its shares every frame from live rates. The donut uses quadrant glyphs, so each cell can show two slices, and both charts keep their slice colors apart from each other in the dark, light, and 16-color palettes.
+A cluster overview: a storage donut sweeps in with an eased reveal, then the highlight steps through each volume, pulling its slice out and following it in the legend and the detail line, while a high-resolution braille pie of requests by region redraws its shares every frame from live rates. The donut takes one sample per cell (the `Block` marker), and both charts keep their slice colors apart from each other in the dark, light, and 16-color palettes.
 
 <img src="docs/media/pie-chart.webp" alt="PieChart: a storage donut and a braille pie of live request shares on a cluster overview screen in the dark theme" width="1028">
 
