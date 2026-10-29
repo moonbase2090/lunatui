@@ -19,10 +19,10 @@ use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Canvas, Chart, Dataset, Date, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer,
     KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
-    MenuState, Monthly, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popup, ProgressBar,
-    RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis,
-    SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
-    WidgetState,
+    MenuState, Monthly, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup,
+    ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider,
+    Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack,
+    Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -197,6 +197,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: tooltip_lunatui,
         ratatui: tooltip_ratatui,
+    },
+    Case {
+        name: "popover",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no popover; its side clears the rectangle Popover::area picks and draws a titled rounded block with the options in it",
+        ),
+        lunatui: popover_lunatui,
+        ratatui: popover_ratatui,
     },
     Case {
         name: "radio-group",
@@ -1650,6 +1659,70 @@ fn progress_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             })
             .collect();
         RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
+}
+
+const POPOVER_OPTIONS: &str = "Compact\nComfortable\nSpacious";
+
+fn popover_open(area: Rect, tick: u32) -> (Rect, &'static str) {
+    let hovered = toolbar_hovered(tick);
+    toolbar_slots(area)
+        .nth(hovered)
+        .map_or((Rect::new(area.x, area.y, 0, 0), ""), |(slot, label, _)| {
+            (slot, label)
+        })
+}
+
+fn popover_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for (slot, label, _) in toolbar_slots(area) {
+        Paragraph::new(label).render(
+            Rect::new(slot.x.saturating_add(1), slot.y, slot.width - 2, 1),
+            &mut cx,
+        );
+    }
+    let (anchor, title) = popover_open(area, tick);
+    Popover::new(Paragraph::new(POPOVER_OPTIONS), anchor)
+        .title(title)
+        .size(lunatui_core::Size::new(12, 3))
+        .render(area, &mut cx);
+}
+
+fn popover_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let screen = Rect::new(area.x, area.y, area.width, area.height);
+    for (slot, label, _) in toolbar_slots(screen) {
+        RatParagraph::new(label).render(
+            RatRect::new(slot.x.saturating_add(1), slot.y, slot.width - 2, 1),
+            buf,
+        );
+    }
+    let (anchor, title) = popover_open(screen, tick);
+    let popover = Popover::new(Paragraph::new(POPOVER_OPTIONS), anchor)
+        .title(title)
+        .size(lunatui_core::Size::new(12, 3));
+    if let Some(panel) = popover.area(screen) {
+        let rect = RatRect::new(panel.x, panel.y, panel.width, panel.height);
+        let panel_style = RatStyle::new()
+            .fg(color(lunatui_theme::Token::TextPrimary))
+            .bg(color(lunatui_theme::Token::Surface1));
+        RatClear.render(rect, buf);
+        RatParagraph::new(POPOVER_OPTIONS)
+            .style(panel_style)
+            .block(
+                RatBlock::bordered()
+                    .border_type(RatBorderType::Rounded)
+                    .border_style(panel_style.fg(color(lunatui_theme::Token::Accent)))
+                    .title(title),
+            )
+            .render(rect, buf);
     }
 }
 

@@ -35,6 +35,8 @@ mod canvas_showcase;
 mod deploy_board;
 #[path = "menu_showcase.rs"]
 mod menu_showcase;
+#[path = "popover_showcase.rs"]
+mod popover_showcase;
 #[path = "release_console.rs"]
 mod release_console;
 #[path = "tooltip_showcase.rs"]
@@ -101,6 +103,11 @@ const PREVIEWS: &[Preview] = &[
         name: "tooltip",
         native: tooltip_showcase::render,
         baseline: tooltip_baseline,
+    },
+    Preview {
+        name: "popover",
+        native: popover_showcase::render,
+        baseline: popover_baseline,
     },
     Preview {
         name: "radio-group",
@@ -4582,6 +4589,12 @@ fn toggle_native(
             ),
             &mut cx,
         );
+}
+
+fn popover_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "popover") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn tooltip_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {

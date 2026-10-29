@@ -5,7 +5,7 @@
 
 #[cfg(feature = "accordion")]
 mod accordion;
-#[cfg(feature = "tooltip")]
+#[cfg(any(feature = "tooltip", feature = "popover"))]
 mod anchor;
 #[cfg(feature = "barchart")]
 mod bar_chart;
@@ -51,6 +51,8 @@ mod padding;
 mod paragraph;
 #[cfg(feature = "pie-chart")]
 mod pie_chart;
+#[cfg(feature = "popover")]
+mod popover;
 #[cfg(feature = "popup")]
 mod popup;
 #[cfg(feature = "progress")]
@@ -89,7 +91,7 @@ mod widget;
 
 #[cfg(feature = "accordion")]
 pub use accordion::{Accordion, AccordionSection, SectionArea};
-#[cfg(feature = "tooltip")]
+#[cfg(any(feature = "tooltip", feature = "popover"))]
 pub use anchor::AnchorSide;
 #[cfg(feature = "barchart")]
 pub use bar_chart::{Bar, BarChart, BarDirection, BarGroup};
@@ -137,6 +139,8 @@ pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
 #[cfg(feature = "pie-chart")]
 pub use pie_chart::{PieChart, PieLayout, PieSlice};
+#[cfg(feature = "popover")]
+pub use popover::{Popover, PopoverClick, PopoverState};
 #[cfg(feature = "popup")]
 pub use popup::{Placement, Popup, PopupState};
 #[cfg(feature = "progress")]

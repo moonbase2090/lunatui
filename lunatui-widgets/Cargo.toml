@@ -37,6 +37,7 @@ form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
 tooltip = []
+popover = ["popup"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -44,7 +45,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.15", path = "../lunatui-core" }
@@ -216,6 +217,11 @@ required-features = ["form"]
 name = "tooltip"
 path = "tests/tooltip.rs"
 required-features = ["tooltip"]
+
+[[test]]
+name = "popover"
+path = "tests/popover.rs"
+required-features = ["popover"]
 
 [[test]]
 name = "slider"
