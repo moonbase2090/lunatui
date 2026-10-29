@@ -149,6 +149,7 @@ impl<'a> RenderCx<'a> {
         feature = "chart",
         feature = "hex-viewer",
         feature = "image",
+        feature = "pie-chart",
         feature = "sparkline"
     ))]
     pub(crate) fn put_char_patched(&mut self, x: u16, y: u16, glyph: char, style: Style) {
@@ -191,7 +192,7 @@ impl<'a> RenderCx<'a> {
         }
     }
 
-    #[cfg(feature = "image")]
+    #[cfg(any(feature = "image", feature = "pie-chart"))]
     pub(crate) fn keep_backgrounds(&mut self, area: Rect, draw: impl FnOnce(&mut Self)) {
         let end_x = area.x.saturating_add(area.width);
         let end_y = area.y.saturating_add(area.height);

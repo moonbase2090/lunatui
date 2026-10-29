@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 use lunatui_core::Rect;
 
 /// Glyphs a drawing is made of.
@@ -22,6 +23,7 @@ pub enum Marker {
     Braille,
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Ink {
     Empty,
@@ -35,6 +37,7 @@ pub(crate) enum Ink {
     Eighths,
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 #[derive(Clone, Copy)]
 pub(crate) struct Spot {
     pub(crate) ink: Ink,
@@ -42,6 +45,7 @@ pub(crate) struct Spot {
     pub(crate) series: usize,
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 pub(crate) const EMPTY_SPOT: Spot = Spot {
     ink: Ink::Empty,
     mask: 0,
@@ -69,11 +73,13 @@ pub(crate) fn sextant(mask: u8) -> char {
 #[cfg(feature = "chart")]
 pub(crate) const EIGHTHS_UP: [char; 9] = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 pub(crate) struct Raster {
     pub(crate) rect: Rect,
     pub(crate) spots: Vec<Spot>,
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 impl Raster {
     pub(crate) fn new(rect: Rect) -> Self {
         Self {
@@ -285,15 +291,20 @@ fn round_ratio_to_even(numerator: i64, denominator: i64) -> i64 {
     }
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 #[derive(Clone, Copy)]
 pub(crate) struct Window {
     pub(crate) x: [f64; 2],
     pub(crate) y: [f64; 2],
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 pub(crate) const LEFT: u8 = 1;
+#[cfg(any(feature = "chart", feature = "canvas"))]
 pub(crate) const RIGHT: u8 = 2;
+#[cfg(any(feature = "chart", feature = "canvas"))]
 pub(crate) const BOTTOM: u8 = 4;
+#[cfg(any(feature = "chart", feature = "canvas"))]
 pub(crate) const TOP: u8 = 8;
 
 pub(crate) fn round_to_tick(value: f64) -> i64 {
@@ -307,10 +318,12 @@ pub(crate) fn round_to_tick(value: f64) -> i64 {
     i64::try_from(mantissa >> shift).unwrap_or(i64::MAX)
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 pub(crate) fn span(cells: i64) -> f64 {
     f64::from(i32::try_from(cells).unwrap_or(i32::MAX))
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 impl Window {
     pub(crate) fn width(self) -> f64 {
         self.x[1] - self.x[0]
@@ -398,6 +411,7 @@ impl Window {
     }
 }
 
+#[cfg(any(feature = "chart", feature = "canvas"))]
 pub(crate) fn glyph(spot: Spot) -> char {
     match spot.ink {
         Ink::Empty => ' ',

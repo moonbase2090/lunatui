@@ -11,8 +11,13 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `Menu`, `MenuItem`, `MenuState`, and `MenuEvent`, behind the opt-in `nested-menu` feature, with keyboard navigation, cascading submenus, disabled items, and queued leaf actions styled with Graphite tokens.
+- `PieChart` widget, behind the `pie-chart` feature: pie and donut charts of labelled slices drawn with half-block, quadrant, sextant, or braille sub-cell glyphs (two slice colors per cell where slices meet), a legend with whole percentages that add up to 100, a start angle, a reveal sweep with a track for animated intros, a pulled-out highlight, center text and a caption for donuts, a cell aspect setting, `slice_at` for hit testing, slice colors from theme tokens kept apart from each other and from the surfaces (also under a 16-color profile), and widget states.
 - `LogView` widget and `LogBuffer` ring buffer, behind the `log-view` feature: log lines with a level-colored label, a target column, and a time label, filtered by minimum level, target prefix, and a smart-case text query with the match highlighted, following the newest entry or scrolled back, with `matching`, `max_scroll`, and per-level counts for an app's own scrollbar and header.
 - `HexViewer` widget, behind the `hex-viewer` feature: a hex dump with offset, hex and ASCII columns, a cursor and selection kept in `HexViewerState`, row and page moves that keep the cursor on screen, wheel scrolling, `byte_at` for mouse hit testing, an optional column header, a base offset for windows into larger files, byte-kind colors from theme tokens, and widget states.
+
+### Changed
+
+- The `log-view` benchmark case now draws its reference rows bottom-aligned with bold warn and error labels, the way `LogView` does.
 
 ## [0.1.15] - 2026-10-28
 
