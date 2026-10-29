@@ -27,6 +27,8 @@ fn rendering_an_overlay_with_a_shadow_allocates_nothing() {
     .backdrop(0.5, Color::Rgb(0, 0, 0))
     .shadow(Style::new().bg(shadow));
     overlay.render(area, &mut RenderCx::new(&mut grid, &mut clusters, &theme));
+    grid.fill(area, Style::new(), '.', &mut clusters);
+    assert_eq!(grid.row_display(3, &clusters), ".".repeat(40));
     let ((), stats) = ALLOC.measure(|| {
         for _ in 0..100 {
             let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
@@ -40,7 +42,12 @@ fn rendering_an_overlay_with_a_shadow_allocates_nothing() {
     assert_eq!(stats.allocations, 0);
     assert_eq!(
         grid.row_display(3, &clusters),
-        format!("{}╭{}╮{}", " ".repeat(10), "─".repeat(18), " ".repeat(10))
+        format!("{}╭{}╮{}", ".".repeat(10), "─".repeat(18), ".".repeat(10))
+    );
+    assert_eq!(
+        grid.row_display(4, &clusters),
+        format!("{}│{}│ {}", ".".repeat(10), " ".repeat(18), ".".repeat(9)),
+        "modal cleared, shadow column blank"
     );
     let bg = |x, y| grid.get(x, y).map(|cell| cell.style().bg);
     assert_eq!(bg(30, 4), Some(shadow), "right edge of the shadow");
