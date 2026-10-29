@@ -6419,13 +6419,6 @@ fn logs_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u3
 
 static PROFILE: OnceLock<Profile> = OnceLock::new();
 
-const PC_STORAGE: [(&str, f64); 5] = [
-    ("Databases", 164.0),
-    ("Object store", 118.0),
-    ("Logs", 62.0),
-    ("Backups", 44.0),
-    ("Images", 24.0),
-];
 const PC_REGIONS: [(&str, f64); 5] = [
     ("us-east", 3420.0),
     ("eu-west", 2610.0),
@@ -6440,7 +6433,11 @@ fn pc_ease(tick: u32, from: u32, span: u32) -> f64 {
 }
 
 fn pc_rates(tick: u32) -> [f64; 5] {
-    let phase = f64::from(tick) / 18.0;
+    pc_rates_at(f64::from(tick))
+}
+
+fn pc_rates_at(time: f64) -> [f64; 5] {
+    let phase = time / 18.0;
     let mut rates = [0.0; 5];
     let mut offset = 0.0;
     for (rate, (_, base)) in rates.iter_mut().zip(PC_REGIONS) {
@@ -6448,6 +6445,10 @@ fn pc_rates(tick: u32) -> [f64; 5] {
         offset += 1.3;
     }
     rates
+}
+
+fn pc_latency(rate: f64, total: f64) -> f64 {
+    38.0 + 140.0 * rate / total
 }
 
 fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
@@ -6471,14 +6472,14 @@ fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area:
         "Cluster overview  ·  prod-eu-2  ·  live",
         head,
     );
-    let left = Rect::new(area.x + 2, area.y + 2, 57, 32);
+    let left = Rect::new(area.x + 2, area.y + 2, 70, 32);
     let right = Rect::new(
         left.x + left.width + 1,
         left.y,
         area.width.saturating_sub(left.width + 5),
         32,
     );
-    for (title, pane) in [(" Storage ", left), (" Requests by region ", right)] {
+    for (title, pane) in [(" Requests by region ", left), (" Regions ", right)] {
         Block::bordered()
             .border_type(BorderType::Rounded)
             .title(title)
@@ -6488,43 +6489,6 @@ fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area:
             .render(pane, &mut cx);
     }
     let picked = (tick >= 60).then(|| usize::try_from((tick - 60) / 36).unwrap_or(0) % 5);
-    PieChart::new(
-        PC_STORAGE
-            .iter()
-            .map(|(label, size)| PieSlice::new(*label, *size)),
-    )
-    .marker(Marker::Quadrant)
-    .cell_aspect(2.3)
-    .donut(0.55)
-    .center("412 GB")
-    .caption("of 512 GB")
-    .reveal(pc_ease(tick, 4, 44))
-    .highlight(picked)
-    .state(WidgetState::Focused)
-    .render(
-        Rect::new(left.x + 2, left.y + 2, left.width - 4, 22),
-        &mut cx,
-    );
-    let detail = picked.map_or(("All volumes", 412.0), |index| PC_STORAGE[index]);
-    cx.put_str(
-        left.x + 3,
-        left.y + 26,
-        detail.0,
-        Style::new()
-            .fg(accent)
-            .bg(surface)
-            .with_attrs(Attrs::new().set_bold(true)),
-    );
-    cx.put_str(
-        left.x + 3,
-        left.y + 27,
-        &format!(
-            "{:.0} GB on 6 volumes  ·  {:.1} GB written today",
-            detail.1,
-            detail.1 / 37.0
-        ),
-        dim,
-    );
     let rates = pc_rates(tick);
     PieChart::new(
         PC_REGIONS
@@ -6534,13 +6498,16 @@ fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area:
     )
     .marker(Marker::Braille)
     .cell_aspect(2.3)
-    .reveal(pc_ease(tick, 14, 44))
+    .reveal(pc_ease(tick, 4, 44))
+    .highlight(picked)
+    .state(WidgetState::Focused)
     .render(
-        Rect::new(right.x + 2, right.y + 2, right.width - 4, 15),
+        Rect::new(left.x + 3, left.y + 2, left.width - 6, 28),
         &mut cx,
     );
-    pc_table(&mut cx, right, &rates, [fill, dim]);
-    StatusBar::new(" ←→ volume  ●  b braille  ●  d donut  ●  r refresh  ●  q quit")
+    pc_table(&mut cx, right, &rates, picked, [fill, dim]);
+    pc_trend(&mut cx, right, tick, [fill, dim]);
+    StatusBar::new(" ←→ region  ●  r refresh  ●  q quit")
         .style(Style::new().fg(text).bg(raised))
         .render(
             Rect::new(
@@ -6553,27 +6520,94 @@ fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area:
         );
 }
 
-fn pc_table(cx: &mut RenderCx<'_>, pane: Rect, rates: &[f64; 5], styles: [Style; 2]) {
+fn pc_table(
+    cx: &mut RenderCx<'_>,
+    pane: Rect,
+    rates: &[f64; 5],
+    picked: Option<usize>,
+    styles: [Style; 2],
+) {
     let [fill, dim] = styles;
     let x = pane.x + 3;
-    let top = pane.y + 19;
-    cx.put_str(x, top, "region       req/s    p95", dim);
+    let top = pane.y + 2;
+    cx.put_str(x, top, "region       share   req/s    p95", dim);
     let total: f64 = rates.iter().sum();
+    let lit = fill
+        .fg(cx.token(Token::FocusRing))
+        .with_attrs(Attrs::new().set_bold(true));
     for (row, ((name, _), rate)) in (0_u16..).zip(PC_REGIONS.iter().zip(rates)) {
-        let latency = 38.0 + 140.0 * rate / total;
+        let share = 100.0 * rate / total;
+        let latency = pc_latency(*rate, total);
+        let style = if picked == Some(usize::from(row)) {
+            lit
+        } else {
+            fill
+        };
         cx.put_str(
             x,
             top + 2 + row,
-            &format!("{name:<10} {rate:>7.0}  {latency:>4.0} ms"),
-            fill,
+            &format!("{name:<10} {share:>5.1}%  {rate:>6.0}  {latency:>4.0} ms"),
+            style,
         );
     }
     cx.put_str(
         x,
         top + 8,
-        &format!("total      {total:>7.0} req/s"),
+        &format!("total              {total:>6.0} req/s"),
         fill.with_attrs(Attrs::new().set_bold(true)),
     );
+    let (name, rate) = picked.map_or(("All regions", total), |index| {
+        (PC_REGIONS[index].0, rates[index])
+    });
+    cx.put_str(
+        x,
+        top + 12,
+        name,
+        fill.fg(cx.token(Token::Accent))
+            .with_attrs(Attrs::new().set_bold(true)),
+    );
+    let detail = if picked.is_some() {
+        format!(
+            "{:.0}% of traffic  ·  p95 {:.0} ms",
+            100.0 * rate / total,
+            pc_latency(rate, total)
+        )
+    } else {
+        format!("{} regions  ·  {total:.0} req/s", PC_REGIONS.len())
+    };
+    cx.put_str(x, top + 13, &detail, dim);
+}
+
+fn pc_trend(cx: &mut RenderCx<'_>, pane: Rect, tick: u32, styles: [Style; 2]) {
+    const SECONDS: usize = 40;
+    let [fill, dim] = styles;
+    let mut points = [(0.0, 0.0); SECONDS];
+    for (at, point) in (0_u32..).zip(points.iter_mut()) {
+        let back = f64::from(u32::try_from(SECONDS).unwrap_or(0) - 1 - at);
+        let total: f64 = pc_rates_at(f64::from(tick) - back * 6.0).iter().sum();
+        *point = (f64::from(at), total);
+    }
+    let x = pane.x + 3;
+    let top = pane.y + 17;
+    cx.put_str(x, top, "total req/s", dim);
+    let sets = [Dataset::new(&points)
+        .name("total")
+        .graph_type(GraphType::Line)
+        .marker(Marker::Braille)];
+    Chart::new(&sets)
+        .background(fill)
+        .legend_position(None)
+        .x_axis(
+            Axis::new()
+                .bounds([0.0, 39.0])
+                .labels(&["-40s", "-20s", "now"]),
+        )
+        .y_axis(
+            Axis::new()
+                .bounds([8000.0, 11000.0])
+                .labels(&["8k", "9.5k", "11k"]),
+        )
+        .render(Rect::new(x, top + 1, pane.width.saturating_sub(6), 12), cx);
 }
 
 fn pie_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
