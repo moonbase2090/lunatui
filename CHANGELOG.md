@@ -14,6 +14,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `scripts/record-pixels.sh` records a real Kitty window with ffmpeg, preserving graphics in lossless video, PNG, and animated WebP. The Image example switches Contain and Cover with `f`; its full-resolution source is sent through the actual image presenter.
 
+### Changed
+
+- The README Image recording and site gallery show native Kitty image pixels from a real framebuffer capture, replacing the text-recorder half-block preview. The full-resolution NASA source switches Contain and Cover.
+
 ## [0.1.16] - 2026-10-30
 
 ### Added

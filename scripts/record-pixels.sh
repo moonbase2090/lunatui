@@ -51,12 +51,12 @@ xdotool getwindowgeometry --shell "$WINDOW" > "$OUT/geometry.txt"
 sleep 2
 if [[ -n "$KEYS" ]]; then
   python3 - "$WINDOW" "$KEYS" <<'PYKEYS' &
-import subprocess,sys,time
+import math,subprocess,sys,time
 started=time.monotonic()
 for event in sys.argv[2].split(','):
     when,key=event.split(':',1)
     delay=float(when)
-    if delay < 0 or delay > 60 or not key.isalnum(): raise SystemExit('invalid capture key sequence')
+    if not math.isfinite(delay) or delay < 0 or delay > 60 or not key.isalnum(): raise SystemExit('invalid capture key sequence')
     time.sleep(max(0,started+delay-time.monotonic()))
     subprocess.run(['xdotool','key','--window',sys.argv[1],key],check=True)
 PYKEYS

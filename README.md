@@ -276,11 +276,11 @@ Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scr
 
 ### Image
 
-A media library for an observatory archive. Each thumbnail is an `Image` with `ImageFit::Cover`. The selected one is drawn focused, and the two imports are drawn disabled until they finish. The preview switches between `ImageFit::Contain` and `ImageFit::Cover`, and the details panel shows each frame's tone bands. The pictures are the website's sky, hills and moon art, resized, tinted and layered by the example.
+NASA's 1920×1920 Blue Marble Earth, displayed by the `Image` widget through Kitty graphics. The recording switches between Contain and Cover with real key input. Credit: NASA, PIA18033.
 
-![Image widget: a media library in the dark theme](docs/media/image-120x36-truecolor-dark.gif)
+![Image widget: full-resolution NASA Blue Marble in a real Kitty terminal](docs/media/image-native.webp)
 
-Screenshot: [docs/media/image-120x36-truecolor-dark.png](docs/media/image-120x36-truecolor-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=image`, 120×36, dark, 10 seconds at 30 fps). The recording shows the half-block cell fallback, two image pixels per cell. The recorder captures terminal text and cannot capture Kitty graphics, so the Kitty path is not shown.
+Screenshot: [docs/media/image-native.png](docs/media/image-native.png). Recorded from an actual Kitty window with `scripts/record-pixels.sh` (100×32, font size 20, 8 seconds at 30 fps, lossless animated WebP). This captures image pixels in the terminal framebuffer. See [Record a pixel widget in a real terminal](docs/recording-pixels.md).
 
 ### Nested menu
 

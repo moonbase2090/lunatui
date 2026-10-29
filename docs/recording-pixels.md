@@ -21,3 +21,5 @@ The script starts an isolated Xvfb display and a Kitty window, builds the exampl
 Inspect `terminal.png` and `terminal.webp` before publishing. `capture.json` records the source commit, whether tracked files were clean, terminal and encoder versions, dimensions, duration, distinct frame count, input sequence, and artifact hashes. The script rejects a capture whose dimensions differ from the terminal window, an unchanged scripted recording, or a WebP above the 3 MB gallery limit. `terminal.mkv` keeps the original lossless framebuffer video.
 
 A text recorder such as asciinema with agg captures the cell fallback. Use this screen-capture path when the gallery must show actual image pixels. Recordings and captions must identify the path actually exercised.
+
+The committed Image recording was captured from code commit `ae377d67c9a437a150f632c05e360a05c49dfccc` in a fresh Ubuntu arm64 VM with Kitty 0.32.2. The tracked tree was clean. The actual window is 1601×1025 pixels; three distinct frames show the Contain/Cover changes. The lossless WebP is 2,313,174 bytes. Both the README and site use that uncomposited recording.
