@@ -19,8 +19,8 @@ name = "pixel_layer"
 required-features = ["pixel-layer"]
 
 [dependencies]
-lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
-lunatui-image = { version = "0.1.14", path = "../lunatui-image", optional = true }
+lunatui-core = { version = "0.1.15", path = "../lunatui-core" }
+lunatui-image = { version = "0.1.15", path = "../lunatui-image", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.190"

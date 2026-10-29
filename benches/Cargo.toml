@@ -21,14 +21,14 @@ gungraun = ["dep:gungraun"]
 
 [dependencies]
 gungraun = { version = "0.20.0", optional = true }
-lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
-lunatui-layout = { version = "0.1.14", path = "../lunatui-layout" }
-lunatui-text = { version = "0.1.14", path = "../lunatui-text", features = ["markdown"] }
-lunatui-theme = { version = "0.1.14", path = "../lunatui-theme" }
-lunatui-widgets = { version = "0.1.14", path = "../lunatui-widgets", features = ["all-widgets"] }
-lunatui-runtime = { version = "0.1.14", path = "../lunatui-runtime", features = ["keymap"] }
-lunatui-term = { version = "0.1.14", path = "../lunatui-term" }
-lunatui-prismattyc = { version = "0.1.14", path = "../lunatui-prismattyc" }
+lunatui-core = { version = "0.1.15", path = "../lunatui-core" }
+lunatui-layout = { version = "0.1.15", path = "../lunatui-layout" }
+lunatui-text = { version = "0.1.15", path = "../lunatui-text", features = ["markdown"] }
+lunatui-theme = { version = "0.1.15", path = "../lunatui-theme" }
+lunatui-widgets = { version = "0.1.15", path = "../lunatui-widgets", features = ["all-widgets"] }
+lunatui-runtime = { version = "0.1.15", path = "../lunatui-runtime", features = ["keymap"] }
+lunatui-term = { version = "0.1.15", path = "../lunatui-term" }
+lunatui-prismattyc = { version = "0.1.15", path = "../lunatui-prismattyc" }
 num-bigint = "0.4"
 num-traits = "0.2"
 ratatui = "=0.30.2"

@@ -11,6 +11,11 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `HexViewer` widget, behind the `hex-viewer` feature: a hex dump with offset, hex and ASCII columns, a cursor and selection kept in `HexViewerState`, row and page moves that keep the cursor on screen, wheel scrolling, `byte_at` for mouse hit testing, an optional column header, a base offset for windows into larger files, byte-kind colors from theme tokens, and widget states.
+
+## [0.1.15] - 2026-10-28
+
+### Added
+
 - `ProgressBar` widget, behind the `progress` feature: a bar of eighth blocks that is determinate (`ratio`), stacked in accent, ok, warn, or fail segments (`segment`), or indeterminate (a block bouncing along the track), with an optional label and percentage, widget states, and `percent` and `track_area` for the numbers and cells.
 - `Accordion` widget, behind the `accordion` feature: collapsible sections with a caret, title, and badge per header, body rectangles for the caller's content, a per-section reveal fraction for animated opening and closing, `layout` for hit testing, `step` for tab-order focus, and widget states.
 - `lunatui-widgets` gets an `all-widgets` feature that turns on every widget needing no extra dependency, so test and example setups no longer list each widget.
