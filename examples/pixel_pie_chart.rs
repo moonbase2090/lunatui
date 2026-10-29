@@ -13,8 +13,8 @@ use lunatui_runtime::RenderFrame;
 use lunatui_term::{Event, KeyCode};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Block, BorderType, ImageId, Paragraph, PieChart, PieSlice, PixelPieChart, RenderCx, Sparkline,
-    Table, VecSource, Widget,
+    Block, BorderType, ImageId, Marker, Paragraph, PieChart, PieSlice, PixelPieChart, RenderCx,
+    Sparkline, Table, VecSource, Widget,
 };
 
 const WIDTH: u16 = 100;
@@ -37,6 +37,12 @@ fn specification(reveal: f64, selected: Option<usize>) -> PieChart {
 }
 
 fn main() -> io::Result<()> {
+    let args: Vec<_> = std::env::args().skip(1).collect();
+    let compare = match args.as_slice() {
+        [] => false,
+        [flag] if flag == "--compare" => true,
+        _ => return Err(io::Error::other("usage: pixel_pie_chart [--compare]")),
+    };
     let id = ImageId::new(41).ok_or_else(|| io::Error::other("invalid chart identity"))?;
     run(
         Screen {
@@ -44,6 +50,7 @@ fn main() -> io::Result<()> {
             started: Instant::now(),
             selected: None,
             visible: true,
+            compare,
         },
         RunOptions::new(WIDTH, HEIGHT),
     )
@@ -54,6 +61,7 @@ struct Screen {
     started: Instant,
     selected: Option<usize>,
     visible: bool,
+    compare: bool,
 }
 
 impl Screen {
@@ -74,6 +82,15 @@ impl Screen {
         Paragraph::new("128,640 requests / second")
             .style(accent)
             .render(Rect::new(3, 5, 60, 1), cx);
+        if self.compare {
+            self.draw_comparison(cx, text, accent);
+            Paragraph::new(
+                "Same data and layout    ← → select region    Space hide / show    q quit",
+            )
+            .style(text)
+            .render(Rect::new(3, 30, 94, 1), cx);
+            return;
+        }
         let left = Rect::new(2, 7, 57, 22);
         let right = Rect::new(61, 7, 37, 22);
         let panel = Block::bordered()
@@ -110,6 +127,33 @@ impl Screen {
         Paragraph::new("← → select region    Space hide / show    q quit")
             .style(text)
             .render(Rect::new(3, 30, 94, 1), cx);
+    }
+}
+
+impl Screen {
+    fn draw_comparison(&mut self, cx: &mut RenderCx<'_>, text: Style, accent: Style) {
+        let spec = specification(
+            (self.started.elapsed().as_secs_f64() / 1.8).min(1.0),
+            self.selected,
+        );
+        self.pie.set_chart(spec.clone());
+        for (index, title) in [(0_u16, " Braille "), (1, " Pixels ")] {
+            let area = Rect::new(2 + index * 49, 7, 47, 22);
+            Block::bordered()
+                .border_type(BorderType::Rounded)
+                .title(title)
+                .style(text)
+                .border_style(accent)
+                .render(area, cx);
+            let pie_area = Rect::new(area.x + 3, area.y + 1, 40, 20);
+            if self.visible {
+                if index == 0 {
+                    spec.clone().marker(Marker::Braille).render(pie_area, cx);
+                } else {
+                    self.pie.render(pie_area, cx);
+                }
+            }
+        }
     }
 }
 
