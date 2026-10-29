@@ -12,6 +12,8 @@ Every PR adds its entry under **Unreleased**.
 
 - `DatePicker` widget, behind the `date-picker` feature: a fixed-size month grid with a cursor, a chosen date or range (filled ends with a band between), `min` and `max` bounds that dim days and arrows, a today marker, Monday or Sunday weeks, `shift_days`, `shift_months`, and `clamped` for moving the cursor, and `prev_area`, `next_area`, and `date_at` for hit testing. `Date` now implements `Ord`.
 
+- `scripts/record-pixels.sh` records a real Kitty window with ffmpeg, preserving graphics in lossless video, PNG, and animated WebP. The Image example switches Contain and Cover with `f`; its full-resolution source is sent through the actual image presenter.
+
 ## [0.1.16] - 2026-10-30
 
 ### Added

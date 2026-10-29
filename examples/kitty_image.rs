@@ -8,9 +8,9 @@ use std::io;
 use lunatui::{App, ControlFlow, RunOptions, is_quit, run};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_runtime::RenderFrame;
-use lunatui_term::Event;
+use lunatui_term::{Event, KeyCode};
 use lunatui_theme::{Theme, Variant};
-use lunatui_widgets::{Block, Image, ImageFit, ImageId, ImageSource, RenderCx, Widget};
+use lunatui_widgets::{Block, Image, ImageFit, ImageId, ImageSource, Paragraph, RenderCx, Widget};
 
 const WIDTH: u16 = 100;
 const HEIGHT: u16 = 32;
@@ -18,11 +18,18 @@ const HEIGHT: u16 = 32;
 fn main() -> io::Result<()> {
     let source = ImageSource::decode(include_bytes!("../site/assets/earth.jpg"))
         .map_err(|error| io::Error::other(error.to_string()))?;
-    run(KittyImage { source }, RunOptions::new(WIDTH, HEIGHT))
+    run(
+        KittyImage {
+            source,
+            fit: ImageFit::Contain,
+        },
+        RunOptions::new(WIDTH, HEIGHT),
+    )
 }
 
 struct KittyImage {
     source: ImageSource,
+    fit: ImageFit,
 }
 
 impl App for KittyImage {
@@ -30,6 +37,13 @@ impl App for KittyImage {
         if is_quit(event) {
             ControlFlow::Break
         } else {
+            if matches!(event, Event::Key(key) if key.code == KeyCode::Char('f')) {
+                self.fit = if self.fit == ImageFit::Contain {
+                    ImageFit::Cover
+                } else {
+                    ImageFit::Contain
+                };
+            }
             ControlFlow::Continue
         }
     }
@@ -53,12 +67,9 @@ impl KittyImage {
         let panel = Block::bordered().title("LUNATUI  /  IMAGE");
         panel.render(area, cx);
         let inner = panel.inner(area);
-        cx.put_str(
-            inner.x,
-            inner.y,
-            "KITTY GRAPHICS  ·  NASA Blue Marble / PIA18033",
-            Style::new().fg(Color::Rgb(184, 167, 240)),
-        );
+        Paragraph::new("NASA Blue Marble / PIA18033")
+            .style(Style::new().fg(Color::Rgb(184, 167, 240)))
+            .render(Rect::new(inner.x, inner.y, inner.width, 1), cx);
         let image_area = Rect::new(
             inner.x + 2,
             inner.y + 2,
@@ -70,20 +81,25 @@ impl KittyImage {
         };
         Image::new(self.source.clone())
             .id(image_id)
-            .fit(ImageFit::Contain)
+            .fit(self.fit)
             .render(image_area, cx);
-        cx.put_str(
-            inner.x,
-            inner.y + inner.height.saturating_sub(1),
-            "Press q to leave  ·  Kitty sends pixels; other terminals use the cell renderer",
-            Style::new().fg(Color::Rgb(164, 174, 193)),
-        );
+        Paragraph::new("f contain / cover    q quit    Source: NASA, 1920 × 1920 pixels")
+            .style(Style::new().fg(Color::Rgb(164, 174, 193)))
+            .render(
+                Rect::new(
+                    inner.x,
+                    inner.y + inner.height.saturating_sub(1),
+                    inner.width,
+                    1,
+                ),
+                cx,
+            );
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Image, ImageFit, ImageId, ImageSource, RenderCx, Widget};
+    use super::{Image, ImageFit, ImageId, ImageSource, Paragraph, RenderCx, Widget};
     use lunatui_core::{ClusterTable, Grid, Rect};
     use lunatui_term::{PixelLayer, PixelMode};
     use lunatui_theme::{Theme, Variant};
