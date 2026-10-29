@@ -199,7 +199,7 @@ A deployment form with a region field: the drop-down opens, arrows move the high
 
 <img src="docs/media/combo-box.webp" alt="ComboBox: a deployment form whose region field opens a filtered drop-down list, narrows as text is typed, and settles on the chosen region in the dark theme" width="1028">
 
-Screenshot: [docs/media/combo-box.png](docs/media/combo-box.png). Recorded with `scripts/record-showcase.sh` (`CASE=combo-box`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+Screenshot: [docs/media/combo-box.png](docs/media/combo-box.png). Recorded with `scripts/record-showcase.sh` (`CASE=combo-box`, 90×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 9 seconds).
 
 ### Diff view
 
