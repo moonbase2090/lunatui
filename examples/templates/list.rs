@@ -1,10 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-// A list with a selected row. Up and down move the selection. Press q to quit.
-// cargo run --example template_list
-// cargo run --example template_list -- --snapshot
-
 #![doc = include_str!("../README.md")]
 
 use std::env;

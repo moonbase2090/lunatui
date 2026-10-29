@@ -1,10 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-// A popover beside an anchor. Enter opens and closes it. Escape closes it. Press q to quit.
-// cargo run --example template_popover
-// cargo run --example template_popover -- --snapshot
-
 #![doc = include_str!("../README.md")]
 
 use std::env;

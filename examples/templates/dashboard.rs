@@ -1,10 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-// A live dashboard: sparkline, gauge, and table. The samples advance on their own. Press q to quit.
-// cargo run --example template_dashboard
-// cargo run --example template_dashboard -- --snapshot
-
 #![doc = include_str!("../README.md")]
 
 use std::env;

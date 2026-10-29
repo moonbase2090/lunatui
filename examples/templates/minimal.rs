@@ -1,10 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-// Minimal app: a titled box. Press q to quit.
-// cargo run --example template_minimal
-// cargo run --example template_minimal -- --snapshot
-
 #![doc = include_str!("../README.md")]
 
 use std::env;

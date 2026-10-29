@@ -17,7 +17,7 @@ Method and limits: [docs/performance.md](docs/performance.md).
 
 ## Quick start
 
-Add the crates, draw a first screen, and quit on `q`. The steps and a program under 30 lines are in [Getting started](docs/getting-started.md).
+Draw a first screen and quit on `q`. The steps and a program under 30 lines are in [Getting started](docs/getting-started.md). The crates are not on crates.io yet, so the commands run from this repository.
 
 From this repository:
 

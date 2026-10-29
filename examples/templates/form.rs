@@ -1,10 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-// A form with two fields. Tab moves focus. Type into the focused field. Press q to quit.
-// cargo run --example template_form
-// cargo run --example template_form -- --snapshot
-
 #![doc = include_str!("../README.md")]
 
 use std::env;

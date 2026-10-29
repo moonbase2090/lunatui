@@ -1,22 +1,18 @@
 # Getting started (v0.1.15 preview)
 
-lunatui **v0.1.15** is the current preview: a packed cell grid, an input and session layer, theme tokens, and the widget set. APIs can still change before 1.0.
+lunatui **v0.1.15** is the current preview: a packed cell grid, an input and session layer, theme tokens, and the widget set. APIs can still change before 1.0. The crates are not on crates.io yet. Run the first app from a checkout of this repository.
 
-## Add the dependency
+## Crates
 
-From a new binary crate:
-
-```sh
-cargo add lunatui --features app
-cargo add lunatui-core lunatui-term lunatui-theme lunatui-widgets
-```
-
-`app` turns on `lunatui::run`. The other crates are the grid, events, theme tokens, and widgets. Templates that use a sparkline, a form, a popover, or the layout engine also need:
-
-```sh
-cargo add lunatui-widgets --features all-widgets
-cargo add lunatui-layout
-```
+| Crate | Role |
+|---|---|
+| `lunatui` with feature `app` | `lunatui::run` |
+| `lunatui-core` | The grid |
+| `lunatui-term` | Events |
+| `lunatui-theme` | Theme tokens |
+| `lunatui-widgets` | Widgets |
+| `lunatui-widgets` with feature `all-widgets` | Sparkline, form, and popover |
+| `lunatui-layout` | The layout template |
 
 ## A first app
 
@@ -53,7 +49,13 @@ fn main() -> std::io::Result<()> {
 }
 ```
 
-`cargo run` opens the screen. Press `q` to leave it. In this repository the same screen is `cargo run --example template_minimal` (that copy calls `lunatui_runtime::run`, which is what `lunatui::run` forwards to). Add `-- --snapshot` to print one frame as text.
+From the repository root:
+
+```sh
+cargo run --example template_minimal
+```
+
+That opens the screen. Press `q` to leave it. The example calls `lunatui_runtime::run`, which is what `lunatui::run` forwards to. Add `-- --snapshot` to print one frame as text.
 
 ## Where to go next
 
