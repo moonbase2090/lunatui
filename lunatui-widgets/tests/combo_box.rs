@@ -5,7 +5,7 @@
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{ComboBox, RenderCx, Widget, WidgetState};
+use lunatui_widgets::{ComboBox, RenderCx, SearchBox, SearchMatch, Widget, WidgetState};
 
 const EMPTY_OPEN: &str = "                  ▴";
 const FRUIT: [&str; 5] = ["apple", "apricot", "banana", "blueberry", "cherry"];
@@ -340,4 +340,43 @@ fn the_caret_stops_at_the_last_cell_of_the_field() {
     let past = ComboBox::new("abcdefgh", 8, &FRUIT).state(WidgetState::Focused);
     let cells = grid(&past, 12, 1);
     assert_eq!(style_at(&cells, 9, 0).bg, color(Token::Surface1));
+}
+
+#[test]
+fn a_focused_field_without_room_draws_no_caret() {
+    let combo = ComboBox::new("al", 0, &FRUIT).state(WidgetState::Focused);
+    let theme = Theme::builtin(Variant::Dark);
+    let mut cells = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut cells, &mut clusters, &theme);
+    cx.put_str(0, 0, "....", Style::default());
+    combo.render(Rect::new(0, 0, 1, 1), &mut cx);
+    assert_eq!(cells.row_display(0, &clusters), " ...");
+}
+
+#[test]
+fn supplied_matches_replace_filtering() {
+    let found = SearchBox::filter(&FRUIT, "an");
+    let combo = ComboBox::new("an", 2, &FRUIT)
+        .open(true)
+        .with_matches(&found);
+    assert_eq!(combo.matches(), found);
+    assert_eq!(rows(&combo, 20, 3), [" an               ▴", " banana", ""]);
+    let stale: Vec<SearchMatch> = Vec::new();
+    let none = ComboBox::new("an", 2, &FRUIT)
+        .open(true)
+        .with_matches(&stale);
+    assert_eq!(rows(&none, 20, 3)[1], " No matches");
+}
+
+#[test]
+fn supplied_ranges_that_do_not_fit_are_ignored() {
+    let found = vec![SearchMatch {
+        index: 0,
+        ranges: vec![3..99, 1..2],
+    }];
+    let combo = ComboBox::new("x", 1, &FRUIT)
+        .open(true)
+        .with_matches(&found);
+    assert_eq!(rows(&combo, 20, 2)[1], " apple");
 }
