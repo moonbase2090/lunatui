@@ -18,6 +18,8 @@ An owned wrapper was preferred over adding image identity and a caller-maintaine
 
 Pixel rendering and the runtime presenter are enabled by default by owner decision. Both the widget and run options expose `pixels(false)` for an explicit cell fallback. Existing Braille/text chart specifications remain available for mirrored views.
 
+The `--compare` demo mirrors Braille and pixels with the same specification and layout. Its committed framebuffer capture comes from code `0a215085b395fdb8f4c18c1546de4be8b9ffc971` in a clean tracked tree on Ubuntu arm64 with Kitty 0.32.2 (1601×1025, 30 fps, about 8 seconds, 13 distinct frames, 81,084-byte lossless WebP).
+
 ## Tradeoffs
 
 The cache uses private interior mutability to implement `Widget::render(&self)`. App interaction state remains outside it. Immediate protocols retransmit images and repaint cells for correctness. Arbitrary text composition, terminal resizing, and multiplexer passthrough are separate work.
