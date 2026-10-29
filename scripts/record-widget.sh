@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Records parity widgets side by side; CASE=image records the Lunatui Image
-# cell fallback as a standalone gallery clip. Requires asciinema 3, agg, ffmpeg.
+# cell fallback as a standalone gallery clip. AGG names the agg binary, which must be the pinned
+# build from moonbase2090/agg (AGG_PIN below; see record-showcase.sh). Requires asciinema 3, agg,
+# ffmpeg.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -23,6 +25,14 @@ fi
 PROFILE="${PROFILE:-truecolor}"
 THEME="${THEME:-dark}"
 OUT="${OUT:-$ROOT/target/widget-recordings}"
+AGG="${AGG:-agg}"
+AGG_PIN="agg 1.9.0+lunatui.2"
+AGG_INSTALL="cargo install --git https://github.com/moonbase2090/agg --rev 42d70620cc4f24f5754df4c57b27081350fad118 --locked"
+if [[ "$("$AGG" --version 2>/dev/null)" != "$AGG_PIN" ]]; then
+  echo "record-widget: $AGG is not $AGG_PIN; install it with: $AGG_INSTALL" >&2
+  exit 2
+fi
+python3 -I "$ROOT/scripts/check-box-joins.py" "$AGG" 1.4
 MAX_BYTES="${MAX_BYTES:-2000000}"
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
@@ -58,7 +68,7 @@ if [[ "$CASE" == "image" ]]; then
     -c "$(printf '%q ' "$BIN" --width "$WIDTH" --height "$HEIGHT" --frames "$FRAMES" --fps "$FPS")" \
     "$CAST"
   python3 "$ROOT/scripts/trim-cast.py" "$CAST"
-  agg --fps-cap 15 --font-size 14 --last-frame-duration 1 "$CAST" "$GIF"
+  "$AGG" --fps-cap 15 --font-size 14 --last-frame-duration 1 "$CAST" "$GIF"
   BYTES="$(wc -c < "$GIF" | awk '{print $1}')"
   if [[ ! "$BYTES" =~ ^[0-9]+$ ]] || (( BYTES > MAX_BYTES )); then
     echo "record-widget: ${GIF} exceeds the ${MAX_BYTES}-byte limit" >&2
@@ -80,7 +90,7 @@ for side in lunatui ratatui; do
   asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "${side} ${CASE}" \
     -c "$(printf '%q ' "$BIN" --side "$side" "${ARGS[@]}")" "${OUT}/${NAME}-${side}.cast"
   python3 "$ROOT/scripts/trim-cast.py" "${OUT}/${NAME}-${side}.cast"
-  agg --font-size 14 "${OUT}/${NAME}-${side}.cast" "${OUT}/${NAME}-${side}.gif"
+  "$AGG" --font-size 14 "${OUT}/${NAME}-${side}.cast" "${OUT}/${NAME}-${side}.gif"
 done
 ffmpeg -loglevel error -y -i "${OUT}/${NAME}-lunatui.gif" -i "${OUT}/${NAME}-ratatui.gif" \
   -filter_complex "[0:v][1:v]hstack=inputs=2,pad=ceil(iw/2)*2:ceil(ih/2)*2,format=yuv420p" \

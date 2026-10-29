@@ -39,17 +39,17 @@ Still frames and short recordings from `scripts/record-showcase.sh`: lunatui onl
 
 An operations dashboard with four charts: braille lines with a legend, a dot scatter, hourly bars, and a half-block line chart in the focused state. The series scroll and the points drift while the axes, labels, and titles stay put.
 
-![Chart widget: an operations dashboard in the dark theme](docs/media/chart.gif)
+<img src="docs/media/chart.webp" alt="Chart widget: an operations dashboard in the dark theme" width="1028">
 
-Screenshot: [docs/media/chart.png](docs/media/chart.png). Recorded with `scripts/record-showcase.sh` (`CASE=chart`, 120×36, `FRAMES=200`, dark, about 11 seconds).
+Screenshot: [docs/media/chart.png](docs/media/chart.png). Recorded with `scripts/record-showcase.sh` (`CASE=chart`, 120×36 at 2x scale, `FRAMES=200`, dark, lossless animated WebP, about 9 seconds).
 
 ### BarChart
 
 A deploy dashboard made of five bar charts: grouped vertical bars with value text and group labels, horizontal bars with region labels, a series of build times with the latest run highlighted, and the same data in the normal, focused, and disabled states.
 
-![BarChart widget: a deploy dashboard in the dark theme](docs/media/barchart.gif)
+<img src="docs/media/barchart.webp" alt="BarChart widget: a deploy dashboard in the dark theme" width="1028">
 
-Screenshot: [docs/media/barchart.png](docs/media/barchart.png). Recorded with `scripts/record-showcase.sh` (`CASE=barchart`, 120×36, `FRAMES=200`, dark, about 11 seconds).
+Screenshot: [docs/media/barchart.png](docs/media/barchart.png). Recorded with `scripts/record-showcase.sh` (`CASE=barchart`, 120×36 at 2x scale, `FRAMES=200`, dark, lossless animated WebP, about 9 seconds).
 
 ### MarkdownView
 
@@ -229,27 +229,27 @@ Screenshot: [docs/media/popover.png](docs/media/popover.png). Recorded with `scr
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
 
-![Sparkline service board](docs/media/sparkline.gif)
+<img src="docs/media/sparkline.webp" alt="Sparkline service board" width="1028">
 
 ![Sparkline service board, still](docs/media/sparkline.png)
 
-Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120×36, 8 s at 30 fps, dark theme).
+Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
 
 ### Calendar
 
 A team schedule: the month beside that day's agenda, colored release, review, on-call, and incident days, today held in a raised cell, and the selection walking from late October into November.
 
-![Calendar widget: a team schedule in the dark theme](docs/media/calendar.gif)
+<img src="docs/media/calendar.webp" alt="Calendar widget: a team schedule in the dark theme" width="1028">
 
-Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-widget.sh` (`CASE=calendar`, 120×36, dark, about 11 seconds).
+Screenshot: [docs/media/calendar.png](docs/media/calendar.png). Recorded with `scripts/record-showcase.sh` (`CASE=calendar`, 120×36 at 2x scale, `FRAMES=300`, dark, lossless animated WebP, about 12 seconds).
 
 ### BigText
 
 A cutover board: a live clock, a countdown that reaches zero, and ticking metrics. The selection moves, and the error count turns red while it is hot.
 
-![BigText widget: a cutover board in the dark theme](docs/media/bigtext.gif)
+<img src="docs/media/bigtext.webp" alt="BigText widget: a cutover board in the dark theme" width="1028">
 
-Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36, dark, about 11 seconds).
+Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36 at 2x scale, `FRAMES=330`, dark, lossless animated WebP, about 13 seconds).
 
 ### Image
 
