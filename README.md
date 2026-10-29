@@ -191,6 +191,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Log view
+
+A service console: log lines stream into a ring buffer and scroll in from the bottom with a level label, a time, and a target column. The level filter then rises to warnings and errors, and a text filter keeps only the lines that mention the database, highlights the match, and scrolls back through the history before returning to follow the newest line.
+
+<img src="docs/media/logs.webp" alt="LogView: a service console following new log lines, then filtering by level and text with a highlighted match in the dark theme" width="1028">
+
+Screenshot: [docs/media/logs.png](docs/media/logs.png). Recorded with `scripts/record-showcase.sh` (`CASE=logs`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
 ### Search box
 
 A widget catalog with live filtering: the query is typed one character at a time (and backspaced), the list narrows to the items that contain every term with the matched text highlighted, the count on the right follows, and `n` steps the active match with the details pane following it. The widget draws the field and hands back the rules (`filter` with smart case and match ranges, `step` through the matches, `put_highlighted` for drawing a row with its matches marked) and the clear button's cell for the app's own key and mouse handling.

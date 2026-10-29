@@ -36,6 +36,8 @@ mod lightcycle;
 #[cfg(feature = "line-gauge")]
 mod line_gauge;
 mod list;
+#[cfg(feature = "log-view")]
+mod log_view;
 #[cfg(feature = "markdown")]
 mod markdown_view;
 #[cfg(feature = "number-input")]
@@ -111,6 +113,8 @@ pub use lightcycle::Lightcycle;
 #[cfg(feature = "line-gauge")]
 pub use line_gauge::LineGauge;
 pub use list::List;
+#[cfg(feature = "log-view")]
+pub use log_view::{LogBuffer, LogEntry, LogLevel, LogView};
 pub use lunatui_core::Size;
 #[cfg(feature = "image")]
 pub use lunatui_image::{Fit as ImageFit, ImageError, ImageId, ImageSource};
