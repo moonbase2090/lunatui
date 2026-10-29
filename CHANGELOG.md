@@ -10,6 +10,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `PixelPieChart`, behind the optional `pixel-pie-chart` feature: antialiased pies and donuts with a cached tiny-skia raster and automatic Braille fallback. The shared image presenter adds measured cell pixels, conservative iTerm2 inline-image and Sixel selection, and repainting for moved or removed immediate images. The new interactive `pixel_pie_chart` example uses the same widget path as applications.
+
 - A quickstart in `docs/getting-started.md` for the current preview: the crate names, a first app under 30 lines, how to run it from this repository (the crates are not on crates.io yet), and where to go next. Six copy-paste templates under `examples/templates/` (a minimal app, a list, a form, a live dashboard, a popover, and a layout skeleton) are registered as examples, indexed from the examples list and the quickstart, and shown with a capture of each on the site. The dashboard sparkline uses an uneven traffic sample.
 - `Menu`, `MenuItem`, `MenuState`, and `MenuEvent`, behind the opt-in `nested-menu` feature, with keyboard navigation, cascading submenus, disabled items, and queued leaf actions styled with Graphite tokens.
 - `DiffView` widget and `Diff::parse`, behind the `diff-view` feature: a unified diff parsed into hunks and drawn with hunk headers, line numbers, added and removed colors, and the changed part of paired lines inverted, in a unified or side-by-side layout with scrolling and row counts for an app's own scrollbar.

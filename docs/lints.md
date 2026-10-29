@@ -23,6 +23,8 @@ No rules yet.
 | `benches/benches/gungraun_calibration.rs`, crate root | `missing_docs` | gungraun's benchmark macros generate undocumented public items | PR 02 (#4); `#[allow]` replaced in #6 |
 | `lunatui-term/src/bin/session_pty_probe.rs`, `run_panic` | `clippy::panic` | PTY integration test exercises panic restore | PR 10 (#22) |
 
+| `lunatui-widgets/src/pie_chart/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, bounded chart coordinates to tiny-skia's f32 coordinates | Pixel PieChart |
+
 ## Checks
 
 | Check | Enforced by | What it rejects |

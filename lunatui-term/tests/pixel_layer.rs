@@ -389,3 +389,123 @@ fn kitty_probe_enables_native_resolution_upload_for_the_placement()
     assert_eq!((sent_width, sent_height), (540, 360));
     Ok(())
 }
+
+fn immediate_layer(protocol: GraphicsProtocol) -> PixelLayer {
+    PixelLayer::from_caps(&Caps {
+        protocols: Protocols {
+            graphics: protocol,
+            ..Protocols::default()
+        },
+        cell_pixels: lunatui_term::CellPixels::new(1, 2),
+        background_rgb: Some([0, 0, 0]),
+        ..Caps::default()
+    })
+}
+
+#[test]
+fn inline_payload_is_a_real_png_with_measured_dimensions_and_original_colors()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut layer = immediate_layer(GraphicsProtocol::Iterm2);
+    let source = ImageSource::rgba8(2, 2, [255, 0, 0, 255].repeat(4).into_boxed_slice())?;
+    layer.begin_frame();
+    assert!(layer.submit(ImageRequest::new(
+        lunatui_image::ImageId::new(8).ok_or("ID")?,
+        0,
+        &source,
+        Rect::new(3, 4, 2, 1),
+        Fit::Stretch,
+        0,
+        255
+    )));
+    assert!(layer.needs_cell_repaint());
+    let output = text(layer.finish_frame());
+    assert!(output.starts_with("\x1b7\x1b[5;4H\x1b]1337;File=inline=1;"));
+    assert!(output.contains(";width=2;height=1;preserveAspectRatio=0:"));
+    let payload = output
+        .split_once(':')
+        .ok_or("payload")?
+        .1
+        .split_once('\x1b')
+        .ok_or("end")?
+        .0;
+    let file = decode(payload);
+    let decoder = png::Decoder::new(std::io::Cursor::new(file));
+    let mut reader = decoder.read_info()?;
+    let mut pixels = vec![0; reader.output_buffer_size().ok_or("size")?];
+    let info = reader.next_frame(&mut pixels)?;
+    assert_eq!((info.width, info.height), (2, 2));
+    assert_eq!(pixels, [255, 0, 0, 255].repeat(4));
+    assert!(output.ends_with("\x1b\\\x1b8"));
+    layer.begin_frame();
+    assert!(
+        layer.needs_cell_repaint(),
+        "omission still needs cell erasure"
+    );
+    assert_eq!(layer.finish_frame(), []);
+    assert!(!layer.needs_cell_repaint());
+    Ok(())
+}
+
+#[test]
+fn sixel_uses_actual_pixels_and_retransmits_unchanged_frames()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut layer = immediate_layer(GraphicsProtocol::Sixel);
+    let image = PixelImage::new(1, 1, &[255, 0, 0, 255]).ok_or("image")?;
+    let first = frame(&mut layer, |layer| {
+        layer.image(7, 0, &image, Rect::new(0, 0, 2, 1), 0);
+    });
+    assert_eq!(
+        text(&first),
+        "\x1b7\x1b[1;1H\x1bP0;1;0q\"1;1;2;2#0;2;100;0;0#0BB$\x1b\\\x1b8"
+    );
+    let second = frame(&mut layer, |layer| {
+        layer.image(7, 0, &image, Rect::new(1, 1, 2, 1), 0);
+    });
+    assert!(text(&second).contains("\x1b[2;2H\x1bP0;1;0q"));
+    assert!(layer.needs_cell_repaint());
+    Ok(())
+}
+
+#[test]
+fn protocol_choice_and_rejection_keep_unsupported_paths_on_cells()
+-> Result<(), Box<dyn std::error::Error>> {
+    for graphics in [GraphicsProtocol::Iterm2, GraphicsProtocol::Sixel] {
+        let mut caps = Caps {
+            protocols: Protocols {
+                graphics,
+                ..Protocols::default()
+            },
+            ..Caps::default()
+        };
+        assert_eq!(
+            PixelMode::from_caps(&caps),
+            PixelMode::Cells,
+            "missing metrics"
+        );
+        caps.cell_pixels = lunatui_term::CellPixels::new(10, 20);
+        assert!(PixelMode::from_caps(&caps).is_pixels());
+        for multiplexer in [Multiplexer::Tmux, Multiplexer::Screen, Multiplexer::Both] {
+            caps.identity.multiplexer = multiplexer;
+            assert_eq!(PixelMode::from_caps(&caps), PixelMode::Cells);
+        }
+        let mut layer = immediate_layer(graphics);
+        let source = ImageSource::rgba8(1, 1, Box::new([255, 0, 0, 255]))?;
+        layer.begin_frame();
+        assert!(!layer.submit(ImageRequest::new(
+            lunatui_image::ImageId::new(2).ok_or("ID")?,
+            0,
+            &source,
+            Rect::new(0, 0, 2, 1),
+            Fit::Stretch,
+            -1,
+            255
+        )));
+        assert_eq!(layer.finish_frame(), []);
+        assert!(
+            layer
+                .pixel_target(Rect::new(0, 0, u16::MAX, u16::MAX))
+                .is_none()
+        );
+    }
+    Ok(())
+}

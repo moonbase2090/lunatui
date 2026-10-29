@@ -86,6 +86,49 @@ impl<'a> RenderCx<'a> {
             .is_some_and(|sink| sink.supports_pixels() && sink.submit(request))
     }
 
+    #[cfg(feature = "pixel-pie-chart")]
+    pub(crate) fn pixel_target(&self, area: Rect) -> Option<lunatui_image::PixelTarget> {
+        self.image_sink.as_deref()?.pixel_target(area)
+    }
+
+    #[cfg(feature = "pixel-pie-chart")]
+    pub(crate) fn pixel_backdrop(
+        &self,
+        area: Rect,
+        default: Option<[u8; 3]>,
+        text_underlay: bool,
+    ) -> Option<Vec<[u8; 3]>> {
+        let mut colors = Vec::with_capacity(usize::from(area.width) * usize::from(area.height));
+        for y in area.y..area.y.checked_add(area.height)? {
+            for x in area.x..area.x.checked_add(area.width)? {
+                let cell = self.grid.get(x, y)?;
+                if !text_underlay
+                    && cell.glyph().decode() != lunatui_core::DecodedGlyph::Inline(' ')
+                {
+                    return None;
+                }
+                colors.push(self.pixel_rgb(cell.style().bg, default)?);
+            }
+        }
+        Some(colors)
+    }
+
+    #[cfg(feature = "pixel-pie-chart")]
+    pub(crate) fn pixel_rgb(&self, mut color: Color, default: Option<[u8; 3]>) -> Option<[u8; 3]> {
+        for _ in 0..16 {
+            match color {
+                Color::Rgb(r, g, b) => return Some([r, g, b]),
+                Color::Indexed(index) => {
+                    let (r, g, b) = ansi_rgb(index);
+                    return Some([r, g, b]);
+                }
+                Color::Default => return default,
+                Color::Token(id) => color = self.theme.resolve_id(id),
+            }
+        }
+        None
+    }
+
     /// Borrow token colors prepared at startup or when the theme changes.
     #[cfg(feature = "color-profiles")]
     #[must_use]

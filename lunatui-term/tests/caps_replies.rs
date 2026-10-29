@@ -307,3 +307,83 @@ fn prismattyc_is_native_and_uses_unicode_widths() {
     assert_eq!(caps.width, WidthPolicy::Unicode);
     assert_eq!(caps.protocols.hyperlinks, Hyperlinks::Osc8);
 }
+
+#[test]
+fn graphics_detection_requires_positive_evidence_and_parses_physical_metrics()
+-> Result<(), Box<dyn std::error::Error>> {
+    let reply = ProbeReply::from_replies(
+        &env_256(),
+        b"\x1b[6;20;10t\x1b]11;rgb:1212/3434/5656\x1b\\\x1b[?62;4;22c",
+    );
+    assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Sixel);
+    let cell = reply.caps.cell_pixels.ok_or("physical metrics")?;
+    assert_eq!((cell.width(), cell.height()), (10, 20));
+    assert_eq!(reply.caps.background_rgb, Some([18, 52, 86]));
+    for bytes in [
+        &b"\x1b[6;0;10t\x1b[?62c"[..],
+        &b"\x1b[6;20;0t\x1b[?62c"[..],
+        &b"\x1b[6;20;10;1t\x1b[?62c"[..],
+        &b"\x1b[6;65536;10t\x1b[?62c"[..],
+    ] {
+        assert!(
+            ProbeReply::from_replies(&env_256(), bytes)
+                .caps
+                .cell_pixels
+                .is_none()
+        );
+    }
+    let reply = ProbeReply::from_replies(&env_256(), b"\x1b_Gi=31;OK\x1b\\\x1b[?62;4c");
+    assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Kitty);
+    Ok(())
+}
+
+#[test]
+fn inline_detection_requires_live_iterm_identity_and_both_ambiguous_f_tokens() {
+    let reply = ProbeReply::from_replies(
+        &env_256(),
+        b"\x1bP>|iTerm2 3.6.0\x1b\\\x1b]1337;Capabilities=T3BFFSy\x1b\\\x1b[?62c",
+    );
+    assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Iterm2);
+    for bytes in [
+        &b"\x1bP>|iTerm2 3.6.0\x1b\\\x1b]1337;Capabilities=BF\x1b\\\x1b[?62c"[..],
+        &b"\x1b]1337;Capabilities=FF\x1b\\\x1b[?62c"[..],
+        &b"\x1bP>|other 1\x1b\\\x1b]1337;Capabilities=FF\x1b\\\x1b[?62c"[..],
+        &b"\x1bP>|iTerm2 3.6.0\x1b\\\x1b]1337;Capabilities=FfF\x1b\\\x1b[?62c"[..],
+    ] {
+        assert_eq!(
+            ProbeReply::from_replies(&env_256(), bytes)
+                .caps
+                .protocols
+                .graphics,
+            GraphicsProtocol::Unknown
+        );
+    }
+    let reply = ProbeReply::from_replies(&env_256(), b"\x1b]1337;Capabilities=Sx\x1b\\\x1b[?62c");
+    assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Sixel);
+}
+
+#[test]
+fn scaled_cell_report_uses_physical_retina_pixels_over_the_point_report()
+-> Result<(), Box<dyn std::error::Error>> {
+    let reply = ProbeReply::from_replies(
+        &env_256(),
+        b"\x1b]1337;ReportCellSize=19.5;9.5;2\x1b\\\x1b[6;20;10t\x1b[?62c",
+    );
+    let cells = reply.caps.cell_pixels.ok_or("scaled cells")?;
+    assert_eq!((cells.width(), cells.height()), (19, 39));
+    for metrics in [
+        "NaN;9;2",
+        "20;inf;2",
+        "20;9;0",
+        "20;9;-1",
+        "20;9;2;3",
+        "999999;9;2",
+    ] {
+        let reply = ProbeReply::from_replies(
+            &env_256(),
+            format!("\x1b]1337;ReportCellSize={metrics}\x1b\\\x1b[?62c").as_bytes(),
+        );
+        assert_eq!(reply.caps.cell_pixels, None, "metrics {metrics}");
+    }
+    Ok(())
+}

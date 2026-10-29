@@ -137,6 +137,8 @@ pub use number_input::NumberInput;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
+#[cfg(feature = "pixel-pie-chart")]
+pub use pie_chart::PixelPieChart;
 #[cfg(feature = "pie-chart")]
 pub use pie_chart::{PieChart, PieLayout, PieSlice};
 #[cfg(feature = "popover")]

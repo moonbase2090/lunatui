@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 use super::{
-    Caps, ColorDepth, GraphicsProtocol, KeyboardProtocol, PrivateMode, ProbeEnv, ProbeReply,
-    refresh,
+    Caps, CellPixels, ColorDepth, GraphicsProtocol, KeyboardProtocol, PrivateMode, ProbeEnv,
+    ProbeReply, refresh,
 };
 
 pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
@@ -11,6 +11,10 @@ pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
     let mut saw_device_attributes = false;
     let mut saw_rgb = false;
     let mut background_dark = None;
+    let mut inline_files = false;
+    let mut sixel = false;
+    let mut live_iterm = false;
+    let mut scaled_cells = None;
     let mut scan = Scan::new(replies);
     while let Some(event) = scan.next_event() {
         match event {
@@ -20,13 +24,36 @@ pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
                 final_byte,
             } => {
                 if final_byte == b'c' {
+                    if intermediates.is_empty() && params.starts_with(b"?") {
+                        sixel |= params[1..]
+                            .split(|byte| *byte == b';')
+                            .skip(1)
+                            .any(|part| part == b"4");
+                    }
                     saw_device_attributes = true;
                     break;
                 }
                 apply_csi(&mut caps, params, intermediates, final_byte);
             }
-            Event::Dcs(data) => apply_xtversion(&mut caps, data),
-            Event::Osc(data) => apply_osc(data, &mut saw_rgb, &mut background_dark),
+            Event::Dcs(data) => {
+                apply_xtversion(&mut caps, data);
+                live_iterm |= xtversion_text(data).is_some()
+                    && caps.identity.program.eq_ignore_ascii_case("iterm2");
+            }
+            Event::Osc(data) => {
+                if let Some(metrics) = data.strip_prefix(b"1337;ReportCellSize=") {
+                    scaled_cells = std::str::from_utf8(metrics).ok().and_then(scaled_cell_size);
+                }
+                if let Some(features) = data.strip_prefix(b"1337;Capabilities=") {
+                    let (files, reported_sixel) = graphics_features(features);
+                    inline_files |= files;
+                    sixel |= reported_sixel;
+                }
+                if let Some(spec) = data.strip_prefix(b"11;") {
+                    caps.background_rgb = std::str::from_utf8(spec).ok().and_then(color_rgb);
+                }
+                apply_osc(data, &mut saw_rgb, &mut background_dark);
+            }
             Event::Apc(data) => {
                 if kitty_graphics_ok(data) {
                     caps.protocols.graphics = GraphicsProtocol::Kitty;
@@ -39,6 +66,18 @@ pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
             caps.color = ColorDepth::TrueColor;
         }
         caps.background_dark = background_dark;
+    }
+    if let Some(cells) = scaled_cells {
+        caps.cell_pixels = Some(cells);
+    }
+    if caps.protocols.graphics != GraphicsProtocol::Kitty {
+        caps.protocols.graphics = if inline_files && live_iterm {
+            GraphicsProtocol::Iterm2
+        } else if sixel {
+            GraphicsProtocol::Sixel
+        } else {
+            GraphicsProtocol::Unknown
+        };
     }
     refresh(&mut caps, env);
     ProbeReply {
@@ -62,6 +101,16 @@ pub(crate) fn has_device_attributes(bytes: &[u8]) -> bool {
 }
 
 fn apply_csi(caps: &mut Caps, params: &[u8], intermediates: &[u8], final_byte: u8) {
+    if final_byte == b't' && intermediates.is_empty() {
+        let mut parts = params.split(|byte| *byte == b';');
+        if parts.next() == Some(&b"6"[..]) {
+            let height = parts.next().and_then(parse_u16);
+            let width = parts.next().and_then(parse_u16);
+            if parts.next().is_none() {
+                caps.cell_pixels = height.zip(width).and_then(|(h, w)| CellPixels::new(w, h));
+            }
+        }
+    }
     if final_byte == b'u' && intermediates.is_empty() && params.first() == Some(&b'?') {
         caps.protocols.keyboard = KeyboardProtocol::Kitty;
         return;
@@ -141,6 +190,72 @@ fn split_version(text: &str) -> (String, String) {
 
 fn clean(text: &str) -> String {
     text.chars().filter(|c| !c.is_control()).take(64).collect()
+}
+
+fn scaled_cell_size(metrics: &str) -> Option<CellPixels> {
+    let mut parts = metrics.split(';');
+    let height = parts.next()?.parse::<f64>().ok()?;
+    let width = parts.next()?.parse::<f64>().ok()?;
+    let scale = parts
+        .next()
+        .map_or(Some(1.0), |part| part.parse::<f64>().ok())?;
+    if parts.next().is_some() || !scale.is_finite() || scale <= 0.0 {
+        return None;
+    }
+    let dimension = |points: f64| {
+        let pixels = (points * scale).round();
+        if !pixels.is_finite() || pixels < 1.0 || pixels > f64::from(u16::MAX) {
+            return None;
+        }
+        format!("{pixels:.0}").parse::<u16>().ok()
+    };
+    CellPixels::new(dimension(width)?, dimension(height)?)
+}
+
+fn graphics_features(mut features: &[u8]) -> (bool, bool) {
+    let mut files = 0;
+    let mut sixel = false;
+    while features.first().is_some_and(u8::is_ascii_uppercase) {
+        let end = features
+            .iter()
+            .skip(1)
+            .position(|byte| !byte.is_ascii_lowercase())
+            .map_or(features.len(), |index| index + 1);
+        let token = &features[..end];
+        features = &features[end..];
+        let digits = features
+            .iter()
+            .take_while(|byte| byte.is_ascii_digit())
+            .count();
+        if digits == 0 {
+            files += u8::from(token == b"F");
+            sixel |= token == b"Sx";
+        }
+        features = &features[digits..];
+    }
+    (files >= 2, sixel)
+}
+
+fn color_rgb(spec: &str) -> Option<[u8; 3]> {
+    let spec = spec.trim();
+    if let Some(hex) = spec.strip_prefix('#') {
+        if hex.len() != 6 || !hex.is_ascii() {
+            return None;
+        }
+        return Some([
+            u8::from_str_radix(&hex[..2], 16).ok()?,
+            u8::from_str_radix(&hex[2..4], 16).ok()?,
+            u8::from_str_radix(&hex[4..], 16).ok()?,
+        ]);
+    }
+    let lower = spec.to_ascii_lowercase();
+    let mut parts = lower.strip_prefix("rgb:")?.split('/');
+    let mut rgb = [0; 3];
+    for channel in &mut rgb {
+        let (value, max) = hex_channel(parts.next()?)?;
+        *channel = u8::try_from(value * 255 / max).ok()?;
+    }
+    parts.next().is_none().then_some(rgb)
 }
 
 fn apply_osc(data: &[u8], saw_rgb: &mut bool, background_dark: &mut Option<bool>) {

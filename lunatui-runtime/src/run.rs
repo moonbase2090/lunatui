@@ -45,7 +45,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         ));
     }
     #[cfg(feature = "image-presenter")]
-    let pixel_mode = probe_pixel_mode();
+    let images = probe_pixel_layer();
     let mut input = Input::open()?;
     let mut session = Session::enter_with_options(
         io::stdout(),
@@ -62,7 +62,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         encoder: Encoder::new(),
         last_palette: None,
         #[cfg(feature = "image-presenter")]
-        images: PixelLayer::new(pixel_mode),
+        images,
     };
     let mut sched = Scheduler::idle();
     sched.on_input();
@@ -168,6 +168,10 @@ fn render_present<A: App>(
         frames.prev = Grid::new(area.width, area.height);
         frames.last_palette = palette;
     }
+    #[cfg(feature = "image-presenter")]
+    if frames.images.needs_cell_repaint() {
+        frames.prev = Grid::new(area.width, area.height);
+    }
     let runs = diff_runs(&frames.prev, &frames.next);
     if let Some(colors) = frames.last_palette.as_ref() {
         frames.encoder.set_token_palette(colors.clone());
@@ -227,23 +231,25 @@ pub fn render_once<A: App>(app: &mut A, width: u16, height: u16) -> (Grid, Clust
 }
 
 #[cfg(all(feature = "image-presenter", unix))]
-fn probe_pixel_mode() -> PixelMode {
+fn probe_pixel_layer() -> PixelLayer {
     use std::fs::OpenOptions;
     use std::os::fd::AsFd;
 
     use lunatui_term::{ProbeEnv, probe_fd};
 
     let Ok(tty) = OpenOptions::new().read(true).write(true).open("/dev/tty") else {
-        return PixelMode::Cells;
+        return PixelLayer::new(PixelMode::Cells);
     };
     let environment = ProbeEnv::from_process();
-    probe_fd(tty.as_fd(), &environment)
-        .map_or(PixelMode::Cells, |reply| PixelMode::from_caps(&reply.caps))
+    probe_fd(tty.as_fd(), &environment).map_or_else(
+        |_| PixelLayer::new(PixelMode::Cells),
+        |reply| PixelLayer::from_caps(&reply.caps),
+    )
 }
 
 #[cfg(all(feature = "image-presenter", not(unix)))]
-fn probe_pixel_mode() -> PixelMode {
-    PixelMode::Cells
+fn probe_pixel_layer() -> PixelLayer {
+    PixelLayer::new(PixelMode::Cells)
 }
 
 #[cfg(test)]

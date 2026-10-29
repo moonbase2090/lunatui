@@ -17,9 +17,9 @@ pub mod sys;
 #[cfg(unix)]
 pub use caps::probe_fd;
 pub use caps::{
-    Caps, ColorDepth, DecModes, GRAPHEME_ENABLE, GraphicsProtocol, Hyperlinks, KeyboardProtocol,
-    Multiplexer, PROBE_BUDGET, PrivateMode, ProbeEnv, ProbeReply, Protocols, QUERIES,
-    RecordedTerminal, TermIdentity, WidthPolicy,
+    Caps, CellPixels, ColorDepth, DecModes, GRAPHEME_ENABLE, GraphicsProtocol, Hyperlinks,
+    KeyboardProtocol, Multiplexer, PROBE_BUDGET, PrivateMode, ProbeEnv, ProbeReply, Protocols,
+    QUERIES, RecordedTerminal, TermIdentity, WidthPolicy,
 };
 pub use encode::{ColorMode, Encoder, write_cursor_state};
 pub use input::{

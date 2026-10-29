@@ -219,3 +219,8 @@ test = true
 name = "template_layout"
 path = "../examples/templates/layout.rs"
 test = true
+
+[[example]]
+name = "pixel_pie_chart"
+path = "../examples/pixel_pie_chart.rs"
+required-features = ["image-presenter"]
