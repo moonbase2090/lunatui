@@ -149,9 +149,9 @@ Screenshot: [docs/media/tooltip.png](docs/media/tooltip.png). Recorded with `scr
 
 ### PieChart
 
-A cluster overview: a storage donut sweeps in with an eased reveal, then the highlight steps through each volume, pulling its slice out and following it in the legend and the detail line, while a high-resolution braille pie of requests by region redraws its shares every frame from live rates. The donut uses quadrant glyphs, so each cell can show two slices, and both charts keep their slice colors apart from each other in the dark, light, and 16-color palettes.
+A cluster overview of live traffic: a high-resolution braille pie of requests by region sweeps in with an eased reveal and redraws its shares every frame from live rates. The highlight then steps through each region, pulling its slice out and following it in the legend, the regions table and the detail line, while a braille line chart beside it tracks total requests over the last 40 seconds. Slice colors stay apart from each other in the dark, light, and 16-color palettes.
 
-<img src="docs/media/pie-chart.webp" alt="PieChart: a storage donut and a braille pie of live request shares on a cluster overview screen in the dark theme" width="1028">
+<img src="docs/media/pie-chart.webp" alt="PieChart: a braille pie of live request shares by region, with a regions table and a request trend, on a cluster overview screen in the dark theme" width="1028">
 
 Screenshot: [docs/media/pie-chart.png](docs/media/pie-chart.png), plus the [light theme](docs/media/pie-chart-light.png) and the [16-color profile](docs/media/pie-chart-ansi16.png). Recorded with `scripts/record-showcase.sh` (`CASE=pie-chart`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
 
