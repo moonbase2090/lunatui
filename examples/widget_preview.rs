@@ -201,6 +201,7 @@ fn preview_menu_state(tick: u32) -> MenuState<&'static str> {
             vec![
                 MenuItem::item("New", "new"),
                 MenuItem::item("Open", "open"),
+                MenuItem::item("Save as", "save-as"),
                 MenuItem::group(
                     "Recent",
                     vec![
@@ -208,7 +209,6 @@ fn preview_menu_state(tick: u32) -> MenuState<&'static str> {
                         MenuItem::item("file_2.txt", "recent-2"),
                     ],
                 ),
-                MenuItem::item("Save as", "save-as"),
             ],
         ),
         MenuItem::group(
@@ -235,6 +235,7 @@ fn preview_menu_state(tick: u32) -> MenuState<&'static str> {
         state.down();
         state.down();
         state.down();
+        state.down();
         state.right();
     }
     state
@@ -247,6 +248,7 @@ fn preview_rat_menu_state(tick: u32) -> RatMenuState<&'static str> {
             vec![
                 RatMenuItem::item("New", "new"),
                 RatMenuItem::item("Open", "open"),
+                RatMenuItem::item("Save as", "save-as"),
                 RatMenuItem::group(
                     "Recent",
                     vec![
@@ -254,7 +256,6 @@ fn preview_rat_menu_state(tick: u32) -> RatMenuState<&'static str> {
                         RatMenuItem::item("file_2.txt", "recent-2"),
                     ],
                 ),
-                RatMenuItem::item("Save as", "save-as"),
             ],
         ),
         RatMenuItem::group(
@@ -278,6 +279,7 @@ fn preview_rat_menu_state(tick: u32) -> RatMenuState<&'static str> {
         state.activate();
     }
     if phase > 1 {
+        state.down();
         state.down();
         state.down();
         state.down();
