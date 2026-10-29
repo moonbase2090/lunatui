@@ -31,6 +31,8 @@ use lunatui_widgets::{
 mod canvas_showcase;
 #[path = "deploy_board.rs"]
 mod deploy_board;
+#[path = "menu_showcase.rs"]
+mod menu_showcase;
 #[path = "release_console.rs"]
 mod release_console;
 #[path = "tooltip_showcase.rs"]
@@ -197,6 +199,14 @@ const PREVIEWS: &[Preview] = &[
 
 fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)
+}
+
+fn native_preview(name: &str) -> Option<NativeDraw> {
+    if name == "menu-editor" {
+        Some(menu_showcase::draw)
+    } else {
+        preview(name).map(|preview| preview.native)
+    }
 }
 
 fn preview_menu_state(tick: u32) -> MenuState<&'static str> {
@@ -6884,7 +6894,7 @@ struct Options {
 fn main() -> io::Result<()> {
     let options = parse(&env::args().skip(1).collect::<Vec<_>>())?;
     let case = CASES.iter().find(|case| case.name == options.case);
-    if case.is_none() && preview(&options.case).is_none() {
+    if case.is_none() && native_preview(&options.case).is_none() {
         return Err(invalid(format!("unknown case: {}", options.case)));
     }
     pin_color_output();
@@ -6913,8 +6923,8 @@ fn play_lunatui(
     let period = Duration::from_secs(1) / options.fps;
     let started = Instant::now();
     for tick in 0..options.frames {
-        match (preview(&options.case), case) {
-            (Some(preview), _) => (preview.native)(&mut next, &mut clusters, &theme, area, tick),
+        match (native_preview(&options.case), case) {
+            (Some(draw), _) => draw(&mut next, &mut clusters, &theme, area, tick),
             (None, Some(case)) => (case.lunatui)(&mut next, &mut clusters, &theme, area, tick),
             (None, None) => return Err(invalid(format!("unknown case: {}", options.case))),
         }

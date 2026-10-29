@@ -235,13 +235,13 @@ Screenshot: [docs/media/image-120x36-truecolor-dark.png](docs/media/image-120x36
 
 ### Nested menu
 
-A File menu opens a cascading Recent submenu over a workspace panel. The recording cycles through closed, root, and nested states at 120×36 in the dark theme.
+An editor opens File, steps past a disabled Save item, and opens Recent. Selecting `metrics.rs` changes the active buffer; the edit is typed into the document and saved, updating the activity log and source-control status. Every panel, menu, code line, cursor and status row comes from real widgets.
 
-![Nested menu with its Recent submenu open](docs/media/nested-menu.webp)
+<img src="docs/media/nested-menu.webp" alt="Nested Menu in a project editor: navigate File, skip disabled Save, open a Recent file, edit and save" width="1028">
 
-Screenshot: [truecolor, dark](docs/media/nested-menu.png). Recorded at 2× with `CASE=nested-menu FRAMES=240 FPS=30 scripts/record-showcase.sh`.
+Screenshot: [Recent submenu over the editor](docs/media/nested-menu.png), taken at 3.8 seconds. Recorded at 120×36 and 2× scale in the dark theme with `CASE=menu-editor FRAMES=300 FPS=30 LAST_FRAME_DURATION=1 MAX_BYTES=2000000 scripts/record-showcase.sh`, as a lossless animated WebP, about 11 seconds.
 
-Side-by-side Lunatui and Ratatui recordings: truecolor dark at [80×24](docs/media/nested-menu-80x24-truecolor-dark-side-by-side.mp4) and [200×60](docs/media/nested-menu-200x60-truecolor-dark-side-by-side.mp4), ANSI16 light at [80×24](docs/media/nested-menu-80x24-ansi16-light-side-by-side.mp4) and [200×60](docs/media/nested-menu-200x60-ansi16-light-side-by-side.mp4). Screenshots: [truecolor dark](docs/media/nested-menu-80x24-truecolor-dark.png) and [ANSI16 light](docs/media/nested-menu-80x24-ansi16-light.png). Reproduce with `CASE=nested-menu WIDTH=80 HEIGHT=24 PROFILE=truecolor THEME=dark FRAMES=180 FPS=30 scripts/record-widget.sh`, changing the size, profile, and theme for each variant.
+Widget-parity Lunatui and Ratatui recordings: truecolor dark at [80×24](docs/media/nested-menu-80x24-truecolor-dark-side-by-side.mp4) and [200×60](docs/media/nested-menu-200x60-truecolor-dark-side-by-side.mp4), ANSI16 light at [80×24](docs/media/nested-menu-80x24-ansi16-light-side-by-side.mp4) and [200×60](docs/media/nested-menu-200x60-ansi16-light-side-by-side.mp4). Screenshots: [truecolor dark](docs/media/nested-menu-80x24-truecolor-dark.png) and [ANSI16 light](docs/media/nested-menu-80x24-ansi16-light.png). Reproduce with `CASE=nested-menu WIDTH=80 HEIGHT=24 PROFILE=truecolor THEME=dark FRAMES=180 FPS=30 scripts/record-widget.sh`, changing the size, profile, and theme for each variant.
 
 ### Popup and ScrollView
 
