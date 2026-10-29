@@ -138,3 +138,16 @@ fn usize_as_f32(mut value: usize) -> f32 {
     }
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::usize_as_f32;
+
+    #[test]
+    fn converts_terminal_widths_within_f32_integer_precision() {
+        assert_eq!(usize_as_f32(0), 0.0);
+        assert_eq!(usize_as_f32(1), 1.0);
+        assert_eq!(usize_as_f32(16_777_215), 16_777_215.0);
+        assert_eq!(usize_as_f32(16_777_217), 16_777_216.0);
+    }
+}
