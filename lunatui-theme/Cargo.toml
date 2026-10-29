@@ -14,7 +14,8 @@ workspace = true
 [features]
 default = []
 color-profiles = []
-graphite-tokens = []
+graphite-extensions = []
+graphite-tokens = ["graphite-extensions"]
 
 [[test]]
 name = "downsample"
@@ -47,3 +48,8 @@ toml = "0.8.23"
 name = "graphite_tokens"
 path = "tests/graphite_tokens.rs"
 required-features = ["graphite-tokens", "color-profiles"]
+
+[[test]]
+name = "graphite_extensions"
+path = "tests/graphite_extensions.rs"
+required-features = ["graphite-extensions", "color-profiles"]

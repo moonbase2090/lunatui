@@ -57,29 +57,14 @@ impl Theme {
     pub fn builtin(variant: Variant) -> Self {
         #[cfg(feature = "graphite-tokens")]
         let colors = crate::graphite::colors(variant);
-        #[cfg(not(feature = "graphite-tokens"))]
-        let colors = match variant {
-            Variant::Light => [
-                Color::Rgb(0xf5, 0xf5, 0xf7),
-                Color::Rgb(0xe8, 0xe8, 0xed),
-                Color::Rgb(0x1a, 0x1a, 0x2e),
-                Color::Rgb(0x7a, 0xa2, 0xf7),
-                Color::Rgb(0x9e, 0xce, 0x6a),
-                Color::Rgb(0xe6, 0x9f, 0x66),
-                Color::Rgb(0xf3, 0x8b, 0xa8),
-                Color::Rgb(0x89, 0xb4, 0xfa),
-            ],
-            Variant::Dark => [
-                Color::Rgb(0x1e, 0x1e, 0x2e),
-                Color::Rgb(0x31, 0x32, 0x44),
-                Color::Rgb(0xcd, 0xd6, 0xf4),
-                Color::Rgb(0x9e, 0xce, 0x6a),
-                Color::Rgb(0xa6, 0xe3, 0xa1),
-                Color::Rgb(0xfa, 0xbd, 0x2f),
-                Color::Rgb(0xf3, 0x8b, 0xa8),
-                Color::Rgb(0xb4, 0xbc, 0xfa),
-            ],
+        #[cfg(all(feature = "graphite-extensions", not(feature = "graphite-tokens")))]
+        let colors = {
+            let mut colors = crate::graphite::colors(variant);
+            colors[..8].copy_from_slice(&classic(variant));
+            colors
         };
+        #[cfg(not(feature = "graphite-extensions"))]
+        let colors = classic(variant);
         Self { variant, colors }
     }
 
@@ -133,7 +118,15 @@ impl Theme {
         } else {
             self.colors.map(|color| profile.downsample(color))
         };
-        #[cfg(not(feature = "graphite-tokens"))]
+        #[cfg(all(feature = "graphite-extensions", not(feature = "graphite-tokens")))]
+        let colors = {
+            let mut colors = self.colors.map(|color| profile.downsample(color));
+            if profile == Profile::Ansi16 {
+                colors[8..].copy_from_slice(&crate::graphite::ansi16(self.variant)[8..]);
+            }
+            colors
+        };
+        #[cfg(not(feature = "graphite-extensions"))]
         let colors = self.colors.map(|color| profile.downsample(color));
         PreparedPalette { colors, profile }
     }
@@ -151,5 +144,31 @@ impl Theme {
             theme.set_token(*token, *color);
         }
         theme
+    }
+}
+
+#[cfg(not(feature = "graphite-tokens"))]
+const fn classic(variant: Variant) -> [Color; 8] {
+    match variant {
+        Variant::Light => [
+            Color::Rgb(0xf5, 0xf5, 0xf7),
+            Color::Rgb(0xe8, 0xe8, 0xed),
+            Color::Rgb(0x1a, 0x1a, 0x2e),
+            Color::Rgb(0x7a, 0xa2, 0xf7),
+            Color::Rgb(0x9e, 0xce, 0x6a),
+            Color::Rgb(0xe6, 0x9f, 0x66),
+            Color::Rgb(0xf3, 0x8b, 0xa8),
+            Color::Rgb(0x89, 0xb4, 0xfa),
+        ],
+        Variant::Dark => [
+            Color::Rgb(0x1e, 0x1e, 0x2e),
+            Color::Rgb(0x31, 0x32, 0x44),
+            Color::Rgb(0xcd, 0xd6, 0xf4),
+            Color::Rgb(0x9e, 0xce, 0x6a),
+            Color::Rgb(0xa6, 0xe3, 0xa1),
+            Color::Rgb(0xfa, 0xbd, 0x2f),
+            Color::Rgb(0xf3, 0x8b, 0xa8),
+            Color::Rgb(0xb4, 0xbc, 0xfa),
+        ],
     }
 }

@@ -22,40 +22,40 @@ pub enum Token {
     Fail = 6,
     /// Semantic `focus.ring` color.
     FocusRing = 7,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `border` color.
     Border = 8,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `text.muted` color.
     TextMuted = 9,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `text.strong` color.
     TextStrong = 10,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `surface.raised` color.
     SurfaceRaised = 11,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `border.title` color.
     BorderTitle = 12,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `hover.outline` color.
     HoverOutline = 13,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `text.idle` color.
     TextIdle = 14,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `focus.fill` color.
     FocusFill = 15,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `focus.line` color.
     FocusLine = 16,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `text.muted.focus` color.
     TextMutedOnFocus = 17,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `on.danger` color.
     OnDanger = 18,
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     /// Semantic `motion.head` color.
     MotionHead = 19,
 }
@@ -63,19 +63,21 @@ pub enum Token {
 impl Token {
     /// Number of tokens enabled in this Cargo feature set.
     ///
-    /// This is 20 when `graphite-tokens` is enabled and 8 otherwise. Cargo
+    /// This is 20 when `graphite-extensions` (or `graphite-tokens`, which turns
+    /// it on) is enabled and 8 otherwise. Cargo
     /// unifies dependency features, so another dependency can enable the
     /// additional variants for the whole build. Do not persist this value as
     /// a format size or assume a fixed count across feature sets.
-    #[cfg(feature = "graphite-tokens")]
+    #[cfg(feature = "graphite-extensions")]
     pub const COUNT: usize = 20;
     /// Number of tokens enabled in this Cargo feature set.
     ///
-    /// This is 20 when `graphite-tokens` is enabled and 8 otherwise. Cargo
+    /// This is 20 when `graphite-extensions` (or `graphite-tokens`, which turns
+    /// it on) is enabled and 8 otherwise. Cargo
     /// unifies dependency features, so another dependency can enable the
     /// additional variants for the whole build. Do not persist this value as
     /// a format size or assume a fixed count across feature sets.
-    #[cfg(not(feature = "graphite-tokens"))]
+    #[cfg(not(feature = "graphite-extensions"))]
     pub const COUNT: usize = 8;
 
     /// Stable id stored in [`lunatui_core::Color::Token`].
@@ -108,29 +110,29 @@ impl Token {
             Self::Warn => "warn",
             Self::Fail => "fail",
             Self::FocusRing => "focus.ring",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::Border => "border",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::TextMuted => "text.muted",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::TextStrong => "text.strong",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::SurfaceRaised => "surface.raised",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::BorderTitle => "border.title",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::HoverOutline => "hover.outline",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::TextIdle => "text.idle",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::FocusFill => "focus.fill",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::FocusLine => "focus.line",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::TextMutedOnFocus => "text.muted.focus",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::OnDanger => "on.danger",
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::MotionHead => "motion.head",
         }
     }
@@ -147,29 +149,29 @@ impl Token {
             Self::Warn,
             Self::Fail,
             Self::FocusRing,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::Border,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::TextMuted,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::TextStrong,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::SurfaceRaised,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::BorderTitle,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::HoverOutline,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::TextIdle,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::FocusFill,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::FocusLine,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::TextMutedOnFocus,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::OnDanger,
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             Self::MotionHead,
         ]
     }
@@ -199,29 +201,29 @@ impl Token {
             "warn" => Some(Self::Warn),
             "fail" => Some(Self::Fail),
             "focus.ring" => Some(Self::FocusRing),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "border" => Some(Self::Border),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "text.muted" => Some(Self::TextMuted),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "text.strong" => Some(Self::TextStrong),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "surface.raised" => Some(Self::SurfaceRaised),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "border.title" => Some(Self::BorderTitle),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "hover.outline" => Some(Self::HoverOutline),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "text.idle" => Some(Self::TextIdle),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "focus.fill" => Some(Self::FocusFill),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "focus.line" => Some(Self::FocusLine),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "text.muted.focus" => Some(Self::TextMutedOnFocus),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "on.danger" => Some(Self::OnDanger),
-            #[cfg(feature = "graphite-tokens")]
+            #[cfg(feature = "graphite-extensions")]
             "motion.head" => Some(Self::MotionHead),
             _ => None,
         }
