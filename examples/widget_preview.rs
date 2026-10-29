@@ -19,13 +19,13 @@ use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText,
-    Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId,
-    FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState, KeyHintBar,
-    LegendPosition, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Monthly,
-    NumberInput, PaneId, Paragraph, PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone,
-    RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Slider, Sparkline,
-    SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput,
-    ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, Diff, DiffLayout,
+    DiffView, DividerId, FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState,
+    KeyHintBar, LegendPosition, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker,
+    Monthly, NumberInput, PaneId, Paragraph, PieChart, PieSlice, PixelSize, ProgressBar,
+    ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Slider,
+    Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag,
+    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -142,6 +142,11 @@ const PREVIEWS: &[Preview] = &[
         name: "logs",
         native: logs_native,
         baseline: logs_baseline,
+    },
+    Preview {
+        name: "diff",
+        native: diff_native,
+        baseline: diff_baseline,
     },
     Preview {
         name: "calendar",
@@ -6332,6 +6337,120 @@ fn pc_table(cx: &mut RenderCx<'_>, pane: Rect, rates: &[f64; 5], styles: [Style;
 }
 
 fn pie_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const DV_DIFF: &str = "--- a/src/grid.rs
++++ b/src/grid.rs
+@@ -12,14 +12,17 @@ impl Grid {
+     pub fn new(width: u16, height: u16) -> Self {
+         let len = usize::from(width) * usize::from(height);
+-        let cells = vec![Cell::EMPTY; len];
++        let mut cells = Vec::with_capacity(len);
++        cells.resize(len, Cell::EMPTY);
+         Self {
+             width,
+             height,
+             cells,
++            dirty: Rect::new(0, 0, width, height),
+         }
+     }
+
+-    pub fn get(&self, x: u16, y: u16) -> Option<&Cell> {
+-        self.cells.get(self.index(x, y))
++    pub fn get(&self, x: u16, y: u16) -> Option<Cell> {
++        let index = self.index(x, y)?;
++        self.cells.get(index).copied()
+     }
+@@ -41,10 +44,12 @@ impl Grid {
+     pub fn set(&mut self, x: u16, y: u16, cell: Cell) {
+-        if x < self.width && y < self.height {
+-            let at = usize::from(y) * usize::from(self.width) + usize::from(x);
+-            self.cells[at] = cell;
++        let Some(index) = self.index(x, y) else {
++            return;
++        };
++        if self.cells[index] != cell {
++            self.cells[index] = cell;
++            self.mark(x, y);
+         }
+     }
+
+     pub fn fill(&mut self, area: Rect, style: Style) {
+-        for y in area.y..area.y + area.height {
+-            for x in area.x..area.x + area.width {
++        for y in area.rows() {
++            for x in area.columns() {
+                 self.set(x, y, Cell::styled(' ', style));
+             }
+         }
+     }
+";
+
+fn dv_diff() -> Diff {
+    Diff::parse(DV_DIFF)
+}
+
+fn dv_scroll(tick: u32) -> usize {
+    let local = if tick < 110 { tick } else { tick - 110 };
+    usize::try_from(local.saturating_sub(15) / 5).unwrap_or(0)
+}
+
+fn diff_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Review  ·  grid: skip redundant writes",
+        head,
+    );
+    let diff = dv_diff();
+    let side = tick >= 110;
+    let pane = Rect::new(area.x + 2, area.y + 2, area.width - 4, area.height - 5);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(format!(" {} ", diff.new_name().trim_start_matches("b/")))
+        .style(fill)
+        .border_style(fill.with_attrs(Attrs::new().set_dim(true)))
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(pane, &mut cx);
+    let layout = if side {
+        DiffLayout::SideBySide
+    } else {
+        DiffLayout::Unified
+    };
+    let inner = Rect::new(pane.x + 2, pane.y + 1, pane.width - 4, pane.height - 2);
+    DiffView::new(&diff)
+        .layout(layout)
+        .scroll(dv_scroll(tick))
+        .render(inner, &mut cx);
+    let (added, removed) = diff.stats();
+    let mode = if side { "side by side" } else { "unified" };
+    StatusBar::new(format!(
+        " {mode}  ●  +{added} −{removed}  ●  v layout  j/k scroll  ●  q quit"
+    ))
+    .style(Style::new().fg(text).bg(raised))
+    .render(
+        Rect::new(
+            area.x,
+            area.y + area.height.saturating_sub(1),
+            area.width,
+            1,
+        ),
+        &mut cx,
+    );
+}
+
+fn diff_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
