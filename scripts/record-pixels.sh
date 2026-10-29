@@ -31,6 +31,7 @@ cleanup() {
   rm -f "$OUT/kitty.sock"
 }
 trap cleanup EXIT INT TERM
+: > "$OUT/display.txt"
 Xvfb -displayfd 3 -screen 0 2800x1800x24 -nolisten tcp 3>"$OUT/display.txt" >"$OUT/xvfb.log" 2>&1 &
 X_PID=$!
 for _ in {1..100}; do [[ -s "$OUT/display.txt" ]] && break; sleep 0.05; done
