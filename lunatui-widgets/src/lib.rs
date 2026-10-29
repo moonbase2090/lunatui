@@ -24,6 +24,8 @@ mod chart;
 #[cfg(feature = "form")]
 mod form;
 mod gauge;
+#[cfg(feature = "graphite-render")]
+pub mod graphite;
 #[cfg(feature = "hex-viewer")]
 mod hex_viewer;
 #[cfg(feature = "image")]
