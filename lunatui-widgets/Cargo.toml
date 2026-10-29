@@ -29,6 +29,7 @@ search-box = ["widget-state"]
 progress = ["widget-state"]
 accordion = ["widget-state"]
 hex-viewer = ["widget-state"]
+pie-chart = ["widget-state"]
 form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
@@ -39,7 +40,7 @@ image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "form", "hex-viewer", "key-hints", "line-gauge", "markdown", "number-input", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "form", "hex-viewer", "key-hints", "line-gauge", "markdown", "number-input", "pie-chart", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.15", path = "../lunatui-core" }
@@ -230,3 +231,8 @@ required-features = ["progress"]
 name = "search_box"
 path = "tests/search_box.rs"
 required-features = ["search-box"]
+
+[[test]]
+name = "pie_chart"
+path = "tests/pie_chart.rs"
+required-features = ["pie-chart"]

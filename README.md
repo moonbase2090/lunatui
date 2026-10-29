@@ -145,6 +145,14 @@ An editor screen with a toolbar, a file tree, source with a warning in the gutte
 
 Screenshot: [docs/media/tooltip.png](docs/media/tooltip.png). Recorded with `scripts/record-showcase.sh` (`CASE=tooltip`, 120×36 at 2x scale, `FRAMES=270`, dark, lossless animated WebP, about 9 seconds plus a 2-second hold).
 
+### PieChart
+
+A cluster overview: a storage donut sweeps in with an eased reveal, then the highlight steps through each volume, pulling its slice out and following it in the legend and the detail line, while a high-resolution braille pie of requests by region redraws its shares every frame from live rates. The donut uses quadrant glyphs, so each cell can show two slices, and both charts keep their slice colors apart from each other in the dark, light, and 16-color palettes.
+
+<img src="docs/media/pie-chart.webp" alt="PieChart: a storage donut and a braille pie of live request shares on a cluster overview screen in the dark theme" width="1028">
+
+Screenshot: [docs/media/pie-chart.png](docs/media/pie-chart.png), plus the [light theme](docs/media/pie-chart-light.png) and the [16-color profile](docs/media/pie-chart-ansi16.png). Recorded with `scripts/record-showcase.sh` (`CASE=pie-chart`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
 ### HexViewer
 
 A firmware inspector: the cursor walks the image header byte by byte, a shift-selection takes the four-byte version and then a section name, pages jump into the boot log strings and the vector table, and a mouse-wheel scroll moves the view while the cursor stays put. The viewer draws only the visible rows of a 4 KB image, colors bytes by kind, and the inspector pane reads the values under the cursor.

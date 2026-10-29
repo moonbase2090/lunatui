@@ -5,6 +5,7 @@
 
 use std::env;
 use std::io::{self, Write};
+use std::sync::OnceLock;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -20,10 +21,11 @@ use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText,
     Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId,
     FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState, KeyHintBar,
-    LegendPosition, List, MarkdownView, Marker, Monthly, NumberInput, PaneId, Paragraph, PixelSize,
-    ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch,
-    Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag,
-    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    LegendPosition, List, MarkdownView, Marker, Monthly, NumberInput, PaneId, Paragraph, PieChart,
+    PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar,
+    SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove,
+    Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget,
+    WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -115,6 +117,11 @@ const PREVIEWS: &[Preview] = &[
         name: "hex-viewer",
         native: hex_viewer_native,
         baseline: hex_viewer_baseline,
+    },
+    Preview {
+        name: "pie-chart",
+        native: pie_native,
+        baseline: pie_baseline,
     },
     Preview {
         name: "slider",
@@ -5978,6 +5985,167 @@ fn hx_inspector(
 
 fn hex_viewer_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
+static PROFILE: OnceLock<Profile> = OnceLock::new();
+
+const PC_STORAGE: [(&str, f64); 5] = [
+    ("Databases", 164.0),
+    ("Object store", 118.0),
+    ("Logs", 62.0),
+    ("Backups", 44.0),
+    ("Images", 24.0),
+];
+const PC_REGIONS: [(&str, f64); 5] = [
+    ("us-east", 3420.0),
+    ("eu-west", 2610.0),
+    ("ap-south", 1480.0),
+    ("us-west", 1190.0),
+    ("sa-east", 540.0),
+];
+
+fn pc_ease(tick: u32, from: u32, span: u32) -> f64 {
+    let t = f64::from(tick.saturating_sub(from).min(span)) / f64::from(span);
+    1.0 - (1.0 - t).powi(3)
+}
+
+fn pc_rates(tick: u32) -> [f64; 5] {
+    let phase = f64::from(tick) / 18.0;
+    let mut rates = [0.0; 5];
+    let mut offset = 0.0;
+    for (rate, (_, base)) in rates.iter_mut().zip(PC_REGIONS) {
+        *rate = base * (1.0 + 0.22 * (phase + offset).sin() + 0.08 * (phase * 2.3 + offset).cos());
+        offset += 1.3;
+    }
+    rates
+}
+
+fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let palette = theme.prepare(PROFILE.get().copied().unwrap_or(Profile::TrueColor));
+    let mut cx = RenderCx::new(grid, clusters, theme).palette(&palette);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(
+        area.x + 1,
+        area.y,
+        "Cluster overview  ·  prod-eu-2  ·  live",
+        head,
+    );
+    let left = Rect::new(area.x + 2, area.y + 2, 57, 32);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        32,
+    );
+    for (title, pane) in [(" Storage ", left), (" Requests by region ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let picked = (tick >= 60).then(|| usize::try_from((tick - 60) / 36).unwrap_or(0) % 5);
+    PieChart::new(
+        PC_STORAGE
+            .iter()
+            .map(|(label, size)| PieSlice::new(*label, *size)),
+    )
+    .marker(Marker::Quadrant)
+    .cell_aspect(2.3)
+    .donut(0.55)
+    .center("412 GB")
+    .caption("of 512 GB")
+    .reveal(pc_ease(tick, 4, 44))
+    .highlight(picked)
+    .state(WidgetState::Focused)
+    .render(
+        Rect::new(left.x + 2, left.y + 2, left.width - 4, 22),
+        &mut cx,
+    );
+    let detail = picked.map_or(("All volumes", 412.0), |index| PC_STORAGE[index]);
+    cx.put_str(
+        left.x + 3,
+        left.y + 26,
+        detail.0,
+        Style::new()
+            .fg(accent)
+            .bg(surface)
+            .with_attrs(Attrs::new().set_bold(true)),
+    );
+    cx.put_str(
+        left.x + 3,
+        left.y + 27,
+        &format!(
+            "{:.0} GB on 6 volumes  ·  {:.1} GB written today",
+            detail.1,
+            detail.1 / 37.0
+        ),
+        dim,
+    );
+    let rates = pc_rates(tick);
+    PieChart::new(
+        PC_REGIONS
+            .iter()
+            .zip(rates)
+            .map(|((label, _), rate)| PieSlice::new(*label, rate)),
+    )
+    .marker(Marker::Braille)
+    .cell_aspect(2.3)
+    .reveal(pc_ease(tick, 14, 44))
+    .render(
+        Rect::new(right.x + 2, right.y + 2, right.width - 4, 15),
+        &mut cx,
+    );
+    pc_table(&mut cx, right, &rates, [fill, dim]);
+    StatusBar::new(" ←→ volume  ●  b braille  ●  d donut  ●  r refresh  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn pc_table(cx: &mut RenderCx<'_>, pane: Rect, rates: &[f64; 5], styles: [Style; 2]) {
+    let [fill, dim] = styles;
+    let x = pane.x + 3;
+    let top = pane.y + 19;
+    cx.put_str(x, top, "region       req/s    p95", dim);
+    let total: f64 = rates.iter().sum();
+    for (row, ((name, _), rate)) in (0_u16..).zip(PC_REGIONS.iter().zip(rates)) {
+        let latency = 38.0 + 140.0 * rate / total;
+        cx.put_str(
+            x,
+            top + 2 + row,
+            &format!("{name:<10} {rate:>7.0}  {latency:>4.0} ms"),
+            fill,
+        );
+    }
+    cx.put_str(
+        x,
+        top + 8,
+        &format!("total      {total:>7.0} req/s"),
+        fill.with_attrs(Attrs::new().set_bold(true)),
+    );
+}
+
+fn pie_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
 const BAR_REGIONS: [(&str, u32); 6] = [
@@ -6479,6 +6647,7 @@ struct Options {
 
 fn main() -> io::Result<()> {
     let options = parse(&env::args().skip(1).collect::<Vec<_>>())?;
+    PROFILE.get_or_init(|| options.profile);
     let case = CASES.iter().find(|case| case.name == options.case);
     if case.is_none() && preview(&options.case).is_none() {
         return Err(invalid(format!("unknown case: {}", options.case)));
