@@ -192,6 +192,7 @@ allow = [
     "time-core",
     "tempfile",
     "tinytemplate",
+    "tui-menu",
     "tui-popup",
     "tui-scrollview",
     "unarray",

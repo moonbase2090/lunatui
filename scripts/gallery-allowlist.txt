@@ -7,3 +7,10 @@
 #
 # A helper may not write cells itself. The cell-writing calls stay forbidden
 # everywhere in scope, so listing a helper never lets it paint.
+scope examples/menu_showcase.rs # the editor scene is composed entirely from public widgets
+helper new # resolves semantic colors for the editor scene without writing cells
+helper panel # lays out and renders a Block
+helper draw # initializes a frame and composes the editor, Menu and status widgets
+helper explorer # renders the project List and text labels
+helper editor # renders code Paragraphs, Tabs and a TextInput caret
+helper activity # renders application event messages through Paragraph

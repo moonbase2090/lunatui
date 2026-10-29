@@ -32,6 +32,7 @@ lunatui-prismattyc = { version = "0.1.15", path = "../lunatui-prismattyc" }
 num-bigint = "0.4"
 num-traits = "0.2"
 ratatui = "=0.30.2"
+tui-menu = "=0.3.1"
 time = { version = "=0.3.55", default-features = false }
 libc = "0.2.190"
 tui-popup = "=0.7.7"
