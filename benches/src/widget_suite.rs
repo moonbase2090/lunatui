@@ -17,9 +17,10 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Canvas, Chart, Dataset, Date, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
-    MarkdownView, Marker, Monthly, NumberInput, Paragraph, PixelSize, Popover, Popup, ProgressBar,
-    RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis,
-    SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Monthly, NumberInput, Paragraph,
+    PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility,
+    SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
+    ToastScope, ToastStack, Toggle, Tooltip, Widget,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -265,6 +266,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: search_box_lunatui,
         ratatui: search_box_ratatui,
+    },
+    Case {
+        name: "log-view",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no log view with a ring buffer, level and target filters, follow and scroll, or text highlight; its side keeps the same entries and draws the last rows by hand as styled lines",
+        ),
+        lunatui: log_view_lunatui,
+        ratatui: log_view_ratatui,
     },
     Case {
         name: "calendar",
@@ -1122,6 +1132,68 @@ fn search_box_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         RatRect::new(area.x, area.y, u16::try_from(width).unwrap_or(0), 1),
         buf,
     );
+}
+
+const LOGV_LINES: [(LogLevel, &str, &str); 6] = [
+    (LogLevel::Info, "api", "GET /v1/orders 200 in 18ms"),
+    (LogLevel::Debug, "db", "pool: 14 of 20 connections idle"),
+    (LogLevel::Warn, "db", "slow query on orders took 812ms"),
+    (LogLevel::Info, "web", "session opened for the dashboard"),
+    (LogLevel::Error, "edge", "upstream refused the connection"),
+    (LogLevel::Trace, "api", "request id assigned"),
+];
+
+fn log_buffer(tick: u32) -> LogBuffer {
+    let mut buffer = LogBuffer::new(200);
+    for index in 0..(60 + tick % 40) {
+        let (level, target, message) = LOGV_LINES[usize::try_from(index % 6).unwrap_or(0)];
+        buffer.push(LogEntry::new(level, target, format!("{message} #{index}")));
+    }
+    buffer
+}
+
+fn log_view_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let buffer = log_buffer(tick);
+    LogView::new(&buffer)
+        .min_level(LogLevel::Info)
+        .target_width(5)
+        .render(area, &mut cx);
+}
+
+fn log_view_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let text = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface0));
+    let dim = text.add_modifier(ratatui::style::Modifier::DIM);
+    let buffer = log_buffer(tick);
+    let mut lines: Vec<Line> = buffer
+        .iter()
+        .filter(|entry| entry.level >= LogLevel::Info)
+        .map(|entry| {
+            let (label, token) = match entry.level {
+                LogLevel::Info => (" INFO", lunatui_theme::Token::Ok),
+                LogLevel::Warn => (" WARN", lunatui_theme::Token::Warn),
+                _ => ("ERROR", lunatui_theme::Token::Fail),
+            };
+            Line::from(vec![
+                Span::styled(label, text.fg(color(token))),
+                Span::styled(format!(" {:<5} ", entry.target), dim),
+                Span::styled(entry.message.clone(), text),
+            ])
+        })
+        .collect();
+    let keep = usize::from(area.height);
+    lines.drain(..lines.len().saturating_sub(keep));
+    RatParagraph::new(lines).render(area, buf);
 }
 
 const RADIO_OPTIONS: [&str; 4] = ["Small", "Medium", "Large", "Extra large"];

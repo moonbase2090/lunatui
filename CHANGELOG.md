@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `LogView` widget and `LogBuffer` ring buffer, behind the `log-view` feature: log lines with a level-colored label, a target column, and a time label, filtered by minimum level, target prefix, and a smart-case text query with the match highlighted, following the newest entry or scrolled back, with `matching`, `max_scroll`, and per-level counts for an app's own scrollbar and header.
 - `Popover` widget, behind the `popover` feature: a titled panel beside an anchor rectangle that never covers it, with the same flipping and sliding placement as `Tooltip`, no backdrop or focus trap, `area` for hit testing, and `PopoverState::click` for opening from the anchor, staying open for clicks inside and closing on clicks outside or Escape.
 - `HexViewer` widget, behind the `hex-viewer` feature: a hex dump with offset, hex and ASCII columns, a cursor and selection kept in `HexViewerState`, row and page moves that keep the cursor on screen, wheel scrolling, `byte_at` for mouse hit testing, an optional column header, a base offset for windows into larger files, byte-kind colors from theme tokens, and widget states.
 
