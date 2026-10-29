@@ -5,7 +5,9 @@
 # first frame. The frames come straight from the recorded terminal output, each kept on its slot
 # of the fixed FPS timestep and shown for its exact milliseconds (GIF delays only count
 # hundredths). LINE_HEIGHT is the rendered line height (1.4 by default; 1.0 keeps Braille dots
-# evenly spaced). Requires asciinema 3, agg, img2webp (libwebp) and ffmpeg with ffprobe.
+# evenly spaced). AGG names the agg binary; it must pass scripts/check-box-joins.py, which stock
+# agg 1.9 does not (it draws rounded corners, tees and double lines from the font). Requires
+# asciinema 3, agg, img2webp (libwebp) and ffmpeg with ffprobe.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -22,6 +24,7 @@ THEME="${THEME:-dark}"
 HARD_MAX_BYTES=3000000
 MAX_BYTES="${MAX_BYTES:-$HARD_MAX_BYTES}"
 OUT="${OUT:-$ROOT/target/widget-showcase}"
+AGG="${AGG:-agg}"
 if [[ ! "$CASE" =~ ^[a-z][a-z-]*$ ]]; then echo "record-showcase: bad CASE" >&2; exit 2; fi
 for value in "$WIDTH" "$HEIGHT" "$FRAMES" "$FPS" "$MAX_BYTES" "$SCALE"; do
   if [[ ! "$value" =~ ^[1-9][0-9]{0,9}$ ]]; then echo "record-showcase: sizes and counts must be positive integers" >&2; exit 2; fi
@@ -35,6 +38,7 @@ case "$PROFILE" in truecolor | ansi256 | ansi16) ;; *) echo "record-showcase: un
 case "$THEME" in dark | light) ;; *) echo "record-showcase: unknown THEME" >&2; exit 2 ;; esac
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
+python3 -I "$ROOT/scripts/check-box-joins.py" "$AGG" "$LINE_HEIGHT"
 cargo build -q --release -p lunatui --features color-profiles --example widget_preview
 BIN="$ROOT/target/release/examples/widget_preview"
 cast="$OUT/${NAME}.cast"
@@ -49,7 +53,7 @@ python3 "$ROOT/scripts/trim-cast.py" "$cast" "$FPS" "$FRAMES"
 TIMELINE_FPS=$(( 10#$FPS < 30 ? 10#$FPS : 30 ))
 SPEED=$(awk -v t="$TIMELINE_FPS" -v f="$FPS" 'BEGIN { printf "%.6f", t / f }')
 # Frames now sit exactly 1/FPS apart; a cap at FPS itself would drop some to rounding.
-agg --speed "$SPEED" --fps-cap "$((10#$FPS * 2))" --font-size $((14 * 10#$SCALE)) --line-height "$LINE_HEIGHT" \
+"$AGG" --speed "$SPEED" --fps-cap "$((10#$FPS * 2))" --font-size $((14 * 10#$SCALE)) --line-height "$LINE_HEIGHT" \
   --last-frame-duration "$LAST_FRAME_DURATION" "$cast" "$gif"
 python3 "$ROOT/scripts/gif-to-webp.py" "$gif" "$webp" "$FPS" "$LAST_FRAME_DURATION" "$TIMELINE_FPS"
 bytes=$(wc -c < "$webp" | awk '{print $1}')
