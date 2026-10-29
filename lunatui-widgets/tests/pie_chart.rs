@@ -844,3 +844,24 @@ fn center_text_follows_an_offset_area() {
     chart.render(Rect::new(4, 1, 6, 3), &mut cx);
     assert_eq!(text_at(&grid, &clusters, 4, 2, 6), "██7 ██");
 }
+
+#[test]
+fn with_three_colors_the_last_slice_differs_from_both_neighbours() {
+    let mut theme = dark();
+    let (red, green, blue) = (
+        Color::Rgb(150, 100, 100),
+        Color::Rgb(100, 150, 100),
+        Color::Rgb(100, 100, 150),
+    );
+    for token in [Token::Accent, Token::Warn, Token::Ok, Token::TextPrimary] {
+        theme.set_token(token, red);
+    }
+    theme.set_token(Token::FocusRing, green);
+    theme.set_token(Token::Fail, blue);
+    assert_eq!(slice_colors(&theme, 3), [red, green, blue]);
+    assert_eq!(slice_colors(&theme, 4), [red, green, blue, green]);
+    assert_eq!(
+        slice_colors(&theme, 7),
+        [red, green, blue, red, green, blue, green]
+    );
+}
