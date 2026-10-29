@@ -543,12 +543,11 @@ impl PieChart {
         };
         let other = majority(all, Some(main));
         let fg = self.slice_color(cx, palette, main);
+        let under = cx.bg_at(x, y);
         let bg = match other {
             Some(index) => self.slice_color(cx, palette, index),
-            None => match cx.bg_at(x, y) {
-                under @ Color::Rgb(..) => under,
-                _ => cx.token(Token::Surface0),
-            },
+            None if under == Color::Default => cx.token(Token::Surface0),
+            None => under,
         };
         let shade = Shade::of(samples, main);
         let glyph = match self.marker {
@@ -567,7 +566,9 @@ impl PieChart {
         } else {
             shown(cx, toward(bg, fg, shade.lit))
         };
-        let unlit = if plain || other.is_none() {
+        let unlit = if other.is_none() {
+            under
+        } else if plain {
             bg
         } else {
             shown(cx, toward(bg, fg, shade.unlit))

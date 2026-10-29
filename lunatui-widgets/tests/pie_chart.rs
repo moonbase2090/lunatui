@@ -914,7 +914,7 @@ fn antialiased_edges_blend_between_the_slice_and_the_background() {
     let cells = drawn_cells(&grid, &clusters, width, height);
     for style in &cells {
         assert!(between(style.fg, surface, accent), "fg {:?}", style.fg);
-        assert!(between(style.bg, surface, accent), "bg {:?}", style.bg);
+        assert_eq!(style.bg, Color::Default, "the background stays as it was");
     }
     let blended = cells
         .iter()
@@ -965,7 +965,7 @@ fn a_sixteen_color_profile_leaves_antialiased_edges_unblended() {
         .render(Rect::new(0, 0, 24, 10), &mut cx);
     for style in drawn_cells(&grid, &clusters, 24, 10) {
         assert!(matches!(style.fg, Color::Indexed(n) if n < 16), "{style:?}");
-        assert!(matches!(style.bg, Color::Indexed(n) if n < 16), "{style:?}");
+        assert_eq!(style.bg, Color::Default, "{style:?}");
     }
 }
 
@@ -978,9 +978,10 @@ fn antialiasing_never_tints_the_background_around_the_disc() {
     for y in 0..height {
         for x in 0..width {
             let bg = style_at(&shaded, x, y).bg;
-            assert!(
-                bg == Color::Default || bg == surface,
-                "cell {x},{y} background {bg:?}"
+            assert_eq!(
+                bg,
+                Color::Default,
+                "cell {x},{y} background (surface is {surface:?})"
             );
             if text_at(&plain, &plain_clusters, x, y, 1) == " " {
                 assert_ne!(
@@ -1262,4 +1263,18 @@ fn a_sixteen_color_seam_keeps_both_slice_colors_unblended() {
         }
     }
     assert!(seams >= 4, "only {seams} seam cells");
+}
+
+#[test]
+fn shaded_edges_keep_an_indexed_background_exactly() {
+    let under = Color::Indexed(236);
+    let (grid, clusters) = draw_on(&octant_disc().antialias(true), 24, 10, under);
+    let mut glyphs = 0;
+    for y in 0..10 {
+        for x in 0..24 {
+            assert_eq!(style_at(&grid, x, y).bg, under, "cell {x},{y}");
+            glyphs += usize::from(text_at(&grid, &clusters, x, y, 1) != " ");
+        }
+    }
+    assert!(glyphs >= 20, "only {glyphs} cells drawn");
 }
