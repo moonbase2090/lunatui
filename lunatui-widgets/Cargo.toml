@@ -14,7 +14,7 @@ workspace = true
 default = []
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
-nested-menu = ["widget-state", "lunatui-theme/graphite-tokens"]
+nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
 markdown = ["widget-state", "lunatui-text/markdown"]
 line-gauge = ["widget-state"]
 calendar = ["widget-state"]
@@ -123,6 +123,11 @@ required-features = ["calendar"]
 name = "nested_menu"
 path = "tests/nested_menu.rs"
 required-features = ["nested-menu"]
+
+[[test]]
+name = "default_palette"
+path = "tests/default_palette.rs"
+required-features = ["all-widgets"]
 
 [[test]]
 name = "status_dot_color_profiles"
