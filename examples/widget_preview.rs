@@ -20,10 +20,11 @@ use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText,
     Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, DividerId,
     FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState, KeyHintBar,
-    LegendPosition, List, MarkdownView, Marker, Monthly, NumberInput, PaneId, Paragraph, PixelSize,
-    ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch,
-    Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag,
-    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    LegendPosition, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Monthly,
+    NumberInput, PaneId, Paragraph, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup,
+    RenderCx, Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag,
+    SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope,
+    ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -130,6 +131,11 @@ const PREVIEWS: &[Preview] = &[
         name: "search-box",
         native: search_native,
         baseline: search_baseline,
+    },
+    Preview {
+        name: "logs",
+        native: logs_native,
+        baseline: logs_baseline,
     },
     Preview {
         name: "calendar",
@@ -5977,6 +5983,188 @@ fn hx_inspector(
 }
 
 fn hex_viewer_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const LV_LINES: [(LogLevel, &str, &str); 20] = [
+    (LogLevel::Info, "api", "GET /v1/orders 200 in 18ms"),
+    (LogLevel::Debug, "db", "pool: 14 of 20 connections idle"),
+    (
+        LogLevel::Info,
+        "web",
+        "session 4f2a opened for the dashboard",
+    ),
+    (
+        LogLevel::Trace,
+        "edge",
+        "keepalive probe to 10.2.0.7 answered",
+    ),
+    (LogLevel::Warn, "db", "slow query on orders took 812ms"),
+    (LogLevel::Info, "jobs", "invoice export queued, 3 ahead"),
+    (LogLevel::Debug, "api", "cache hit for catalog:eu (ttl 42s)"),
+    (
+        LogLevel::Error,
+        "edge",
+        "upstream web-2 refused the connection",
+    ),
+    (LogLevel::Info, "api", "POST /v1/payments 201 in 64ms"),
+    (LogLevel::Warn, "jobs", "retry 2 of 5 for mail digest"),
+    (LogLevel::Debug, "db", "vacuum finished, 1.2 GB reclaimed"),
+    (
+        LogLevel::Info,
+        "web",
+        "asset bundle 8c1e served from memory",
+    ),
+    (LogLevel::Trace, "db", "checkpoint wrote 212 pages"),
+    (
+        LogLevel::Info,
+        "edge",
+        "web-2 healthy again, back in rotation",
+    ),
+    (LogLevel::Warn, "api", "rate limit at 90% for key ak_31"),
+    (LogLevel::Info, "jobs", "invoice export finished in 4.1s"),
+    (LogLevel::Debug, "web", "websocket ping from 3 clients"),
+    (
+        LogLevel::Error,
+        "db",
+        "deadlock detected, transaction rolled back",
+    ),
+    (LogLevel::Info, "api", "GET /v1/status 200 in 2ms"),
+    (LogLevel::Trace, "api", "request id 7e19 assigned"),
+];
+
+fn lv_buffer(tick: u32) -> LogBuffer {
+    let mut buffer = LogBuffer::new(400);
+    let count = 36 + tick / 6;
+    for index in 0..count {
+        let (level, target, message) = LV_LINES[usize::try_from(index * 7 % 20).unwrap_or(0)];
+        let second = 31 + index;
+        let stamp = format!("12:{:02}:{:02}", 4 + second / 60, second % 60);
+        buffer.push(LogEntry::new(level, target, format!("{message} #{index}")).stamp(stamp));
+    }
+    buffer
+}
+
+fn lv_behind(tick: u32) -> usize {
+    if !(120..180).contains(&tick) {
+        return 0;
+    }
+    usize::try_from(14_u32.saturating_sub((tick - 120) / 4)).unwrap_or(0)
+}
+
+fn lv_query(tick: u32) -> &'static str {
+    if tick >= 180 { "orders" } else { "" }
+}
+
+fn lv_level(tick: u32) -> LogLevel {
+    if (60..120).contains(&tick) {
+        LogLevel::Warn
+    } else {
+        LogLevel::Debug
+    }
+}
+
+fn lv_view(buffer: &LogBuffer, tick: u32) -> LogView<'_> {
+    let behind = lv_behind(tick);
+    LogView::new(buffer)
+        .target_width(5)
+        .min_level(lv_level(tick))
+        .query(lv_query(tick))
+        .follow(behind == 0)
+        .scroll(behind)
+}
+
+fn lv_levels(cx: &mut RenderCx<'_>, (x, y): (u16, u16), counts: [usize; 5], shown: LogLevel) {
+    let surface = cx.token(Token::Surface0);
+    let text = Style::new().fg(cx.token(Token::TextPrimary)).bg(surface);
+    let on = Style::new()
+        .fg(surface)
+        .bg(cx.token(Token::Accent))
+        .with_attrs(Attrs::new().set_bold(true));
+    let names = ["trace", "debug", "info", "warn", "error"];
+    let levels = [
+        LogLevel::Trace,
+        LogLevel::Debug,
+        LogLevel::Info,
+        LogLevel::Warn,
+        LogLevel::Error,
+    ];
+    let mut at = x;
+    for ((name, count), level) in names.iter().zip(counts).zip(levels) {
+        let label = format!(" {name} {count} ");
+        let style = if level >= shown {
+            on
+        } else {
+            text.with_attrs(Attrs::new().set_dim(true))
+        };
+        cx.put_str(at, y, &label, style);
+        at += u16::try_from(label.chars().count()).unwrap_or(0) + 1;
+    }
+}
+
+fn logs_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Service logs  ·  lunatui", head);
+    let pane = Rect::new(area.x + 2, area.y + 2, area.width - 4, area.height - 5);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Logs ")
+        .style(fill)
+        .border_style(fill.with_attrs(Attrs::new().set_dim(true)))
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(pane, &mut cx);
+    let buffer = lv_buffer(tick);
+    let view = lv_view(&buffer, tick);
+    lv_levels(
+        &mut cx,
+        (pane.x + 2, pane.y + 1),
+        buffer.counts(),
+        lv_level(tick),
+    );
+    let query = lv_query(tick);
+    SearchBox::new(query, query.len())
+        .placeholder("Filter messages")
+        .matches(None, view.matching())
+        .render(
+            Rect::new(pane.x + 2, pane.y + 3, pane.width - 4, 1),
+            &mut cx,
+        );
+    let rows = pane.height - 6;
+    view.render(
+        Rect::new(pane.x + 2, pane.y + 5, pane.width - 4, rows),
+        &mut cx,
+    );
+    let mode = if lv_behind(tick) > 0 {
+        "paused, scrolled back"
+    } else {
+        "following the newest"
+    };
+    StatusBar::new(format!(
+        " {mode}  ●  {} lines  ●  l level  /  filter  ●  q quit",
+        buffer.len()
+    ))
+    .style(Style::new().fg(text).bg(raised))
+    .render(
+        Rect::new(
+            area.x,
+            area.y + area.height.saturating_sub(1),
+            area.width,
+            1,
+        ),
+        &mut cx,
+    );
+}
+
+fn logs_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 const BAR_SERVICES: [&str; 4] = ["api", "web", "jobs", "edge"];
 const BAR_PERCENTILES: [&str; 3] = ["p50", "p95", "p99"];
