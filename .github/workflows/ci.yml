@@ -46,7 +46,7 @@ jobs:
       - run: cargo test --locked -p lunatui-bench --features subcell --test subcell_allocs
       - run: cargo test --locked -p lunatui-core --features render-color
       - run: cargo test --locked -p lunatui-bench --features render-color --test render_color_allocs
-      - run: cargo test -p lunatui-widgets --features color-profiles,barchart,bigtext,calendar,sparkline
+      - run: cargo test -p lunatui-widgets --features color-profiles,all-widgets
       - run: cargo test --locked -p lunatui-term --features pixel-layer
       - run: cargo test --locked -p lunatui-bench --features pixel-layer --test pixel_layer_allocs
       # `app` is off by default. Select the packages that define it so
@@ -109,3 +109,4 @@ jobs:
       - uses: actions/checkout@v5
       - run: ./scripts/check-gallery-real-output-selftest.sh
       - run: ./scripts/check-gallery-real-output.sh
+      - run: ./scripts/trim-cast-selftest.sh

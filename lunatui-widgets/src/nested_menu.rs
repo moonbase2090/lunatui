@@ -335,13 +335,15 @@ impl<T> Widget for Menu<'_, T> {
             area,
             cx,
             colors,
-            area.x
-                .saturating_add(root_item_bar_offset(&self.state.items, selected_root)),
-            area.y.saturating_add(1),
-            &root_item.children,
-            self.state.selected_path.get(1).copied(),
-            self.state.selected_path.get(2..).unwrap_or_default(),
-            dropdowns,
+            &Dropdown {
+                x: area
+                    .x
+                    .saturating_add(root_item_bar_offset(&self.state.items, selected_root)),
+                y: area.y.saturating_add(1),
+                items: &root_item.children,
+                selected_path: self.state.selected_path.get(1..).unwrap_or_default(),
+                remaining: dropdowns,
+            },
         );
     }
 
@@ -365,30 +367,30 @@ struct MenuColors {
 
 impl MenuColors {
     fn new(cx: &RenderCx<'_>, state: WidgetState) -> Self {
-        let bar = Style::new()
+        let disabled = Style::new()
+            .fg(cx.token(Token::TextMuted))
+            .bg(cx.token(Token::SurfaceRaised))
+            .with_attrs(lunatui_core::Attrs::new().set_dim(true));
+        let normal = Style::new()
             .fg(cx.token(Token::TextPrimary))
             .bg(cx.token(Token::SurfaceRaised));
-        let panel = Style::new()
-            .fg(cx.token(Token::TextPrimary))
-            .bg(cx.token(Token::SurfaceRaised));
+        let panel = if state == WidgetState::Disabled {
+            disabled
+        } else {
+            normal
+        };
+        let bar = panel;
         let border = panel;
         let selected = match state {
             WidgetState::Focused => Style::new()
                 .fg(cx.token(Token::TextMutedOnFocus))
                 .bg(cx.token(Token::FocusFill)),
-            WidgetState::Disabled => Style::new()
-                .fg(cx.token(Token::TextMuted))
-                .bg(cx.token(Token::SurfaceRaised))
-                .with_attrs(lunatui_core::Attrs::new().set_dim(true)),
+            WidgetState::Disabled => disabled,
             WidgetState::Normal => Style::new()
                 .fg(cx.token(Token::Accent))
                 .bg(cx.token(Token::SurfaceRaised))
                 .with_attrs(lunatui_core::Attrs::new().set_bold(true)),
         };
-        let disabled = Style::new()
-            .fg(cx.token(Token::TextMuted))
-            .bg(cx.token(Token::SurfaceRaised))
-            .with_attrs(lunatui_core::Attrs::new().set_dim(true));
         Self {
             bar,
             panel,
@@ -397,6 +399,14 @@ impl MenuColors {
             disabled,
         }
     }
+}
+
+struct Dropdown<'a, T> {
+    x: u16,
+    y: u16,
+    items: &'a [MenuItem<T>],
+    selected_path: &'a [usize],
+    remaining: u16,
 }
 
 impl<T> Menu<'_, T> {
@@ -425,19 +435,21 @@ impl<T> Menu<'_, T> {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn render_dropdown(
         &self,
         bounds: Rect,
         cx: &mut RenderCx<'_>,
         colors: MenuColors,
-        x: u16,
-        y: u16,
-        items: &[MenuItem<T>],
-        selected: Option<usize>,
-        selected_tail: &[usize],
-        dropdowns_to_go: u16,
+        dropdown: &Dropdown<'_, T>,
     ) {
+        let Dropdown {
+            x,
+            y,
+            items,
+            selected_path,
+            remaining,
+        } = *dropdown;
+        let selected = selected_path.first().copied();
         if items.is_empty() || bounds.width == 0 || bounds.height < 3 {
             return;
         }
@@ -459,7 +471,7 @@ impl<T> Menu<'_, T> {
         }
         let width_reserve = self
             .dropdown_width
-            .saturating_mul(dropdowns_to_go.max(1))
+            .saturating_mul(remaining.max(1))
             .min(bounds.width);
         let max_x = bounds
             .x
@@ -495,40 +507,7 @@ impl<T> Menu<'_, T> {
                 );
         }
         let max_label = u16::try_from(child_width).unwrap_or(u16::MAX);
-        for (index, item) in items.iter().enumerate() {
-            let row_y = panel
-                .y
-                .saturating_add(1)
-                .saturating_add(u16::try_from(index).unwrap_or(u16::MAX));
-            if row_y >= panel.y.saturating_add(panel.height).saturating_sub(1) {
-                break;
-            }
-            let is_selected = selected == Some(index);
-            let style = if item.disabled {
-                colors.disabled
-            } else if is_selected {
-                colors.selected
-            } else {
-                colors.panel
-            };
-            let row_x = panel.x.saturating_add(2);
-            let mut label_x = row_x;
-            label_x = label_x.saturating_add(put_clipped(cx, panel, label_x, row_y, " ", style));
-            label_x =
-                label_x.saturating_add(put_clipped(cx, panel, label_x, row_y, &item.label, style));
-            let label_width = u16::try_from(width(&item.label)).unwrap_or(u16::MAX);
-            let padding = max_label.saturating_sub(label_width);
-            fill_spaces(cx, panel, label_x, row_y, padding, style);
-            label_x = label_x.saturating_add(padding);
-            put_clipped(
-                cx,
-                panel,
-                label_x,
-                row_y,
-                if item.is_group() { ">" } else { " " },
-                style,
-            );
-        }
+        render_dropdown_items(dropdown, panel, cx, colors, max_label);
 
         let Some(index) = selected else {
             return;
@@ -536,7 +515,7 @@ impl<T> Menu<'_, T> {
         let Some(item) = items.get(index) else {
             return;
         };
-        if item.disabled || !item.is_group() || dropdowns_to_go <= 1 {
+        if item.disabled || !item.is_group() || remaining <= 1 {
             return;
         }
         let nested_x = panel.x.saturating_add(2).saturating_add(max_label);
@@ -548,12 +527,57 @@ impl<T> Menu<'_, T> {
             bounds,
             cx,
             colors,
-            nested_x,
-            nested_y,
-            &item.children,
-            selected_tail.first().copied(),
-            selected_tail.get(1..).unwrap_or_default(),
-            dropdowns_to_go.saturating_sub(1),
+            &Dropdown {
+                x: nested_x,
+                y: nested_y,
+                items: &item.children,
+                selected_path: selected_path.get(1..).unwrap_or_default(),
+                remaining: remaining.saturating_sub(1),
+            },
+        );
+    }
+}
+
+fn render_dropdown_items<T>(
+    dropdown: &Dropdown<'_, T>,
+    panel: Rect,
+    cx: &mut RenderCx<'_>,
+    colors: MenuColors,
+    max_label: u16,
+) {
+    let selected = dropdown.selected_path.first().copied();
+    for (index, item) in dropdown.items.iter().enumerate() {
+        let row_y = panel
+            .y
+            .saturating_add(1)
+            .saturating_add(u16::try_from(index).unwrap_or(u16::MAX));
+        if row_y >= panel.y.saturating_add(panel.height).saturating_sub(1) {
+            break;
+        }
+        let is_selected = selected == Some(index);
+        let style = if item.disabled {
+            colors.disabled
+        } else if is_selected {
+            colors.selected
+        } else {
+            colors.panel
+        };
+        let row_x = panel.x.saturating_add(2);
+        let mut label_x = row_x;
+        label_x = label_x.saturating_add(put_clipped(cx, panel, label_x, row_y, " ", style));
+        label_x =
+            label_x.saturating_add(put_clipped(cx, panel, label_x, row_y, &item.label, style));
+        let label_width = u16::try_from(width(&item.label)).unwrap_or(u16::MAX);
+        let padding = max_label.saturating_sub(label_width);
+        fill_spaces(cx, panel, label_x, row_y, padding, style);
+        label_x = label_x.saturating_add(padding);
+        put_clipped(
+            cx,
+            panel,
+            label_x,
+            row_y,
+            if item.is_group() { ">" } else { " " },
+            style,
         );
     }
 }
@@ -589,7 +613,7 @@ fn fill_spaces(
 ) {
     const SPACES: &str = "                                                                ";
     while count > 0 {
-        let chunk = count.min(SPACES.len() as u16);
+        let chunk = count.min(64);
         let painted = put_clipped(cx, bounds, x, y, &SPACES[..usize::from(chunk)], style);
         if painted == 0 {
             return;

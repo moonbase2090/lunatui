@@ -669,7 +669,7 @@ fn days_from_civil(mut year: i32, month: u32, day: u32) -> i32 {
     let era = if year >= 0 { year } else { year - 399 } / 400;
     let yoe = u32::try_from(year - era * 400).unwrap_or(0);
     let month_adj = if month > 2 { month - 3 } else { month + 9 };
-    let doy = (153 * month_adj + 2) / 5 + day - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let day_of_year = (153 * month_adj + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + day_of_year;
     era * 146_097 + i32::try_from(doe).unwrap_or(0) - 719_468
 }

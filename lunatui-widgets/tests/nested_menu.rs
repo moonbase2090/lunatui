@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
-//! Nested menu behavior and tui-menu cell parity checks.
+
+#![doc = include_str!("../README.md")]
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect};
 use lunatui_theme::{Theme, Token, Variant};
@@ -157,10 +158,9 @@ fn paint_ratatui(
 
 fn to_rat_color(color: Color) -> RatColor {
     match color {
-        Color::Default => RatColor::Reset,
+        Color::Default | Color::Token(_) => RatColor::Reset,
         Color::Rgb(red, green, blue) => RatColor::Rgb(red, green, blue),
         Color::Indexed(index) => RatColor::Indexed(index),
-        Color::Token(_) => RatColor::Reset,
     }
 }
 
@@ -196,7 +196,7 @@ fn assert_same_cells(grid: &Grid, clusters: &ClusterTable, buffer: &Buffer) {
             .collect::<String>();
         assert_eq!(native, baseline, "row {y}");
         for x in 0..buffer.area.width {
-            let cell = grid.get(x, y).expect("cell exists");
+            let cell = grid.get(x, y).unwrap_or_default();
             let expected = &buffer[(x, y)];
             let actual_style = cell.style();
             assert_eq!(
@@ -225,14 +225,16 @@ fn assert_same_cells(grid: &Grid, clusters: &ClusterTable, buffer: &Buffer) {
 
 #[test]
 fn matches_tui_menu_cells_for_inactive_dropdown_and_nested_states() {
-    let theme = Theme::builtin(Variant::Dark);
-    for (width, height) in [(80, 24), (200, 60)] {
-        for scenario in [Scenario::Inactive, Scenario::RootOpen, Scenario::NestedOpen] {
-            let native_state = native_state(scenario);
-            let mut baseline_state = ratatui_state(scenario);
-            let (grid, clusters) = paint_native(&native_state, &theme, width, height);
-            let buffer = paint_ratatui(&mut baseline_state, &theme, width, height);
-            assert_same_cells(&grid, &clusters, &buffer);
+    for variant in [Variant::Dark, Variant::Light] {
+        let theme = Theme::builtin(variant);
+        for (width, height) in [(80, 24), (200, 60)] {
+            for scenario in [Scenario::Inactive, Scenario::RootOpen, Scenario::NestedOpen] {
+                let native_state = native_state(scenario);
+                let mut baseline_state = ratatui_state(scenario);
+                let (grid, clusters) = paint_native(&native_state, &theme, width, height);
+                let buffer = paint_ratatui(&mut baseline_state, &theme, width, height);
+                assert_same_cells(&grid, &clusters, &buffer);
+            }
         }
     }
 }
@@ -285,9 +287,48 @@ fn reset_closes_nested_levels_without_dropping_queued_actions() {
     state.select();
 
     assert!(state.reset());
-    assert!(state.selected_path().is_empty());
+    assert_eq!(state.selected_path(), &[] as &[usize]);
     assert_eq!(
         state.drain_events().collect::<Vec<_>>(),
         [lunatui_widgets::MenuEvent::Selected("open-recent")]
     );
+}
+
+#[test]
+fn disabled_menu_dims_unselected_roots_and_dropdown_rows() {
+    let mut state = native_state(Scenario::RootOpen);
+    state.down();
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(80, 24);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Menu::new(&state)
+        .state(WidgetState::Disabled)
+        .render(Rect::new(0, 0, 80, 24), &mut cx);
+    assert!(grid.row_display(0, &clusters).contains("File  Edit  About"));
+    assert!(grid.row_display(3, &clusters).contains("Open"));
+    for (x, y) in [(2, 0), (8, 0), (3, 2), (3, 3)] {
+        let style = grid.get(x, y).unwrap_or_default().style();
+        assert_eq!(style.fg, theme.resolve(Token::TextMuted), "fg at {x},{y}");
+        assert_eq!(
+            style.bg,
+            theme.resolve(Token::SurfaceRaised),
+            "bg at {x},{y}"
+        );
+        assert!(style.attrs.dim(), "dim at {x},{y}");
+        assert!(!style.attrs.bold(), "no selection emphasis at {x},{y}");
+    }
+}
+
+#[test]
+fn wide_labels_clip_to_an_offset_bar_without_splitting_a_character() {
+    let state = MenuState::new(vec![MenuItem::item("界界界界", "open")]);
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(14, 3);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    Menu::new(&state).render(Rect::new(2, 1, 7, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "              ");
+    assert_eq!(grid.row_display(1, &clusters), "    界界      ");
+    assert_eq!(grid.row_display(2, &clusters), "              ");
 }

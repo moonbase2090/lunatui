@@ -221,10 +221,11 @@ fn kitty_graphics_ok(data: &[u8]) -> bool {
     let Ok(text) = std::str::from_utf8(data) else {
         return false;
     };
-    if !text.contains("a=q") {
+    let Some((control, status)) = text.strip_prefix('G').and_then(|body| body.split_once(';'))
+    else {
         return false;
-    }
-    text.split([',', ';', ' ']).any(|part| part == "OK")
+    };
+    status == "OK" && control.split(',').any(|field| field == "i=31")
 }
 
 fn parse_u16(bytes: &[u8]) -> Option<u16> {

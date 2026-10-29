@@ -5,13 +5,6 @@
 use core::fmt;
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 
-#[cfg(any(
-    feature = "barchart",
-    feature = "bigtext",
-    feature = "calendar",
-    feature = "image",
-    feature = "sparkline"
-))]
 use lunatui_core::UnderlineStyle;
 
 use crate::overlay::blend_rgb;
@@ -144,10 +137,17 @@ impl<'a> RenderCx<'a> {
         }
     }
 
+    /// Fills `area` with `ch` and `style` without building an intermediate string.
+    pub fn fill(&mut self, area: Rect, style: Style, ch: char) {
+        self.grid.fill(area, style, ch, self.clusters);
+    }
+
     #[cfg(any(
         feature = "barchart",
         feature = "bigtext",
         feature = "calendar",
+        feature = "chart",
+        feature = "hex-viewer",
         feature = "image",
         feature = "sparkline"
     ))]
@@ -161,7 +161,7 @@ impl<'a> RenderCx<'a> {
         self.grid.put_char(x, y, patched, glyph, self.clusters);
     }
 
-    #[cfg(feature = "barchart")]
+    #[cfg(any(feature = "barchart", feature = "canvas", feature = "chart"))]
     pub(crate) fn clear_area(&mut self, area: Rect, style: Style) {
         let blank = lunatui_core::GlyphSlot::inline_scalar(' ');
         for y in area.y..area.y.saturating_add(area.height) {
@@ -191,6 +191,111 @@ impl<'a> RenderCx<'a> {
         }
     }
 
+    #[cfg(feature = "image")]
+    pub(crate) fn keep_backgrounds(&mut self, area: Rect, draw: impl FnOnce(&mut Self)) {
+        let end_x = area.x.saturating_add(area.width);
+        let end_y = area.y.saturating_add(area.height);
+        let cells: Vec<(u16, u16)> = (area.y..end_y)
+            .flat_map(|y| (area.x..end_x).map(move |x| (x, y)))
+            .collect();
+        let before: Vec<Color> = cells
+            .iter()
+            .map(|&(x, y)| {
+                self.grid
+                    .get(x, y)
+                    .map_or(Color::Default, |cell| cell.style().bg)
+            })
+            .collect();
+        draw(self);
+        for (&(x, y), bg) in cells.iter().zip(before) {
+            let Some(cell) = self.grid.get(x, y) else {
+                continue;
+            };
+            let style = cell.style();
+            if style.bg == Color::Default && bg != Color::Default {
+                self.grid.set_style(Rect::new(x, y, 1, 1), style.bg(bg));
+            }
+        }
+    }
+
+    #[cfg(feature = "popup")]
+    pub(crate) fn inherit(&mut self, area: Rect, style: Style) {
+        for row in area.y..area.y.saturating_add(area.height) {
+            for col in area.x..area.x.saturating_add(area.width) {
+                let Some(cell) = self.grid.get(col, row) else {
+                    continue;
+                };
+                let own = cell.style();
+                if own.fg != Color::Default && own.bg != Color::Default {
+                    continue;
+                }
+                let filled = Style {
+                    fg: if own.fg == Color::Default {
+                        style.fg
+                    } else {
+                        own.fg
+                    },
+                    bg: if own.bg == Color::Default {
+                        style.bg
+                    } else {
+                        own.bg
+                    },
+                    attrs: own.attrs,
+                };
+                self.grid.set_style(Rect::new(col, row, 1, 1), filled);
+            }
+        }
+    }
+
+    #[cfg(feature = "popup")]
+    pub(crate) fn fade_fg(&mut self, area: Rect, alpha: f32, toward: Color) {
+        let toward_rgb = resolve_rgb(toward, self.theme);
+        for row in area.y..area.y.saturating_add(area.height) {
+            for col in area.x..area.x.saturating_add(area.width) {
+                let Some(cell) = self.grid.get(col, row) else {
+                    continue;
+                };
+                let style = cell.style();
+                let fg = if style.fg == Color::Default {
+                    self.theme.resolve(Token::TextPrimary)
+                } else {
+                    style.fg
+                };
+                let faded = blend_rgb(resolve_rgb(fg, self.theme), toward_rgb, alpha);
+                self.grid.set_style(
+                    Rect::new(col, row, 1, 1),
+                    style.fg(Color::Rgb(faded.0, faded.1, faded.2)),
+                );
+            }
+        }
+    }
+
+    #[cfg(feature = "scroll-view")]
+    pub(crate) fn offscreen(&mut self, grid: &mut Grid, draw: impl FnOnce(&mut RenderCx<'_>)) {
+        let mut cx = RenderCx {
+            grid,
+            clusters: self.clusters,
+            theme: self.theme,
+            #[cfg(feature = "color-profiles")]
+            palette: self.palette,
+            #[cfg(feature = "image")]
+            image_sink: None,
+        };
+        draw(&mut cx);
+    }
+
+    #[cfg(feature = "scroll-view")]
+    pub(crate) fn bg_at(&self, x: u16, y: u16) -> Color {
+        self.grid
+            .get(x, y)
+            .map_or(Color::Default, |cell| cell.style().bg)
+    }
+
+    #[cfg(feature = "scroll-view")]
+    pub(crate) fn blit(&mut self, src: &Grid, from: Rect, x: u16, y: u16) {
+        self.grid.blit(src, from, x, y);
+    }
+
     /// Applies `style` to every cell in `area`, keeping glyphs unchanged.
     pub fn set_style(&mut self, area: Rect, style: Style) {
         self.grid.set_style(area, style);
@@ -215,13 +320,15 @@ impl<'a> RenderCx<'a> {
     }
 }
 
-#[cfg(any(
-    feature = "barchart",
-    feature = "bigtext",
-    feature = "calendar",
-    feature = "image",
-    feature = "sparkline"
-))]
+pub(crate) fn clip_to_coordinates(area: Rect) -> Rect {
+    Rect::new(
+        area.x,
+        area.y,
+        area.width.min(u16::MAX - area.x),
+        area.height.min(u16::MAX - area.y),
+    )
+}
+
 pub(crate) fn patch_style(base: Style, over: Style) -> Style {
     Style {
         fg: if over.fg == Color::Default {
@@ -238,13 +345,6 @@ pub(crate) fn patch_style(base: Style, over: Style) -> Style {
     }
 }
 
-#[cfg(any(
-    feature = "barchart",
-    feature = "bigtext",
-    feature = "calendar",
-    feature = "image",
-    feature = "sparkline"
-))]
 fn merge_attrs(base: Attrs, over: Attrs) -> Attrs {
     if over.to_bits() == 0 {
         return base;

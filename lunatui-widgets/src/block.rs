@@ -329,88 +329,52 @@ impl Block {
         cx: &mut RenderCx<'_>,
     ) {
         let band = self.titles_band(area, position);
-        if band.width == 0 || band.height == 0 {
+        if band.width == 0 {
             return;
         }
-        let titles: Vec<&TitleEntry> = self
-            .titles
-            .iter()
-            .filter(|entry| entry.position.unwrap_or(self.titles_position) == position)
-            .filter(|entry| entry.alignment.unwrap_or(self.titles_alignment) == alignment)
-            .collect();
-        if titles.is_empty() {
+        let matching = || {
+            self.titles
+                .iter()
+                .filter(move |entry| entry.position.unwrap_or(self.titles_position) == position)
+                .filter(move |entry| entry.alignment.unwrap_or(self.titles_alignment) == alignment)
+        };
+        if matching().next().is_none() {
             return;
         }
-        let style_of = |entry: &TitleEntry| entry.style.unwrap_or(self.titles_style);
-        match alignment {
-            Alignment::Left => {
-                let mut x = band.x.saturating_add(self.title_inset.min(band.width));
-                for (index, entry) in titles.iter().enumerate() {
-                    if x >= band.x + band.width {
-                        break;
-                    }
-                    let remaining = band.x + band.width - x;
-                    let text = clip_display_prefix(&entry.text, remaining);
-                    let w = str_display_width(text);
-                    if w == 0 {
-                        break;
-                    }
-                    put_symbol(cx, x, band.y, text, style_of(entry));
-                    x = x.saturating_add(w);
-                    if index + 1 < titles.len() {
-                        x = x.saturating_add(1);
-                    }
-                }
+        let total = || {
+            matching()
+                .map(|entry| title_width(entry).saturating_add(1))
+                .fold(0_u16, u16::saturating_add)
+                .saturating_sub(1)
+        };
+        let mut x = match alignment {
+            Alignment::Left => band.x.saturating_add(self.title_inset.min(band.width)),
+            Alignment::Center => band
+                .x
+                .saturating_add(band.width.saturating_sub(total()) / 2),
+            Alignment::Right => band.x.saturating_add(band.width.saturating_sub(total())),
+        };
+        for (index, entry) in matching().enumerate() {
+            if index > 0 {
+                x = x.saturating_add(1);
             }
-            Alignment::Center => {
-                let total = titles
-                    .iter()
-                    .map(|entry| title_width(entry).saturating_add(1))
-                    .fold(0_u16, u16::saturating_add)
-                    .saturating_sub(1);
-                let x = band.x.saturating_add(band.width.saturating_sub(total) / 2);
-                let mut cursor = x;
-                for (index, entry) in titles.iter().enumerate() {
-                    if cursor >= band.x + band.width {
-                        break;
-                    }
-                    let remaining = band.x + band.width - cursor;
-                    let text = clip_display_prefix(&entry.text, remaining);
-                    let w = str_display_width(text);
-                    if w == 0 {
-                        break;
-                    }
-                    put_symbol(cx, cursor, band.y, text, style_of(entry));
-                    cursor = cursor.saturating_add(w);
-                    if index + 1 < titles.len() {
-                        cursor = cursor.saturating_add(1);
-                    }
-                }
+            if x >= band.x + band.width {
+                break;
             }
-            Alignment::Right => {
-                let total = titles
-                    .iter()
-                    .map(|entry| title_width(entry).saturating_add(1))
-                    .fold(0_u16, u16::saturating_add)
-                    .saturating_sub(1);
-                let mut x = band.x.saturating_add(band.width.saturating_sub(total));
-                for (index, entry) in titles.iter().enumerate() {
-                    if x >= band.x + band.width {
-                        break;
-                    }
-                    let remaining = band.x + band.width - x;
-                    let text = clip_display_prefix(&entry.text, remaining);
-                    let w = str_display_width(text);
-                    if w == 0 {
-                        break;
-                    }
-                    put_symbol(cx, x, band.y, text, style_of(entry));
-                    x = x.saturating_add(w);
-                    if index + 1 < titles.len() {
-                        x = x.saturating_add(1);
-                    }
-                }
+            let remaining = band.x + band.width - x;
+            let text = clip_display_prefix(&entry.text, remaining);
+            let w = str_display_width(text);
+            if w == 0 {
+                break;
             }
+            put_symbol(
+                cx,
+                x,
+                band.y,
+                text,
+                entry.style.unwrap_or(self.titles_style),
+            );
+            x = x.saturating_add(w);
         }
     }
 

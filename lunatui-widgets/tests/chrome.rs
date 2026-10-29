@@ -3,10 +3,10 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
+use lunatui_core::{Attrs, Cell, ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
-    Gauge, RenderCx, Spinner, SpinnerPattern, StatusBar, Tabs, TextInput, Widget,
+    Gauge, RenderCx, Spinner, SpinnerPattern, SpinnerPreset, StatusBar, Tabs, TextInput, Widget,
 };
 
 #[test]
@@ -255,4 +255,117 @@ fn tabs_highlight_style_bolds_only_the_selected_title() {
     assert_eq!(bold_at(0), Some(false));
     assert_eq!(bold_at(4), Some(true));
     assert_eq!(bold_at(6), Some(true));
+}
+
+#[test]
+fn status_bar_segments_fill_the_row_and_pin_right_segments_to_the_edge() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(26, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 0, "xxxxxxxxxxxxxxxxxxxxxxxxxx", Style::new());
+    let panel = Color::Rgb(17, 22, 49);
+    let mode = Style::new()
+        .fg(Color::Rgb(10, 13, 28))
+        .bg(Color::Rgb(185, 167, 240))
+        .with_attrs(Attrs::new().set_bold(true));
+    let percent = Style::new()
+        .fg(Color::Rgb(10, 13, 28))
+        .bg(Color::Rgb(243, 226, 176));
+    StatusBar::new("")
+        .style(Style::new().bg(panel))
+        .left([(" NORMAL ", mode), (" main ", Style::new().bg(panel))])
+        .right([(" rs ", Style::new().bg(panel)), (" 50% ", percent)])
+        .render(Rect::new(1, 0, 24, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "x NORMAL  main   rs  50% x");
+    let style = |x| grid.get(x, 0).map(Cell::style).unwrap_or_default();
+    assert!(style(2).attrs.bold());
+    assert_eq!(style(2).bg, Color::Rgb(185, 167, 240));
+    assert_eq!(
+        style(16).bg,
+        panel,
+        "the gap between groups takes the bar style"
+    );
+    assert_eq!(
+        style(22).bg,
+        Color::Rgb(243, 226, 176),
+        "right group ends at the edge"
+    );
+    assert_eq!(grid.row_display(0, &clusters).chars().last(), Some('x'));
+}
+
+#[test]
+fn status_bar_text_clears_the_rest_of_its_row() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(12, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 0, "xxxxxxxxxxxx", Style::new());
+    let panel = Color::Rgb(17, 22, 49);
+    StatusBar::new("")
+        .left([(" NORMAL ", Style::new().bg(Color::Rgb(185, 167, 240)))])
+        .render(Rect::new(1, 0, 10, 1), &mut cx);
+    StatusBar::new("ok")
+        .style(Style::new().bg(panel))
+        .render(Rect::new(1, 0, 10, 1), &mut cx);
+    assert_eq!(grid.row_display(0, &clusters), "xok        x");
+    let style = |x| grid.get(x, 0).map(Cell::style).unwrap_or_default();
+    for x in 1..11 {
+        assert_eq!(style(x).bg, panel, "x={x}");
+    }
+}
+
+#[test]
+fn status_bar_clips_an_area_at_the_u16_edge() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    cx.put_str(0, 0, "keep", Style::new());
+
+    StatusBar::new("body")
+        .left([("left", Style::new())])
+        .right([("right", Style::new())])
+        .render(Rect::new(u16::MAX - 5, 0, 10, 1), &mut cx);
+
+    assert_eq!(grid.row_display(0, &clusters), "keep");
+}
+
+#[test]
+fn spinner_glyph_matches_the_rendered_frame_and_wraps() {
+    let theme = Theme::builtin(Variant::Dark);
+    for frame in [0_u32, 1, 9] {
+        let spinner = Spinner::new(frame).pattern(SpinnerPattern::BrailleRing);
+        let mut grid = Grid::new(1, 1);
+        let mut clusters = ClusterTable::new();
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        spinner.render(Rect::new(0, 0, 1, 1), &mut cx);
+        assert_eq!(
+            grid.row_display(0, &clusters),
+            spinner.glyph(),
+            "frame {frame}"
+        );
+    }
+    assert_eq!(
+        Spinner::new(1).pattern(SpinnerPattern::BrailleRing).glyph(),
+        "⣽"
+    );
+    assert_eq!(
+        Spinner::new(9).pattern(SpinnerPattern::BrailleRing).glyph(),
+        "⣽"
+    );
+}
+
+#[test]
+fn spinner_glyph_matches_preset_frames_and_handles_empty_presets() {
+    assert_eq!(
+        Spinner::new(4).preset(SpinnerPreset::BOUNCE).glyph(),
+        "    ●"
+    );
+    assert_eq!(
+        Spinner::new(0)
+            .preset(SpinnerPreset::new("empty", &[], 1))
+            .glyph(),
+        ""
+    );
 }
