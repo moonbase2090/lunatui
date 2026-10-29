@@ -104,6 +104,9 @@ pub trait TextMetrics {
 }
 
 /// Terminal-cell text metrics using Lunatui's grapheme-aware display width.
+///
+/// Font face and pixel-size arguments are ignored; each display column has the configured cell
+/// width.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CellTextMetrics {
     cell_size: CellSize,
