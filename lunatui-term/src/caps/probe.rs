@@ -61,20 +61,26 @@ fn exchange(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
     let start = Instant::now();
     loop {
         if has_device_attributes(&buf) {
-            return finish(fd, env, &buf);
+            let reply = from_replies(env, &buf);
+            if reply.caps.protocols.graphics == super::GraphicsProtocol::Kitty
+                && reply.caps.cell_pixels.is_some()
+                && reply.caps.background_rgb.is_some()
+            {
+                return finish(fd, env, &buf);
+            }
         }
         if buf.len() >= 65_536 {
-            return Ok(from_replies(env, &buf));
+            return finish(fd, env, &buf);
         }
         let left = PROBE_BUDGET.saturating_sub(start.elapsed());
         if left.is_zero() {
-            return Ok(from_replies(env, &buf));
+            return finish(fd, env, &buf);
         }
         let millis = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
         match wait_read(fd, millis)? {
-            Wait::Timeout => return Ok(from_replies(env, &buf)),
+            Wait::Timeout => return finish(fd, env, &buf),
             Wait::Ready => match read_some(fd, &mut tmp)? {
-                Read::Eof => return Ok(from_replies(env, &buf)),
+                Read::Eof => return finish(fd, env, &buf),
                 Read::Bytes(n) => buf.extend_from_slice(&tmp[..n]),
                 Read::Again => {}
             },

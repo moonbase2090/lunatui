@@ -397,3 +397,19 @@ fn probe_keeps_typed_keys_between_capability_replies() {
     assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Kitty);
     assert_eq!(reply.pending_input, b"q\x1bOP\x1b[99;5uZ");
 }
+
+#[test]
+fn graphics_metrics_and_background_may_arrive_after_device_attributes()
+-> Result<(), Box<dyn std::error::Error>> {
+    let reply = ProbeReply::from_replies(
+        &env_256(),
+        b"\x1b[?63;1;2;4c\x1b[6;33;17t\x1b]11;rgb:0000/0000/0000\x1b\\",
+    );
+    assert!(reply.saw_device_attributes);
+    assert_eq!(reply.caps.protocols.graphics, GraphicsProtocol::Sixel);
+    let pixels = reply.caps.cell_pixels.ok_or("late cell metrics")?;
+    assert_eq!((pixels.width(), pixels.height()), (17, 33));
+    assert_eq!(reply.caps.background_rgb, Some([0, 0, 0]));
+    assert_eq!(reply.pending_input, []);
+    Ok(())
+}

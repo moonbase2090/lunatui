@@ -35,14 +35,18 @@ pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
                             .any(|part| part == b"4");
                     }
                     saw_device_attributes = true;
-                    break;
+                    continue;
                 }
-                apply_csi(&mut caps, params, intermediates, final_byte);
+                if !saw_device_attributes || final_byte == b't' {
+                    apply_csi(&mut caps, params, intermediates, final_byte);
+                }
             }
             Event::Dcs(data) => {
-                apply_xtversion(&mut caps, data);
-                live_iterm |= xtversion_text(data).is_some()
-                    && caps.identity.program.eq_ignore_ascii_case("iterm2");
+                if !saw_device_attributes {
+                    apply_xtversion(&mut caps, data);
+                    live_iterm |= xtversion_text(data).is_some()
+                        && caps.identity.program.eq_ignore_ascii_case("iterm2");
+                }
             }
             Event::Osc(data) => {
                 if let Some(metrics) = data.strip_prefix(b"1337;ReportCellSize=") {
@@ -56,7 +60,9 @@ pub(crate) fn from_replies(env: &ProbeEnv, replies: &[u8]) -> ProbeReply {
                 if let Some(spec) = data.strip_prefix(b"11;") {
                     caps.background_rgb = std::str::from_utf8(spec).ok().and_then(color_rgb);
                 }
-                apply_osc(data, &mut saw_rgb, &mut background_dark);
+                if !saw_device_attributes {
+                    apply_osc(data, &mut saw_rgb, &mut background_dark);
+                }
             }
             Event::Apc(data) => {
                 if kitty_graphics_ok(data) {
