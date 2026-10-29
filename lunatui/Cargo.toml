@@ -26,6 +26,7 @@ lunatui-runtime = { version = "0.1.15", path = "../lunatui-runtime", optional = 
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-image = { path = "../lunatui-image" }
+lunatui-layout = { path = "../lunatui-layout" }
 lunatui-term = { path = "../lunatui-term" }
 lunatui-text = { path = "../lunatui-text", features = ["markdown"] }
 lunatui-theme = { path = "../lunatui-theme" }
@@ -187,4 +188,34 @@ test = true
 [[example]]
 name = "spinner_presets"
 path = "../examples/spinner_presets.rs"
+test = true
+
+[[example]]
+name = "template_minimal"
+path = "../examples/templates/minimal.rs"
+test = true
+
+[[example]]
+name = "template_list"
+path = "../examples/templates/list.rs"
+test = true
+
+[[example]]
+name = "template_form"
+path = "../examples/templates/form.rs"
+test = true
+
+[[example]]
+name = "template_dashboard"
+path = "../examples/templates/dashboard.rs"
+test = true
+
+[[example]]
+name = "template_popover"
+path = "../examples/templates/popover.rs"
+test = true
+
+[[example]]
+name = "template_layout"
+path = "../examples/templates/layout.rs"
 test = true
