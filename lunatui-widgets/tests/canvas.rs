@@ -110,6 +110,7 @@ fn each_marker_has_its_own_grain() {
     let _ = canvas(Marker::Braille);
     let grains = [
         (Marker::Braille, (8, 8)),
+        (Marker::Octant, (8, 8)),
         (Marker::Sextant, (8, 6)),
         (Marker::Quadrant, (8, 4)),
         (Marker::HalfBlock, (4, 4)),
@@ -733,4 +734,26 @@ fn huge_circles_add_steps_beyond_the_default() {
         .map(|row| row.chars().filter(|&c| c == '█').count())
         .sum();
     assert!(filled >= 500, "{filled} cells");
+}
+
+#[test]
+fn octant_points_fill_eighths_of_a_cell() {
+    let at = |x: f64, y: f64| dot(Marker::Octant, (1, 1), (x, y));
+    assert_eq!(at(0.0, 1.0), ["\u{1CEA8}"]);
+    assert_eq!(at(1.0, 1.0), ["\u{1CEAB}"]);
+    assert_eq!(at(0.0, 0.0), ["\u{1CEA3}"]);
+    assert_eq!(at(1.0, 0.0), ["\u{1CEA0}"]);
+    let column = |x: f64| {
+        show(Marker::Octant, UNIT, (1, 1), move |ctx| {
+            ctx.draw(&Line {
+                x1: x,
+                y1: 0.0,
+                x2: x,
+                y2: 1.0,
+                style: Style::new(),
+            });
+        })
+    };
+    assert_eq!(column(0.0), ["▌"]);
+    assert_eq!(column(1.0), ["▐"]);
 }

@@ -6493,7 +6493,8 @@ fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area:
             .iter()
             .map(|(label, size)| PieSlice::new(*label, *size)),
     )
-    .marker(Marker::Quadrant)
+    .marker(Marker::Octant)
+    .antialias(true)
     .cell_aspect(2.3)
     .donut(0.55)
     .center("412 GB")

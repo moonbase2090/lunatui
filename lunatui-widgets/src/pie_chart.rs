@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+use lunatui_core::subcell::GlyphSet;
 use lunatui_core::{Attrs, Color, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 
@@ -28,6 +29,8 @@ const APART: u32 = 60 * 60;
 const EXPLODE: f64 = 0.08;
 const SWATCH: &str = "●";
 const MAX_SUB: usize = 8;
+const AA_SIDE: u16 = 4;
+const AA_SAMPLES: usize = (AA_SIDE * AA_SIDE) as usize;
 
 /// One slice of a [`PieChart`].
 #[derive(Clone, Debug, PartialEq)]
@@ -111,6 +114,7 @@ pub struct PieChart {
     center: Option<String>,
     caption: Option<String>,
     state: WidgetState,
+    antialias: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -144,6 +148,7 @@ impl PieChart {
             center: None,
             caption: None,
             state: WidgetState::Normal,
+            antialias: false,
         }
     }
 
@@ -151,6 +156,23 @@ impl PieChart {
     #[must_use]
     pub const fn marker(mut self, marker: Marker) -> Self {
         self.marker = marker;
+        self
+    }
+
+    /// Shades the cells along the disc's edges by how much of each cell the slices cover, so
+    /// the outline reads as smooth rather than stepped.
+    ///
+    /// Each sub-cell of the [`marker`](Self::marker) is sampled at 4×4 points. The two colors
+    /// that cover most of a cell become its foreground and background (a slice and the one next
+    /// to it, or a slice and the background under the disc), and each sub-cell takes whichever
+    /// covers most of it. The foreground is then blended toward the background by the share of
+    /// its sub-cells the slice does not cover. Between two slices the background is blended the
+    /// same way; the background under the disc is left as it is, so no cell outside the slices is
+    /// tinted. Under a 16-color profile the colors are left unblended; under 256 colors the
+    /// blends are downsampled. Braille and dot markers are not shaded. Off by default.
+    #[must_use]
+    pub const fn antialias(mut self, on: bool) -> Self {
+        self.antialias = on;
         self
     }
 
@@ -417,6 +439,32 @@ impl PieChart {
         let disc = self.disc(pie);
         let sectors = self.sectors();
         let (columns, rows) = sub_cells(self.marker);
+        if self.antialias && !matches!(self.marker, Marker::Braille | Marker::Dot) {
+            let mut samples = [[None; AA_SAMPLES]; MAX_SUB];
+            let count = usize::from(columns * rows);
+            for y in pie.y..pie.y + pie.height {
+                for x in pie.x..pie.x + pie.width {
+                    for row in 0..rows {
+                        for column in 0..columns {
+                            let cell = &mut samples[usize::from(row * columns + column)];
+                            for (spot, hit) in (0_u16..).zip(cell.iter_mut()) {
+                                let across = (f64::from(spot % AA_SIDE) + 0.5) / f64::from(AA_SIDE);
+                                let down = (f64::from(spot / AA_SIDE) + 0.5) / f64::from(AA_SIDE);
+                                let point = (
+                                    f64::from(x)
+                                        + (f64::from(column) + across) / f64::from(columns),
+                                    (f64::from(y) + (f64::from(row) + down) / f64::from(rows))
+                                        * self.aspect,
+                                );
+                                *hit = sample(disc, &sectors, point);
+                            }
+                        }
+                    }
+                    self.draw_shaded_cell(cx, palette, (x, y), &samples[..count]);
+                }
+            }
+            return;
+        }
         let mut hits = [None; MAX_SUB];
         for y in pie.y..pie.y + pie.height {
             for x in pie.x..pie.x + pie.width {
@@ -467,12 +515,67 @@ impl PieChart {
             Marker::HalfBlock => ['█', '▀', '▄', '█'][usize::from(mask & 3)],
             Marker::Quadrant => QUADRANT[usize::from(mask & 15)],
             Marker::Sextant => sextant(mask),
+            Marker::Octant => GlyphSet::Octants.glyph(mask),
             Marker::Dot => '•',
             _ => '█',
         };
         let style = match majority(hits, Some(main)) {
             Some(other) => Style::new().fg(fg).bg(self.slice_color(cx, palette, other)),
             None => Style::new().fg(fg),
+        };
+        cx.put_char_patched(x, y, glyph, style);
+    }
+
+    fn draw_shaded_cell(
+        &self,
+        cx: &mut RenderCx<'_>,
+        palette: &[Color],
+        (x, y): (u16, u16),
+        samples: &[[Option<usize>; AA_SAMPLES]],
+    ) {
+        let mut all = [None; AA_SAMPLES * MAX_SUB];
+        for (at, hit) in samples.iter().flatten().enumerate() {
+            all[at] = *hit;
+        }
+        let all = &all[..samples.len() * AA_SAMPLES];
+        let Some(main) = majority(all, None) else {
+            return;
+        };
+        let other = majority(all, Some(main));
+        let fg = self.slice_color(cx, palette, main);
+        let bg = match other {
+            Some(index) => self.slice_color(cx, palette, index),
+            None => match cx.bg_at(x, y) {
+                under @ Color::Rgb(..) => under,
+                _ => cx.token(Token::Surface0),
+            },
+        };
+        let shade = Shade::of(samples, main);
+        let glyph = match self.marker {
+            Marker::HalfBlock => ['█', '▀', '▄', '█'][usize::from(shade.mask & 3)],
+            Marker::Quadrant => QUADRANT[usize::from(shade.mask & 15)],
+            Marker::Sextant => sextant(shade.mask),
+            Marker::Octant => GlyphSet::Octants.glyph(shade.mask),
+            _ => '█',
+        };
+        if shade.mask == 0 && other.is_none() {
+            return;
+        }
+        let plain = profile_is_ansi16(cx);
+        let lit = if plain {
+            fg
+        } else {
+            shown(cx, toward(bg, fg, shade.lit))
+        };
+        let unlit = if plain || other.is_none() {
+            bg
+        } else {
+            shown(cx, toward(bg, fg, shade.unlit))
+        };
+        let (glyph, style) = if shade.mask == 0 {
+            (' ', Style::new().fg(unlit).bg(unlit))
+        } else {
+            (glyph, Style::new().fg(lit).bg(unlit))
         };
         cx.put_char_patched(x, y, glyph, style);
     }
@@ -571,12 +674,73 @@ impl Widget for PieChart {
 
 fn sub_cells(marker: Marker) -> (u16, u16) {
     match marker {
-        Marker::Braille => (2, 4),
+        Marker::Braille | Marker::Octant => (2, 4),
         Marker::Sextant => (2, 3),
         Marker::Quadrant => (2, 2),
         Marker::HalfBlock => (1, 2),
         _ => (1, 1),
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Shade {
+    mask: u8,
+    lit: f32,
+    unlit: f32,
+}
+
+impl Shade {
+    fn of(samples: &[[Option<usize>; AA_SAMPLES]], main: usize) -> Self {
+        let total = AA_SIDE * AA_SIDE;
+        let (mut mask, mut lit, mut unlit) = (0_u8, (0_u16, 0_u16), (0_u16, 0_u16));
+        for (at, cell) in (0_u8..).zip(samples) {
+            let hits = (0_u16..)
+                .zip(cell)
+                .filter(|(_, hit)| **hit == Some(main))
+                .count();
+            let hits = u16::try_from(hits).unwrap_or(total);
+            if hits * 2 > total {
+                mask |= 1 << at;
+                lit = (lit.0 + hits, lit.1 + total);
+            } else {
+                unlit = (unlit.0 + hits, unlit.1 + total);
+            }
+        }
+        Self {
+            mask,
+            lit: share(lit),
+            unlit: share(unlit),
+        }
+    }
+}
+
+fn share((hits, total): (u16, u16)) -> f32 {
+    if total == 0 {
+        0.0
+    } else {
+        f32::from(hits) / f32::from(total)
+    }
+}
+
+fn toward(from: Color, to: Color, amount: f32) -> Color {
+    match (from, to) {
+        (Color::Rgb(from_r, from_g, from_b), Color::Rgb(to_r, to_g, to_b)) => {
+            let (red, green, blue) =
+                blend_rgb((from_r, from_g, from_b), (to_r, to_g, to_b), amount);
+            Color::Rgb(red, green, blue)
+        }
+        _ if amount >= 0.5 => to,
+        _ => from,
+    }
+}
+
+fn profile_is_ansi16(cx: &RenderCx<'_>) -> bool {
+    #[cfg(feature = "color-profiles")]
+    if let Some(profile) = cx.color_profile() {
+        return profile == lunatui_theme::Profile::Ansi16;
+    }
+    let _ = cx;
+    false
 }
 
 fn majority(hits: &[Option<usize>], except: Option<usize>) -> Option<usize> {
@@ -727,4 +891,51 @@ fn floor_u16(value: f64) -> u16 {
 
 fn floor_u8(value: f64) -> u8 {
     u8::try_from(round_to_tick(value.max(0.0).floor())).unwrap_or(u8::MAX)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AA_SAMPLES, Shade};
+
+    fn cells(hits: &[usize]) -> Vec<[Option<usize>; AA_SAMPLES]> {
+        hits.iter()
+            .map(|&count| {
+                let mut cell = [None; AA_SAMPLES];
+                for hit in cell.iter_mut().take(count) {
+                    *hit = Some(0);
+                }
+                cell
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_covered_cell_is_solid_and_unblended() {
+        let shade = Shade::of(&cells(&[16; 8]), 0);
+        assert_eq!((shade.mask, shade.lit, shade.unlit), (0xFF, 1.0, 0.0));
+    }
+
+    #[test]
+    fn a_mostly_covered_eighth_is_lit_and_shaded_by_its_share() {
+        let shade = Shade::of(&cells(&[12, 0, 0, 4, 0, 0, 0, 0]), 0);
+        assert_eq!(shade.mask, 0b1);
+        assert!((shade.lit - 0.75).abs() < 1e-6, "{shade:?}");
+        assert!((shade.unlit - 4.0 / 112.0).abs() < 1e-6, "{shade:?}");
+    }
+
+    #[test]
+    fn a_half_covered_eighth_stays_unlit() {
+        let shade = Shade::of(&cells(&[8, 0, 0, 0, 0, 0, 0, 0]), 0);
+        assert_eq!(shade.mask, 0);
+        assert!((shade.unlit - 8.0 / 128.0).abs() < 1e-6, "{shade:?}");
+        assert!(shade.lit.abs() < 1e-6, "{shade:?}");
+    }
+
+    #[test]
+    fn other_slices_do_not_count_as_coverage() {
+        let mut samples = cells(&[16, 16]);
+        samples[1] = [Some(1); AA_SAMPLES];
+        let shade = Shade::of(&samples, 0);
+        assert_eq!((shade.mask, shade.lit, shade.unlit), (0b01, 1.0, 0.0));
+    }
 }

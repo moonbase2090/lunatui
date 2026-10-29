@@ -3,6 +3,8 @@
 
 #[cfg(any(feature = "chart", feature = "canvas"))]
 use lunatui_core::Rect;
+#[cfg(any(feature = "chart", feature = "canvas"))]
+use lunatui_core::subcell::GlyphSet;
 
 /// Glyphs a drawing is made of.
 #[non_exhaustive]
@@ -18,6 +20,8 @@ pub enum Marker {
     Quadrant,
     /// A cell split into a 2×3 grid of sextant blocks.
     Sextant,
+    /// A cell split into a 2×4 grid of solid octant blocks, Braille's resolution without gaps.
+    Octant,
     /// A cell split into a 2×4 grid of Braille dots, the finest resolution.
     #[default]
     Braille,
@@ -32,6 +36,7 @@ pub(crate) enum Ink {
     Half,
     Quadrant,
     Sextant,
+    Octant,
     Braille,
     #[cfg(feature = "chart")]
     Eighths,
@@ -96,7 +101,7 @@ impl Raster {
     pub(crate) fn resolution(&self, marker: Marker) -> (i64, i64) {
         let (width, height) = (i64::from(self.rect.width), i64::from(self.rect.height));
         match marker {
-            Marker::Braille => (width * 2, height * 4),
+            Marker::Braille | Marker::Octant => (width * 2, height * 4),
             Marker::Sextant => (width * 2, height * 3),
             Marker::Quadrant => (width * 2, height * 2),
             Marker::HalfBlock => (width, height * 2),
@@ -113,6 +118,7 @@ impl Raster {
                 BRAILLE_BITS[usize::try_from(x % 2).unwrap_or(0)]
                     [usize::try_from(y % 4).unwrap_or(0)],
             ),
+            Marker::Octant => (Ink::Octant, x / 2, y / 4, 1 << (x % 2 + 2 * (y % 4))),
             Marker::Sextant => (Ink::Sextant, x / 2, y / 3, 1 << (x % 2 + 2 * (y % 3))),
             Marker::Quadrant => (Ink::Quadrant, x / 2, y / 2, 1 << (x % 2 + 2 * (y % 2))),
             Marker::HalfBlock => (Ink::Half, x, y / 2, 1 << (y % 2)),
@@ -424,6 +430,7 @@ pub(crate) fn glyph(spot: Spot) -> char {
         },
         Ink::Quadrant => QUADRANT[usize::from(spot.mask & 15)],
         Ink::Sextant => sextant(spot.mask),
+        Ink::Octant => GlyphSet::Octants.glyph(spot.mask),
         Ink::Braille => char::from_u32(0x2800 + u32::from(spot.mask)).unwrap_or(' '),
         #[cfg(feature = "chart")]
         Ink::Eighths => EIGHTHS_UP[usize::from(spot.mask.min(8))],
