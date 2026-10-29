@@ -15,5 +15,5 @@ default = []
 decode = ["dep:image"]
 
 [dependencies]
-lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
+lunatui-core = { version = "0.1.15", path = "../lunatui-core" }
 image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg", "gif", "webp"], optional = true }

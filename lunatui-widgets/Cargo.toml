@@ -41,17 +41,17 @@ scroll-view = ["widget-state", "lunatui-core/blit"]
 all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "form", "key-hints", "line-gauge", "markdown", "number-input", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
-lunatui-core = { version = "0.1.14", path = "../lunatui-core" }
-lunatui-layout = { version = "0.1.14", path = "../lunatui-layout" }
-lunatui-image = { version = "0.1.14", path = "../lunatui-image", optional = true }
-lunatui-text = { version = "0.1.14", path = "../lunatui-text" }
-lunatui-theme = { version = "0.1.14", path = "../lunatui-theme" }
-lunatui-runtime = { version = "0.1.14", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
+lunatui-core = { version = "0.1.15", path = "../lunatui-core" }
+lunatui-layout = { version = "0.1.15", path = "../lunatui-layout" }
+lunatui-image = { version = "0.1.15", path = "../lunatui-image", optional = true }
+lunatui-text = { version = "0.1.15", path = "../lunatui-text" }
+lunatui-theme = { version = "0.1.15", path = "../lunatui-theme" }
+lunatui-runtime = { version = "0.1.15", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
 unicode-segmentation = "=1.13.3"
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.14", path = "../lunatui-test" }
-lunatui-term = { version = "0.1.14", path = "../lunatui-term" }
+lunatui-test = { version = "0.1.15", path = "../lunatui-test" }
+lunatui-term = { version = "0.1.15", path = "../lunatui-term" }
 ratatui = "=0.30.2"
 proptest = "=1.9.0"
 time = { version = "=0.3.55", default-features = false }
