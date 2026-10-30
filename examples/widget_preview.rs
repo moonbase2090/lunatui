@@ -22,10 +22,11 @@ use lunatui_widgets::{
     ComboBox, Constraint, Dataset, Date, DatePicker, DateStyle, Diff, DiffLayout, DiffView,
     DividerId, FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState, KeyHintBar,
     List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
-    Monthly, NumberInput, PaneId, Paragraph, PieChart, PieSlice, PixelSize, ProgressBar,
-    ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Slider,
-    Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag,
-    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    Monthly, NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph,
+    PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx,
+    Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
+    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
+    Toggle, VecSource, Widget, WidgetState,
 };
 
 mod bar_scene;
@@ -168,6 +169,11 @@ const PREVIEWS: &[Preview] = &[
         name: "date-picker",
         native: datepick_native,
         baseline: datepick_baseline,
+    },
+    Preview {
+        name: "notification-center",
+        native: notify_native,
+        baseline: notify_baseline,
     },
     Preview {
         name: "combo-box",
@@ -7307,3 +7313,119 @@ fn datepick_native(
 }
 
 fn datepick_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const NOTIFY_FEED: [(u32, ToastKind, &str, &str); 7] = [
+    (0, ToastKind::Info, "Signed in on a new device", "11:30"),
+    (0, ToastKind::Success, "Cache warmed on edge-3", "11:41"),
+    (0, ToastKind::Success, "Release notes saved", "11:58"),
+    (40, ToastKind::Success, "Build 4821 finished", "12:04"),
+    (
+        70,
+        ToastKind::Warning,
+        "Disk almost full on build-2",
+        "12:09",
+    ),
+    (100, ToastKind::Error, "Deploy to staging failed", "12:15"),
+    (120, ToastKind::Info, "Retry queued for staging", "12:16"),
+];
+
+fn notify_clock(tick: u32) -> Duration {
+    Duration::from_millis(u64::from(tick) * 33)
+}
+
+fn notify_log(tick: u32) -> NotificationLog {
+    let mut log = NotificationLog::new(16);
+    for (arrival, kind, text, stamp) in NOTIFY_FEED {
+        if tick >= arrival {
+            log.push(kind, text, stamp);
+        }
+    }
+    if tick >= 140 {
+        let visited = usize::try_from(((tick - 140) / 14).min(3)).unwrap_or(0);
+        for position in 0..=visited {
+            let source = NOTIFY_FEED.len() - 1 - position;
+            log.mark_read(NotificationId(u32::try_from(source).unwrap_or(0)));
+        }
+    }
+    if tick >= 200 {
+        log.dismiss(NotificationId(3));
+    }
+    if tick >= 215 {
+        log.mark_all_read();
+    }
+    log
+}
+
+fn notify_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let body_height = area.height.saturating_sub(1);
+    let deploys = Rect::new(area.x + 1, area.y, 58, body_height);
+    let panel = Rect::new(area.x + 61, area.y, 58, body_height);
+    for (title, pane) in [(" Deploys ", deploys), (" Inbox ", panel)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let services = ["api", "web", "jobs", "edge", "docs", "staging", "billing"];
+    for (row, name) in (0_u16..).zip(services) {
+        let state = match (name, tick) {
+            ("staging", 100..=119) => "failed",
+            ("staging", 120..) => "retrying",
+            _ => "passing",
+        };
+        let line = format!(" {name:<12}{state:<10}#{}", 4800 + u32::from(row) * 3);
+        cx.put_str(deploys.x + 2, deploys.y + 2 + row * 2, &line, fill);
+    }
+    let log = notify_log(tick);
+    let selected = (tick >= 140).then(|| {
+        let step = usize::try_from(((tick - 140) / 14).min(3)).unwrap_or(0);
+        step.min(log.len().saturating_sub(1))
+    });
+    NotificationCenter::new(&log)
+        .selected(selected)
+        .state(WidgetState::Focused)
+        .render(
+            Rect::new(panel.x + 1, panel.y + 1, panel.width - 2, panel.height - 2),
+            &mut cx,
+        );
+    let mut toasts = ToastStack::new();
+    let now = notify_clock(tick);
+    for (arrival, kind, text, _) in NOTIFY_FEED {
+        let at = notify_clock(arrival);
+        if arrival > 0 && now >= at {
+            toasts.push(
+                at,
+                Some(Duration::from_millis(900)),
+                ToastScope::Pane(1),
+                kind,
+                text,
+            );
+        }
+    }
+    toasts.render(now, area, |id| (id == 1).then_some(deploys), &mut cx);
+    StatusBar::new(" ↑↓ select  ●  x dismiss  ●  m mark all read  ●  esc close")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(area.x, area.y + body_height, area.width, 1),
+            &mut cx,
+        );
+}
+
+fn notify_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}

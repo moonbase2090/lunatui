@@ -200,6 +200,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Notification center
+
+An inbox beside a deploy dashboard: toasts pop up as events arrive and each one lands in the history with an unread mark and a count in the header, the arrow keys move through the list and read what they pass, a dismissed entry drops out, and marking all read turns the header to "All read".
+
+<img src="docs/media/notification-center.webp" alt="NotificationCenter: a notification history growing as toasts arrive, unread marks turning to read as the selection moves, a dismissed entry, and an all-read header in the dark theme" width="1028">
+
+Screenshot: [docs/media/notification-center.png](docs/media/notification-center.png). Recorded with `scripts/record-showcase.sh` (`CASE=notification-center`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 9 seconds).
+
 ### Date picker
 
 A trip form with two months side by side: the arrow keys move the cursor a day at a time, a range stretches from the first chosen day with its ends filled and a band between, days outside the allowed dates are dimmed, the cursor crosses into the next month, and the summary line confirms the range.
