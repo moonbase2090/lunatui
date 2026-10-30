@@ -5,6 +5,7 @@
 """Check every displayed frame for colored pixels inside a widget's rectangle."""
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -17,6 +18,10 @@ def main():
     parser.add_argument("--region", required=True, help="x,y,width,height in screenshot pixels")
     parser.add_argument("--min-colored-pixels", required=True, type=int)
     parser.add_argument("--contact-sheet", type=Path)
+    parser.add_argument(
+        "--reference-frame", type=Path, action="append", default=[],
+        help="approved unmodified still; reject any displayed frame that matches none of these",
+    )
     args = parser.parse_args()
     x, y, width, height = map(int, args.region.split(","))
     recording = Image.open(args.recording)
@@ -24,6 +29,12 @@ def main():
         parser.error("region must be inside the recording")
     if args.min_colored_pixels <= 0:
         parser.error("minimum colored pixel count must be positive")
+    references = {}
+    for path in args.reference_frame:
+        with Image.open(path) as reference:
+            if reference.size != recording.size or reference.n_frames != 1:
+                parser.error("reference frames must be still images with the recording dimensions")
+            references[hashlib.sha256(reference.convert("RGB").tobytes()).hexdigest()] = path.name
     counts = []
     thumbnails = []
     elapsed = 0
@@ -37,6 +48,8 @@ def main():
         )
         duration = recording.info.get("duration", 0)
         counts.append({"frame": index, "start_ms": elapsed, "duration_ms": duration, "colored_pixels": colored})
+        if references:
+            counts[-1]["reference"] = references.get(hashlib.sha256(frame.tobytes()).hexdigest())
         elapsed += duration
         if args.contact_sheet:
             frame.thumbnail((400, 256))
@@ -53,6 +66,9 @@ def main():
     failures = [item["frame"] for item in counts if item["colored_pixels"] < args.min_colored_pixels]
     if failures:
         raise SystemExit(f"Widget blank or below threshold in frames: {failures}")
+    unexpected = [item["frame"] for item in counts if references and item["reference"] is None]
+    if unexpected:
+        raise SystemExit(f"Frames differ from every approved state: {unexpected}")
 
 
 if __name__ == "__main__":

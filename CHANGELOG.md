@@ -22,6 +22,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
+- Kitty image uploads complete before the runtime clears cell fallbacks or changes graph labels, preventing stale plots and misplaced legend swatches when switching charts.
+
 - Native graph rendering retains the cell renderer for reversed background colors, avoiding an unswapped pixel backdrop.
 
 ## [0.1.16] - 2026-10-30

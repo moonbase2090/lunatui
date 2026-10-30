@@ -141,9 +141,10 @@ struct StoredImage {
 /// changes, placed again only when its cell rectangle or depth moves, and deleted when a frame
 /// stops listing it.
 ///
-/// Write the bytes from [`finish_frame`](Self::finish_frame) to the terminal after the frame's
-/// cell output. In [`PixelMode::Cells`] every call is a no-op and the caller draws a cell
-/// fallback. After the first frames, nothing here allocates.
+/// Use [`finish_frame_parts`](Self::finish_frame_parts) to upload images before changing
+/// cells, then present cells and image placements together. In [`PixelMode::Cells`] every
+/// call is a no-op and the caller draws a cell fallback. After the first frames, nothing
+/// here allocates.
 #[derive(Clone, Debug)]
 pub struct PixelLayer {
     mode: PixelMode,
@@ -262,6 +263,22 @@ impl PixelLayer {
         core::mem::swap(&mut self.placed, &mut self.frame);
         self.frame.clear();
         &self.out
+    }
+
+    /// Ends the frame and separates invisible uploads from visible updates.
+    ///
+    /// Write the first part before changing cells. Then write cells and the second part
+    /// in one new synchronized frame. Kitty uploads can take longer than a terminal's
+    /// synchronization timeout; retaining the old cells until uploads finish avoids a
+    /// blank when replacing a cell fallback with pixels. Immediate protocols return an
+    /// empty first part because their uploads also display the image.
+    pub fn finish_frame_parts(&mut self) -> (&[u8], &[u8]) {
+        let uploads = if self.mode == PixelMode::Kitty {
+            self.out.len()
+        } else {
+            0
+        };
+        self.finish_frame().split_at(uploads)
     }
 
     /// Deletes every image, for exit or a size change, and returns the bytes to send.

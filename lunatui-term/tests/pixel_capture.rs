@@ -342,6 +342,70 @@ impl Screen {
 }
 
 #[test]
+fn split_frames_finish_chunked_uploads_before_any_visible_update() -> Result<(), String> {
+    let pixels = [0, 255, 0, 255].repeat(2048);
+    let image = PixelImage::new(2048, 1, &pixels).ok_or("bad image")?;
+    let area = Rect::new(2, 3, 10, 5);
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    let mut screen = Screen::default();
+    layer.begin_frame();
+    layer.image(10, 1, &image, area, 0);
+    let (uploads, updates) = layer.finish_frame_parts();
+    let commands = parse(uploads)?;
+    assert!(commands.len() > 1, "exercise a multi-chunk upload");
+    for command in commands {
+        screen.apply(&command)?;
+        assert!(screen.visible.is_empty(), "upload changed the display");
+        assert!(screen.placements.is_empty());
+    }
+    assert!(
+        screen.transfer.is_none(),
+        "upload must finish before cells change"
+    );
+    assert_eq!(screen.images.values().collect::<Vec<_>>(), vec![&pixels]);
+    for command in parse(updates)? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.at(area, 0), Some(pixels.as_slice()));
+    layer.begin_frame();
+    layer.image(10, 1, &image, area, 0);
+    let (uploads, updates) = layer.finish_frame_parts();
+    assert_eq!(uploads, []);
+    assert_eq!(updates, []);
+    layer.begin_frame();
+    let (uploads, updates) = layer.finish_frame_parts();
+    assert_eq!(uploads, []);
+    for command in parse(updates)? {
+        screen.apply(&command)?;
+    }
+    assert!(screen.visible.is_empty());
+    assert!(screen.images.is_empty());
+    Ok(())
+}
+
+#[test]
+fn immediate_protocols_keep_the_entire_image_after_cell_output() -> Result<(), String> {
+    let image = PixelImage::new(1, 1, &[0, 255, 0, 255]).ok_or("bad image")?;
+    for graphics in [GraphicsProtocol::Iterm2, GraphicsProtocol::Sixel] {
+        let caps = Caps {
+            protocols: Protocols {
+                graphics,
+                ..Protocols::default()
+            },
+            cell_pixels: CellPixels::new(1, 2),
+            ..Caps::default()
+        };
+        let mut layer = PixelLayer::from_caps(&caps);
+        layer.begin_frame();
+        layer.image(10, 1, &image, Rect::new(0, 0, 2, 1), 0);
+        let (uploads, updates) = layer.finish_frame_parts();
+        assert_eq!(uploads, []);
+        assert!(!updates.is_empty(), "immediate image belongs after cells");
+    }
+    Ok(())
+}
+
+#[test]
 fn every_upload_chunk_keeps_the_previous_image_visible_until_replacement() -> Result<(), String> {
     let first = [255, 0, 0, 255];
     let second = [0, 255, 0, 255].repeat(2048);

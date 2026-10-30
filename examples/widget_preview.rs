@@ -21,12 +21,12 @@ use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText,
     Block, BorderType, Breadcrumbs, Chart, ComboBox, Constraint, Dataset, Date, DatePicker,
     DateStyle, Diff, DiffLayout, DiffView, DividerId, FieldArea, Form, FormField, Gauge, GraphType,
-    HexViewer, HexViewerState, KeyHintBar, List, LogBuffer, LogEntry, LogLevel,
-    LogView, MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NumberInput, PaneId,
-    Paragraph, PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup,
-    RenderCx, Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag,
-    SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope,
-    ToastStack, Toggle, VecSource, Widget, WidgetState,
+    HexViewer, HexViewerState, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView,
+    MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NumberInput, PaneId, Paragraph,
+    PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx,
+    Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
+    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
+    Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]

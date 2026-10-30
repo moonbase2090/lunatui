@@ -229,3 +229,4 @@ required-features = ["image-presenter"]
 name = "pixel_chart"
 path = "../examples/pixel_chart.rs"
 required-features = ["image-presenter"]
+test = true
