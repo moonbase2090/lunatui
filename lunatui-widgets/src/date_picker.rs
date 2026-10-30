@@ -291,7 +291,7 @@ impl DatePicker {
             plain
         };
         let end = selection.is_some_and(|(start, end)| date == start || date == end);
-        let inside = selection.is_some_and(|(start, end)| start < date && date < end);
+        let inside = selection.is_some_and(|(start, end)| (start..=end).contains(&date));
         let today = self.today == Some(date);
         let cursor = focused && date == self.cursor;
         let flags = (
