@@ -18,7 +18,7 @@ KEYS=2:f,5:f scripts/record-pixels.sh
 
 The script starts an isolated Xvfb display and a Kitty window, builds the example, waits for a real Kitty control response before letting the app probe it, records the window, and closes both processes when finished. `OUT` selects the output directory. `KEYS` is an optional comma-separated list of elapsed seconds and alphanumeric X11 key names. `CARGO_TARGET_DIR` can select an absolute Cargo build directory. Arguments after the script name are passed unchanged to the example and recorded in the receipt.
 
-Inspect every frame before publishing. `capture.json` records the source commit, whether tracked files were clean, terminal and encoder versions, dimensions, duration, distinct frame count, input sequence, and artifact hashes. The script rejects a capture whose dimensions differ from the terminal window, an unchanged scripted recording, or a WebP of 2 MB or larger. `terminal.mkv` keeps the original lossless framebuffer video.
+Inspect every frame before publishing. `capture.json` records the source commit, whether tracked files were clean, terminal and encoder versions, configured cell dimensions and font size, actual pixel dimensions, duration, distinct frame count, input sequence, and artifact hashes. Use that receipt when writing captions. The script rejects a capture whose dimensions differ from the terminal window, an unchanged scripted recording, or a WebP of 2 MB or larger. `terminal.mkv` keeps the original lossless framebuffer video.
 
 With Pillow installed (`apt-get install python3-pil`), check a rectangle inside the widget for colored pixels in every displayed frame:
 

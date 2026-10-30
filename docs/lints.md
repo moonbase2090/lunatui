@@ -25,6 +25,7 @@ No rules yet.
 
 | `lunatui-widgets/src/pie_chart/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, bounded chart coordinates to tiny-skia's f32 coordinates | Pixel PieChart |
 | `lunatui-widgets/src/chart/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, clipped chart coordinates bounded to 4096 pixels to tiny-skia's f32 coordinates | Pixel Chart |
+| `lunatui-widgets/src/canvas/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, bounded canvas coordinates and extents to tiny-skia's f32 coordinates | Pixel Canvas |
 
 ## Checks
 

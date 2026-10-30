@@ -397,7 +397,7 @@ impl Window {
         None
     }
 
-    #[cfg(feature = "pixel-chart")]
+    #[cfg(any(feature = "pixel-chart", feature = "pixel-canvas"))]
     pub(crate) fn normalized(self, (x, y): (f64, f64)) -> (f64, f64) {
         (
             (x - self.x[0]) / self.width(),
