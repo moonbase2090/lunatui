@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.18] - 2026-10-30
+
 ### Added
 
 - Default-on `pixel-sparkline` rendering for `Sparkline`: native antialiased heights with per-row colors, focused and disabled styles, preserved missing/coarse block shapes, exact cell fallback and unchanged sample callback order. The `pixel_sparkline` example shares the existing service board in equal-size Cells/Pixels panes and can switch the right pane to cells and back.
