@@ -104,9 +104,16 @@ struct Uploaded {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Placed {
     id: u32,
+    wire_id: u32,
     rect: Rect,
     z: i32,
     fresh: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct StoredImage {
+    image: Uploaded,
+    wire_id: u32,
 }
 
 /// Keeps images on screen with the least traffic: an image is transmitted when its content
@@ -121,7 +128,8 @@ pub struct PixelLayer {
     mode: PixelMode,
     cell_pixels: Option<CellPixels>,
     background: Option<[u8; 3]>,
-    uploaded: Vec<Uploaded>,
+    uploaded: Vec<StoredImage>,
+    retired: Vec<u32>,
     placed: Vec<Placed>,
     frame: Vec<Placed>,
     frame_pixels: u64,
@@ -138,6 +146,7 @@ impl PixelLayer {
             cell_pixels: None,
             background: None,
             uploaded: Vec::new(),
+            retired: Vec::new(),
             placed: Vec::new(),
             frame: Vec::new(),
             frame_pixels: 0,
@@ -195,7 +204,7 @@ impl PixelLayer {
             let _accepted = self.immediate_image(id, image, at, z);
             return;
         }
-        let fresh = self.update_upload(Uploaded {
+        let (wire_id, fresh) = self.update_upload(Uploaded {
             id,
             generation,
             source_width: image.width,
@@ -207,11 +216,12 @@ impl PixelLayer {
             opacity: u8::MAX,
         });
         if fresh {
-            write_transmit(&mut self.out, id, image);
+            write_transmit(&mut self.out, wire_id, image);
         }
         self.frame_pixels += u64::from(image.width) * u64::from(image.height);
         self.frame.push(Placed {
             id,
+            wire_id,
             rect: at,
             z,
             fresh,
@@ -237,9 +247,12 @@ impl PixelLayer {
         }
         for old in &self.placed {
             if !self.frame.iter().any(|placed| placed.id == old.id) {
-                write_delete(&mut self.out, old.id);
-                self.uploaded.retain(|known| known.id != old.id);
+                write_delete(&mut self.out, old.wire_id);
+                self.uploaded.retain(|known| known.image.id != old.id);
             }
+        }
+        for wire_id in self.retired.drain(..) {
+            write_delete(&mut self.out, wire_id);
         }
         core::mem::swap(&mut self.placed, &mut self.frame);
         self.frame.clear();
@@ -251,7 +264,7 @@ impl PixelLayer {
         self.out.clear();
         for old in &self.placed {
             if self.mode == PixelMode::Kitty {
-                write_delete(&mut self.out, old.id);
+                write_delete(&mut self.out, old.wire_id);
             } else {
                 for y in old.rect.y..old.rect.y.saturating_add(old.rect.height) {
                     write_cup(&mut self.out, old.rect.x, y);
@@ -263,28 +276,40 @@ impl PixelLayer {
         self.placed.clear();
         self.frame.clear();
         self.uploaded.clear();
+        self.retired.clear();
         &self.out
     }
 }
 
 impl PixelLayer {
-    fn update_upload(&mut self, current: Uploaded) -> bool {
-        match self
+    fn update_upload(&mut self, current: Uploaded) -> (u32, bool) {
+        let previous = self
             .uploaded
-            .iter_mut()
-            .find(|known| known.id == current.id)
-        {
-            Some(known) if *known == current => false,
-            Some(known) => {
-                write_delete(&mut self.out, current.id);
-                *known = current;
-                true
-            }
-            None => {
-                self.uploaded.push(current);
-                true
+            .iter()
+            .position(|known| known.image.id == current.id);
+        if let Some(index) = previous {
+            let known = self.uploaded[index];
+            if known.image == current {
+                return (known.wire_id, false);
             }
         }
+        let mut wire_id = current.id;
+        while self.uploaded.iter().any(|known| known.wire_id == wire_id)
+            || self.retired.contains(&wire_id)
+        {
+            wire_id = wire_id.wrapping_add(1).max(1);
+        }
+        let stored = StoredImage {
+            image: current,
+            wire_id,
+        };
+        if let Some(index) = previous {
+            self.retired.push(self.uploaded[index].wire_id);
+            self.uploaded[index] = stored;
+        } else {
+            self.uploaded.push(stored);
+        }
+        (wire_id, true)
     }
 
     fn submit_cropped(
@@ -340,12 +365,14 @@ impl PixelLayer {
             height: crop_height,
             opacity: request.opacity(),
         };
-        let fresh = self.mode != PixelMode::Kitty || self.update_upload(current);
+        let (wire_id, fresh) = if self.mode == PixelMode::Kitty {
+            self.update_upload(current)
+        } else {
+            (request.id().get(), true)
+        };
         if fresh {
             self.scratch.clear();
-            if self.scratch.capacity() < crop_len {
-                self.scratch.reserve(crop_len);
-            }
+            self.scratch.reserve(crop_len);
             for row in crop_y..crop_y.saturating_add(crop_height) {
                 let Some(offset) = row_offset(row).and_then(|offset| {
                     offset.checked_add(usize::try_from(crop_x).ok()?.checked_mul(4)?)
@@ -383,11 +410,12 @@ impl PixelLayer {
                     request.depth(),
                 );
             }
-            write_transmit(&mut self.out, request.id().get(), &image);
+            write_transmit(&mut self.out, wire_id, &image);
         }
         self.frame_pixels += u64::from(crop_width) * u64::from(crop_height);
         self.frame.push(Placed {
             id: request.id().get(),
+            wire_id,
             rect: destination,
             z: request.depth(),
             fresh,
@@ -519,7 +547,7 @@ fn write_transmit(out: &mut Vec<u8>, id: u32, image: &PixelImage<'_>) {
 fn write_place(out: &mut Vec<u8>, placed: &Placed) {
     write_cup(out, placed.rect.x, placed.rect.y);
     out.extend_from_slice(b"\x1b_Ga=p,i=");
-    push_decimal(out, u64::from(placed.id));
+    push_decimal(out, u64::from(placed.wire_id));
     out.extend_from_slice(b",p=1,c=");
     push_decimal(out, u64::from(placed.rect.width));
     out.extend_from_slice(b",r=");

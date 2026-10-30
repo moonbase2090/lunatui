@@ -54,6 +54,7 @@ impl PixelLayer {
         self.frame_pixels += u64::from(width) * u64::from(height);
         self.frame.push(Placed {
             id,
+            wire_id: id,
             rect: at,
             z,
             fresh: true,

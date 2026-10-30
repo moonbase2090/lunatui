@@ -149,8 +149,9 @@ fn new_content_is_transmitted_and_placed_again() {
     let mut layer = PixelLayer::new(PixelMode::Kitty);
     one(&mut layer, 7, 1, Rect::new(0, 0, 4, 2), 0);
     let bytes = text(&one(&mut layer, 7, 2, Rect::new(0, 0, 4, 2), 0));
-    assert!(bytes.starts_with("\x1b_Ga=d,d=I,i=7,q=2\x1b\\\x1b_Ga=t,i=7,"));
-    assert!(bytes.contains("a=p,i=7,"));
+    assert!(bytes.starts_with("\x1b_Ga=t,i=8,"));
+    assert!(bytes.contains("a=p,i=8,"));
+    assert!(bytes.ends_with("\x1b_Ga=d,d=I,i=7,q=2\x1b\\"));
 }
 
 #[test]
@@ -164,7 +165,7 @@ fn a_changed_size_with_the_same_generation_is_transmitted_again() {
             layer.image(7, 1, &image, Rect::new(0, 0, 4, 2), 0);
         }
     });
-    assert!(text(&bytes).starts_with("\x1b_Ga=d,d=I,i=7,q=2\x1b\\\x1b_Ga=t,i=7,f=32,s=2,v=1,"));
+    assert!(text(&bytes).starts_with("\x1b_Ga=t,i=8,f=32,s=2,v=1,"));
 }
 
 #[test]
