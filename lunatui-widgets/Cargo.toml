@@ -242,6 +242,11 @@ path = "tests/dialog.rs"
 required-features = ["dialog"]
 
 [[test]]
+name = "menu_mnemonics"
+path = "tests/menu_mnemonics.rs"
+required-features = ["nested-menu"]
+
+[[test]]
 name = "slider"
 path = "tests/slider.rs"
 required-features = ["slider"]

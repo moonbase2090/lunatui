@@ -121,4 +121,6 @@ assert_eq!(
 
 Render with `Menu::new(&state)` and provide a `WidgetState` for token-based styling. The feature enables Graphite token support; applications choose their own key bindings and event loop.
 
+Items take keyboard mnemonics with `MenuItem::mnemonic`. `Menu` underlines the first matching letter of each enabled item's label in the bar and the dropdowns; `Menu::mnemonics(false)` hides the underlines. `MenuState::press_mnemonic` looks the key up without regard to case in the deepest open dropdown, then in the bar. One match is chosen as `select` would choose it, so a group opens and a leaf queues its action. When several items share the key, each press moves to the next of them. `Menu::bar_item_at` finds the top-level item under a click, and `MenuState::open` highlights it. Items without a mnemonic draw as before.
+
 Snapshot tests use `lunatui_test::styled_snapshot`. See [Getting started](../docs/getting-started.md).

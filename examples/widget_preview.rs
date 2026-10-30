@@ -37,6 +37,8 @@ use chart_scene::ChartBoard;
 mod deploy_board;
 #[path = "dialog_showcase.rs"]
 mod dialog_showcase;
+#[path = "menu_mnemonic_showcase.rs"]
+mod menu_mnemonic_showcase;
 #[path = "menu_showcase.rs"]
 mod menu_showcase;
 #[path = "popover_showcase.rs"]
@@ -112,6 +114,11 @@ const PREVIEWS: &[Preview] = &[
         name: "popover",
         native: popover_showcase::render,
         baseline: popover_baseline,
+    },
+    Preview {
+        name: "menu-mnemonics",
+        native: menu_mnemonic_showcase::render,
+        baseline: menu_mnemonics_baseline,
     },
     Preview {
         name: "dialog",
@@ -4608,6 +4615,12 @@ fn toggle_native(
             ),
             &mut cx,
         );
+}
+
+fn menu_mnemonics_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "menu-mnemonics") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn dialog_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
