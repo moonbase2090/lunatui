@@ -13,7 +13,7 @@ use lunatui_widgets::{Block, BorderType, Canvas, RenderCx, Tabs, Widget};
 
 pub(super) const FPS: u32 = 60;
 const BOID_RATE: f64 = 30.0;
-const SCENES: [(&str, &str, u32); 6] = [
+pub(super) const SCENES: [(&str, &str, u32); 6] = [
     ("Scope", " XY oscilloscope ", 51),
     ("Globe", " Flight paths ", 57),
     ("System", " System load ", 51),
@@ -58,14 +58,14 @@ struct Ink {
 }
 
 impl Ink {
-    fn new(theme: &Theme) -> Self {
+    fn new(cx: &RenderCx<'_>) -> Self {
         Self {
-            bg: theme.resolve(Token::Surface0),
-            text: theme.resolve(Token::TextPrimary),
-            line: theme.resolve(Token::FocusRing),
-            warm: theme.resolve(Token::Warn),
-            rose: theme.resolve(Token::Fail),
-            leaf: theme.resolve(Token::Ok),
+            bg: cx.token(Token::Surface0),
+            text: cx.token(Token::TextPrimary),
+            line: cx.token(Token::FocusRing),
+            warm: cx.token(Token::Warn),
+            rose: cx.token(Token::Fail),
+            leaf: cx.token(Token::Ok),
         }
     }
 
@@ -155,21 +155,24 @@ struct Stage {
     hh: f64,
     tick: u32,
     t: f64,
+    pixels: bool,
 }
 
 impl Stage {
-    fn new(ink: Ink, area: Rect, tick: u32) -> Self {
+    fn new(ink: Ink, area: Rect, tick: u32, pixels: bool) -> Self {
         Self {
             ink,
             hw: f64::from(area.width) * CELL_ASPECT / 2.0,
             hh: f64::from(area.height) / 2.0,
             tick,
             t: f64::from(tick) / f64::from(FPS),
+            pixels,
         }
     }
 
     fn canvas<F: Fn(&mut Context<'_>)>(self, area: Rect, cx: &mut RenderCx<'_>, paint: F) {
         Canvas::new(paint)
+            .pixels(self.pixels)
             .x_bounds([-self.hw, self.hw])
             .y_bounds([-self.hh, self.hh])
             .background(self.ink.panel())
@@ -184,19 +187,30 @@ pub(super) fn render(
     area: Rect,
     tick: u32,
 ) {
-    let ink = Ink::new(theme);
-    grid.fill(area, ink.panel(), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let (index, local) = scene_at(tick);
+    render_scene(&mut cx, area, index, local, false);
+}
+
+pub(super) fn render_scene(
+    cx: &mut RenderCx<'_>,
+    area: Rect,
+    index: usize,
+    tick: u32,
+    pixels: bool,
+) {
+    let ink = Ink::new(cx);
+    Block::default().style(ink.panel()).render(area, cx);
     if area.width < 4 || area.height < 4 {
         return;
     }
-    let mut cx = RenderCx::new(grid, clusters, theme);
-    let (index, local) = scene_at(tick);
+    let index = index % SCENES.len();
     Tabs::new(SCENES.iter().map(|(name, _, _)| format!(" {name} ")))
         .select(index)
         .style(ink.shade(ink.text, 0.55).bg(ink.bg))
         .highlight_style(Style::new().fg(ink.bg).bg(ink.line))
         .indent(1)
-        .render(Rect::new(area.x, area.y, area.width, 1), &mut cx);
+        .render(Rect::new(area.x, area.y, area.width, 1), cx);
     let frame = Rect::new(area.x, area.y + 1, area.width, area.height - 1);
     let block = Block::bordered()
         .border_type(BorderType::Rounded)
@@ -204,16 +218,16 @@ pub(super) fn render(
         .style(ink.panel())
         .border_style(ink.shade(ink.text, 0.22).bg(ink.bg))
         .title_style(ink.shade(ink.text, 0.8).bg(ink.bg));
-    block.render(frame, &mut cx);
+    block.render(frame, cx);
     let inner = block.inner(frame);
-    let stage = Stage::new(ink, inner, local);
+    let stage = Stage::new(ink, inner, tick, pixels);
     match index {
-        0 => scope(stage, inner, &mut cx),
-        1 => globe(stage, inner, &mut cx),
-        2 => system(stage, inner, &mut cx),
-        3 => clock_and_tree(stage, inner, &mut cx),
-        4 => flock(stage, inner, &mut cx),
-        _ => pings(stage, inner, &mut cx),
+        0 => scope(stage, inner, cx),
+        1 => globe(stage, inner, cx),
+        2 => system(stage, inner, cx),
+        3 => clock_and_tree(stage, inner, cx),
+        4 => flock(stage, inner, cx),
+        _ => pings(stage, inner, cx),
     }
 }
 
@@ -689,6 +703,7 @@ fn system(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
             }
             ctx.print(0.0, 57.0, "50%", ink.shade(ink.text, 0.4));
         })
+        .pixels(stage.pixels)
         .x_bounds([0.0, f64::from(last)])
         .y_bounds([0.0, 100.0])
         .background(ink.panel())
@@ -867,7 +882,7 @@ fn clock_and_tree(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
 const BOIDS: u32 = 200;
 const TRAIL: usize = 7;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct Boid {
     p: (f64, f64),
     v: (f64, f64),
@@ -1090,4 +1105,64 @@ fn pings(stage: Stage, area: Rect, cx: &mut RenderCx<'_>) {
             );
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lunatui_theme::Variant;
+
+    #[derive(Debug, PartialEq)]
+    struct Snapshot {
+        steps: u32,
+        half: (f64, f64),
+        birds: Vec<Boid>,
+        trails: Vec<Vec<(f64, f64)>>,
+    }
+
+    fn snapshot() -> Option<Snapshot> {
+        FLOCK.with_borrow(|cache| {
+            cache.as_ref().map(|flock| Snapshot {
+                steps: flock.steps,
+                half: flock.half,
+                birds: flock.boids.clone(),
+                trails: flock.trails.clone(),
+            })
+        })
+    }
+
+    #[test]
+    fn held_flock_twins_use_identical_actual_birds_and_trails_before_and_after_resize()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut grid = Grid::new(120, 42);
+        let mut clusters = ClusterTable::new();
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+        let mut previous: Option<Snapshot> = None;
+        for (width, height) in [(57, 25), (53, 23)] {
+            render_scene(&mut cx, Rect::new(1, 7, width, height), 4, 18, false);
+            let left = snapshot().ok_or("first flock was not rendered")?;
+            render_scene(&mut cx, Rect::new(60, 7, width, height), 4, 18, true);
+            let right = snapshot().ok_or("second flock was not rendered")?;
+            assert_eq!(left, right);
+            assert_eq!(left.steps, 138);
+            assert_eq!(left.birds.len(), 200);
+            assert_eq!(left.trails.len(), 200);
+            let moving = left
+                .trails
+                .iter()
+                .find(|trail| trail.len() > 1)
+                .ok_or("no moving trail")?;
+            assert_ne!(moving.first(), moving.last());
+            if let Some(before) = previous {
+                assert_ne!(left.half, before.half);
+                assert_ne!(left.birds, before.birds);
+                assert_ne!(left.trails, before.trails);
+            } else {
+                assert_eq!(left.half, (16.5, 11.0));
+            }
+            previous = Some(left);
+        }
+        Ok(())
+    }
 }
