@@ -19,8 +19,8 @@ name = "pixel_layer"
 required-features = ["pixel-layer"]
 
 [dependencies]
-lunatui-core = { version = "0.1.16", path = "../lunatui-core" }
-lunatui-image = { version = "0.1.16", path = "../lunatui-image", optional = true }
+lunatui-core = { version = "0.1.17", path = "../lunatui-core" }
+lunatui-image = { version = "0.1.17", path = "../lunatui-image", optional = true }
 
 png = { version = "=0.18.1", optional = true }
 

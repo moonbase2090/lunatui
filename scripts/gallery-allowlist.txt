@@ -35,6 +35,12 @@ helper system # composes three Canvas plots with Paragraph headings
 helper clock_and_tree # draws clock and tree shapes through Canvas
 helper flock # renders deterministic boid shapes through Canvas
 helper pings # renders ping rings, map shapes and labels through Canvas
+scope examples/pixel_bar_chart.rs # live BarChart twins use the runtime image presenter
+scope examples/bar_scene.rs # shared BarChart scenes construct bars and compose real widgets
+helper requests # renders grouped request data through BarChart
+helper latency # renders regional latency data through horizontal BarChart
+helper runs # renders build data through BarChart
+helper states # renders the same queue data in three BarChart states
 scope examples/button_showcase.rs # the release console composes Block, Paragraph, LineGauge, StatusBar and Button widgets
 helper changes # renders release notes through Block and Paragraph
 helper checks # renders check names through Paragraph and their progress through LineGauge
