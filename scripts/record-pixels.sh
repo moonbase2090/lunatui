@@ -6,7 +6,7 @@ EXAMPLE="${EXAMPLE:-kitty_image}"
 FEATURES="${FEATURES:-image-presenter,image-decode}"
 WIDTH="${WIDTH:-100}"
 HEIGHT="${HEIGHT:-32}"
-FONT_SIZE="${FONT_SIZE:-20}"
+FONT_SIZE="${FONT_SIZE:-16}"
 FPS="${FPS:-30}"
 SECONDS_TO_RECORD="${SECONDS_TO_RECORD:-8}"
 OUT="${OUT:-$ROOT/target/pixel-capture}"
@@ -85,7 +85,7 @@ assert (stream['width'],stream['height']) == (int(geometry['WIDTH']),int(geometr
 subprocess.run(['ffmpeg','-nostdin','-loglevel','error','-y','-i',str(out/'terminal.mkv'),'-f','framemd5',str(out/'frames.md5')],check=True)
 frames={line.rsplit(',',1)[-1].strip() for line in (out/'frames.md5').read_text().splitlines() if line and not line.startswith('#')}
 if sys.argv[3]: assert len(frames)>1, 'scripted input must change the real terminal frames'
-assert (out/'terminal.webp').stat().st_size <= 3000000, 'recording exceeds the gallery limit'
+assert (out/'terminal.webp').stat().st_size < 2000000, 'recording exceeds the 2 MB gallery limit'
 receipt['distinct_frames']=len(frames)
 receipt['keys']=sys.argv[3]
 receipt['args']=sys.argv[4:]
