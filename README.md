@@ -33,15 +33,15 @@ Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). C
 
 ## Widget gallery
 
-Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
+Still frames and short recordings of real widget output, in the dark theme. Native pixel demos use the real terminal recorder; cell demos use `scripts/record-showcase.sh`.
 
 ### Chart
 
-An operations dashboard with four charts: braille lines with a legend, a dot scatter, hourly bars, and a half-block line chart in the focused state. The series scroll and the points drift while the axes, labels, and titles stay put.
+Requests, Saturation CPU/memory, and latency scatter keep matching Braille and antialiased pixel views. Hourly bars use native pixels. Both views share the same scene data and layout; the axes, labels, and legends stay as text, with native pixel legend swatches. Pixels are enabled by default when the image presenter supports them; `.pixels(false)` retains the original cell rendering.
 
-<img src="docs/media/chart.webp" alt="Chart widget: an operations dashboard in the dark theme" width="1028">
+<img src="docs/media/chart.webp" alt="Matching Braille and native pixel Chart plots, including Saturation CPU and memory, followed by native hourly bars in a real Kitty terminal" width="1028">
 
-Screenshot: [docs/media/chart.png](docs/media/chart.png). Recorded with `scripts/record-showcase.sh` (`CASE=chart`, 120×36 at 2x scale, `FRAMES=200`, dark, lossless animated WebP, about 9 seconds).
+Screenshots: [Requests](docs/media/chart.png), [Saturation CPU/memory](docs/media/chart-saturation.png). Recorded from a clean source tree at `8c213fa0ff9b2f21530f519cfadf33141f00c3df` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_chart FEATURES=image-presenter FONT_SIZE=16 KEYS=1:u,2:Right,3:u,4:Right,5:u,6:Right,7:u scripts/record-pixels.sh`: 100×32 cells, 1301×801 pixels, 30 fps, 8 seconds, lossless WebP 82,922 bytes. All 240 source frames retain graph pixels. The stills are unmodified video frames at 0 and 2.5 seconds. No compositing or dropped frames.
 
 ### BarChart
 
