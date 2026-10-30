@@ -153,7 +153,7 @@ impl<'a, S: AsRef<str>> TagInput<'a, S> {
 
     fn cell(&self, area: Rect, slot: Slot) -> Option<Rect> {
         let row = slot.row.checked_sub(self.hidden_rows(area))?;
-        (row < area.height).then(|| Rect::new(area.x + slot.x, area.y + row, slot.width, 1))
+        Some(Rect::new(area.x + slot.x, area.y + row, slot.width, 1))
     }
 
     /// The cells of the text field in `area`, or an empty rectangle when it is scrolled out.
