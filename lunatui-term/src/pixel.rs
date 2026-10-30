@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::Rect;
-use lunatui_image::{ImageGeometry, ImageRequest, ImageSink, PixelSize, PixelTarget};
+use lunatui_image::{ImageGeometry, ImageRequest, ImageSink, ImageSource, PixelSize, PixelTarget};
 
 mod immediate;
 
@@ -89,8 +89,29 @@ impl<'a> PixelImage<'a> {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ImageKey {
+    Caller(u32),
+    RasterSlot(u16),
+}
+
+impl ImageKey {
+    fn wire_hint(self) -> u32 {
+        match self {
+            Self::Caller(id) => id,
+            Self::RasterSlot(slot) => u32::from(slot) + 1,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CachedRaster {
+    source: ImageSource,
+    generation: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Uploaded {
-    id: u32,
+    id: ImageKey,
     generation: u64,
     source_width: u32,
     source_height: u32,
@@ -103,7 +124,7 @@ struct Uploaded {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Placed {
-    id: u32,
+    id: ImageKey,
     wire_id: u32,
     rect: Rect,
     z: i32,
@@ -133,6 +154,8 @@ pub struct PixelLayer {
     placed: Vec<Placed>,
     frame: Vec<Placed>,
     frame_pixels: u64,
+    raster_slots: Vec<CachedRaster>,
+    raster_cursor: usize,
     out: Vec<u8>,
     scratch: Vec<u8>,
 }
@@ -150,6 +173,8 @@ impl PixelLayer {
             placed: Vec::new(),
             frame: Vec::new(),
             frame_pixels: 0,
+            raster_slots: Vec::new(),
+            raster_cursor: 0,
             out: Vec::new(),
             scratch: Vec::new(),
         }
@@ -182,6 +207,7 @@ impl PixelLayer {
         self.out.clear();
         self.frame.clear();
         self.frame_pixels = 0;
+        self.raster_cursor = 0;
     }
 
     /// Lists `image` for this frame at the cell rectangle `at` and depth `z` (negative draws
@@ -196,40 +222,19 @@ impl PixelLayer {
             || id == 0
             || at.width == 0
             || at.height == 0
-            || self.frame.iter().any(|placed| placed.id == id)
+            || self
+                .frame
+                .iter()
+                .any(|placed| placed.id == ImageKey::Caller(id))
         {
             return;
         }
-        if self.mode != PixelMode::Kitty {
-            let _accepted = self.immediate_image(id, image, at, z);
-            return;
-        }
-        let (wire_id, fresh) = self.update_upload(Uploaded {
-            id,
-            generation,
-            source_width: image.width,
-            source_height: image.height,
-            crop_x: 0,
-            crop_y: 0,
-            width: image.width,
-            height: image.height,
-            opacity: u8::MAX,
-        });
-        if fresh {
-            write_transmit(&mut self.out, wire_id, image);
-        }
-        self.frame_pixels += u64::from(image.width) * u64::from(image.height);
-        self.frame.push(Placed {
-            id,
-            wire_id,
-            rect: at,
-            z,
-            fresh,
-        });
+        let _accepted = self.present_image(ImageKey::Caller(id), generation, image, at, z);
     }
 
     /// Ends the frame and returns the bytes that bring the terminal up to date.
     pub fn finish_frame(&mut self) -> &[u8] {
+        self.raster_slots.truncate(self.raster_cursor);
         if self.mode != PixelMode::Kitty {
             core::mem::swap(&mut self.placed, &mut self.frame);
             self.frame.clear();
@@ -277,11 +282,49 @@ impl PixelLayer {
         self.frame.clear();
         self.uploaded.clear();
         self.retired.clear();
+        self.raster_slots.clear();
+        self.raster_cursor = 0;
         &self.out
     }
 }
 
 impl PixelLayer {
+    fn present_image(
+        &mut self,
+        id: ImageKey,
+        generation: u64,
+        image: &PixelImage<'_>,
+        area: Rect,
+        depth: i32,
+    ) -> bool {
+        if self.mode != PixelMode::Kitty {
+            return self.immediate_image(id, image, area, depth);
+        }
+        let (wire_id, fresh) = self.update_upload(Uploaded {
+            id,
+            generation,
+            source_width: image.width,
+            source_height: image.height,
+            crop_x: 0,
+            crop_y: 0,
+            width: image.width,
+            height: image.height,
+            opacity: u8::MAX,
+        });
+        if fresh {
+            write_transmit(&mut self.out, wire_id, image);
+        }
+        self.frame_pixels += u64::from(image.width) * u64::from(image.height);
+        self.frame.push(Placed {
+            id,
+            wire_id,
+            rect: area,
+            z: depth,
+            fresh,
+        });
+        true
+    }
+
     fn update_upload(&mut self, current: Uploaded) -> (u32, bool) {
         let previous = self
             .uploaded
@@ -293,7 +336,7 @@ impl PixelLayer {
                 return (known.wire_id, false);
             }
         }
-        let mut wire_id = current.id;
+        let mut wire_id = current.id.wire_hint();
         while self.uploaded.iter().any(|known| known.wire_id == wire_id)
             || self.retired.contains(&wire_id)
         {
@@ -355,7 +398,7 @@ impl PixelLayer {
                 .checked_mul(4)
         };
         let current = Uploaded {
-            id: request.id().get(),
+            id: ImageKey::Caller(request.id().get()),
             generation: request.generation(),
             source_width,
             source_height: source.size().height(),
@@ -404,7 +447,7 @@ impl PixelLayer {
                     return false;
                 };
                 return self.immediate_image(
-                    request.id().get(),
+                    ImageKey::Caller(request.id().get()),
                     &image,
                     destination,
                     request.depth(),
@@ -414,7 +457,7 @@ impl PixelLayer {
         }
         self.frame_pixels += u64::from(crop_width) * u64::from(crop_height);
         self.frame.push(Placed {
-            id: request.id().get(),
+            id: ImageKey::Caller(request.id().get()),
             wire_id,
             rect: destination,
             z: request.depth(),
@@ -453,6 +496,55 @@ impl ImageSink for PixelLayer {
         ))
     }
 
+    fn submit_raster(&mut self, source: &ImageSource, area: Rect, depth: i32) -> bool {
+        let size = source.size();
+        if size.width() > 4096
+            || size.height() > 4096
+            || size
+                .width()
+                .checked_mul(size.height())
+                .is_none_or(|n| n > 1_048_576)
+            || self
+                .pixel_target(area)
+                .is_none_or(|target| target.size() != size)
+            || (self.mode != PixelMode::Kitty && depth < 0)
+        {
+            return false;
+        }
+        let Ok(slot) = u16::try_from(self.raster_cursor) else {
+            return false;
+        };
+        let cached = self.raster_slots.get(self.raster_cursor);
+        let generation = match cached {
+            Some(cached) if cached.source == *source => cached.generation,
+            Some(cached) => {
+                let Some(generation) = cached.generation.checked_add(1) else {
+                    return false;
+                };
+                generation
+            }
+            None => 0,
+        };
+        let Some(image) = PixelImage::new(size.width(), size.height(), source.rgba8_pixels())
+        else {
+            return false;
+        };
+        if !self.present_image(ImageKey::RasterSlot(slot), generation, &image, area, depth) {
+            return false;
+        }
+        let cached = CachedRaster {
+            source: source.clone(),
+            generation,
+        };
+        if let Some(previous) = self.raster_slots.get_mut(self.raster_cursor) {
+            *previous = cached;
+        } else {
+            self.raster_slots.push(cached);
+        }
+        self.raster_cursor += 1;
+        true
+    }
+
     fn submit(&mut self, request: ImageRequest<'_>) -> bool {
         let area = request.area();
         if !self.mode.is_pixels()
@@ -463,7 +555,8 @@ impl ImageSink for PixelLayer {
         {
             return false;
         }
-        self.frame.retain(|placed| placed.id != request.id().get());
+        self.frame
+            .retain(|placed| placed.id != ImageKey::Caller(request.id().get()));
         let cell_width = self.cell_pixels.map_or(1, CellPixels::width);
         let cell_height = self.cell_pixels.map_or(2, CellPixels::height);
         let Some(viewport_height) = u32::from(area.height).checked_mul(u32::from(cell_height))
@@ -601,3 +694,6 @@ fn push_base64(out: &mut Vec<u8>, data: &[u8]) {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod raster_tests;

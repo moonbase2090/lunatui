@@ -8,6 +8,9 @@ use lunatui_theme::Token;
 use crate::raster::{Ink, Marker, Raster, Window, glyph};
 use crate::{Block, BorderType, RenderCx, Widget, WidgetState};
 
+#[cfg(feature = "pixel-chart")]
+mod pixel;
+
 fn clip_area_to_coordinates(area: Rect) -> Rect {
     Rect::new(
         area.x,
@@ -35,7 +38,7 @@ pub enum GraphType {
     Scatter,
     /// Points joined by straight lines.
     Line,
-    /// A bar from the bottom of the plot up to each point, using eighth blocks.
+    /// A bar from the bottom of the plot up to each point, using eighth blocks in cell mode.
     Bar,
 }
 
@@ -73,7 +76,7 @@ pub struct Dataset<'a> {
 }
 
 impl<'a> Dataset<'a> {
-    /// A Braille scatter series over `data`, colored by its position in the chart.
+    /// A scatter series over `data`, with a Braille cell fallback and a series theme color.
     #[must_use]
     pub const fn new(data: &'a [(f64, f64)]) -> Self {
         Self {
@@ -92,7 +95,7 @@ impl<'a> Dataset<'a> {
         self
     }
 
-    /// Glyphs the series is drawn with.
+    /// Glyphs used by the cell fallback. Pixel plots use native shapes and smooth strokes.
     #[must_use]
     pub const fn marker(mut self, marker: Marker) -> Self {
         self.marker = marker;
@@ -188,6 +191,13 @@ impl Default for Axis<'_> {
 /// when it would take more than half of the plot, which
 /// [`hidden_legend_constraints`](Self::hidden_legend_constraints) changes.
 ///
+/// With the default `pixel-chart` feature and a measured image presenter, plots and legend
+/// swatches use antialiased pixels. Axes and labels remain text. [`pixels(false)`](Self::pixels)
+/// selects the cell renderer. Missing metrics, rejected images, excessive work, unresolved
+/// foregrounds, per-series backgrounds, or unsupported style attributes also use cells. DIM
+/// is rendered at half intensity; other series attributes, including REVERSE, use cells.
+/// iTerm2/Sixel use cells for an in-plot legend because they cannot put images below its text.
+///
 /// ```
 /// use lunatui_core::{ClusterTable, Grid, Rect};
 /// use lunatui_theme::{Theme, Variant};
@@ -214,6 +224,7 @@ pub struct Chart<'a> {
     hidden: (Constraint, Constraint),
     state: WidgetState,
     background: Option<Style>,
+    pixels: bool,
 }
 
 impl<'a> Chart<'a> {
@@ -228,7 +239,15 @@ impl<'a> Chart<'a> {
             hidden: (Constraint::Ratio(1, 2), Constraint::Ratio(1, 2)),
             state: WidgetState::Normal,
             background: None,
+            pixels: true,
         }
+    }
+
+    /// Uses antialiased pixels when supported (the default), or explicitly selects cells.
+    #[must_use]
+    pub const fn pixels(mut self, enabled: bool) -> Self {
+        self.pixels = enabled;
+        self
     }
 
     /// Style the area is reset to before anything is drawn, such as a panel background. Without
@@ -456,36 +475,12 @@ impl Chart<'_> {
         }
         for (series, set) in self.datasets.iter().enumerate() {
             let mut layer = Raster::new(plot.rect);
-            let points: Vec<(f64, f64)> = set
-                .data
-                .iter()
-                .copied()
-                .filter(|(x, y)| x.is_finite() && y.is_finite())
-                .collect();
-            match set.graph_type {
-                GraphType::Scatter => {
-                    for &point in &points {
-                        layer.point(window, set.marker, point, series);
-                    }
-                }
-                GraphType::Line => {
-                    for pair in points.windows(2) {
-                        layer.segment(window, set.marker, pair[0], pair[1], series);
-                    }
-                    if let [only] = points[..] {
-                        layer.point(window, set.marker, only, series);
-                    }
-                }
-                GraphType::Bar => {
-                    let (width, height) =
-                        (i64::from(layer.rect.width), i64::from(layer.rect.height));
-                    for &(x, y) in points.iter().filter(|&&point| window.contains(point)) {
-                        let column = window.column(x, width);
-                        let ticks = window.ticks(y, height * 8);
-                        layer.eighths(u16::try_from(column).unwrap_or(0), ticks, series);
-                    }
-                }
-            }
+            set.plot_into(&mut CellPlot {
+                raster: &mut layer,
+                window,
+                marker: set.marker,
+                series,
+            });
             plot.overlay(&layer);
         }
     }
@@ -511,10 +506,8 @@ impl Chart<'_> {
         }
     }
 
-    fn draw_legend(&self, plot: Rect, look: &Look, cx: &mut RenderCx<'_>) {
-        let Some(position) = self.legend else {
-            return;
-        };
+    fn legend_layout(&self, plot: Rect) -> Option<LegendLayout<'_>> {
+        let position = self.legend?;
         let entries: Vec<(usize, &str)> = self
             .datasets
             .iter()
@@ -522,7 +515,7 @@ impl Chart<'_> {
             .filter_map(|(index, set)| set.name.map(|name| (index, name)))
             .collect();
         if entries.is_empty() {
-            return;
+            return None;
         }
         let inner = entries
             .iter()
@@ -539,7 +532,7 @@ impl Chart<'_> {
             || width > plot.width
             || height > plot.height
         {
-            return;
+            return None;
         }
         let (left, middle) = (plot.x, plot.x.saturating_add((plot.width - width) / 2));
         let right = plot.x.saturating_add(plot.width).saturating_sub(width);
@@ -555,7 +548,25 @@ impl Chart<'_> {
             LegendPosition::BottomRight => (right, bottom),
             LegendPosition::BottomLeft => (left, bottom),
         };
-        let area = Rect::new(x, y, width, height);
+        Some(LegendLayout {
+            area: Rect::new(x, y, width, height),
+            entries,
+        })
+    }
+
+    fn draw_legend(
+        &self,
+        layout: &LegendLayout<'_>,
+        look: &Look,
+        cx: &mut RenderCx<'_>,
+        swatches: bool,
+    ) {
+        let Rect {
+            x,
+            y,
+            width,
+            height,
+        } = layout.area;
         let blank = " ".repeat(usize::from(width));
         let panel = Style::new().fg(look.text.fg).bg(look.legend_bg);
         for row in 0..height {
@@ -565,11 +576,13 @@ impl Chart<'_> {
             .border_type(BorderType::Rounded)
             .style(panel)
             .border_style(look.axis.bg(look.legend_bg))
-            .render(area, cx);
-        for (row, (index, name)) in (0_u16..).zip(&entries) {
+            .render(layout.area, cx);
+        for (row, (index, name)) in (0_u16..).zip(&layout.entries) {
             let swatch = self.series_style(cx, *index).bg(look.legend_bg);
             let label_y = y.saturating_add(1).saturating_add(row);
-            put_text(cx, x.saturating_add(2), label_y, "■", swatch);
+            if swatches {
+                put_text(cx, x.saturating_add(2), label_y, "■", swatch);
+            }
             put_text(
                 cx,
                 x.saturating_add(4),
@@ -618,13 +631,97 @@ impl Widget for Chart<'_> {
         );
         let look = self.look(cx);
         self.draw_axes(area, rect, &look, cx);
+        let legend = self.legend_layout(rect);
+        #[cfg(feature = "pixel-chart")]
+        if self.pixels && self.draw_pixels(rect, legend.as_ref(), &look, cx) {
+            return;
+        }
         let mut plot = Raster::new(rect);
         self.rasterize(&mut plot);
         self.draw_plot(&plot, cx);
-        self.draw_legend(rect, &look, cx);
+        if let Some(legend) = legend {
+            self.draw_legend(&legend, &look, cx, true);
+        }
     }
 
     fn measure(&self, avail: Size) -> Size {
         Size::new(avail.width, avail.height).clamp(avail)
+    }
+}
+
+struct LegendLayout<'a> {
+    area: Rect,
+    entries: Vec<(usize, &'a str)>,
+}
+
+trait PlotTarget {
+    fn point(&mut self, point: (f64, f64));
+    fn segment(&mut self, from: (f64, f64), to: (f64, f64));
+    fn bar(&mut self, point: (f64, f64));
+}
+
+impl Dataset<'_> {
+    fn plot_into(&self, target: &mut impl PlotTarget) {
+        let mut points = self
+            .data
+            .iter()
+            .copied()
+            .filter(|(x, y)| x.is_finite() && y.is_finite());
+        match self.graph_type {
+            GraphType::Scatter => {
+                for point in points {
+                    target.point(point);
+                }
+            }
+            GraphType::Line => {
+                let Some(mut before) = points.next() else {
+                    return;
+                };
+                let mut paired = false;
+                for after in points {
+                    target.segment(before, after);
+                    before = after;
+                    paired = true;
+                }
+                if !paired {
+                    target.point(before);
+                }
+            }
+            GraphType::Bar => {
+                for point in points {
+                    target.bar(point);
+                }
+            }
+        }
+    }
+}
+
+struct CellPlot<'a> {
+    raster: &'a mut Raster,
+    window: Window,
+    marker: Marker,
+    series: usize,
+}
+
+impl PlotTarget for CellPlot<'_> {
+    fn point(&mut self, point: (f64, f64)) {
+        self.raster
+            .point(self.window, self.marker, point, self.series);
+    }
+
+    fn segment(&mut self, from: (f64, f64), to: (f64, f64)) {
+        self.raster
+            .segment(self.window, self.marker, from, to, self.series);
+    }
+
+    fn bar(&mut self, (x, y): (f64, f64)) {
+        if self.window.contains((x, y)) {
+            let width = i64::from(self.raster.rect.width);
+            let height = i64::from(self.raster.rect.height);
+            let column = self.window.column(x, width);
+            let ticks = self.window.ticks(y, height * 8);
+            self.raster
+                .eighths(u16::try_from(column).unwrap_or(0), ticks, self.series);
+        }
     }
 }

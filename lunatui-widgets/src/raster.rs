@@ -397,6 +397,14 @@ impl Window {
         None
     }
 
+    #[cfg(feature = "pixel-chart")]
+    pub(crate) fn normalized(self, (x, y): (f64, f64)) -> (f64, f64) {
+        (
+            (x - self.x[0]) / self.width(),
+            (y - self.y[0]) / self.height(),
+        )
+    }
+
     pub(crate) fn column(self, x: f64, cells: i64) -> i64 {
         round_to_tick((x - self.x[0]) * span(cells - 1) / self.width())
     }

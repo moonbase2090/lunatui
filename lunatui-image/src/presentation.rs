@@ -156,6 +156,17 @@ pub trait ImageSink {
         None
     }
 
+    /// Presents a widget raster without caller-managed identity or revisions.
+    ///
+    /// The source must match the measured pixel target for `area`. Identities follow accepted
+    /// raster submission order within each complete presenter frame. Submit every visible
+    /// raster each frame; omitted rasters are removed. Equal decoded pixels suppress Kitty
+    /// uploads, while image generation and lifetime remain owned by the presenter.
+    /// Custom sinks can decline this operation and retain the widget's cell fallback.
+    fn submit_raster(&mut self, _source: &ImageSource, _area: Rect, _depth: i32) -> bool {
+        false
+    }
+
     /// Accepts an image for this frame. Returns false when the sink cannot present it.
     fn submit(&mut self, request: ImageRequest<'_>) -> bool;
 }
