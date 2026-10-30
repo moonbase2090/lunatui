@@ -30,6 +30,7 @@ pixel-canvas = ["canvas", "image"]
 barchart = ["widget-state"]
 pixel-barchart = ["barchart", "image"]
 toast = ["widget-state"]
+notification-center = ["widget-state", "toast"]
 slider = ["widget-state"]
 number-input = ["widget-state"]
 diff-view = ["widget-state"]
@@ -53,7 +54,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.17", path = "../lunatui-core" }
@@ -306,6 +307,11 @@ required-features = ["combo-box"]
 name = "date_picker"
 path = "tests/date_picker.rs"
 required-features = ["date-picker"]
+
+[[test]]
+name = "notification_center"
+path = "tests/notification_center.rs"
+required-features = ["notification-center"]
 
 [[test]]
 name = "pixel_chart"
