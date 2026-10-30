@@ -415,9 +415,9 @@ fn the_sort_marker_fits_short_and_centred_columns() {
         .sort_indicator(Some((0, SortDirection::Ascending)));
     assert_eq!(rows(&two, 8, 1)[0], " ▲Errors");
     let long = Table::new(&source, vec![Constraint::Length(8), Constraint::Length(6)])
-        .header([("Service", Style::new()), ("Errors", Style::new())])
+        .header([("Service", Style::new()), ("Latency", Style::new())])
         .sort_indicator(Some((1, SortDirection::Descending)));
-    assert_eq!(rows(&long, 14, 1)[0], "Service Erro ▼");
+    assert_eq!(rows(&long, 14, 1)[0], "Service Late ▼");
     let centred = Table::new(&source, vec![Constraint::Length(9), Constraint::Length(9)])
         .header([("p95", Style::new()), ("Region", Style::new())])
         .alignments(vec![Alignment::Center, Alignment::Center])

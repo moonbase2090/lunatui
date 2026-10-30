@@ -167,7 +167,6 @@ pub(super) fn render(
     if area.width < 100 || area.height < 30 {
         return;
     }
-    let dim = fill.with_attrs(Attrs::new().set_dim(true));
     let seconds = 20 + tick / 30;
     Paragraph::new(format!(
         " acme · service inventory{:>width$}",
@@ -256,7 +255,7 @@ pub(super) fn render(
         area.width - pane.width - 3,
         pane.height,
     );
-    details(&mut cx, &app, &source, side, fill, dim, theme, tick);
+    details(&mut cx, &app, &source, side, fill, theme, tick);
 
     status(&mut cx, &app, area, raised, accent, theme);
     pointer(&mut cx, &app, &table, table_area, fill, theme, tick);
@@ -323,20 +322,16 @@ fn pointer<S: RowSource, C: lunatui_widgets::CellStyle>(
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the details pane reads the app, the data and the theme"
-)]
 fn details(
     cx: &mut RenderCx<'_>,
     app: &App,
     source: &VecSource,
     pane: Rect,
     fill: Style,
-    dim: Style,
     theme: &Theme,
     tick: u32,
 ) {
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
     let block = Block::bordered()
         .border_type(BorderType::Rounded)
         .title(" Details ")
