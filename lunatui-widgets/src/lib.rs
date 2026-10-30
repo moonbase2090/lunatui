@@ -93,6 +93,8 @@ mod status_dot;
 mod table;
 mod table_state;
 mod tabs;
+#[cfg(feature = "tag-input")]
+mod tag_input;
 mod text_input;
 #[cfg(feature = "toast")]
 mod toast;
@@ -201,6 +203,8 @@ pub use status_dot::{StatusDot, StatusState};
 pub use table::{CellStyle, Table};
 pub use table_state::{SortDirection, TableState, TableView};
 pub use tabs::{TabMove, Tabs, TabsDrag};
+#[cfg(feature = "tag-input")]
+pub use tag_input::TagInput;
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]
 pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};
