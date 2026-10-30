@@ -113,7 +113,7 @@ impl<'a, S: AsRef<str>> TagInput<'a, S> {
         let mut row = 0_u16;
         for (index, tag) in self.tags.iter().enumerate() {
             let chip = Self::chip_width(tag.as_ref(), total);
-            if x > 0 && x.saturating_add(chip) > total {
+            if x.saturating_add(chip) > total {
                 row += 1;
                 x = 0;
             }
@@ -160,7 +160,7 @@ impl<'a, S: AsRef<str>> TagInput<'a, S> {
     #[must_use]
     pub fn field_area(&self, area: Rect) -> Rect {
         let mut found = Rect::new(area.x, area.y, 0, 0);
-        if area.width == 0 || area.height == 0 {
+        if area.width == 0 {
             return found;
         }
         self.layout(area.width, |slot| {
@@ -172,9 +172,6 @@ impl<'a, S: AsRef<str>> TagInput<'a, S> {
     }
 
     fn chip_at(&self, area: Rect, x: u16, y: u16) -> Option<(usize, Rect)> {
-        if area.width == 0 || area.height == 0 {
-            return None;
-        }
         let mut hit = None;
         self.layout(area.width, |slot| {
             let (Some(index), Some(cell)) = (slot.index, self.cell(area, slot)) else {

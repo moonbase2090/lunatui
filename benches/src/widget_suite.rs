@@ -23,8 +23,8 @@ use lunatui_widgets::{
     LogView, MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
     NotificationLog, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup,
     ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider,
-    SortDirection, Sparkline, SplitAxis, SplitTree, Table, TableState, Tabs, TextWrap, ToastKind,
-    ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
+    SortDirection, Sparkline, SplitAxis, SplitTree, Table, TableState, Tabs, TagInput, TextWrap,
+    ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -348,6 +348,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: notification_center_lunatui,
         ratatui: notification_center_ratatui,
+    },
+    Case {
+        name: "tag-input",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no tag input; its side draws the same chips and typed text as one Paragraph of styled spans, without wrapping, a caret, or hit testing",
+        ),
+        lunatui: tag_input_lunatui,
+        ratatui: tag_input_ratatui,
     },
     Case {
         name: "log-view",
@@ -3374,4 +3383,39 @@ fn notification_center_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         ),
         buf,
     );
+}
+
+const TAGS: [&str; 5] = ["rust", "tui", "async", "widgets", "grid"];
+
+fn tag_input_text(tick: u32) -> &'static str {
+    let typed = "terminal";
+    &typed[..usize::try_from((tick / 10) % 9).unwrap_or(0)]
+}
+
+fn tag_input_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let text = tag_input_text(tick);
+    TagInput::new(&TAGS, text, text.len())
+        .placeholder("Add a tag")
+        .state(WidgetState::Focused)
+        .render(area, &mut cx);
+}
+
+fn tag_input_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let chip = rat_text().add_modifier(ratatui::style::Modifier::REVERSED);
+    let mut spans = Vec::new();
+    for tag in TAGS {
+        spans.push(Span::styled(format!(" {tag} × "), chip));
+        spans.push(Span::raw(" "));
+    }
+    spans.push(Span::styled(tag_input_text(tick), rat_text()));
+    RatParagraph::new(Line::from(spans))
+        .style(rat_text())
+        .render(area, buf);
 }

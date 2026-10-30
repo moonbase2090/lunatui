@@ -305,3 +305,23 @@ fn commit_adds_a_trimmed_new_tag_and_clears_the_text() {
     assert_eq!(tags, ["rust", "tui"]);
     assert_eq!(text, "");
 }
+
+#[test]
+fn chips_and_the_field_may_end_exactly_at_the_edge() {
+    assert_eq!(rows(&input("ru", 2), 16, 3)[0], " rust ×   tui ×");
+    assert_eq!(input("", 0).rows(16), 3);
+    assert_eq!(
+        rows(&input("abcdefgh", 0), 35, 2),
+        [" rust ×   tui ×   async ×  abcdefgh", ""]
+    );
+    assert_eq!(input("", 0).rows(35), 1);
+    assert_eq!(input("", 0).rows(34), 2);
+    let none: [&str; 0] = [];
+    let empty = TagInput::new(&none, "", 0);
+    assert_eq!(empty.rows(6), 1);
+    assert_eq!(empty.rows(1), 1);
+    assert_eq!(
+        empty.field_area(Rect::new(0, 0, 6, 3)),
+        Rect::new(0, 0, 6, 1)
+    );
+}

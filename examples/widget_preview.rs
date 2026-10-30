@@ -25,8 +25,8 @@ use lunatui_widgets::{
     Monthly, NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph,
     PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx,
     Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
-    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
-    Toggle, VecSource, Widget, WidgetState,
+    StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput, TextInput, ToastKind, ToastScope,
+    ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 mod bar_scene;
@@ -191,6 +191,11 @@ const PREVIEWS: &[Preview] = &[
         name: "date-picker",
         native: datepick_native,
         baseline: datepick_baseline,
+    },
+    Preview {
+        name: "tag-input",
+        native: tags_native,
+        baseline: tags_baseline,
     },
     Preview {
         name: "notification-center",
@@ -6947,3 +6952,93 @@ fn notify_native(
 }
 
 fn notify_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+fn tags_state(tick: u32) -> (Vec<String>, String, Option<usize>) {
+    let mut tags = vec!["rust".to_owned(), "tui".to_owned()];
+    let mut text = String::new();
+    let typing = |word: &str, start: u32, per: u32, tick: u32| -> usize {
+        let typed = usize::try_from(tick.saturating_sub(start) / per + 1).unwrap_or(0);
+        typed.min(word.len())
+    };
+    let words = [
+        ("async", 20_u32, 85_u32),
+        ("widgets", 100, 165),
+        ("grid", 175, 205),
+    ];
+    for (word, start, done) in words {
+        if tick >= done {
+            tags.push(word.to_owned());
+        } else if tick >= start {
+            text = word[..typing(word, start, 12, tick)].to_owned();
+        }
+    }
+    let selected = (tick >= 215).then(|| tags.len() - 1);
+    if tick >= 232 {
+        tags.pop();
+        return (tags, text, None);
+    }
+    (tags, text, selected)
+}
+
+fn tags_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Journal  ·  new entry", head);
+    let panel = Rect::new(area.x + 2, area.y + 2, 56, 16);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Tag your entry ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(panel, &mut cx);
+    cx.put_str(panel.x + 3, panel.y + 2, "Title", dim);
+    cx.put_str(
+        panel.x + 3,
+        panel.y + 3,
+        "Zero-allocation rendering notes",
+        fill,
+    );
+    cx.put_str(panel.x + 3, panel.y + 5, "Tags", dim);
+    let (tags, typed, selected) = tags_state(tick);
+    let box_area = Rect::new(panel.x + 3, panel.y + 6, 36, 4);
+    Block::bordered()
+        .border_style(dim)
+        .style(fill)
+        .render(Rect::new(box_area.x - 1, box_area.y - 1, 38, 6), &mut cx);
+    TagInput::new(&tags, typed.as_str(), typed.len())
+        .placeholder("Type a tag and press enter")
+        .selected(selected)
+        .state(WidgetState::Focused)
+        .render(box_area, &mut cx);
+    let hint = match selected {
+        Some(_) => "Selected tag: press delete to remove it",
+        None if typed.is_empty() => "Type a tag, then press enter to add it",
+        None => "Press enter to add the tag",
+    };
+    cx.put_str(panel.x + 3, panel.y + 12, hint, dim);
+    StatusBar::new(" enter add  ●  ← select tag  ●  delete remove  ●  esc cancel")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn tags_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}

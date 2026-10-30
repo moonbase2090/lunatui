@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `TagInput` widget, behind the `tag-input` feature: tags drawn as chips with a `×` that wrap across rows, followed by a text field with a caret for the next tag, and a selected chip for removal. `commit` turns the typed text into a tag (trimmed, skipping empty and duplicate ones), `step` moves the selection between the chips and the field, `rows` and `measure` report the height needed, and `tag_at`, `remove_at`, and `field_area` give hit testing.
 - `CodeView` widget, behind the `code-view` feature: read-only lines with a right-aligned line-number gutter, `CodeMark` gutter signs (added, changed, removed, error, warning, info, breakpoint), a cursor line, tab stops, horizontal and vertical scrolling, and a vertical scrollbar when the lines overflow. A `CodeHighlight` hook styles byte ranges of each visible line, and closures implement it. `CodeViewState` keeps the cursor on screen through `down`, `up`, `page_down`, `page_up`, and `set_cursor`, and `line_at` finds the line under a click. The lines are borrowed, so a built view draws without allocating.
 
 - `lunatui-ui-tokens` is the shared base for the `lunatui-<name>` UI component crates: `Role` and `Tone` map semantic names (card, primary, border, ring, danger) onto core theme tokens, with a `Spacing` scale and the default border style.
