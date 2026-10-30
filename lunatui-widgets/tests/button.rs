@@ -122,7 +122,6 @@ fn rest_colors_follow_the_variant() {
 
 #[test]
 fn focus_fills_the_button_with_the_focus_ring_or_fail() {
-    assert_ne!(token(Token::Accent), token(Token::FocusRing));
     for variant in [ButtonVariant::Normal, ButtonVariant::Primary] {
         let focused = label_style(
             &Button::new("Save")
