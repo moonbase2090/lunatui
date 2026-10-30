@@ -47,3 +47,8 @@ helper ink_from # resolves semantic colors without writing cells
 helper draw_spark_chrome # composes header labels and background widgets
 helper draw_lane # composes one Sparkline lane and its labels through public widgets
 helper draw_inspector # composes the selected Sparkline and its summary widgets
+scope examples/button_showcase.rs # the release console composes Block, Paragraph, LineGauge, StatusBar and Button widgets
+helper changes # renders release notes through Block and Paragraph
+helper checks # renders check names through Paragraph and their progress through LineGauge
+helper actions # renders the action bar through Block and Button
+helper history # renders release history lines through Block and Paragraph
