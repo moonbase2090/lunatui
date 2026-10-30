@@ -44,6 +44,8 @@ mod menu_showcase;
 mod popover_showcase;
 #[path = "release_console.rs"]
 mod release_console;
+#[path = "table_showcase.rs"]
+mod table_showcase;
 #[path = "tooltip_showcase.rs"]
 mod tooltip_showcase;
 use ratatui::backend::CrosstermBackend;
@@ -113,6 +115,11 @@ const PREVIEWS: &[Preview] = &[
         name: "popover",
         native: popover_showcase::render,
         baseline: popover_baseline,
+    },
+    Preview {
+        name: "table-sorted",
+        native: table_showcase::render,
+        baseline: table_sorted_baseline,
     },
     Preview {
         name: "dialog",
@@ -4609,6 +4616,12 @@ fn toggle_native(
             ),
             &mut cx,
         );
+}
+
+fn table_sorted_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "table-sorted") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn dialog_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {

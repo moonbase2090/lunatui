@@ -85,6 +85,7 @@ mod state;
 mod status_bar;
 mod status_dot;
 mod table;
+mod table_state;
 mod tabs;
 mod text_input;
 #[cfg(feature = "toast")]
@@ -186,6 +187,7 @@ pub use state::WidgetState;
 pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
 pub use table::{CellStyle, Table};
+pub use table_state::{SortDirection, TableState, TableView};
 pub use tabs::{TabMove, Tabs, TabsDrag};
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]

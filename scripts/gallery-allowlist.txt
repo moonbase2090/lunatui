@@ -41,3 +41,7 @@ helper requests # renders grouped request data through BarChart
 helper latency # renders regional latency data through horizontal BarChart
 helper runs # renders build data through BarChart
 helper states # renders the same queue data in three BarChart states
+scope examples/table_showcase.rs # the service inventory composes Block, Table, Paragraph, LineGauge and StatusBar widgets
+helper details # renders the focused service through Block, Paragraph and LineGauge
+helper status # renders key and action notes through StatusBar
+helper pointer # renders the pointer glyph through Paragraph at a Table column position

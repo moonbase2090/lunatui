@@ -243,6 +243,10 @@ path = "tests/dialog.rs"
 required-features = ["dialog"]
 
 [[test]]
+name = "table_upgrades"
+path = "tests/table_upgrades.rs"
+
+[[test]]
 name = "slider"
 path = "tests/slider.rs"
 required-features = ["slider"]
