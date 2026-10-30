@@ -1,11 +1,14 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{Rect, Size, Style, clip_display_prefix};
+use lunatui_core::{Rect, Size, Style, clip_display_prefix, text_display_width};
 use lunatui_theme::Token;
 
 use crate::raster::{Marker, Raster, Window, glyph};
 use crate::{RenderCx, Widget, WidgetState};
+
+#[cfg(feature = "pixel-canvas")]
+mod pixel;
 
 /// A drawing a [`Canvas`] can paint: it plots points and lines through a [`Painter`] in the
 /// canvas's own coordinates.
@@ -21,6 +24,8 @@ pub struct Painter<'p> {
     window: Window,
     marker: Marker,
     styles: &'p mut Vec<Style>,
+    #[cfg(feature = "pixel-canvas")]
+    native: Option<&'p mut pixel::Native>,
 }
 
 impl Painter<'_> {
@@ -34,11 +39,24 @@ impl Painter<'_> {
 
     /// Plots one point.
     pub fn point(&mut self, x: f64, y: f64, style: Style) {
-        if !x.is_finite() || !y.is_finite() {
+        let Some(tag) = self.cell_point(x, y, style) else {
             return;
+        };
+        #[cfg(feature = "pixel-canvas")]
+        if let Some(native) = &mut self.native {
+            native.point(self.window, self.marker, (x, y), tag);
+        }
+        #[cfg(not(feature = "pixel-canvas"))]
+        let _tag = tag;
+    }
+
+    fn cell_point(&mut self, x: f64, y: f64, style: Style) -> Option<usize> {
+        if !x.is_finite() || !y.is_finite() {
+            return None;
         }
         let tag = self.tag(style);
         self.raster.point(self.window, self.marker, (x, y), tag);
+        Some(tag)
     }
 
     /// Plots a straight line, clipped to the bounds.
@@ -55,6 +73,30 @@ impl Painter<'_> {
                 .segment_centered(self.window, self.marker, from, to, tag);
         } else {
             self.raster.segment(self.window, self.marker, from, to, tag);
+        }
+        #[cfg(feature = "pixel-canvas")]
+        if let Some(native) = &mut self.native {
+            native.line(self.window, from, to, tag);
+        }
+    }
+
+    fn circle(&mut self, center: (f64, f64), radius: f64, style: Style) {
+        let (width, height) = self.resolution();
+        let steps = 360_u32.max(width.max(height).saturating_mul(4));
+        for step in 0..steps {
+            let angle = f64::from(step) / f64::from(steps) * core::f64::consts::TAU;
+            let _tag = self.cell_point(
+                radius.mul_add(angle.cos(), center.0),
+                radius.mul_add(angle.sin(), center.1),
+                style,
+            );
+        }
+        #[cfg(feature = "pixel-canvas")]
+        {
+            let tag = self.tag(style);
+            if let Some(native) = &mut self.native {
+                native.circle(self.window, self.marker, center, radius, tag);
+            }
         }
     }
 
@@ -148,16 +190,7 @@ pub struct Circle {
 
 impl Shape for Circle {
     fn draw(&self, painter: &mut Painter<'_>) {
-        let (width, height) = painter.resolution();
-        let steps = 360_u32.max(width.max(height).saturating_mul(4));
-        for step in 0..steps {
-            let angle = f64::from(step) / f64::from(steps) * core::f64::consts::TAU;
-            painter.point(
-                self.radius.mul_add(angle.cos(), self.x),
-                self.radius.mul_add(angle.sin(), self.y),
-                self.style,
-            );
-        }
+        painter.circle((self.x, self.y), self.radius, self.style);
     }
 }
 
@@ -176,6 +209,8 @@ pub struct Context<'c> {
     current: Raster,
     styles: &'c mut Vec<Style>,
     labels: Vec<Label>,
+    #[cfg(feature = "pixel-canvas")]
+    native: Option<pixel::Native>,
 }
 
 impl Context<'_> {
@@ -186,6 +221,8 @@ impl Context<'_> {
             window: self.window,
             marker: self.marker,
             styles: self.styles,
+            #[cfg(feature = "pixel-canvas")]
+            native: self.native.as_mut(),
         };
         shape.draw(&mut painter);
     }
@@ -198,6 +235,7 @@ impl Context<'_> {
 
     /// Starts a new layer. A cell a later layer draws in replaces what an earlier layer drew
     /// there, so later layers sit on top.
+    /// Native pixels instead composite the pixels covered by each shape in drawing order.
     pub fn layer(&mut self) {
         self.committed.overlay(&self.current);
         let rect = self.current.rect;
@@ -235,6 +273,12 @@ impl Context<'_> {
 /// `y_bounds` say which range of coordinates the area shows; shapes are clipped to it. Every cell
 /// of the area is rewritten, and a [`background`](Self::background) keeps a panel color.
 ///
+/// Native pixels are enabled by default when a measured image target is available. The callback
+/// runs once and [`Painter::resolution`] keeps its cell-marker meaning. Native shapes composite
+/// covered pixels in drawing order; [`pixels(false)`](Self::pixels) retains cell layer behavior.
+/// Unsupported styles, limits, rejected images, and text on immediate image protocols use the
+/// same callback's cell result automatically.
+///
 /// ```
 /// use lunatui_core::{ClusterTable, Grid, Rect, Style};
 /// use lunatui_theme::{Theme, Variant};
@@ -262,6 +306,7 @@ pub struct Canvas<F> {
     marker: Marker,
     background: Option<Style>,
     state: WidgetState,
+    pixels: bool,
 }
 
 impl<F> Canvas<F>
@@ -278,6 +323,7 @@ where
             marker: Marker::Braille,
             background: None,
             state: WidgetState::Normal,
+            pixels: true,
         }
     }
 
@@ -304,6 +350,14 @@ where
         self
     }
 
+    /// Enables native pixels when available (the default), or preserves cell drawing explicitly.
+    /// Native outlines are smooth; block markers retain their point-fill footprints.
+    #[must_use]
+    pub const fn pixels(mut self, enabled: bool) -> Self {
+        self.pixels = enabled;
+        self
+    }
+
     /// Style the area is reset to before anything is drawn, such as a panel background. Without
     /// one, cells are reset to the default style.
     #[must_use]
@@ -325,6 +379,12 @@ where
     F: Fn(&mut Context<'_>),
 {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let area = Rect::new(
+            area.x,
+            area.y,
+            area.width.min(u16::MAX - area.x),
+            area.height.min(u16::MAX - area.y),
+        );
         let background = self.background.unwrap_or_default();
         cx.clear_area(area, background);
         let window = Window {
@@ -342,28 +402,37 @@ where
             current: Raster::new(area),
             styles: &mut styles,
             labels: Vec::new(),
+            #[cfg(feature = "pixel-canvas")]
+            native: self.pixels.then(|| pixel::Native::new(area, cx)).flatten(),
         };
         (self.paint)(&mut context);
         context.layer();
         let Context {
-            committed, labels, ..
+            committed,
+            labels,
+            #[cfg(feature = "pixel-canvas")]
+            native,
+            ..
         } = context;
-        let dim = self.state == WidgetState::Disabled;
-        let ink = |style: Style, cx: &RenderCx<'_>| {
-            let mut style = style;
-            if style.fg == lunatui_core::Color::Default {
-                style = style.fg(cx.token(Token::TextPrimary));
-            }
-            if dim {
-                style = style.with_attrs(style.attrs.set_dim(true));
-            }
-            if background.bg != lunatui_core::Color::Default
-                && style.bg == lunatui_core::Color::Default
-            {
-                style = style.bg(background.bg);
-            }
-            style
-        };
+        let labels: Vec<_> = labels
+            .iter()
+            .filter_map(|label| label_placement(area, window, label))
+            .collect();
+        #[cfg(feature = "pixel-canvas")]
+        if native.as_ref().is_some_and(|native| {
+            native.draw(
+                &pixel::Drawing {
+                    area,
+                    styles: &styles,
+                    labels: &labels,
+                    background,
+                    state: self.state,
+                },
+                cx,
+            )
+        }) {
+            return;
+        }
         for row in 0..area.height {
             for column in 0..area.width {
                 let index = usize::from(row) * usize::from(area.width) + usize::from(column);
@@ -373,13 +442,11 @@ where
                 }
                 let mut buffer = [0_u8; 4];
                 let text = glyph(spot).encode_utf8(&mut buffer);
-                let style = ink(styles[spot.series], cx);
+                let style = ink(styles[spot.series], background, self.state, cx);
                 cx.put_str(area.x + column, area.y + row, text, style);
             }
         }
-        for label in &labels {
-            put_label(cx, area, window, label, ink(label.style, cx));
-        }
+        draw_labels(&labels, background, self.state, cx);
     }
 
     fn measure(&self, avail: Size) -> Size {
@@ -387,12 +454,18 @@ where
     }
 }
 
-fn put_label(cx: &mut RenderCx<'_>, area: Rect, window: Window, label: &Label, style: Style) {
+struct LabelPlacement<'a> {
+    text: &'a str,
+    cells: Rect,
+    style: Style,
+}
+
+fn label_placement(area: Rect, window: Window, label: &Label) -> Option<LabelPlacement<'_>> {
     if !label.x.is_finite() || !label.y.is_finite() {
-        return;
+        return None;
     }
     if !window.contains((label.x, label.y)) {
-        return;
+        return None;
     }
     let column = crate::raster::round_to_tick(
         ((label.x - window.x[0]) * crate::raster::span(i64::from(area.width) - 1) / window.width())
@@ -404,11 +477,48 @@ fn put_label(cx: &mut RenderCx<'_>, area: Rect, window: Window, label: &Label, s
         .floor(),
     );
     let (Ok(column), Ok(row)) = (u16::try_from(column), u16::try_from(row)) else {
-        return;
+        return None;
     };
-    let room = area.width - column;
+    let room = area.width.checked_sub(column)?;
     let text = clip_display_prefix(&label.text, room);
-    if !text.is_empty() {
-        cx.put_str(area.x + column, area.y + row, text, style);
+    let width = u16::try_from(text_display_width(text)).ok()?;
+    Some(LabelPlacement {
+        text,
+        cells: Rect::new(
+            area.x.checked_add(column)?,
+            area.y.checked_add(row)?,
+            width,
+            1,
+        ),
+        style: label.style,
+    })
+}
+
+fn ink(mut style: Style, background: Style, state: WidgetState, cx: &RenderCx<'_>) -> Style {
+    if style.fg == lunatui_core::Color::Default {
+        style = style.fg(cx.token(Token::TextPrimary));
+    }
+    if state == WidgetState::Disabled {
+        style = style.with_attrs(style.attrs.set_dim(true));
+    }
+    if background.bg != lunatui_core::Color::Default && style.bg == lunatui_core::Color::Default {
+        style = style.bg(background.bg);
+    }
+    style
+}
+
+fn draw_labels(
+    labels: &[LabelPlacement<'_>],
+    background: Style,
+    state: WidgetState,
+    cx: &mut RenderCx<'_>,
+) {
+    for label in labels {
+        cx.put_str(
+            label.cells.x,
+            label.cells.y,
+            label.text,
+            ink(label.style, background, state, cx),
+        );
     }
 }

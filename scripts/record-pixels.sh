@@ -76,8 +76,9 @@ ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -framerate "$FPS" \
 ffmpeg -nostdin -loglevel error -y -sseof -0.1 -i "$OUT/terminal.mkv" -frames:v 1 "$OUT/terminal.png"
 ffmpeg -nostdin -loglevel error -y -i "$OUT/terminal.mkv" -c:v libwebp_anim -lossless 1 -loop 0 "$OUT/terminal.webp"
 ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate -show_entries format=duration -of json "$OUT/terminal.mkv" > "$OUT/capture.json"
-python3 - "$OUT" "$EXAMPLE" "$KEYS" "$@" <<'PY'
-import hashlib,json,pathlib,subprocess,sys
+LUNATUI_CAPTURE_COLUMNS="$WIDTH" LUNATUI_CAPTURE_ROWS="$HEIGHT" LUNATUI_CAPTURE_FONT_SIZE="$FONT_SIZE" \
+  python3 - "$OUT" "$EXAMPLE" "$KEYS" "$@" <<'PY'
+import hashlib,json,os,pathlib,subprocess,sys
 out=pathlib.Path(sys.argv[1]); receipt=json.loads((out/'capture.json').read_text())
 geometry=dict(line.split('=',1) for line in (out/'geometry.txt').read_text().splitlines())
 stream=receipt['streams'][0]
@@ -90,6 +91,11 @@ receipt['distinct_frames']=len(frames)
 receipt['keys']=sys.argv[3]
 receipt['args']=sys.argv[4:]
 receipt['example']=sys.argv[2]
+receipt['terminal_configuration']={
+    'columns':int(os.environ['LUNATUI_CAPTURE_COLUMNS']),
+    'rows':int(os.environ['LUNATUI_CAPTURE_ROWS']),
+    'font_size_points':int(os.environ['LUNATUI_CAPTURE_FONT_SIZE']),
+}
 receipt['source']='Actual Kitty X11 window captured by ffmpeg x11grab; no compositing.'
 receipt['head']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
 receipt['kitty']=subprocess.check_output(['kitty','--version'],text=True).strip().split(' created by ')[0]

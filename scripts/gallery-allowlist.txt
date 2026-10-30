@@ -24,3 +24,14 @@ helper histogram # constructs Chart hourly datasets and renders the widget
 scope examples/dialog_showcase.rs # the branch manager scene composes Block, Paragraph, LineGauge, StatusBar and Dialog widgets
 helper branches # renders the branch rows through Block and Paragraph
 helper details # renders branch facts through Paragraph and check progress through LineGauge
+scope examples/canvas_showcase.rs # shared Canvas scenes use public shapes and real widgets
+scope examples/pixel_canvas.rs # live Canvas twins use the runtime image presenter
+helper render # builds a context and delegates to the cell-only Canvas scene
+helper render_scene # composes Tabs, Block and the selected Canvas scene
+helper canvas # renders the Canvas widget with bounds, background and paint closure
+helper scope # draws the oscilloscope through Canvas shapes and labels
+helper globe # draws geography and flight paths through Canvas shapes and labels
+helper system # composes three Canvas plots with Paragraph headings
+helper clock_and_tree # draws clock and tree shapes through Canvas
+helper flock # renders deterministic boid shapes through Canvas
+helper pings # renders ping rings, map shapes and labels through Canvas
