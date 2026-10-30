@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.16] - 2026-10-30
+
 ### Added
 
 - A quickstart in `docs/getting-started.md` for the current preview: the crate names, a first app under 30 lines, how to run it from this repository (the crates are not on crates.io yet), and where to go next. Six copy-paste templates under `examples/templates/` (a minimal app, a list, a form, a live dashboard, a popover, and a layout skeleton) are registered as examples, indexed from the examples list and the quickstart, and shown with a capture of each on the site. The dashboard sparkline uses an uneven traffic sample.
