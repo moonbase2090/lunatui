@@ -24,7 +24,7 @@ fn drawing_a_notification_center_allocates_nothing() {
     let mut log = NotificationLog::new(8);
     log.push(ToastKind::Success, "Build 4821 finished", "12:04");
     log.push(ToastKind::Warning, "Disk almost full", "12:09");
-    let newest = log.push(ToastKind::Error, "Deploy failed", "12:15");
+    let newest = log.push(ToastKind::Error, "Deploy broken", "12:15");
     log.mark_read(newest);
     let center = NotificationCenter::new(&log)
         .selected(Some(1))
@@ -53,6 +53,6 @@ fn drawing_a_notification_center_allocates_nothing() {
     );
     assert_eq!(
         grid.row_display(1, &clusters).trim_end(),
-        " ○ 12:15 Deploy failed                ×"
+        " ○ 12:15 Deploy broken                ×"
     );
 }

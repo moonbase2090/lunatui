@@ -14,7 +14,7 @@ fn log() -> NotificationLog {
     let mut log = NotificationLog::new(8);
     log.push(ToastKind::Success, "Build done", "12:04");
     log.push(ToastKind::Warning, "Disk almost full", "12:09");
-    log.push(ToastKind::Error, "Deploy failed", "12:15");
+    log.push(ToastKind::Error, "Deploy broken", "12:15");
     log
 }
 
@@ -59,7 +59,7 @@ fn entries_are_listed_newest_first_under_a_header_with_the_unread_count() {
         rows(&center(&log), 24, 5),
         [
             " Notifications 3 unread",
-            " ● 12:15 Deploy faile ×",
+            " ● 12:15 Deploy broke ×",
             " ● 12:09 Disk almost  ×",
             " ● 12:04 Build done   ×",
             "",
@@ -76,7 +76,7 @@ fn read_entries_get_an_open_mark_and_the_header_says_so_when_all_are_read() {
         rows(&center(&log), 24, 4),
         [
             " Notifications 2 unread",
-            " ● 12:15 Deploy faile ×",
+            " ● 12:15 Deploy broke ×",
             " ○ 12:09 Disk almost  ×",
             " ● 12:04 Build done   ×",
         ]
