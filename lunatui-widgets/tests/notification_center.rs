@@ -6,7 +6,8 @@
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    NotificationCenter, NotificationId, NotificationLog, RenderCx, ToastKind, Widget, WidgetState,
+    Notification, NotificationCenter, NotificationId, NotificationLog, RenderCx, ToastKind, Widget,
+    WidgetState,
 };
 
 fn log() -> NotificationLog {
@@ -44,7 +45,7 @@ fn color(token: Token) -> Color {
 fn nth_id(log: &NotificationLog, n: usize) -> NotificationId {
     log.iter()
         .nth(n)
-        .map_or(NotificationId(u32::MAX), |item| item.id())
+        .map_or(NotificationId(u32::MAX), Notification::id)
 }
 
 fn center(log: &NotificationLog) -> NotificationCenter<'_> {
@@ -353,13 +354,13 @@ fn the_log_keeps_the_newest_entries_and_numbers_them_in_order() {
     assert_eq!((a.0, b.0, c.0), (0, 1, 2));
     assert_eq!(log.len(), 2);
     assert!(log.get(a).is_none());
-    let texts: Vec<&str> = log.iter().map(|item| item.text()).collect();
+    let texts: Vec<&str> = log.iter().map(Notification::text).collect();
     assert_eq!(texts, ["c", "b"]);
     let newest = log
         .get(c)
         .map(|item| (item.kind(), item.stamp(), item.read()));
     assert_eq!(newest, Some((ToastKind::Error, "09:00", false)));
-    assert_eq!(log.get(b).map(|item| item.id()), Some(b));
+    assert_eq!(log.get(b).map(Notification::id), Some(b));
 }
 
 #[test]
@@ -368,7 +369,7 @@ fn a_log_holds_at_least_one_entry() {
     log.push(ToastKind::Info, "a", "");
     log.push(ToastKind::Info, "b", "");
     assert_eq!(log.len(), 1);
-    assert_eq!(log.iter().next().map(|item| item.text()), Some("b"));
+    assert_eq!(log.iter().next().map(Notification::text), Some("b"));
 }
 
 #[test]
@@ -379,7 +380,7 @@ fn dismiss_clear_and_read_marks_report_what_they_found() {
     assert_eq!(log.unread(), 2);
     assert!(log.mark_read(a));
     assert_eq!(log.unread(), 1);
-    assert_eq!(log.get(b).map(|item| item.read()), Some(false));
+    assert_eq!(log.get(b).map(Notification::read), Some(false));
     assert!(!log.mark_read(NotificationId(9)));
     assert!(log.dismiss(a));
     assert!(!log.dismiss(a));
