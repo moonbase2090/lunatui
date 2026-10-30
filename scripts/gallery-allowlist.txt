@@ -21,3 +21,6 @@ helper throughput # constructs Chart request line datasets and renders the widge
 helper saturation # constructs Chart CPU/memory datasets and renders the widget
 helper scatter # constructs Chart latency datasets and renders the widget
 helper histogram # constructs Chart hourly datasets and renders the widget
+scope examples/dialog_showcase.rs # the branch manager scene composes Block, Paragraph, LineGauge, StatusBar and Dialog widgets
+helper branches # renders the branch rows through Block and Paragraph
+helper details # renders branch facts through Paragraph and check progress through LineGauge
