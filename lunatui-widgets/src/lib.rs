@@ -23,6 +23,8 @@ pub mod canvas;
 mod chart;
 #[cfg(feature = "combo-box")]
 mod combo_box;
+#[cfg(feature = "date-picker")]
+mod date_picker;
 #[cfg(feature = "diff-view")]
 mod diff_view;
 #[cfg(feature = "form")]
@@ -110,6 +112,8 @@ pub use canvas::Canvas;
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
 #[cfg(feature = "combo-box")]
 pub use combo_box::ComboBox;
+#[cfg(feature = "date-picker")]
+pub use date_picker::DatePicker;
 #[cfg(feature = "diff-view")]
 pub use diff_view::{Diff, DiffHunk, DiffKind, DiffLayout, DiffLine, DiffView};
 #[cfg(feature = "form")]
