@@ -118,23 +118,21 @@ impl DatePicker {
     /// `date` moved to the nearest date within the bounds.
     #[must_use]
     pub fn clamped(&self, date: Date) -> Date {
-        match (self.min, self.max) {
-            (Some(min), _) if date < min => min,
-            (_, Some(max)) if date > max => max,
-            _ => date,
-        }
+        let raised = self.min.map_or(date, |min| date.max(min));
+        self.max.map_or(raised, |max| raised.min(max))
     }
 
     /// `date` moved by `delta` days, for arrow keys. The cost grows with the size of `delta`.
     #[must_use]
     pub fn shift_days(date: Date, delta: i32) -> Date {
+        let step = if delta.is_negative() {
+            Date::pred
+        } else {
+            Date::succ
+        };
         let mut moved = date;
         for _ in 0..delta.unsigned_abs() {
-            moved = if delta > 0 {
-                moved.succ()
-            } else {
-                moved.pred()
-            };
+            moved = step(moved);
         }
         moved
     }
@@ -144,10 +142,12 @@ impl DatePicker {
     #[must_use]
     pub fn shift_months(date: Date, delta: i32) -> Date {
         let months = i64::from(date.year()) * 12 + i64::from(date.month()) - 1 + i64::from(delta);
-        let year = i32::try_from(months.div_euclid(12)).unwrap_or(if delta < 0 {
-            i32::MIN
-        } else {
-            i32::MAX
+        let year = i32::try_from(months.div_euclid(12)).unwrap_or_else(|_| {
+            if delta.is_negative() {
+                i32::MIN
+            } else {
+                i32::MAX
+            }
         });
         let month = u8::try_from(months.rem_euclid(12)).unwrap_or(0) + 1;
         let day = date.day().min(month_length(year, month));

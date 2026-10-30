@@ -19,14 +19,14 @@ use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText,
-    Block, BorderType, Breadcrumbs, Chart, ComboBox, Constraint, Dataset, Date, DateStyle, Diff,
-    DiffLayout, DiffView, DividerId, FieldArea, Form, FormField, Gauge, GraphType, HexViewer,
-    HexViewerState, KeyHintBar, LegendPosition, List, LogBuffer, LogEntry, LogLevel, LogView,
-    MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NumberInput, PaneId, Paragraph,
-    PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx,
-    Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
-    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
-    Toggle, VecSource, Widget, WidgetState,
+    Block, BorderType, Breadcrumbs, Chart, ComboBox, Constraint, Dataset, Date, DatePicker,
+    DateStyle, Diff, DiffLayout, DiffView, DividerId, FieldArea, Form, FormField, Gauge, GraphType,
+    HexViewer, HexViewerState, KeyHintBar, LegendPosition, List, LogBuffer, LogEntry, LogLevel,
+    LogView, MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NumberInput, PaneId,
+    Paragraph, PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup,
+    RenderCx, Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag,
+    SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope,
+    ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -153,6 +153,11 @@ const PREVIEWS: &[Preview] = &[
         name: "search-box",
         native: search_native,
         baseline: search_baseline,
+    },
+    Preview {
+        name: "date-picker",
+        native: datepick_native,
+        baseline: datepick_baseline,
     },
     Preview {
         name: "combo-box",
@@ -7551,3 +7556,105 @@ fn combo_native(
 }
 
 fn combo_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+fn dp_day(year: i32, month: u8, day: u8) -> Date {
+    Date::from_ymd(year, month, day).unwrap_or(Date::UNIX_EPOCH)
+}
+
+fn dp_cursor(tick: u32) -> Date {
+    let start = dp_day(2026, 10, 14);
+    let days = match tick {
+        0..=29 => 0,
+        30..=89 => (1 + (tick - 30) / 6).min(10),
+        _ => 10 + 7 * (1 + (tick - 90) / 20).min(3),
+    };
+    DatePicker::shift_days(start, i32::try_from(days).unwrap_or(0))
+}
+
+fn datepick_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Trips  ·  lunatui", head);
+    let panel = Rect::new(area.x + 2, area.y + 2, 54, 14);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Choose your dates ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(panel, &mut cx);
+    let anchor = dp_day(2026, 10, 14);
+    let cursor = dp_cursor(tick);
+    let confirmed = tick >= 150;
+    let focus_right = cursor.month() == 11;
+    for (index, month) in [10_u8, 11].into_iter().enumerate() {
+        let shown = if cursor.month() == month {
+            cursor
+        } else {
+            dp_day(2026, month, 1)
+        };
+        let mut picker = DatePicker::new(shown)
+            .today(anchor)
+            .min(dp_day(2026, 10, 10))
+            .max(dp_day(2026, 11, 28))
+            .state(if !confirmed && (index == 1) == focus_right {
+                WidgetState::Focused
+            } else {
+                WidgetState::Normal
+            });
+        if tick >= 20 {
+            picker = picker.range(anchor, cursor);
+        }
+        let x = panel.x + 3 + u16::try_from(index).unwrap_or(0) * 25;
+        picker.render(
+            Rect::new(x, panel.y + 2, DatePicker::WIDTH, DatePicker::HEIGHT),
+            &mut cx,
+        );
+    }
+    let summary = if tick < 20 {
+        "Move with the arrow keys, press enter to start".to_owned()
+    } else {
+        let nights = (0..=62)
+            .find(|days| DatePicker::shift_days(anchor, *days) >= cursor)
+            .unwrap_or(0);
+        format!(
+            "{} {} to {} {}  ·  {nights} nights{}",
+            &anchor.month_name()[..3],
+            anchor.day(),
+            &cursor.month_name()[..3],
+            cursor.day(),
+            if confirmed { "  ·  confirmed" } else { "" }
+        )
+    };
+    cx.put_str(panel.x + 3, panel.y + panel.height - 3, &summary, fill);
+    StatusBar::new(" arrows day  ●  pgup/pgdn month  ●  enter select  ●  esc cancel")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn datepick_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}

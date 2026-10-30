@@ -193,6 +193,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Date picker
+
+A trip form with two months side by side: the arrow keys move the cursor a day at a time, a range stretches from the first chosen day with its ends filled and a band between, days outside the allowed dates are dimmed, the cursor crosses into the next month, and the summary line confirms the range.
+
+<img src="docs/media/date-picker.webp" alt="DatePicker: two months side by side with a date range growing across them, filled range ends, dimmed days outside the bounds, and a confirmed summary in the dark theme" width="1028">
+
+Screenshot: [docs/media/date-picker.png](docs/media/date-picker.png). Recorded with `scripts/record-showcase.sh` (`CASE=date-picker`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 7 seconds).
+
 ### Combo box
 
 A deployment form with a region field: the drop-down opens, arrows move the highlighted row and scroll the six-row list, typing narrows the thirteen regions with the matched text marked, and the chosen value closes the list back into the field.

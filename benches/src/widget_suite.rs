@@ -17,12 +17,12 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Canvas, Chart, ComboBox, Dataset, Date, Diff, DiffView, Form, FormField, Gauge, GraphType,
-    HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker,
-    Menu, MenuItem, MenuState, Monthly, NumberInput, Paragraph, PieChart, PieSlice, PixelSize,
-    Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox,
-    Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind, ToastScope,
-    ToastStack, Toggle, Tooltip, Widget, WidgetState,
+    Canvas, Chart, ComboBox, Dataset, Date, DatePicker, Diff, DiffView, Form, FormField, Gauge,
+    GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView,
+    Marker, Menu, MenuItem, MenuState, Monthly, NumberInput, Paragraph, PieChart, PieSlice,
+    PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility,
+    SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
+    ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -294,6 +294,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: combo_box_lunatui,
         ratatui: combo_box_ratatui,
+    },
+    Case {
+        name: "date-picker",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui's Monthly has no range selection, date bounds, cursor, or hit testing; its side draws the same month with the range days styled through a date styler",
+        ),
+        lunatui: date_picker_lunatui,
+        ratatui: date_picker_ratatui,
     },
     Case {
         name: "log-view",
@@ -2869,4 +2878,46 @@ fn combo_box_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     RatParagraph::new(lines)
         .style(list)
         .render(RatRect::new(area.x, area.y + 1, width, rows), buf);
+}
+
+fn date_picker_cursor(tick: u32) -> u8 {
+    8 + u8::try_from((tick / 10) % 12).unwrap_or(0)
+}
+
+fn date_picker_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let day = |day| Date::from_ymd(2026, 10, day).unwrap_or(Date::UNIX_EPOCH);
+    let cursor = day(date_picker_cursor(tick));
+    DatePicker::new(cursor)
+        .range(day(8), cursor)
+        .today(day(14))
+        .state(WidgetState::Focused)
+        .render(area, &mut cx);
+}
+
+struct RangeDays(u8);
+
+impl DateStyler for RangeDays {
+    fn get_style(&self, date: TimeDate) -> RatStyle {
+        if (8..=self.0).contains(&date.day()) {
+            rat_accent()
+        } else {
+            RatStyle::new()
+        }
+    }
+}
+
+fn date_picker_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let month = TimeDate::from_calendar_date(2026, Month::October, 1).unwrap_or(TimeDate::MIN);
+    RatMonthly::new(month, RangeDays(date_picker_cursor(tick)))
+        .default_style(rat_text())
+        .show_month_header(rat_accent())
+        .show_weekdays_header(rat_dim())
+        .render(area, buf);
 }
