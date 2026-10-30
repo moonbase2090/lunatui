@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- Default-on `pixel-progress` rendering for `ProgressBar`: continuous multicolor bands, the existing indeterminate clock, focused and disabled states, and exact eighth-block fallback. The `pixel_progress` example mirrors the complete release pipeline at equal sizes and ticks, with a right-pane cell/native switch.
 - Default-on `pixel-sparkline` rendering for `Sparkline`: native antialiased heights with per-row colors, focused and disabled styles, preserved missing/coarse block shapes, exact cell fallback and unchanged sample callback order. The `pixel_sparkline` example shares the existing service board in equal-size Cells/Pixels panes and can switch the right pane to cells and back.
 - `NotificationCenter` widget and `NotificationLog`, behind the `notification-center` feature: a history of past notifications, newest first, under a header that counts the unread ones. Each row has a read or unread mark in the color of its `ToastKind`, a time label, the message, and a dismiss cross. The log is a ring buffer with `push`, `dismiss`, `clear`, `mark_read`, `mark_all_read`, and `unread`; the widget scrolls to keep the selected row in view, and `row_at` and `dismiss_at` give hit testing.
 

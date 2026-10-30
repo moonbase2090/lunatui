@@ -8,6 +8,9 @@ use lunatui_theme::Token;
 
 use crate::{RenderCx, Widget, WidgetState};
 
+#[cfg(feature = "pixel-progress")]
+mod pixel;
+
 const EIGHTHS: u16 = 8;
 const PARTIAL: [&str; 7] = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
 const FULL: &str = "█";
@@ -43,7 +46,7 @@ struct Segment {
     tone: ProgressTone,
 }
 
-/// A progress bar drawn with eighth blocks, so its fill moves in steps of an eighth of a cell.
+/// A progress bar with continuous native color bands and an eighth-block cell fallback.
 ///
 /// Three modes share one widget: [`ProgressBar::ratio`] fills a single segment, repeated
 /// [`ProgressBar::segment`] calls stack colored segments (a cell where two segments meet shows
@@ -58,6 +61,7 @@ pub struct ProgressBar<'a> {
     show_percent: bool,
     state: WidgetState,
     style: Option<Style>,
+    pixels: bool,
 }
 
 impl Default for ProgressBar<'_> {
@@ -77,6 +81,7 @@ impl<'a> ProgressBar<'a> {
             show_percent: false,
             state: WidgetState::Normal,
             style: None,
+            pixels: true,
         }
     }
 
@@ -139,16 +144,20 @@ impl<'a> ProgressBar<'a> {
         self
     }
 
+    /// Uses antialiased native bands when the frame supports them.
+    ///
+    /// Native bands preserve continuous segment boundaries and dim every color when disabled.
+    /// Set this to false to keep eighth-block cells. Builds without `pixel-progress` use cells.
+    #[must_use]
+    pub const fn pixels(mut self, enabled: bool) -> Self {
+        self.pixels = enabled;
+        self
+    }
+
     fn amounts(&self) -> Vec<f64> {
         self.segments
             .iter()
-            .map(|segment| {
-                if segment.amount.is_nan() {
-                    0.0
-                } else {
-                    segment.amount.clamp(0.0, 1.0)
-                }
-            })
+            .map(|segment| amount(segment.amount))
             .collect()
     }
 
@@ -247,6 +256,11 @@ impl Widget for ProgressBar<'_> {
         let track = self.track_area(area);
         let total = track.width.saturating_mul(EIGHTHS);
         let spans = self.spans(total);
+        let value = self.percent_text();
+        #[cfg(feature = "pixel-progress")]
+        let native = self.pixels && pixel::render(self, track, &spans, cx);
+        #[cfg(not(feature = "pixel-progress"))]
+        let native = false;
         let dim = Attrs::new().set_dim(disabled);
         for cell in 0..track.width {
             let base = cell * EIGHTHS;
@@ -262,10 +276,14 @@ impl Widget for ProgressBar<'_> {
             };
             let style = Style::new().fg(fg).bg(bg).with_attrs(dim);
             for row in 0..track.height {
-                cx.put_str(track.x + cell, track.y + row, glyph, style);
+                cx.put_str(
+                    track.x + cell,
+                    track.y + row,
+                    if native { " " } else { glyph },
+                    style,
+                );
             }
         }
-        let value = self.percent_text();
         let after = track.x.saturating_add(track.width);
         let end = area.x.saturating_add(area.width);
         cx.put_str(
@@ -281,6 +299,14 @@ impl Widget for ProgressBar<'_> {
             return Size::new(0, 0);
         }
         Size::new(avail.width, 1)
+    }
+}
+
+fn amount(value: f64) -> f64 {
+    if value.is_nan() {
+        0.0
+    } else {
+        value.clamp(0.0, 1.0)
     }
 }
 

@@ -47,3 +47,9 @@ helper ink_from # resolves semantic colors without writing cells
 helper draw_spark_chrome # composes header labels and background widgets
 helper draw_lane # composes one Sparkline lane and its labels through public widgets
 helper draw_inspector # composes the selected Sparkline and its summary widgets
+
+scope examples/pixel_progress.rs # native ProgressBar twins use the runtime image presenter
+scope examples/progress_scene.rs # shared release pipeline composes real ProgressBar and text widgets
+helper stages # renders original stage data with ProgressBar and Paragraph
+helper log # renders original pipeline log lines with Paragraph
+helper frame # comparison test setup attaches a capture sink and delegates to the real scene
