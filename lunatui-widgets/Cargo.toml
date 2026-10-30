@@ -17,6 +17,7 @@ widget-state = []
 nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
 markdown = ["widget-state", "lunatui-text/markdown"]
 line-gauge = ["widget-state"]
+code-view = ["widget-state"]
 combo-box = ["widget-state", "search-box"]
 calendar = ["widget-state"]
 date-picker = ["widget-state", "calendar"]
@@ -51,7 +52,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.16", path = "../lunatui-core" }
@@ -240,6 +241,11 @@ required-features = ["popover"]
 name = "dialog"
 path = "tests/dialog.rs"
 required-features = ["dialog"]
+
+[[test]]
+name = "code_view"
+path = "tests/code_view.rs"
+required-features = ["code-view"]
 
 [[test]]
 name = "slider"

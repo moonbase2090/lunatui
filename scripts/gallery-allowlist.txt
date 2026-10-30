@@ -35,3 +35,6 @@ helper system # composes three Canvas plots with Paragraph headings
 helper clock_and_tree # draws clock and tree shapes through Canvas
 helper flock # renders deterministic boid shapes through Canvas
 helper pings # renders ping rings, map shapes and labels through Canvas
+scope examples/code_view_showcase.rs # the review screen composes Block, Paragraph, LineGauge, StatusBar and CodeView widgets
+helper files_pane # renders the file list through Block and Paragraph
+helper problems_pane # renders diagnostics through Block and Paragraph and the check run through LineGauge

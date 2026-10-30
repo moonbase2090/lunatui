@@ -10,6 +10,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `CodeView` widget, behind the `code-view` feature: read-only lines with a right-aligned line-number gutter, `CodeMark` gutter signs (added, changed, removed, error, warning, info, breakpoint), a cursor line, tab stops, horizontal and vertical scrolling, and a vertical scrollbar when the lines overflow. A `CodeHighlight` hook styles byte ranges of each visible line, and closures implement it. `CodeViewState` keeps the cursor on screen through `down`, `up`, `page_down`, `page_up`, and `set_cursor`, and `line_at` finds the line under a click. The lines are borrowed, so a built view draws without allocating.
+
 - `Dialog` widget, behind the `dialog` feature: `alert`, `confirm`, and `prompt` dialogs drawn as a centred titled panel over a faded screen, with the message wrapped inside, a one-line text field for prompts, right-aligned buttons, custom labels, and a `destructive` confirm button. `DialogState` opens a dialog with the focus id to restore, keeps Tab and Shift+Tab inside it, and reports `Confirmed` or `Cancelled` with that id from Enter, Escape, or a click found with `Dialog::control_at`. A built dialog draws without allocating.
 
 - `DatePicker` widget, behind the `date-picker` feature: a fixed-size month grid with a cursor, a chosen date or range (filled ends with a band between), `min` and `max` bounds that dim days and arrows, a today marker, Monday or Sunday weeks, `shift_days`, `shift_months`, and `clamped` for moving the cursor, and `prev_area`, `next_area`, and `date_at` for hit testing. `Date` now implements `Ord`.
