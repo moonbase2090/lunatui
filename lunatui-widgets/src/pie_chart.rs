@@ -1,6 +1,11 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+#[cfg(feature = "pixel-pie-chart")]
+mod pixel;
+#[cfg(feature = "pixel-pie-chart")]
+pub use pixel::PixelPieChart;
+
 use lunatui_core::{Attrs, Color, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 

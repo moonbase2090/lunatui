@@ -12,7 +12,7 @@ autoexamples = false
 workspace = true
 
 [features]
-default = []
+default = ["image-presenter"]
 color-profiles = ["lunatui-theme/color-profiles"]
 app = ["lunatui-runtime/app", "dep:lunatui-runtime"]
 image-presenter = ["app", "lunatui-runtime/image-presenter"]
@@ -219,3 +219,8 @@ test = true
 name = "template_layout"
 path = "../examples/templates/layout.rs"
 test = true
+
+[[example]]
+name = "pixel_pie_chart"
+path = "../examples/pixel_pie_chart.rs"
+required-features = ["image-presenter"]

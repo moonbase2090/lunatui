@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = []
+default = ["pixel-pie-chart"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
@@ -34,6 +34,7 @@ progress = ["widget-state"]
 accordion = ["widget-state"]
 hex-viewer = ["widget-state"]
 pie-chart = ["widget-state"]
+pixel-pie-chart = ["pie-chart", "image"]
 form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
@@ -46,7 +47,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "combo-box", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "combo-box", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.16", path = "../lunatui-core" }
@@ -56,6 +57,8 @@ lunatui-text = { version = "0.1.16", path = "../lunatui-text" }
 lunatui-theme = { version = "0.1.16", path = "../lunatui-theme" }
 lunatui-runtime = { version = "0.1.16", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
 unicode-segmentation = "=1.13.3"
+
+tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"] }
 
 [dev-dependencies]
 lunatui-test = { version = "0.1.16", path = "../lunatui-test" }
@@ -273,6 +276,10 @@ required-features = ["log-view"]
 name = "diff_view"
 path = "tests/diff_view.rs"
 required-features = ["diff-view"]
+
+[[test]]
+name = "pixel_pie_chart"
+required-features = ["pixel-pie-chart"]
 
 [[test]]
 name = "combo_box"

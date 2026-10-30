@@ -5,7 +5,7 @@ use std::num::NonZeroU32;
 
 use lunatui_core::Rect;
 
-use crate::{Fit, ImageSource};
+use crate::{Fit, ImageSource, PixelSize};
 
 /// Stable, nonzero identity for one image placement.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -107,10 +107,54 @@ impl<'a> ImageRequest<'a> {
     }
 }
 
+/// Physical raster size and composition support reported by an image presenter.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PixelTarget {
+    size: PixelSize,
+    text_underlay: bool,
+    background: Option<[u8; 3]>,
+}
+
+impl PixelTarget {
+    /// Describes measured pixels, text-underlay support, and the terminal default background.
+    #[must_use]
+    pub const fn new(size: PixelSize, text_underlay: bool, background: Option<[u8; 3]>) -> Self {
+        Self {
+            size,
+            text_underlay,
+            background,
+        }
+    }
+
+    /// Measured raster dimensions for the requested cell rectangle.
+    #[must_use]
+    pub const fn size(self) -> PixelSize {
+        self.size
+    }
+
+    /// Whether negative-depth images can preserve text above the image rectangle.
+    #[must_use]
+    pub const fn text_underlay(self) -> bool {
+        self.text_underlay
+    }
+
+    /// Queried terminal default background, when available.
+    #[must_use]
+    pub const fn background(self) -> Option<[u8; 3]> {
+        self.background
+    }
+}
+
 /// Receives image requests during the same widget render pass as their cell fallback.
 pub trait ImageSink {
     /// True when this frame can present images using a pixel protocol.
     fn supports_pixels(&self) -> bool;
+
+    /// Returns measured raster information, or `None` when unavailable or over budget.
+    /// Custom sinks can omit this method and continue accepting ordinary images.
+    fn pixel_target(&self, _area: Rect) -> Option<PixelTarget> {
+        None
+    }
 
     /// Accepts an image for this frame. Returns false when the sink cannot present it.
     fn submit(&mut self, request: ImageRequest<'_>) -> bool;

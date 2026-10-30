@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 
 use lunatui_core::Rect;
+use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};
 use lunatui_term::{PixelImage, PixelLayer, PixelMode};
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -237,7 +238,7 @@ fn clear_deletes_every_image_it_placed() -> Result<(), String> {
 }
 
 #[test]
-fn a_changed_generation_deletes_then_transmits_then_places() -> Result<(), String> {
+fn a_changed_generation_is_placed_before_the_old_image_is_deleted() -> Result<(), String> {
     let first = vec![1_u8; 4];
     let second = vec![2_u8; 4];
     let before = PixelImage::new(1, 1, &first).ok_or("bad image")?;
@@ -253,19 +254,153 @@ fn a_changed_generation_deletes_then_transmits_then_places() -> Result<(), Strin
         .iter()
         .map(|command| command.keys.get("a").map_or("", String::as_str))
         .collect();
-    if actions != ["d", "t", "p"] {
+    if actions != ["t", "p", "d"] {
         return Err(format!(
-            "order was {actions:?}, expected [\"d\", \"t\", \"p\"]"
+            "order was {actions:?}, expected [\"t\", \"p\", \"d\"]"
         ));
     }
-    if commands
-        .iter()
-        .any(|command| command.keys.get("i").map(String::as_str) != Some("10"))
-    {
-        return Err("a command targeted another image id".to_owned());
-    }
-    if commands[1].payload != second {
+    assert_eq!(number(&commands[0], "i"), number(&commands[1], "i"));
+    assert_ne!(number(&commands[0], "i"), Some(10));
+    assert_eq!(number(&commands[2], "i"), Some(10));
+    if commands[0].payload != second {
         return Err("the transmitted pixels are not the new generation".to_owned());
     }
+    Ok(())
+}
+
+#[derive(Default)]
+struct Screen {
+    images: BTreeMap<u64, Vec<u8>>,
+    visible: BTreeMap<u64, Vec<u8>>,
+    transfer: Option<(u64, Vec<u8>)>,
+}
+
+impl Screen {
+    fn apply(&mut self, command: &Command) -> Result<(), String> {
+        match command.keys.get("a").map(String::as_str) {
+            Some("t") => {
+                let id = number(command, "i").ok_or("upload without id")?;
+                self.images.remove(&id);
+                self.visible.remove(&id);
+                self.transfer = Some((id, Vec::new()));
+            }
+            Some("p") => {
+                let id = number(command, "i").ok_or("placement without id")?;
+                let pixels = self.images.get(&id).ok_or("placing missing image")?;
+                self.visible.insert(id, pixels.clone());
+            }
+            Some("d") => {
+                let id = number(command, "i").ok_or("delete without id")?;
+                self.images.remove(&id);
+                self.visible.remove(&id);
+            }
+            _ => {}
+        }
+        if !command.payload.is_empty() {
+            let (_, pixels) = self.transfer.as_mut().ok_or("chunk without upload")?;
+            pixels.extend_from_slice(&command.payload);
+            if number(command, "m") != Some(1) {
+                let (id, pixels) = self.transfer.take().ok_or("missing upload")?;
+                self.images.insert(id, pixels);
+            }
+        }
+        Ok(())
+    }
+}
+
+#[test]
+fn every_upload_chunk_keeps_the_previous_image_visible_until_replacement() -> Result<(), String> {
+    let first = [255, 0, 0, 255];
+    let second = [0, 255, 0, 255].repeat(2048);
+    let before = PixelImage::new(1, 1, &first).ok_or("bad image")?;
+    let after = PixelImage::new(2048, 1, &second).ok_or("bad image")?;
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    let mut screen = Screen::default();
+    layer.begin_frame();
+    layer.image(10, 1, &before, Rect::new(0, 0, 2, 1), 0);
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(
+        screen.visible.values().collect::<Vec<_>>(),
+        vec![&first.to_vec()]
+    );
+    for generation in 2..5 {
+        layer.begin_frame();
+        layer.image(10, generation, &after, Rect::new(0, 0, 2, 1), 0);
+        for command in parse(layer.finish_frame())? {
+            screen.apply(&command)?;
+            assert!(
+                !screen.visible.is_empty(),
+                "image vanished during {command:?}"
+            );
+        }
+        assert_eq!(screen.visible.values().collect::<Vec<_>>(), vec![&second]);
+        assert_eq!(screen.images.len(), 1, "old uploads must be freed");
+    }
+    for command in parse(layer.clear())? {
+        screen.apply(&command)?;
+    }
+    assert!(screen.visible.is_empty());
+    assert!(screen.images.is_empty());
+    Ok(())
+}
+
+#[test]
+fn fit_changes_keep_pixels_visible_and_wire_ids_do_not_collide_with_widget_ids()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = ImageSource::rgba8(
+        2,
+        2,
+        vec![10, 0, 0, 255, 20, 0, 0, 255, 30, 0, 0, 255, 40, 0, 0, 255].into_boxed_slice(),
+    )?;
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    let mut screen = Screen::default();
+    for fit in [Fit::Stretch, Fit::Cover, Fit::Stretch, Fit::Cover] {
+        layer.begin_frame();
+        assert!(layer.submit(ImageRequest::new(
+            ImageId::new(10).ok_or("invalid id")?,
+            1,
+            &source,
+            Rect::new(0, 0, 1, 1),
+            fit,
+            0,
+            255,
+        )));
+        let was_visible = !screen.visible.is_empty();
+        for command in parse(layer.finish_frame())? {
+            screen.apply(&command)?;
+            if was_visible {
+                assert!(
+                    !screen.visible.is_empty(),
+                    "image vanished during {command:?}"
+                );
+            }
+        }
+        let expected = if fit == Fit::Cover {
+            vec![10, 0, 0, 255, 30, 0, 0, 255]
+        } else {
+            vec![10, 0, 0, 255, 20, 0, 0, 255, 30, 0, 0, 255, 40, 0, 0, 255]
+        };
+        assert_eq!(screen.visible.values().collect::<Vec<_>>(), vec![&expected]);
+    }
+    let pixel = PixelImage::new(1, 1, &[0, 255, 0, 255]).ok_or("bad pixel")?;
+    layer.begin_frame();
+    layer.image(10, 2, &pixel, Rect::new(0, 0, 1, 1), 0);
+    layer.image(11, 1, &pixel, Rect::new(1, 0, 1, 1), 0);
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+        assert!(!screen.visible.is_empty());
+    }
+    assert_eq!(
+        screen.visible.values().collect::<Vec<_>>(),
+        vec![&vec![0, 255, 0, 255], &vec![0, 255, 0, 255]]
+    );
+    assert_eq!(screen.images.len(), 2);
+    for command in parse(layer.clear())? {
+        screen.apply(&command)?;
+    }
+    assert!(screen.images.is_empty());
+    assert!(screen.visible.is_empty());
     Ok(())
 }
