@@ -42,6 +42,7 @@ radio = ["widget-state"]
 toggle = ["widget-state"]
 tooltip = []
 popover = ["popup"]
+dialog = ["popup"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -49,7 +50,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "pixel-chart", "combo-box", "date-picker", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "pixel-chart", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.16", path = "../lunatui-core" }
@@ -233,6 +234,11 @@ required-features = ["tooltip"]
 name = "popover"
 path = "tests/popover.rs"
 required-features = ["popover"]
+
+[[test]]
+name = "dialog"
+path = "tests/dialog.rs"
+required-features = ["dialog"]
 
 [[test]]
 name = "slider"

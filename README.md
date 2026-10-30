@@ -248,6 +248,14 @@ A deploy console with a toolbar, a table of deploys and an activity log. Filter 
 
 Screenshot: [docs/media/popover.png](docs/media/popover.png). Recorded with `scripts/record-showcase.sh` (`CASE=popover`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds plus a 2-second hold).
 
+### Dialog
+
+A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.
+
+<img src="docs/media/dialog.gif" alt="Dialog: confirm, prompt and alert dialogs over a live branch manager in the dark theme" width="1028">
+
+Screenshot: [docs/media/dialog.png](docs/media/dialog.png). Recorded with `scripts/record-widget.sh` (`CASE=dialog`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 227 KB).
+
 ### Sparkline
 
 Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.

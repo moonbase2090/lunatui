@@ -25,6 +25,8 @@ mod chart;
 mod combo_box;
 #[cfg(feature = "date-picker")]
 mod date_picker;
+#[cfg(feature = "dialog")]
+mod dialog;
 #[cfg(feature = "diff-view")]
 mod diff_view;
 #[cfg(feature = "form")]
@@ -114,6 +116,8 @@ pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
 pub use combo_box::ComboBox;
 #[cfg(feature = "date-picker")]
 pub use date_picker::DatePicker;
+#[cfg(feature = "dialog")]
+pub use dialog::{Dialog, DialogClosed, DialogFocus, DialogKind, DialogOutcome, DialogState};
 #[cfg(feature = "diff-view")]
 pub use diff_view::{Diff, DiffHunk, DiffKind, DiffLayout, DiffLine, DiffView};
 #[cfg(feature = "form")]
