@@ -230,3 +230,9 @@ name = "pixel_chart"
 path = "../examples/pixel_chart.rs"
 required-features = ["image-presenter"]
 test = true
+
+[[example]]
+name = "pixel_canvas"
+path = "../examples/pixel_canvas.rs"
+required-features = ["image-presenter"]
+test = true
