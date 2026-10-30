@@ -325,3 +325,25 @@ fn chips_and_the_field_may_end_exactly_at_the_edge() {
         Rect::new(0, 0, 6, 1)
     );
 }
+
+#[test]
+fn the_caret_at_the_start_of_a_field_in_the_first_column_is_drawn() {
+    let none: [&str; 0] = [];
+    let input = TagInput::new(&none, "ab", 0).state(WidgetState::Focused);
+    let (grid, _) = draw(&input, 20, 1);
+    assert_eq!(style_at(&grid, 0, 0).bg, color(Token::Accent));
+    assert_eq!(style_at(&grid, 1, 0).bg, color(Token::Surface0));
+}
+
+#[test]
+fn the_caret_stops_at_the_field_edge_inside_a_wider_grid() {
+    let none: [&str; 0] = [];
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(20, 1);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    let input = TagInput::new(&none, "abcdefgh", 8).state(WidgetState::Focused);
+    input.render(Rect::new(0, 0, 8, 1), &mut cx);
+    assert_eq!(style_at(&grid, 8, 0).bg, Style::default().bg);
+    assert_eq!(style_at(&grid, 7, 0).bg, color(Token::Surface0));
+}

@@ -262,9 +262,6 @@ impl<'a, S: AsRef<str>> TagInput<'a, S> {
 
 impl<S: AsRef<str>> Widget for TagInput<'_, S> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        if area.width == 0 || area.height == 0 {
-            return;
-        }
         let surface = cx.token(Token::Surface0);
         let blank = Style::new().fg(cx.token(Token::TextPrimary)).bg(surface);
         cx.fill(area, blank, ' ');
