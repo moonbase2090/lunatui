@@ -317,7 +317,7 @@ fn indexed_token_and_prepared_palette_colors_resolve_as_foreground_ink() {
     let mut images = capture(8, 1);
     let mut theme = theme();
     theme.set_token(Token::Accent, Color::Rgb(255, 0, 0));
-    let palette = theme.prepare(Profile::Ansi16);
+    let palette = theme.prepare(Profile::Ansi256);
     theme.set_token(Token::Accent, Color::Rgb(0, 0, 255));
     ProgressBar::new().ratio(1.0).render(
         Rect::new(0, 0, 2, 1),
