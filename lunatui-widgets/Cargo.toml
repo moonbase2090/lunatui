@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = ["pixel-pie-chart", "pixel-chart"]
+default = ["pixel-pie-chart", "pixel-chart", "pixel-canvas"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
@@ -24,6 +24,7 @@ sparkline = ["widget-state"]
 chart = ["widget-state"]
 pixel-chart = ["chart", "image"]
 canvas = ["widget-state"]
+pixel-canvas = ["canvas", "image"]
 
 barchart = ["widget-state"]
 toast = ["widget-state"]
@@ -43,6 +44,7 @@ radio = ["widget-state"]
 toggle = ["widget-state"]
 tooltip = []
 popover = ["popup"]
+dialog = ["popup"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
@@ -50,22 +52,22 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "pixel-chart", "combo-box", "date-picker", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
-lunatui-core = { version = "0.1.16", path = "../lunatui-core" }
-lunatui-layout = { version = "0.1.16", path = "../lunatui-layout" }
-lunatui-image = { version = "0.1.16", path = "../lunatui-image", optional = true }
-lunatui-text = { version = "0.1.16", path = "../lunatui-text" }
-lunatui-theme = { version = "0.1.16", path = "../lunatui-theme" }
-lunatui-runtime = { version = "0.1.16", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
+lunatui-core = { version = "0.1.17", path = "../lunatui-core" }
+lunatui-layout = { version = "0.1.17", path = "../lunatui-layout" }
+lunatui-image = { version = "0.1.17", path = "../lunatui-image", optional = true }
+lunatui-text = { version = "0.1.17", path = "../lunatui-text" }
+lunatui-theme = { version = "0.1.17", path = "../lunatui-theme" }
+lunatui-runtime = { version = "0.1.17", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
 unicode-segmentation = "=1.13.3"
 
 tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"] }
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.16", path = "../lunatui-test" }
-lunatui-term = { version = "0.1.16", path = "../lunatui-term" }
+lunatui-test = { version = "0.1.17", path = "../lunatui-test" }
+lunatui-term = { version = "0.1.17", path = "../lunatui-term" }
 ratatui = "=0.30.2"
 tui-menu = "=0.3.1"
 proptest = "=1.9.0"
@@ -236,6 +238,11 @@ path = "tests/popover.rs"
 required-features = ["popover"]
 
 [[test]]
+name = "dialog"
+path = "tests/dialog.rs"
+required-features = ["dialog"]
+
+[[test]]
 name = "slider"
 path = "tests/slider.rs"
 required-features = ["slider"]
@@ -302,3 +309,7 @@ required-features = ["notification-center"]
 [[test]]
 name = "pixel_chart"
 required-features = ["pixel-chart"]
+
+[[test]]
+name = "pixel_canvas"
+required-features = ["pixel-canvas"]

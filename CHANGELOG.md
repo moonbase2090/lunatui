@@ -11,7 +11,16 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `NotificationCenter` widget and `NotificationLog`, behind the `notification-center` feature: a history of past notifications, newest first, under a header that counts the unread ones. Each row has a read or unread mark in the color of its `ToastKind`, a time label, the message, and a dismiss cross. The log is a ring buffer with `push`, `dismiss`, `clear`, `mark_read`, `mark_all_read`, and `unread`; the widget scrolls to keep the selected row in view, and `row_at` and `dismiss_at` give hit testing.
+
+## [0.1.17] - 2026-10-30
+
+### Added
+
+- `Dialog` widget, behind the `dialog` feature: `alert`, `confirm`, and `prompt` dialogs drawn as a centred titled panel over a faded screen, with the message wrapped inside, a one-line text field for prompts, right-aligned buttons, custom labels, and a `destructive` confirm button. `DialogState` opens a dialog with the focus id to restore, keeps Tab and Shift+Tab inside it, and reports `Confirmed` or `Cancelled` with that id from Enter, Escape, or a click found with `Dialog::control_at`. A built dialog draws without allocating.
+
 - `DatePicker` widget, behind the `date-picker` feature: a fixed-size month grid with a cursor, a chosen date or range (filled ends with a band between), `min` and `max` bounds that dim days and arrows, a today marker, Monday or Sunday weeks, `shift_days`, `shift_months`, and `clamped` for moving the cursor, and `prev_area`, `next_area`, and `date_at` for hit testing. `Date` now implements `Ord`.
+
+- Default-on `pixel-canvas` rendering for `Canvas`: antialiased native geometry with exact cell fallback, one paint callback, preserved custom-shape resolution, native circles and filled marker footprints, and real text labels. The `pixel_canvas` example keeps equal-size, same-tick Braille and pixel views of all six scenes and can switch the right pane to cells and back.
 
 - Default-on `pixel-chart` rendering for `Chart`: antialiased lines, scatter points, bars, and legend swatches with the original cell fallback. `ImageSink::submit_raster` manages frame-ordered raster identities and revisions; the interactive `pixel_chart` example keeps Braille twins beside matching pixels and includes Saturation CPU/memory.
 

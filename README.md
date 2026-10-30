@@ -2,7 +2,7 @@
 
 lunatui is a hyperspeed Rust TUI library being built from scratch, keeping a simple "render widgets into a rectangle" model while fixing its structural costs with a 16-byte packed cell, damage-tracked diffing and a single-write output encoder, plus first-class input, focus, animation, capability and theme layers. It is open source under the [MIT](LICENSE) license.
 
-**Status: v0.1.16 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
+**Status: v0.1.17 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
 
 ## Performance
 
@@ -77,11 +77,11 @@ Screenshot: [docs/media/split.png](docs/media/split.png). Recorded with `scripts
 
 ### Canvas
 
-Six scenes drawn with Canvas, each in thin one-dot Braille strokes with no filled areas: an XY oscilloscope whose Lissajous figure glides between frequency ratios with a fading trail over a faint graticule, a slowly turning globe with great-circle flight paths and planes moving along them, CPU, memory, and network history as scrolling lines, an analog clock running at double time with a sweeping second hand beside a tree that grows branch by branch, a flock of 200 boids with short trails, and a world map with fading ping rings. Each frame is drawn for its own time on a fixed 60 fps step.
+Scope, Globe, System CPU/memory/network, Clock/tree, Flock, and Pings keep equal-size Braille and antialiased pixel views of the same scene and sample. Labels stay as terminal text. Pixels are enabled by default with a measured presenter; `.pixels(false)` retains the original cell renderer. Try `cargo run --release -p lunatui --example pixel_canvas`: arrows change scenes, `u` advances the sample, and `b` switches the right pane to cells and back.
 
-<img src="docs/media/canvas.webp" alt="Canvas widget: an oscilloscope, a globe with flight paths, system graphs, a clock and tree, a flock, and a ping map, in the dark theme" width="1028">
+<img src="docs/media/canvas.webp" alt="Matching Braille and antialiased pixel Canvas scenes in a real Kitty terminal, followed by switching the right pane to cells and restoring pixels" width="1028">
 
-Screenshot: [docs/media/canvas.png](docs/media/canvas.png). Recorded with `scripts/record-showcase.sh` (`CASE=canvas FPS=60 FRAMES=321 HEIGHT=50 LINE_HEIGHT=1.0`, 120×50 at 60 fps, dark, 2× scale, lossless animated WebP, about 5.3 seconds plus a 2-second hold on the last frame; every frame is kept and shown for 16 or 17 ms). Coastlines are from Natural Earth (public domain).
+Screenshots: [Scope](docs/media/canvas.png), [Clock and tree](docs/media/canvas-clock.png). Recorded from a clean source tree at `2c45e6a1d57b4c0ca5cce5ed89b95ac90e8cdfc7` in a fresh Ubuntu arm64 VM, using `WIDTH=120 HEIGHT=36 FONT_SIZE=16 SECONDS_TO_RECORD=24 EXAMPLE=pixel_canvas FEATURES=image-presenter KEYS=3:Right,6:Right,9:Right,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 120×36 cells, 1561×901 pixels, 30 fps, 24 seconds, lossless WebP 292,106 bytes. Each scene stays on screen for about 3 seconds. All 720 source frames retain graph pixels, including cells-to-pixels restoration. The stills are unmodified video frames at 0 and 10.5 seconds. Coastlines are from Natural Earth, public domain.
 
 ### Toast
 
@@ -255,6 +255,14 @@ A deploy console with a toolbar, a table of deploys and an activity log. Filter 
 <img src="docs/media/popover.webp" alt="Popover: filter, sort and column panels opening under toolbar buttons in a deploy console, in the dark theme" width="1028">
 
 Screenshot: [docs/media/popover.png](docs/media/popover.png). Recorded with `scripts/record-showcase.sh` (`CASE=popover`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds plus a 2-second hold).
+
+### Dialog
+
+A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.
+
+<img src="docs/media/dialog.gif" alt="Dialog: confirm, prompt and alert dialogs over a live branch manager in the dark theme" width="1028">
+
+Screenshot: [docs/media/dialog.png](docs/media/dialog.png). Recorded with `scripts/record-widget.sh` (`CASE=dialog`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 227 KB).
 
 ### Sparkline
 

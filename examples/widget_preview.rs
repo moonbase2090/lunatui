@@ -35,6 +35,8 @@ mod chart_scene;
 use chart_scene::ChartBoard;
 #[path = "deploy_board.rs"]
 mod deploy_board;
+#[path = "dialog_showcase.rs"]
+mod dialog_showcase;
 #[path = "menu_showcase.rs"]
 mod menu_showcase;
 #[path = "popover_showcase.rs"]
@@ -110,6 +112,11 @@ const PREVIEWS: &[Preview] = &[
         name: "popover",
         native: popover_showcase::render,
         baseline: popover_baseline,
+    },
+    Preview {
+        name: "dialog",
+        native: dialog_showcase::render,
+        baseline: dialog_baseline,
     },
     Preview {
         name: "radio-group",
@@ -4606,6 +4613,12 @@ fn toggle_native(
             ),
             &mut cx,
         );
+}
+
+fn dialog_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "dialog") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn popover_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {

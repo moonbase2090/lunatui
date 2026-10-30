@@ -17,12 +17,13 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Canvas, Chart, ComboBox, Dataset, Date, DatePicker, Diff, DiffView, Form, FormField, Gauge,
-    GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView,
-    Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput,
-    Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx,
-    ScrollView, ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table,
-    Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
+    Canvas, Chart, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus, DialogKind,
+    DialogState, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
+    LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
+    Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart, PieSlice,
+    PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility,
+    SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
+    ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -206,6 +207,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: popover_lunatui,
         ratatui: popover_ratatui,
+    },
+    Case {
+        name: "dialog",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no dialog; its side clears the rectangle Dialog::area picks and draws a titled rounded block with the wrapped message and the two buttons, without fading the screen behind",
+        ),
+        lunatui: dialog_lunatui,
+        ratatui: dialog_ratatui,
     },
     Case {
         name: "radio-group",
@@ -1687,6 +1697,93 @@ fn progress_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             .collect();
         RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
     }
+}
+
+const DIALOG_BEHIND: &str = "main\nfeature/login\nfeature/search\nfix/cache-headers";
+const DIALOG_MESSAGE: &str = "Delete feature/login? Its 3 unmerged commits will be lost.";
+
+fn dialog_state(tick: u32) -> DialogState {
+    let mut state = DialogState::new();
+    state.open(DialogKind::Confirm, None);
+    if (tick / 30) % 2 == 1 {
+        state.next();
+    }
+    state
+}
+
+fn dialog_widget(state: &DialogState) -> Dialog<'static> {
+    Dialog::confirm("Delete branch", DIALOG_MESSAGE)
+        .width(40)
+        .confirm_label("Delete")
+        .destructive(true)
+        .state(state)
+}
+
+fn dialog_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    Paragraph::new(DIALOG_BEHIND).render(area, &mut cx);
+    dialog_widget(&dialog_state(tick)).render(area, &mut cx);
+}
+
+fn dialog_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    RatParagraph::new(DIALOG_BEHIND).render(area, buf);
+    let screen = Rect::new(area.x, area.y, area.width, area.height);
+    let state = dialog_state(tick);
+    let panel = dialog_widget(&state).area(screen);
+    let rect = RatRect::new(panel.x, panel.y, panel.width, panel.height);
+    let panel_style = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let button = |focused: bool, tone| {
+        if focused {
+            RatStyle::new()
+                .fg(color(lunatui_theme::Token::Surface0))
+                .bg(color(tone))
+        } else {
+            RatStyle::new()
+                .fg(color(lunatui_theme::Token::TextPrimary))
+                .bg(color(lunatui_theme::Token::Surface0))
+        }
+    };
+    let cancel = state.focus() == DialogFocus::Cancel;
+    let buttons = Line::from(vec![
+        Span::styled(
+            "  Cancel  ",
+            button(cancel, lunatui_theme::Token::FocusRing),
+        ),
+        Span::raw("  "),
+        Span::styled("  Delete  ", button(!cancel, lunatui_theme::Token::Fail)),
+    ])
+    .right_aligned();
+    RatClear.render(rect, buf);
+    let block = RatBlock::bordered()
+        .border_type(RatBorderType::Rounded)
+        .border_style(panel_style.fg(color(lunatui_theme::Token::Accent)))
+        .title("Delete branch")
+        .style(panel_style);
+    let inner = block.inner(rect);
+    block.render(rect, buf);
+    let body = RatRect::new(
+        inner.x + 2,
+        inner.y + 1,
+        inner.width.saturating_sub(4),
+        inner.height.saturating_sub(1),
+    );
+    RatParagraph::new(Text::from(vec![
+        Line::from(DIALOG_MESSAGE),
+        Line::from(""),
+        buttons,
+    ]))
+    .wrap(Wrap { trim: true })
+    .render(body, buf);
 }
 
 const POPOVER_OPTIONS: &str = "Compact\nComfortable\nSpacious";
