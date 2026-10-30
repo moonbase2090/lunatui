@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.17] - 2026-10-30
+
 ### Added
 
 - `DatePicker` widget, behind the `date-picker` feature: a fixed-size month grid with a cursor, a chosen date or range (filled ends with a band between), `min` and `max` bounds that dim days and arrows, a today marker, Monday or Sunday weeks, `shift_days`, `shift_months`, and `clamped` for moving the cursor, and `prev_area`, `next_area`, and `date_at` for hit testing. `Date` now implements `Ord`.
