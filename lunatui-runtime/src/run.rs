@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, IsTerminal};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -81,7 +81,9 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         match sched.poll(now, false) {
             SchedulePoll::Render => {
                 let present_start = epoch.elapsed();
-                render_present(&mut app, area, &mut frames, &mut session)?;
+                render_present(&mut app, area, &mut frames, |parts| {
+                    session.present_frame_parts(parts).map_err(io::Error::from)
+                })?;
                 let present_done = epoch.elapsed();
                 sched.after_present(present_start, present_done.saturating_sub(present_start));
             }
@@ -150,7 +152,7 @@ fn render_present<A: App>(
     app: &mut A,
     area: Rect,
     frames: &mut FrameState,
-    session: &mut Session<impl Write>,
+    mut present: impl FnMut(&[&[u8]]) -> io::Result<()>,
 ) -> io::Result<()> {
     frames.next.fill(
         area,
@@ -192,18 +194,22 @@ fn render_present<A: App>(
         ColorMode::TrueColor,
     );
     #[cfg(feature = "image-presenter")]
-    let image_bytes = frames.images.finish_frame();
+    let (upload_bytes, image_bytes) = frames.images.finish_frame_parts();
     #[cfg(feature = "image-presenter")]
     let has_images = !image_bytes.is_empty();
     #[cfg(feature = "image-presenter")]
     let payloads = [cell_bytes, image_bytes];
+    #[cfg(feature = "image-presenter")]
+    if !upload_bytes.is_empty() {
+        present(&[upload_bytes])?;
+    }
     #[cfg(not(feature = "image-presenter"))]
     let has_images = false;
     if !runs.is_empty() || has_images {
         #[cfg(feature = "image-presenter")]
-        session.present_frame_parts(&payloads)?;
+        present(&payloads)?;
         #[cfg(not(feature = "image-presenter"))]
-        session.present_frame(cell_bytes)?;
+        present(&[cell_bytes])?;
     }
     frames.prev = frames.next.clone();
     frames.next = Grid::new(area.width, area.height);
@@ -314,3 +320,7 @@ mod tests {
         assert_eq!(options.height, 24);
     }
 }
+
+#[cfg(all(test, feature = "image-presenter"))]
+#[path = "run/pixel_tests.rs"]
+mod pixel_tests;

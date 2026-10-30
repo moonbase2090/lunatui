@@ -24,6 +24,7 @@ No rules yet.
 | `lunatui-term/src/bin/session_pty_probe.rs`, `run_panic` | `clippy::panic` | PTY integration test exercises panic restore | PR 10 (#22) |
 
 | `lunatui-widgets/src/pie_chart/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, bounded chart coordinates to tiny-skia's f32 coordinates | Pixel PieChart |
+| `lunatui-widgets/src/chart/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, clipped chart coordinates bounded to 4096 pixels to tiny-skia's f32 coordinates | Pixel Chart |
 
 ## Checks
 

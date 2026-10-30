@@ -13,6 +13,20 @@ Every PR adds its entry under **Unreleased**.
 - `NotificationCenter` widget and `NotificationLog`, behind the `notification-center` feature: a history of past notifications, newest first, under a header that counts the unread ones. Each row has a read or unread mark in the color of its `ToastKind`, a time label, the message, and a dismiss cross. The log is a ring buffer with `push`, `dismiss`, `clear`, `mark_read`, `mark_all_read`, and `unread`; the widget scrolls to keep the selected row in view, and `row_at` and `dismiss_at` give hit testing.
 - `DatePicker` widget, behind the `date-picker` feature: a fixed-size month grid with a cursor, a chosen date or range (filled ends with a band between), `min` and `max` bounds that dim days and arrows, a today marker, Monday or Sunday weeks, `shift_days`, `shift_months`, and `clamped` for moving the cursor, and `prev_area`, `next_area`, and `date_at` for hit testing. `Date` now implements `Ord`.
 
+- Default-on `pixel-chart` rendering for `Chart`: antialiased lines, scatter points, bars, and legend swatches with the original cell fallback. `ImageSink::submit_raster` manages frame-ordered raster identities and revisions; the interactive `pixel_chart` example keeps Braille twins beside matching pixels and includes Saturation CPU/memory.
+
+- `scripts/record-pixels.sh` records a real Kitty window with ffmpeg, preserving graphics in lossless video, PNG, and animated WebP. The Image example switches Contain and Cover with `f`; its full-resolution source is sent through the actual image presenter.
+
+### Changed
+
+- The README Image recording and site gallery show native Kitty image pixels from a real framebuffer capture, replacing the text-recorder half-block preview. The full-resolution NASA source switches Contain and Cover.
+
+### Fixed
+
+- Kitty image uploads complete before the runtime clears cell fallbacks or changes graph labels, preventing stale plots and misplaced legend swatches when switching charts.
+
+- Native graph rendering retains the cell renderer for reversed background colors, avoiding an unswapped pixel backdrop.
+
 ## [0.1.16] - 2026-10-30
 
 ### Added

@@ -14,3 +14,10 @@ The optional `decode` feature uses the `image` crate with only PNG, JPEG, GIF,
 and WebP codecs enabled. It decodes GIF and WebP inputs as their first frame;
 applications own animation scheduling. Encoded dimensions and decoded RGBA
 storage are bounded before the source is retained.
+
+`ImageSink::submit` presents an image with an application-owned identity and
+generation. `ImageSink::submit_raster` presents a widget raster with identity,
+exact content comparison, and revisions managed by the presenter. Automatic
+identities follow accepted submission order in each frame; submit every visible
+raster each frame. The raster must match the measured target dimensions.
+Custom sinks can decline automatic rasters and keep the widget's cell fallback.

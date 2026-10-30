@@ -33,15 +33,15 @@ Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). C
 
 ## Widget gallery
 
-Still frames and short recordings from `scripts/record-showcase.sh`: lunatui only, dark theme, 120×36.
+Still frames and short recordings of real widget output, in the dark theme. Native pixel demos use the real terminal recorder; cell demos use `scripts/record-showcase.sh`.
 
 ### Chart
 
-An operations dashboard with four charts: braille lines with a legend, a dot scatter, hourly bars, and a half-block line chart in the focused state. The series scroll and the points drift while the axes, labels, and titles stay put.
+Requests, Saturation CPU/memory, and latency scatter keep matching Braille and antialiased pixel views. Hourly bars use native pixels. Both views share the same scene data and layout; the axes, labels, and legends stay as text, with native pixel legend swatches. Pixels are enabled by default when the image presenter supports them; `.pixels(false)` retains the original cell rendering.
 
-<img src="docs/media/chart.webp" alt="Chart widget: an operations dashboard in the dark theme" width="1028">
+<img src="docs/media/chart.webp" alt="Matching Braille and native pixel Chart plots, including Saturation CPU and memory, followed by native hourly bars in a real Kitty terminal" width="1028">
 
-Screenshot: [docs/media/chart.png](docs/media/chart.png). Recorded with `scripts/record-showcase.sh` (`CASE=chart`, 120×36 at 2x scale, `FRAMES=200`, dark, lossless animated WebP, about 9 seconds).
+Screenshots: [Requests](docs/media/chart.png), [Saturation CPU/memory](docs/media/chart-saturation.png), [Latency scatter](docs/media/chart-scatter.png). Recorded from a clean source tree at `757abcef18301fcbe72dfbd17c1bf57ce1d1ad98` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_chart FEATURES=image-presenter FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:u,6:Right,9:u,12:Right,15:u,18:Right,21:u scripts/record-pixels.sh`: 100×32 cells, 1301×801 pixels, 30 fps, 24 seconds, lossless WebP 81,152 bytes. Each sample stays on screen for about 3 seconds. All 720 source frames exactly match one of eight inspected states, with no previous plot under new labels. The stills are unmodified video frames at 0, 7.5, and 13 seconds. No compositing or dropped frames.
 
 ### BarChart
 
@@ -284,11 +284,11 @@ Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scr
 
 ### Image
 
-A media library for an observatory archive. Each thumbnail is an `Image` with `ImageFit::Cover`. The selected one is drawn focused, and the two imports are drawn disabled until they finish. The preview switches between `ImageFit::Contain` and `ImageFit::Cover`, and the details panel shows each frame's tone bands. The pictures are the website's sky, hills and moon art, resized, tinted and layered by the example.
+NASA's 1920×1920 Blue Marble Earth, displayed by the `Image` widget through Kitty graphics. The recording switches between Contain and Cover with real key input. Credit: NASA, PIA18033.
 
-![Image widget: a media library in the dark theme](docs/media/image-120x36-truecolor-dark.gif)
+<img src="docs/media/image-native.webp" alt="Image widget: full-resolution NASA Blue Marble in a real Kitty terminal" width="1028">
 
-Screenshot: [docs/media/image-120x36-truecolor-dark.png](docs/media/image-120x36-truecolor-dark.png). Recorded with `scripts/record-widget.sh` (`CASE=image`, 120×36, dark, 10 seconds at 30 fps). The recording shows the half-block cell fallback, two image pixels per cell. The recorder captures terminal text and cannot capture Kitty graphics, so the Kitty path is not shown.
+Screenshot: [docs/media/image-native.png](docs/media/image-native.png). Recorded from an actual Kitty window with `scripts/record-pixels.sh` (100×32, font size 16, 1301×801 pixels, 8 seconds at 30 fps, lossless animated WebP). This captures image pixels in the terminal framebuffer. See [Record a pixel widget in a real terminal](docs/recording-pixels.md).
 
 ### Nested menu
 

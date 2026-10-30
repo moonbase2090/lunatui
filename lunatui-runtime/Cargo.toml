@@ -28,6 +28,7 @@ lunatui-image = { version = "0.1.16", path = "../lunatui-image", optional = true
 lunatui-term = { version = "0.1.16", path = "../lunatui-term" }
 
 [dev-dependencies]
+lunatui-test = { path = "../lunatui-test" }
 proptest = "1.9"
 
 [lints]

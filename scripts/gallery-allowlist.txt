@@ -14,3 +14,10 @@ helper draw # initializes a frame and composes the editor, Menu and status widge
 helper explorer # renders the project List and text labels
 helper editor # renders code Paragraphs, Tabs and a TextInput caret
 helper activity # renders application event messages through Paragraph
+scope examples/kitty_image.rs # the native pixel capture composes Image, Block and Paragraph widgets
+scope examples/pixel_chart.rs # live native Chart demo uses the runtime image presenter
+scope examples/chart_scene.rs # shared chart scene uses Chart, Block and typed datasets
+helper throughput # constructs Chart request line datasets and renders the widget
+helper saturation # constructs Chart CPU/memory datasets and renders the widget
+helper scatter # constructs Chart latency datasets and renders the widget
+helper histogram # constructs Chart hourly datasets and renders the widget
