@@ -30,9 +30,10 @@ def main():
     for index in range(recording.n_frames):
         recording.seek(index)
         frame = recording.convert("RGB")
+        pixels = iter(frame.crop((x, y, x + width, y + height)).tobytes())
         colored = sum(
             max(rgb) >= 100 and max(rgb) - min(rgb) >= 40
-            for rgb in frame.crop((x, y, x + width, y + height)).getdata()
+            for rgb in zip(pixels, pixels, pixels)
         )
         duration = recording.info.get("duration", 0)
         counts.append({"frame": index, "start_ms": elapsed, "duration_ms": duration, "colored_pixels": colored})

@@ -32,4 +32,4 @@ Choose a rectangle that includes the graph or image and excludes labels, borders
 
 A text recorder such as asciinema with agg captures the cell fallback. Use this screen-capture path when the gallery must show actual image pixels. Recordings and captions must identify the path actually exercised.
 
-The committed Image recording was captured from code commit `ae377d67c9a437a150f632c05e360a05c49dfccc` in a fresh Ubuntu arm64 VM with Kitty 0.32.2. The tracked tree was clean. The actual window is 1601×1025 pixels; three distinct frames show the Contain/Cover changes. The lossless WebP is 2,313,174 bytes. Both the README and site use that uncomposited recording.
+The committed Image recording was captured from code commit `17012b45cb1a24e0372f78b34945c4dcf64d411b` in a fresh Ubuntu arm64 Tart VM with Kitty 0.32.2 and a clean tracked tree. The actual window is 1301×801 pixels at 30 fps. Its three displayed WebP frames show Contain, Cover, then Contain; all 240 lossless video frames retain the image. The lossless WebP is 1,580,600 bytes. Both the README and site use that uncomposited recording.
