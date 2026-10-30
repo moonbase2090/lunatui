@@ -50,6 +50,8 @@ mod log_view;
 mod markdown_view;
 #[cfg(feature = "nested-menu")]
 mod nested_menu;
+#[cfg(feature = "notification-center")]
+mod notification_center;
 #[cfg(feature = "number-input")]
 mod number_input;
 mod overlay;
@@ -144,6 +146,8 @@ pub use lunatui_text::{RowBuilder, RowSource, VecSource};
 pub use markdown_view::MarkdownView;
 #[cfg(feature = "nested-menu")]
 pub use nested_menu::{Menu, MenuEvent, MenuItem, MenuState};
+#[cfg(feature = "notification-center")]
+pub use notification_center::{Notification, NotificationCenter, NotificationId, NotificationLog};
 #[cfg(feature = "number-input")]
 pub use number_input::NumberInput;
 pub use overlay::{FocusTrap, Overlay, blend_rgb};
