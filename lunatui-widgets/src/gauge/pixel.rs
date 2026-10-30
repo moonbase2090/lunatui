@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Attrs, CellWidth, DecodedGlyph, Meta, Rect, Style};
-use lunatui_image::{ImageSource, PixelSize};
+use lunatui_image::{ImageSource, PixelSize, PixelTarget};
 use tiny_skia::{Paint, Pixmap, Transform};
 
 use super::Gauge;
@@ -49,6 +49,21 @@ fn prepare(
     partial: Option<char>,
     cx: &RenderCx<'_>,
 ) -> Option<Prepared> {
+    let target = target(gauge, area, cx)?;
+    let size = target.size();
+    let mut foreground = cx.pixel_rgb(gauge.fill_style.fg, None)?;
+    if gauge.fill_style.attrs.dim() {
+        for channel in &mut foreground {
+            *channel /= 2;
+        }
+    }
+    let erase = verify_row(gauge, area, whole, partial, cx)?;
+    let backgrounds = cx.pixel_backdrop(area, target.background(), true)?;
+    let source = raster(size, area.width, &backgrounds, foreground, gauge.ratio)?;
+    Some(Prepared { source, erase })
+}
+
+fn target(gauge: &Gauge, area: Rect, cx: &RenderCx<'_>) -> Option<PixelTarget> {
     if !gauge.ratio.is_finite()
         || gauge.ratio <= 0.0
         || !supported(gauge.fill_style)
@@ -78,12 +93,16 @@ fn prepare(
     if work > MAX_WORK {
         return None;
     }
-    let mut foreground = cx.pixel_rgb(gauge.fill_style.fg, None)?;
-    if gauge.fill_style.attrs.dim() {
-        for channel in &mut foreground {
-            *channel /= 2;
-        }
-    }
+    Some(target)
+}
+
+fn verify_row(
+    gauge: &Gauge,
+    area: Rect,
+    whole: u16,
+    partial: Option<char>,
+    cx: &RenderCx<'_>,
+) -> Option<Vec<EraseInk>> {
     let mut erase = Vec::new();
     erase
         .try_reserve_exact(usize::from(whole) + usize::from(partial.is_some()))
@@ -121,9 +140,7 @@ fn prepare(
             });
         }
     }
-    let backgrounds = cx.pixel_backdrop(area, target.background(), true)?;
-    let source = raster(size, area.width, &backgrounds, foreground, gauge.ratio)?;
-    Some(Prepared { source, erase })
+    Some(erase)
 }
 
 fn raster(
