@@ -53,3 +53,8 @@ scope examples/progress_scene.rs # shared release pipeline composes real Progres
 helper stages # renders original stage data with ProgressBar and Paragraph
 helper log # renders original pipeline log lines with Paragraph
 helper frame # comparison test setup attaches a capture sink and delegates to the real scene
+scope examples/button_showcase.rs # the release console composes Block, Paragraph, LineGauge, StatusBar and Button widgets
+helper changes # renders release notes through Block and Paragraph
+helper checks # renders check names through Paragraph and their progress through LineGauge
+helper actions # renders the action bar through Block and Button
+helper history # renders release history lines through Block and Paragraph
