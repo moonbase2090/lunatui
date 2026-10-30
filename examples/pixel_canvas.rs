@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn every_scene_accepts_native_rasters_at_the_documented_terminal_size_and_keeps_text_labels() {
         let labels = ["ratio", "Flights", "50%", "10:08:", "200 boids", "ms"];
-        for cell_height in [25, 26] {
+        for (cell_height, tick) in [(25, 18), (25, 54), (26, 18), (26, 54)] {
             for (scene, label) in labels.into_iter().enumerate() {
                 let mut grid = Grid::new(WIDTH, HEIGHT);
                 let mut clusters = ClusterTable::new();
@@ -220,7 +220,7 @@ mod tests {
                 };
                 Screen {
                     scene,
-                    tick: 18,
+                    tick,
                     right_pixels: true,
                 }
                 .draw(
