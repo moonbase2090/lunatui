@@ -30,6 +30,8 @@ use lunatui_widgets::{
 };
 
 mod bar_scene;
+#[path = "button_showcase.rs"]
+mod button_showcase;
 #[path = "canvas_showcase.rs"]
 mod canvas_showcase;
 use bar_scene::BarBoard;
@@ -117,6 +119,11 @@ const PREVIEWS: &[Preview] = &[
         name: "popover",
         native: popover_showcase::render,
         baseline: popover_baseline,
+    },
+    Preview {
+        name: "button",
+        native: button_showcase::render,
+        baseline: button_baseline,
     },
     Preview {
         name: "table-sorted",
@@ -4005,6 +4012,12 @@ fn toggle_native(
             ),
             &mut cx,
         );
+}
+
+fn button_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "button") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn table_sorted_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {

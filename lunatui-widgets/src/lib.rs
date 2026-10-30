@@ -14,6 +14,8 @@ mod big_text;
 mod block;
 mod borders;
 mod breadcrumbs;
+#[cfg(feature = "button")]
+mod button;
 #[cfg(feature = "calendar")]
 mod calendar;
 /// Shapes for [`Canvas`] and the painter they draw with.
@@ -109,6 +111,8 @@ pub use big_text::{BigText, BigTextFont, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 pub use breadcrumbs::Breadcrumbs;
+#[cfg(feature = "button")]
+pub use button::{Button, ButtonState, ButtonVariant};
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 #[cfg(feature = "canvas")]
