@@ -41,7 +41,7 @@ Requests, Saturation CPU/memory, and latency scatter keep matching Braille and a
 
 <img src="docs/media/chart.webp" alt="Matching Braille and native pixel Chart plots, including Saturation CPU and memory, followed by native hourly bars in a real Kitty terminal" width="1028">
 
-Screenshots: [Requests](docs/media/chart.png), [Saturation CPU/memory](docs/media/chart-saturation.png). Recorded from a clean source tree at `8c213fa0ff9b2f21530f519cfadf33141f00c3df` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_chart FEATURES=image-presenter FONT_SIZE=16 KEYS=1:u,2:Right,3:u,4:Right,5:u,6:Right,7:u scripts/record-pixels.sh`: 100×32 cells, 1301×801 pixels, 30 fps, 8 seconds, lossless WebP 82,922 bytes. All 240 source frames retain graph pixels. The stills are unmodified video frames at 0 and 2.5 seconds. No compositing or dropped frames.
+Screenshots: [Requests](docs/media/chart.png), [Saturation CPU/memory](docs/media/chart-saturation.png). Recorded from a clean source tree at `d14292f53513c2e9379d98e3dcc0e2316bc2fcb9` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_chart FEATURES=image-presenter FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:u,6:Right,9:u,12:Right,15:u,18:Right,21:u scripts/record-pixels.sh`: 100×32 cells, 1301×801 pixels, 30 fps, 24 seconds, lossless WebP 82,780 bytes. Each sample stays on screen for about 3 seconds. All 720 source frames retain graph pixels. The stills are unmodified video frames at 0 and 7.5 seconds. No compositing or dropped frames.
 
 ### BarChart
 
