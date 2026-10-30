@@ -40,7 +40,7 @@ pub enum WeekStart {
 /// A Gregorian calendar date.
 ///
 /// Years follow the proleptic Gregorian calendar. Month and day are 1-based.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Date {
     year: i32,
     month: u8,
@@ -89,11 +89,11 @@ impl Date {
         MONTHS[self.month as usize - 1]
     }
 
-    const fn first_of_month(self) -> Self {
+    pub(crate) const fn first_of_month(self) -> Self {
         Self { day: 1, ..self }
     }
 
-    const fn succ(self) -> Self {
+    pub(crate) const fn succ(self) -> Self {
         let len = month_length(self.year, self.month);
         if self.day < len {
             return Self {
@@ -116,7 +116,7 @@ impl Date {
         }
     }
 
-    const fn pred(self) -> Self {
+    pub(crate) const fn pred(self) -> Self {
         if self.day > 1 {
             return Self {
                 day: self.day - 1,
@@ -140,7 +140,7 @@ impl Date {
         }
     }
 
-    fn weekday(self) -> u8 {
+    pub(crate) fn weekday(self) -> u8 {
         let days = days_from_civil(self.year, u32::from(self.month), u32::from(self.day));
         u8::try_from(days.wrapping_add(4).rem_euclid(7)).unwrap_or(0)
     }
@@ -601,7 +601,7 @@ fn day_chars(day: u8) -> [char; 2] {
     }
 }
 
-fn month_label(date: Date, bytes: &mut [u8; 32]) -> &str {
+pub(crate) fn month_label(date: Date, bytes: &mut [u8; 32]) -> &str {
     let len = {
         let mut writer = ArrayWriter { bytes, len: 0 };
         let _ = write!(writer, "{} {}", date.month_name(), date.year);
@@ -648,7 +648,7 @@ fn week_rows(date: Date, week_start: WeekStart) -> u8 {
     rows
 }
 
-const fn month_length(year: i32, month: u8) -> u8 {
+pub(crate) const fn month_length(year: i32, month: u8) -> u8 {
     match month {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
