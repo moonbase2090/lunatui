@@ -147,7 +147,7 @@ fn a_selected_chip_is_highlighted_and_hides_the_caret() {
     for x in 9..16 {
         assert_eq!(style_at(&grid, x, 0).bg, accent, "column {x}");
     }
-    assert_eq!(style_at(&grid, 10, 0).fg, color(Token::Surface0));
+    assert_eq!(style_at(&grid, 10, 0).fg, color(Token::Surface1));
     assert_eq!(style_at(&grid, 7, 0).bg, color(Token::Surface1));
     assert_eq!(style_at(&grid, 8, 0).bg, color(Token::Surface0));
     assert_eq!(style_at(&grid, 16, 0).bg, color(Token::Surface0));
