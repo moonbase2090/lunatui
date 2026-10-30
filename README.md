@@ -280,7 +280,7 @@ NASA's 1920×1920 Blue Marble Earth, displayed by the `Image` widget through Kit
 
 <img src="docs/media/image-native.webp" alt="Image widget: full-resolution NASA Blue Marble in a real Kitty terminal" width="1028">
 
-Screenshot: [docs/media/image-native.png](docs/media/image-native.png). Recorded from an actual Kitty window with `scripts/record-pixels.sh` (100×32, font size 20, 8 seconds at 30 fps, lossless animated WebP). This captures image pixels in the terminal framebuffer. See [Record a pixel widget in a real terminal](docs/recording-pixels.md).
+Screenshot: [docs/media/image-native.png](docs/media/image-native.png). Recorded from an actual Kitty window with `scripts/record-pixels.sh` (100×32, font size 16, 1301×801 pixels, 8 seconds at 30 fps, lossless animated WebP). This captures image pixels in the terminal framebuffer. See [Record a pixel widget in a real terminal](docs/recording-pixels.md).
 
 ### Nested menu
 
