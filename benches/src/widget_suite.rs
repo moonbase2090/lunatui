@@ -17,13 +17,13 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Canvas, Chart, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus, DialogKind,
-    DialogState, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
-    LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
-    Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart, PieSlice,
-    PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility,
-    SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap, ToastKind,
-    ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
+    Button, ButtonVariant, Canvas, Chart, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus,
+    DialogKind, DialogState, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer,
+    KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
+    MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart,
+    PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView,
+    ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap,
+    ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -207,6 +207,13 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: popover_lunatui,
         ratatui: popover_ratatui,
+    },
+    Case {
+        name: "button",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: button_lunatui,
+        ratatui: button_ratatui,
     },
     Case {
         name: "dialog",
@@ -1696,6 +1703,108 @@ fn progress_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             })
             .collect();
         RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
+    }
+}
+
+const BUTTON_LABELS: [&str; 3] = ["Run checks", "Deploy", "Roll back"];
+
+fn button_slots(area: Rect) -> impl Iterator<Item = (usize, Rect)> {
+    let mut x = area.x.saturating_add(2);
+    let y = area.y.saturating_add(1);
+    let end = area.x.saturating_add(area.width);
+    BUTTON_LABELS.iter().enumerate().map(move |(index, label)| {
+        let wanted = u16::try_from(label.len()).unwrap_or(0) + 4;
+        let slot = Rect::new(x, y, wanted.min(end.saturating_sub(x)), 1);
+        x = x.saturating_add(wanted + 1).min(end);
+        (index, slot)
+    })
+}
+
+fn button_look(tick: u32, index: usize) -> (ButtonVariant, WidgetState, bool) {
+    let variant = match index {
+        1 => ButtonVariant::Primary,
+        2 => ButtonVariant::Destructive,
+        _ => ButtonVariant::Normal,
+    };
+    let focus = usize::try_from(tick / 10 % 3).unwrap_or(0);
+    let state = if index == 1 && (tick / 30).is_multiple_of(2) {
+        WidgetState::Disabled
+    } else if index == focus {
+        WidgetState::Focused
+    } else {
+        WidgetState::Normal
+    };
+    (variant, state, index == focus && tick % 10 < 3)
+}
+
+fn button_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    for (index, slot) in button_slots(area) {
+        let (variant, state, pressed) = button_look(tick, index);
+        Button::new(BUTTON_LABELS[index])
+            .variant(variant)
+            .state(state)
+            .pressed(pressed)
+            .render(slot, &mut cx);
+    }
+}
+
+fn button_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let screen = Rect::new(area.x, area.y, area.width, area.height);
+    for (index, slot) in button_slots(screen) {
+        let (variant, state, pressed) = button_look(tick, index);
+        let tone = match variant {
+            ButtonVariant::Primary => Token::Accent,
+            ButtonVariant::Destructive => Token::Fail,
+            _ => Token::FocusRing,
+        };
+        let bold = ratatui::style::Modifier::BOLD;
+        let style = if state == WidgetState::Disabled {
+            RatStyle::new()
+                .fg(color(Token::TextPrimary))
+                .bg(color(Token::Surface1))
+                .add_modifier(ratatui::style::Modifier::DIM)
+        } else if pressed {
+            RatStyle::new()
+                .fg(color(tone))
+                .bg(color(Token::Surface0))
+                .add_modifier(bold)
+        } else if state == WidgetState::Focused {
+            let fill = if variant == ButtonVariant::Destructive {
+                Token::Fail
+            } else {
+                Token::FocusRing
+            };
+            RatStyle::new()
+                .fg(color(Token::Surface0))
+                .bg(color(fill))
+                .add_modifier(bold)
+        } else if variant == ButtonVariant::Primary {
+            RatStyle::new()
+                .fg(color(Token::Surface0))
+                .bg(color(Token::Accent))
+                .add_modifier(bold)
+        } else if variant == ButtonVariant::Destructive {
+            RatStyle::new()
+                .fg(color(Token::Fail))
+                .bg(color(Token::Surface1))
+        } else {
+            RatStyle::new()
+                .fg(color(Token::TextPrimary))
+                .bg(color(Token::Surface1))
+        };
+        RatParagraph::new(BUTTON_LABELS[index])
+            .alignment(ratatui::layout::Alignment::Center)
+            .style(style)
+            .render(RatRect::new(slot.x, slot.y, slot.width, slot.height), buf);
     }
 }
 
