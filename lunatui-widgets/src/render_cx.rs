@@ -114,6 +114,9 @@ impl<'a> RenderCx<'a> {
         for y in area.y..area.y.checked_add(area.height)? {
             for x in area.x..area.x.checked_add(area.width)? {
                 let cell = self.grid.get(x, y)?;
+                if cell.style().attrs.reverse() {
+                    return None;
+                }
                 if !text_underlay
                     && cell.glyph().decode() != lunatui_core::DecodedGlyph::Inline(' ')
                 {

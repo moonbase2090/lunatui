@@ -90,6 +90,37 @@ fn existing_chart_calls_use_native_antialiased_lines_and_keep_axes_in_cells() {
 }
 
 #[test]
+fn reversed_backgrounds_keep_the_cell_renderer_instead_of_using_the_unswapped_color() {
+    let points = [(0.0, 0.0), (1.0, 1.0)];
+    let sets = [Dataset::new(&points)
+        .graph_type(GraphType::Line)
+        .style(Style::new().fg(Color::Rgb(255, 255, 255)))];
+    let background = Style::new()
+        .fg(Color::Rgb(255, 0, 0))
+        .bg(Color::Rgb(0, 0, 255));
+    let chart = Chart::new(&sets).background(background);
+    let mut images = capture(32, 32);
+    draw(&chart, &mut images, 6, 5);
+    assert_eq!(pixel(&images.images[0].0, 0, 0), [0, 0, 255, 255]);
+    let reversed = background.with_attrs(Attrs::new().set_reverse(true));
+    let chart = chart.background(reversed);
+    let mut images = capture(32, 32);
+    let (grid, clusters) = draw(&chart, &mut images, 6, 5);
+    assert_eq!(images.images, Vec::new());
+    let (expected, expected_clusters) = draw(&chart.pixels(false), &mut capture(32, 32), 6, 5);
+    for row in 0..5 {
+        assert_eq!(
+            grid.row_display(row, &clusters),
+            expected.row_display(row, &expected_clusters)
+        );
+    }
+    assert_eq!(
+        grid.get(1, 0).map(lunatui_core::Cell::style),
+        Some(reversed)
+    );
+}
+
+#[test]
 fn bar_heights_use_the_first_axis_bound_and_keep_a_cell_wide_footprint() {
     let points = [(0.0, 1.0), (0.5, 0.5), (1.0, 0.25)];
     let sets = [Dataset::new(&points)
