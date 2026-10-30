@@ -104,7 +104,10 @@ fn the_unread_count_prints_every_digit() {
     for _ in 0..95 {
         log.dismiss(nth_id(&log, 0));
     }
-    assert_eq!(rows(&center(&log), 30, 1)[0], " Notifications      10 unread");
+    assert_eq!(
+        rows(&center(&log), 30, 1)[0],
+        " Notifications      10 unread"
+    );
 }
 
 #[test]
