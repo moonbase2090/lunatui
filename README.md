@@ -2,7 +2,7 @@
 
 lunatui is a hyperspeed Rust TUI library being built from scratch, keeping a simple "render widgets into a rectangle" model while fixing its structural costs with a 16-byte packed cell, damage-tracked diffing and a single-write output encoder, plus first-class input, focus, animation, capability and theme layers. It is open source under the [MIT](LICENSE) license.
 
-**Status: v0.1.15 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
+**Status: v0.1.16 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
 
 ## Performance
 
@@ -150,6 +150,13 @@ Screenshot: [docs/media/tooltip.png](docs/media/tooltip.png). Recorded with `scr
 ### PieChart
 
 A cluster overview of live traffic: a high-resolution braille pie of requests by region sweeps in with an eased reveal and redraws its shares every frame from live rates. The highlight then steps through each region, pulling its slice out and following it in the legend, the regions table and the detail line, while a braille line chart beside it tracks total requests over the last 40 seconds. Slice colors stay apart from each other in the dark, light, and 16-color palettes.
+
+For antialiased pixels, wrap the chart in `PixelPieChart` and attach the frame's image sink. Pixel support is enabled by default. Use `.pixels(false)` on the widget or `RunOptions` to select Braille explicitly. Kitty, iTerm2 inline images, and Sixel use the shared presenter; unsupported terminals and multiplexers use Braille. Try `cargo run --release -p lunatui --features image-presenter --example pixel_pie_chart`. Add `-- --compare` to mirror the Braille and pixel versions side by side with the same data and layout. See the [widget reference](lunatui-widgets/README.md) for text-layering and resource limits.
+
+
+<img src="docs/media/pixel-pie-chart.webp" alt="Braille and antialiased pixel pies, mirrored with the same data and geometry in a real Kitty terminal" width="1028">
+
+Pixel comparison screenshot: [docs/media/pixel-pie-chart.png](docs/media/pixel-pie-chart.png). Captured from a real Kitty 0.32.2 window in a clean Linux VM (100×32, font size 20, 30 fps, 8 seconds, with the selected region changing from the keyboard). The Braille version remains alongside the pixel version; no compositing.
 
 <img src="docs/media/pie-chart.webp" alt="PieChart: a braille pie of live request shares by region, with a regions table and a request trend, on a cluster overview screen in the dark theme" width="1028">
 

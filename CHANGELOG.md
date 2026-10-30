@@ -8,7 +8,11 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.16] - 2026-10-30
+
 ### Added
+
+- `PixelPieChart`, behind the default `pixel-pie-chart` feature: antialiased pies and donuts with a cached tiny-skia raster and automatic Braille fallback. The shared image presenter adds measured cell pixels, conservative iTerm2 inline-image and Sixel selection, and repainting for moved or removed immediate images. The new interactive `pixel_pie_chart` example uses the same widget path as applications.
 
 - A quickstart in `docs/getting-started.md` for the current preview: the crate names, a first app under 30 lines, how to run it from this repository (the crates are not on crates.io yet), and where to go next. Six copy-paste templates under `examples/templates/` (a minimal app, a list, a form, a live dashboard, a popover, and a layout skeleton) are registered as examples, indexed from the examples list and the quickstart, and shown with a capture of each on the site. The dashboard sparkline uses an uneven traffic sample.
 - `Menu`, `MenuItem`, `MenuState`, and `MenuEvent`, behind the opt-in `nested-menu` feature, with keyboard navigation, cascading submenus, disabled items, and queued leaf actions styled with Graphite tokens.
@@ -21,6 +25,8 @@ Every PR adds its entry under **Unreleased**.
 - `HexViewer` widget, behind the `hex-viewer` feature: a hex dump with offset, hex and ASCII columns, a cursor and selection kept in `HexViewerState`, row and page moves that keep the cursor on screen, wheel scrolling, `byte_at` for mouse hit testing, an optional column header, a base offset for windows into larger files, byte-kind colors from theme tokens, and widget states.
 
 ### Changed
+
+- Pixel rendering and the runtime image presenter are enabled by default. `PixelPieChart::pixels(false)` and `RunOptions::pixels(false)` explicitly select cell fallbacks; existing Braille/text charts remain available.
 
 - The PieChart demo shows only the braille pie of requests by region, with a regions table and a request trend; the block-glyph storage donut is gone.
 - The `log-view` benchmark case now draws its reference rows bottom-aligned with bold warn and error labels, the way `LogView` does.

@@ -126,6 +126,8 @@ fn graphics_name(protocol: GraphicsProtocol) -> &'static str {
     match protocol {
         GraphicsProtocol::Unknown => "unknown",
         GraphicsProtocol::Kitty => "kitty",
+        GraphicsProtocol::Iterm2 => "iterm2",
+        GraphicsProtocol::Sixel => "sixel",
     }
 }
 

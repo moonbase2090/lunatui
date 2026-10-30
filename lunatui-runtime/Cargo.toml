@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = []
+default = ["image-presenter"]
 app = []
 keymap = []
 motion = []
@@ -23,9 +23,9 @@ name = "motion"
 required-features = ["motion"]
 
 [dependencies]
-lunatui-core = { version = "0.1.15", path = "../lunatui-core" }
-lunatui-image = { version = "0.1.15", path = "../lunatui-image", optional = true }
-lunatui-term = { version = "0.1.15", path = "../lunatui-term" }
+lunatui-core = { version = "0.1.16", path = "../lunatui-core" }
+lunatui-image = { version = "0.1.16", path = "../lunatui-image", optional = true }
+lunatui-term = { version = "0.1.16", path = "../lunatui-term" }
 
 [dev-dependencies]
 proptest = "1.9"

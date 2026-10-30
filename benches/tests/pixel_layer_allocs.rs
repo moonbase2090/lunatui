@@ -61,7 +61,7 @@ fn steady_state_frames_allocate_nothing_and_send_only_what_changed() -> Result<(
                 "step {step}: the moving image was transmitted again"
             ));
         }
-        let bumped = contains(output, b"a=t,i=3,");
+        let bumped = contains(output, b"a=t,i=");
         if bumped != (step % 5 == 0) {
             return Err(format!("step {step}: transmit of image 3 was {bumped}"));
         }

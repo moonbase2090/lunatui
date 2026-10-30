@@ -17,7 +17,7 @@ use std::time::Duration;
 pub const PROBE_BUDGET: Duration = Duration::from_millis(200);
 
 /// Startup queries in one write, ending with primary device attributes (`CSI c`).
-pub const QUERIES: &[u8] = b"\x1b[>0q\x1b[?2026$p\x1b[?2027$p\x1b[?2004$p\x1b[?1004$p\x1b[?u\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b]10;?\x1b\\\x1b]11;?\x1b\\\x1b[c";
+pub const QUERIES: &[u8] = b"\x1b[>0q\x1b[?2026$p\x1b[?2027$p\x1b[?2004$p\x1b[?1004$p\x1b[?u\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b]1337;Capabilities\x1b\\\x1b]1337;ReportCellSize\x1b\\\x1b[16t\x1b]10;?\x1b\\\x1b]11;?\x1b\\\x1b[c";
 
 /// `CSI ? 2027 h`, sent when grapheme-cluster mode is supported and currently reset.
 pub const GRAPHEME_ENABLE: &[u8] = b"\x1b[?2027h";
@@ -117,11 +117,15 @@ pub enum KeyboardProtocol {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
 pub enum GraphicsProtocol {
-    /// No kitty graphics reply arrived.
+    /// No supported graphics reply arrived.
     #[default]
     Unknown,
     /// The kitty graphics query returned `OK`.
     Kitty,
+    /// A live iTerm2 capabilities report unambiguously advertised inline files.
+    Iterm2,
+    /// Primary device attributes or a capabilities report advertised Sixel.
+    Sixel,
 }
 
 /// Whether the terminal is treated as OSC 8 capable.
@@ -239,6 +243,37 @@ impl ProbeEnv {
     }
 }
 
+/// Measured physical pixels in one terminal cell.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CellPixels {
+    width: std::num::NonZeroU16,
+    height: std::num::NonZeroU16,
+}
+
+impl CellPixels {
+    /// Creates a measurement; zero dimensions are invalid.
+    #[must_use]
+    pub const fn new(width: u16, height: u16) -> Option<Self> {
+        match (
+            std::num::NonZeroU16::new(width),
+            std::num::NonZeroU16::new(height),
+        ) {
+            (Some(width), Some(height)) => Some(Self { width, height }),
+            _ => None,
+        }
+    }
+    /// Physical width of a cell.
+    #[must_use]
+    pub const fn width(self) -> u16 {
+        self.width.get()
+    }
+    /// Physical height of a cell.
+    #[must_use]
+    pub const fn height(self) -> u16 {
+        self.height.get()
+    }
+}
+
 /// Capability result: color, modes, protocols, and the width fallback.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[must_use]
@@ -255,6 +290,10 @@ pub struct Caps {
     pub identity: TermIdentity,
     /// `Some(true)` when the OSC 11 background is dark.
     pub background_dark: Option<bool>,
+    /// Exact RGB from the OSC 11 reply, when valid.
+    pub background_rgb: Option<[u8; 3]>,
+    /// Physical cell dimensions from `CSI 16 t`.
+    pub cell_pixels: Option<CellPixels>,
 }
 
 impl Caps {
@@ -292,6 +331,8 @@ pub struct ProbeReply {
     pub caps: Caps,
     /// A primary device-attributes reply (`CSI` … `c`) was present.
     pub saw_device_attributes: bool,
+    /// Non-probe bytes consumed during the exchange, in order. Replay before new input.
+    pub pending_input: Vec<u8>,
 }
 
 impl ProbeReply {
@@ -300,6 +341,7 @@ impl ProbeReply {
         Self {
             caps: Caps::from_env(env),
             saw_device_attributes: false,
+            pending_input: Vec::new(),
         }
     }
 

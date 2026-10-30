@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::Rect;
-use lunatui_image::{ImageGeometry, ImageRequest, ImageSink, PixelSize};
+use lunatui_image::{ImageGeometry, ImageRequest, ImageSink, PixelSize, PixelTarget};
 
-use crate::caps::{Caps, GraphicsProtocol, Multiplexer};
+mod immediate;
+
+use crate::caps::{Caps, CellPixels, GraphicsProtocol, Multiplexer};
 use crate::encode::write_cup;
 
 const MAX_CHUNK_BYTES: usize = 3072;
@@ -19,28 +21,32 @@ pub enum PixelMode {
     Cells,
     /// Send true pixels with the kitty graphics protocol.
     Kitty,
+    /// Send PNG files with the iTerm2 inline-image protocol.
+    Iterm2,
+    /// Send a palette-based Sixel raster.
+    Sixel,
 }
 
 impl PixelMode {
-    /// Chooses pixels only when the terminal answered the kitty graphics query and no multiplexer
-    /// sits between the program and the terminal, since tmux and screen do not forward graphics.
-    ///
-    /// Prismattyc native pixels need a protocol extension that is not specified yet, so a native
-    /// terminal without the kitty reply stays on cells.
+    /// Chooses a positively reported protocol on a direct terminal connection.
+    /// Multiplexers retain cells until a verified passthrough path is available.
     #[must_use]
     pub fn from_caps(caps: &Caps) -> Self {
-        let direct = caps.identity.multiplexer == Multiplexer::None;
-        if direct && caps.protocols.graphics == GraphicsProtocol::Kitty {
-            Self::Kitty
-        } else {
-            Self::Cells
+        if caps.identity.multiplexer != Multiplexer::None {
+            return Self::Cells;
+        }
+        match caps.protocols.graphics {
+            GraphicsProtocol::Kitty => Self::Kitty,
+            GraphicsProtocol::Iterm2 if caps.cell_pixels.is_some() => Self::Iterm2,
+            GraphicsProtocol::Sixel if caps.cell_pixels.is_some() => Self::Sixel,
+            _ => Self::Cells,
         }
     }
 
     /// Whether this mode draws true pixels.
     #[must_use]
     pub const fn is_pixels(self) -> bool {
-        matches!(self, Self::Kitty)
+        !matches!(self, Self::Cells)
     }
 }
 
@@ -98,9 +104,16 @@ struct Uploaded {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Placed {
     id: u32,
+    wire_id: u32,
     rect: Rect,
     z: i32,
     fresh: bool,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct StoredImage {
+    image: Uploaded,
+    wire_id: u32,
 }
 
 /// Keeps images on screen with the least traffic: an image is transmitted when its content
@@ -113,9 +126,13 @@ struct Placed {
 #[derive(Clone, Debug)]
 pub struct PixelLayer {
     mode: PixelMode,
-    uploaded: Vec<Uploaded>,
+    cell_pixels: Option<CellPixels>,
+    background: Option<[u8; 3]>,
+    uploaded: Vec<StoredImage>,
+    retired: Vec<u32>,
     placed: Vec<Placed>,
     frame: Vec<Placed>,
+    frame_pixels: u64,
     out: Vec<u8>,
     scratch: Vec<u8>,
 }
@@ -126,12 +143,32 @@ impl PixelLayer {
     pub fn new(mode: PixelMode) -> Self {
         Self {
             mode,
+            cell_pixels: None,
+            background: None,
             uploaded: Vec::new(),
+            retired: Vec::new(),
             placed: Vec::new(),
             frame: Vec::new(),
+            frame_pixels: 0,
             out: Vec::new(),
             scratch: Vec::new(),
         }
+    }
+
+    /// Builds a presenter with queried protocol, physical metrics, and background.
+    #[must_use]
+    pub fn from_caps(caps: &Caps) -> Self {
+        let mut layer = Self::new(PixelMode::from_caps(caps));
+        layer.cell_pixels = caps.cell_pixels;
+        layer.background = caps.background_rgb;
+        layer
+    }
+
+    /// Whether the runtime must repaint cells to remove immediate-mode images.
+    #[must_use]
+    pub fn needs_cell_repaint(&self) -> bool {
+        matches!(self.mode, PixelMode::Iterm2 | PixelMode::Sixel)
+            && (!self.placed.is_empty() || !self.frame.is_empty())
     }
 
     /// The mode this layer was built for.
@@ -144,6 +181,7 @@ impl PixelLayer {
     pub fn begin_frame(&mut self) {
         self.out.clear();
         self.frame.clear();
+        self.frame_pixels = 0;
     }
 
     /// Lists `image` for this frame at the cell rectangle `at` and depth `z` (negative draws
@@ -154,6 +192,7 @@ impl PixelLayer {
     /// nonzero and is listed once per frame; a zero or repeated id is ignored.
     pub fn image(&mut self, id: u32, generation: u64, image: &PixelImage<'_>, at: Rect, z: i32) {
         if !self.mode.is_pixels()
+            || self.frame.len() >= 256
             || id == 0
             || at.width == 0
             || at.height == 0
@@ -161,7 +200,11 @@ impl PixelLayer {
         {
             return;
         }
-        let fresh = self.update_upload(Uploaded {
+        if self.mode != PixelMode::Kitty {
+            let _accepted = self.immediate_image(id, image, at, z);
+            return;
+        }
+        let (wire_id, fresh) = self.update_upload(Uploaded {
             id,
             generation,
             source_width: image.width,
@@ -173,10 +216,12 @@ impl PixelLayer {
             opacity: u8::MAX,
         });
         if fresh {
-            write_transmit(&mut self.out, id, image);
+            write_transmit(&mut self.out, wire_id, image);
         }
+        self.frame_pixels += u64::from(image.width) * u64::from(image.height);
         self.frame.push(Placed {
             id,
+            wire_id,
             rect: at,
             z,
             fresh,
@@ -185,6 +230,11 @@ impl PixelLayer {
 
     /// Ends the frame and returns the bytes that bring the terminal up to date.
     pub fn finish_frame(&mut self) -> &[u8] {
+        if self.mode != PixelMode::Kitty {
+            core::mem::swap(&mut self.placed, &mut self.frame);
+            self.frame.clear();
+            return &self.out;
+        }
         for placed in &self.frame {
             let unchanged = !placed.fresh
                 && self
@@ -197,9 +247,12 @@ impl PixelLayer {
         }
         for old in &self.placed {
             if !self.frame.iter().any(|placed| placed.id == old.id) {
-                write_delete(&mut self.out, old.id);
-                self.uploaded.retain(|known| known.id != old.id);
+                write_delete(&mut self.out, old.wire_id);
+                self.uploaded.retain(|known| known.image.id != old.id);
             }
+        }
+        for wire_id in self.retired.drain(..) {
+            write_delete(&mut self.out, wire_id);
         }
         core::mem::swap(&mut self.placed, &mut self.frame);
         self.frame.clear();
@@ -210,33 +263,53 @@ impl PixelLayer {
     pub fn clear(&mut self) -> &[u8] {
         self.out.clear();
         for old in &self.placed {
-            write_delete(&mut self.out, old.id);
+            if self.mode == PixelMode::Kitty {
+                write_delete(&mut self.out, old.wire_id);
+            } else {
+                for y in old.rect.y..old.rect.y.saturating_add(old.rect.height) {
+                    write_cup(&mut self.out, old.rect.x, y);
+                    self.out
+                        .extend(std::iter::repeat_n(b' ', usize::from(old.rect.width)));
+                }
+            }
         }
         self.placed.clear();
         self.frame.clear();
         self.uploaded.clear();
+        self.retired.clear();
         &self.out
     }
 }
 
 impl PixelLayer {
-    fn update_upload(&mut self, current: Uploaded) -> bool {
-        match self
+    fn update_upload(&mut self, current: Uploaded) -> (u32, bool) {
+        let previous = self
             .uploaded
-            .iter_mut()
-            .find(|known| known.id == current.id)
-        {
-            Some(known) if *known == current => false,
-            Some(known) => {
-                write_delete(&mut self.out, current.id);
-                *known = current;
-                true
-            }
-            None => {
-                self.uploaded.push(current);
-                true
+            .iter()
+            .position(|known| known.image.id == current.id);
+        if let Some(index) = previous {
+            let known = self.uploaded[index];
+            if known.image == current {
+                return (known.wire_id, false);
             }
         }
+        let mut wire_id = current.id;
+        while self.uploaded.iter().any(|known| known.wire_id == wire_id)
+            || self.retired.contains(&wire_id)
+        {
+            wire_id = wire_id.wrapping_add(1).max(1);
+        }
+        let stored = StoredImage {
+            image: current,
+            wire_id,
+        };
+        if let Some(index) = previous {
+            self.retired.push(self.uploaded[index].wire_id);
+            self.uploaded[index] = stored;
+        } else {
+            self.uploaded.push(stored);
+        }
+        (wire_id, true)
     }
 
     fn submit_cropped(
@@ -249,6 +322,13 @@ impl PixelLayer {
         destination: Rect,
     ) -> bool {
         let source = request.source();
+        if self.mode != PixelMode::Kitty
+            && crop_width
+                .checked_mul(crop_height)
+                .is_none_or(|n| n > 1_048_576)
+        {
+            return false;
+        }
         let Some(crop_len) = usize::try_from(crop_width)
             .ok()
             .and_then(|width| {
@@ -285,12 +365,14 @@ impl PixelLayer {
             height: crop_height,
             opacity: request.opacity(),
         };
-        let fresh = self.update_upload(current);
+        let (wire_id, fresh) = if self.mode == PixelMode::Kitty {
+            self.update_upload(current)
+        } else {
+            (request.id().get(), true)
+        };
         if fresh {
             self.scratch.clear();
-            if self.scratch.capacity() < crop_len {
-                self.scratch.reserve(crop_len);
-            }
+            self.scratch.reserve(crop_len);
             for row in crop_y..crop_y.saturating_add(crop_height) {
                 let Some(offset) = row_offset(row).and_then(|offset| {
                     offset.checked_add(usize::try_from(crop_x).ok()?.checked_mul(4)?)
@@ -316,10 +398,24 @@ impl PixelLayer {
             let Some(image) = PixelImage::new(crop_width, crop_height, &self.scratch) else {
                 return false;
             };
-            write_transmit(&mut self.out, request.id().get(), &image);
+            if self.mode != PixelMode::Kitty {
+                let pixels = self.scratch.clone();
+                let Some(image) = PixelImage::new(crop_width, crop_height, &pixels) else {
+                    return false;
+                };
+                return self.immediate_image(
+                    request.id().get(),
+                    &image,
+                    destination,
+                    request.depth(),
+                );
+            }
+            write_transmit(&mut self.out, wire_id, &image);
         }
+        self.frame_pixels += u64::from(crop_width) * u64::from(crop_height);
         self.frame.push(Placed {
             id: request.id().get(),
+            wire_id,
             rect: destination,
             z: request.depth(),
             fresh,
@@ -333,35 +429,71 @@ impl ImageSink for PixelLayer {
         self.mode.is_pixels()
     }
 
+    fn pixel_target(&self, area: Rect) -> Option<PixelTarget> {
+        if !self.supports_pixels() || self.frame.len() >= 256 {
+            return None;
+        }
+        let cell = self.cell_pixels?;
+        let width = u32::from(area.width).checked_mul(u32::from(cell.width()))?;
+        let height = u32::from(area.height).checked_mul(u32::from(cell.height()))?;
+        if width > 4096
+            || height > 4096
+            || width.checked_mul(height)? > 1_048_576
+            || self
+                .frame_pixels
+                .saturating_add(u64::from(width) * u64::from(height))
+                > 4 * 1_048_576
+        {
+            return None;
+        }
+        Some(PixelTarget::new(
+            PixelSize::new(width, height)?,
+            self.mode == PixelMode::Kitty,
+            self.background,
+        ))
+    }
+
     fn submit(&mut self, request: ImageRequest<'_>) -> bool {
         let area = request.area();
-        if !self.mode.is_pixels() || area.width == 0 || area.height == 0 {
+        if !self.mode.is_pixels()
+            || area.width == 0
+            || area.height == 0
+            || self.frame.len() >= 256
+            || (self.mode != PixelMode::Kitty && request.depth() < 0)
+        {
             return false;
         }
         self.frame.retain(|placed| placed.id != request.id().get());
-        let Some(viewport_height) = u32::from(area.height).checked_mul(2) else {
+        let cell_width = self.cell_pixels.map_or(1, CellPixels::width);
+        let cell_height = self.cell_pixels.map_or(2, CellPixels::height);
+        let Some(viewport_height) = u32::from(area.height).checked_mul(u32::from(cell_height))
+        else {
             return false;
         };
-        let Some(viewport) = PixelSize::new(u32::from(area.width), viewport_height) else {
+        let Some(viewport) = PixelSize::new(
+            u32::from(area.width) * u32::from(cell_width),
+            viewport_height,
+        ) else {
             return false;
         };
         let geometry = ImageGeometry::fit(request.source().size(), viewport, request.fit());
         let source = geometry.source;
         let destination = geometry.destination;
-        let top = destination.origin.y / 2;
+        let top = destination.origin.y / u32::from(cell_height);
         let bottom = destination
             .origin
             .y
             .saturating_add(destination.size.height())
-            .saturating_add(1)
-            / 2;
-        let Ok(x) = u16::try_from(destination.origin.x) else {
+            .saturating_add(u32::from(cell_height) - 1)
+            / u32::from(cell_height);
+        let Ok(x) = u16::try_from(destination.origin.x / u32::from(cell_width)) else {
             return false;
         };
         let Ok(y) = u16::try_from(top) else {
             return false;
         };
-        let Ok(width) = u16::try_from(destination.size.width()) else {
+        let Ok(width) = u16::try_from(destination.size.width().div_ceil(u32::from(cell_width)))
+        else {
             return false;
         };
         let Ok(height) = u16::try_from(bottom.saturating_sub(top)) else {
@@ -415,7 +547,7 @@ fn write_transmit(out: &mut Vec<u8>, id: u32, image: &PixelImage<'_>) {
 fn write_place(out: &mut Vec<u8>, placed: &Placed) {
     write_cup(out, placed.rect.x, placed.rect.y);
     out.extend_from_slice(b"\x1b_Ga=p,i=");
-    push_decimal(out, u64::from(placed.id));
+    push_decimal(out, u64::from(placed.wire_id));
     out.extend_from_slice(b",p=1,c=");
     push_decimal(out, u64::from(placed.rect.width));
     out.extend_from_slice(b",r=");

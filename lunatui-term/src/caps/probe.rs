@@ -5,6 +5,7 @@ use std::io;
 use std::os::fd::{AsRawFd, BorrowedFd};
 use std::time::Instant;
 
+use rustix::fs::{OFlags, fcntl_getfl, fcntl_setfl};
 use rustix::io::Errno;
 use rustix::termios::OptionalActions;
 use rustix::termios::{Termios, isatty, tcgetattr, tcsetattr};
@@ -21,9 +22,14 @@ use super::{PROBE_BUDGET, ProbeEnv, ProbeReply, QUERIES};
 ///
 /// Returns an error when the write, the read, or restoring the terminal mode fails.
 pub fn probe_fd(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
+    let flags = fcntl_getfl(fd)?;
     let saved = prepare(fd)?;
-    let result = exchange(fd, env);
-    match (result, restore(fd, saved.as_ref())) {
+    let result = fcntl_setfl(fd, flags | OFlags::NONBLOCK)
+        .map_err(io::Error::from)
+        .and_then(|()| exchange(fd, env));
+    let restored_flags = fcntl_setfl(fd, flags).map_err(io::Error::from);
+    let restored_terminal = restore(fd, saved.as_ref());
+    match (result, restored_flags.and(restored_terminal)) {
         (Ok(reply), Ok(())) => Ok(reply),
         (Err(err), _) | (Ok(_), Err(err)) => Err(err),
     }
@@ -55,22 +61,35 @@ fn exchange(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
     let start = Instant::now();
     loop {
         if has_device_attributes(&buf) {
-            return finish(fd, env, &buf);
+            let reply = from_replies(env, &buf);
+            if reply.caps.protocols.graphics == super::GraphicsProtocol::Kitty
+                && reply.caps.cell_pixels.is_some()
+                && reply.caps.background_rgb.is_some()
+            {
+                return finish(fd, env, &buf);
+            }
         }
         if buf.len() >= 65_536 {
-            return Ok(from_replies(env, &buf));
+            return finish(fd, env, &buf);
         }
         let left = PROBE_BUDGET.saturating_sub(start.elapsed());
         if left.is_zero() {
-            return Ok(from_replies(env, &buf));
+            return finish(fd, env, &buf);
         }
         let millis = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
         match wait_read(fd, millis)? {
-            Wait::Timeout => return Ok(from_replies(env, &buf)),
-            Wait::Ready => match read_some(fd, &mut tmp)? {
-                Read::Eof => return Ok(from_replies(env, &buf)),
-                Read::Bytes(n) => buf.extend_from_slice(&tmp[..n]),
-                Read::Again => {}
+            Wait::Timeout => return finish(fd, env, &buf),
+            Wait::Ready => match read_some(fd, &mut tmp) {
+                Ok(Read::Eof) => return finish(fd, env, &buf),
+                Ok(Read::Bytes(n)) => buf.extend_from_slice(&tmp[..n]),
+                Ok(Read::Again) => {}
+                Err(error)
+                    if error.kind() == io::ErrorKind::ConnectionReset
+                        && has_device_attributes(&buf) =>
+                {
+                    return finish(fd, env, &buf);
+                }
+                Err(error) => return Err(error),
             },
             Wait::Interrupted => {}
         }
