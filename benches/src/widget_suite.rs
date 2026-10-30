@@ -20,10 +20,10 @@ use lunatui_widgets::{
     Canvas, Chart, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus, DialogKind,
     DialogState, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer, KeyHintBar, List,
     LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
-    Monthly, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup, ProgressBar,
-    RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider, SortDirection,
-    Sparkline, SplitAxis, SplitTree, Table, TableState, Tabs, TextWrap, ToastKind, ToastScope,
-    ToastStack, Toggle, Tooltip, Widget, WidgetState,
+    Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart, PieSlice,
+    PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility,
+    SearchBox, Slider, SortDirection, Sparkline, SplitAxis, SplitTree, Table, TableState, Tabs,
+    TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -322,6 +322,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: date_picker_lunatui,
         ratatui: date_picker_ratatui,
+    },
+    Case {
+        name: "notification-center",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no notification history; its side draws the same rows as a plain List with a header line, without unread marks, per-kind colors, or dismiss crosses",
+        ),
+        lunatui: notification_center_lunatui,
+        ratatui: notification_center_ratatui,
     },
     Case {
         name: "log-view",
@@ -3109,4 +3118,76 @@ fn date_picker_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .show_month_header(rat_accent())
         .show_weekdays_header(rat_dim())
         .render(area, buf);
+}
+
+const NOTIFICATIONS: [(ToastKind, &str, &str); 6] = [
+    (ToastKind::Error, "Deploy to staging failed", "12:15"),
+    (ToastKind::Warning, "Disk almost full on build-2", "12:09"),
+    (ToastKind::Success, "Build 4821 finished", "12:04"),
+    (ToastKind::Info, "Release notes saved", "11:58"),
+    (ToastKind::Success, "Cache warmed", "11:41"),
+    (ToastKind::Info, "Signed in on a new device", "11:30"),
+];
+
+fn notification_log() -> &'static NotificationLog {
+    static LOG: OnceLock<NotificationLog> = OnceLock::new();
+    LOG.get_or_init(|| {
+        let mut log = NotificationLog::new(NOTIFICATIONS.len());
+        for (kind, text, stamp) in NOTIFICATIONS.iter().rev() {
+            log.push(*kind, *text, *stamp);
+        }
+        log
+    })
+}
+
+fn notification_selected(tick: u32) -> usize {
+    usize::try_from((tick / 10) % 6).unwrap_or(0)
+}
+
+fn notification_center_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    NotificationCenter::new(notification_log())
+        .selected(Some(notification_selected(tick)))
+        .render(area, &mut cx);
+}
+
+fn notification_rows() -> &'static [String] {
+    static ROWS: OnceLock<Vec<String>> = OnceLock::new();
+    ROWS.get_or_init(|| {
+        NOTIFICATIONS
+            .iter()
+            .map(|(_, text, stamp)| format!(" ● {stamp} {text}"))
+            .collect()
+    })
+}
+
+fn notification_center_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let selected = notification_selected(tick);
+    RatParagraph::new(" Notifications")
+        .style(rat_text().add_modifier(ratatui::style::Modifier::BOLD))
+        .render(RatRect::new(area.x, area.y, area.width, 1), buf);
+    let items = notification_rows().iter().enumerate().map(|(index, row)| {
+        let style = if index == selected {
+            rat_accent()
+        } else {
+            rat_text()
+        };
+        ListItem::new(row.as_str()).style(style)
+    });
+    RatWidget::render(
+        RatList::new(items),
+        RatRect::new(
+            area.x,
+            area.y + 1,
+            area.width,
+            area.height.saturating_sub(1),
+        ),
+        buf,
+    );
 }

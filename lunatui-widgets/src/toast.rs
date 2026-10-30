@@ -35,7 +35,7 @@ pub enum ToastKind {
 }
 
 impl ToastKind {
-    fn token(self) -> Token {
+    pub(crate) fn token(self) -> Token {
         match self {
             Self::Info => Token::Accent,
             Self::Success => Token::Ok,
