@@ -253,6 +253,16 @@ impl<W> Popup<W> {
         self
     }
 
+    #[cfg(feature = "dialog")]
+    pub(crate) fn content(&self) -> &W {
+        &self.content
+    }
+
+    #[cfg(feature = "dialog")]
+    pub(crate) fn content_mut(&mut self) -> &mut W {
+        &mut self.content
+    }
+
     fn styles(&self, cx: &RenderCx<'_>) -> (Style, Style, Style) {
         let panel = self.style.unwrap_or_else(|| {
             Style::new()
