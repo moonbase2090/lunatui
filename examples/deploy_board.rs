@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_core::{ClusterTable, Grid, Rect, Size, Style};
-use lunatui_theme::{Theme, Token};
+use lunatui_core::{Rect, Size, Style};
+use lunatui_theme::Token;
 use lunatui_widgets::{
     Block, Gauge, Paragraph, RenderCx, Spinner, SpinnerPreset, StatusBar, Widget,
 };
@@ -128,15 +128,17 @@ pub(super) fn frame_index(preset: SpinnerPreset, elapsed_ms: u64) -> u32 {
     u32::try_from(elapsed_ms / interval).unwrap_or(u32::MAX)
 }
 
-pub(super) fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, elapsed_ms: u64) {
-    let area = Rect::new(0, 0, grid.width(), grid.height());
+pub(super) fn draw(area: Rect, elapsed_ms: u64, pixels: bool, cx: &mut RenderCx<'_>) {
+    let theme = cx.theme();
     let text = theme.resolve(Token::TextPrimary);
     let accent = theme.resolve(Token::Accent);
     let surface = theme.resolve(Token::Surface0);
     let raised = theme.resolve(Token::Surface1);
     let focus = theme.resolve(Token::FocusRing);
-    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
-    let mut cx = RenderCx::new(grid, clusters, theme);
+    let background = (" ".repeat(usize::from(area.width)) + "\n").repeat(usize::from(area.height));
+    Paragraph::new(background)
+        .style(Style::new().fg(text).bg(surface))
+        .render(area, cx);
     let ink = Ink {
         text: Style::new().fg(text).bg(surface),
         muted: Style::new().fg(focus).bg(surface),
@@ -156,15 +158,15 @@ pub(super) fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, 
         .style(ink.surface)
         .border_style(ink.border)
         .title_style(ink.title);
-    frame.render(area, &mut cx);
+    frame.render(area, cx);
     let inner = frame.inner(area);
     let regions = regions(inner);
-    paint_header(&mut cx, regions.header, &ink);
-    paint_cards(&mut cx, regions.cards, elapsed_ms, &ink);
-    paint_tasks(&mut cx, regions.tasks, elapsed_ms, &ink);
-    paint_events(&mut cx, regions.events, elapsed_ms, &ink);
-    paint_gauge(&mut cx, regions.gauge, elapsed_ms, &ink);
-    paint_status(&mut cx, regions.status, &ink);
+    paint_header(cx, regions.header, &ink);
+    paint_cards(cx, regions.cards, elapsed_ms, &ink);
+    paint_tasks(cx, regions.tasks, elapsed_ms, &ink);
+    paint_events(cx, regions.events, elapsed_ms, &ink);
+    paint_gauge(cx, regions.gauge, elapsed_ms, &ink, pixels);
+    paint_status(cx, regions.status, &ink);
 }
 
 fn regions(inner: Rect) -> Regions {
@@ -369,7 +371,7 @@ fn paint_events(cx: &mut RenderCx<'_>, area: Rect, elapsed_ms: u64, ink: &Ink) {
     }
 }
 
-fn paint_gauge(cx: &mut RenderCx<'_>, area: Rect, elapsed_ms: u64, ink: &Ink) {
+fn paint_gauge(cx: &mut RenderCx<'_>, area: Rect, elapsed_ms: u64, ink: &Ink, pixels: bool) {
     if area.width == 0 || area.height == 0 {
         return;
     }
@@ -388,7 +390,7 @@ fn paint_gauge(cx: &mut RenderCx<'_>, area: Rect, elapsed_ms: u64, ink: &Ink) {
     } else {
         Gauge::new(ratio).gauge_style(ink.gauge)
     };
-    gauge.render(area, cx);
+    gauge.pixels(pixels).render(area, cx);
 }
 
 fn paint_status(cx: &mut RenderCx<'_>, area: Rect, ink: &Ink) {
