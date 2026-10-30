@@ -234,6 +234,7 @@ fn the_list_scrolls_to_keep_the_selected_row_in_view() {
     assert_eq!(shown(1)[1..], [item_row(4), item_row(3)]);
     assert_eq!(shown(2)[1..], [item_row(3), item_row(2)]);
     assert_eq!(shown(4)[1..], [item_row(1), item_row(0)]);
+    assert_eq!(shown(5)[1..], [item_row(4), item_row(3)]);
     assert_eq!(shown(9)[1..], [item_row(4), item_row(3)]);
 }
 
@@ -381,6 +382,7 @@ fn dismiss_clear_and_read_marks_report_what_they_found() {
     assert!(log.mark_read(a));
     assert_eq!(log.unread(), 1);
     assert_eq!(log.get(b).map(Notification::read), Some(false));
+    assert_eq!(log.get(a).map(Notification::read), Some(true));
     assert!(!log.mark_read(NotificationId(9)));
     assert!(log.dismiss(a));
     assert!(!log.dismiss(a));
@@ -388,4 +390,19 @@ fn dismiss_clear_and_read_marks_report_what_they_found() {
     log.clear();
     assert!(log.is_empty());
     assert_eq!(log.unread(), 0);
+}
+
+#[test]
+fn a_header_only_area_leaves_the_rows_below_alone() {
+    let log = NotificationLog::new(2);
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(24, 3);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    center(&log).render(Rect::new(0, 0, 24, 1), &mut cx);
+    assert_eq!(
+        grid.row_display(0, &clusters).trim_end(),
+        " Notifications All read"
+    );
+    assert_eq!(grid.row_display(1, &clusters).trim_end(), "");
 }
