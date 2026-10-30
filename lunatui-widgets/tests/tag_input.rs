@@ -33,7 +33,7 @@ fn color(token: Token) -> Color {
     Theme::builtin(Variant::Dark).resolve(token)
 }
 
-fn input<'a>(text: &'a str, caret: usize) -> TagInput<'a> {
+fn input(text: &str, caret: usize) -> TagInput<'_> {
     TagInput::new(&TAGS, text, caret)
 }
 
