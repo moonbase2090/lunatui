@@ -200,6 +200,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Combo box
+
+A deployment form with a region field: the drop-down opens, arrows move the highlighted row and scroll the six-row list, typing narrows the thirteen regions with the matched text marked, and the chosen value closes the list back into the field.
+
+<img src="docs/media/combo-box.webp" alt="ComboBox: a deployment form whose region field opens a filtered drop-down list, narrows as text is typed, and settles on the chosen region in the dark theme" width="1028">
+
+Screenshot: [docs/media/combo-box.png](docs/media/combo-box.png). Recorded with `scripts/record-showcase.sh` (`CASE=combo-box`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 9 seconds).
+
 ### Diff view
 
 A code review: a unified diff of a grid change with hunk headers, two line-number columns, removed and added lines in their own colors, and the changed part of each paired line inverted. It scrolls through both hunks, then switches to the side-by-side layout, where each removed line sits across from the line that replaced it.

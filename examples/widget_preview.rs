@@ -19,14 +19,14 @@ use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Axis, Bar, BarChart, BarDirection, BarGroup, BigText,
-    Block, BorderType, Breadcrumbs, Chart, Constraint, Dataset, Date, DateStyle, Diff, DiffLayout,
-    DiffView, DividerId, FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState,
-    KeyHintBar, LegendPosition, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker,
-    Menu, MenuItem, MenuState, Monthly, NumberInput, PaneId, Paragraph, PieChart, PieSlice,
-    PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox,
-    SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
-    Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget,
-    WidgetState,
+    Block, BorderType, Breadcrumbs, Chart, ComboBox, Constraint, Dataset, Date, DateStyle, Diff,
+    DiffLayout, DiffView, DividerId, FieldArea, Form, FormField, Gauge, GraphType, HexViewer,
+    HexViewerState, KeyHintBar, LegendPosition, List, LogBuffer, LogEntry, LogLevel, LogView,
+    MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NumberInput, PaneId, Paragraph,
+    PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx,
+    Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
+    StatusBar, TabMove, Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack,
+    Toggle, VecSource, Widget, WidgetState,
 };
 
 #[path = "canvas_showcase.rs"]
@@ -153,6 +153,11 @@ const PREVIEWS: &[Preview] = &[
         name: "search-box",
         native: search_native,
         baseline: search_baseline,
+    },
+    Preview {
+        name: "combo-box",
+        native: combo_native,
+        baseline: combo_baseline,
     },
     Preview {
         name: "logs",
@@ -7430,3 +7435,119 @@ fn positive<T: std::str::FromStr + Default + PartialEq>(value: &str, flag: &str)
     }
     Ok(parsed)
 }
+
+const CB_REGIONS: [&str; 13] = [
+    "ap-northeast-1",
+    "ap-south-1",
+    "ap-southeast-2",
+    "ca-central-1",
+    "eu-central-1",
+    "eu-north-1",
+    "eu-west-1",
+    "eu-west-2",
+    "eu-west-3",
+    "sa-east-1",
+    "us-east-1",
+    "us-east-2",
+    "us-west-2",
+];
+
+const CB_TYPING: [(u32, &str); 7] = [
+    (60, "e"),
+    (68, "eu"),
+    (76, "eu-"),
+    (84, "eu-w"),
+    (92, "eu-we"),
+    (140, "eu-west-2"),
+    (210, ""),
+];
+
+fn cb_text(tick: u32) -> &'static str {
+    CB_TYPING
+        .iter()
+        .rev()
+        .find(|(at, _)| tick >= *at)
+        .map_or("", |(_, text)| *text)
+}
+
+fn cb_open(tick: u32) -> bool {
+    (20..140).contains(&tick)
+}
+
+fn cb_active(tick: u32) -> Option<usize> {
+    match tick {
+        30..=35 | 60..=99 => Some(0),
+        36..=41 | 100..=111 => Some(1),
+        42..=59 | 112..=139 => Some(2),
+        _ => None,
+    }
+}
+
+fn combo_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Deploy  ·  lunatui", head);
+    let panel = Rect::new(area.x + 2, area.y + 2, 64, 24);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" New deployment ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(panel, &mut cx);
+    let value_x = panel.x + 16;
+    let rows = [
+        (2, "Service", "api-gateway"),
+        (4, "Region", ""),
+        (6, "Replicas", "3"),
+        (8, "Strategy", "rolling, 25% at a time"),
+        (10, "Notify", "#releases"),
+    ];
+    for (dy, label, value) in rows {
+        cx.put_str(panel.x + 3, panel.y + dy, label, dim);
+        cx.put_str(value_x, panel.y + dy, value, fill);
+    }
+    let typed = cb_text(tick);
+    let focused = (20..150).contains(&tick);
+    ComboBox::new(typed, typed.len(), &CB_REGIONS)
+        .placeholder("Choose a region")
+        .open(cb_open(tick))
+        .active(cb_active(tick))
+        .max_rows(6)
+        .state(if focused {
+            WidgetState::Focused
+        } else {
+            WidgetState::Normal
+        })
+        .render(Rect::new(value_x, panel.y + 4, 32, 8), &mut cx);
+    StatusBar::new(" type to filter  ●  up/down choose  ●  enter select  ●  esc close")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn combo_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
