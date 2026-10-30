@@ -2,7 +2,7 @@
 
 lunatui is a hyperspeed Rust TUI library being built from scratch, keeping a simple "render widgets into a rectangle" model while fixing its structural costs with a 16-byte packed cell, damage-tracked diffing and a single-write output encoder, plus first-class input, focus, animation, capability and theme layers. It is open source under the [MIT](LICENSE) license.
 
-**Status: v0.1.16 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
+**Status: v0.1.17 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
 
 ## Performance
 
@@ -45,11 +45,11 @@ Screenshots: [Requests](docs/media/chart.png), [Saturation CPU/memory](docs/medi
 
 ### BarChart
 
-A deploy dashboard made of five bar charts: grouped vertical bars with value text and group labels, horizontal bars with region labels, a series of build times with the latest run highlighted, and the same data in the normal, focused, and disabled states.
+Grouped requests, regional latency, build runs, and queue states keep equal-size Cells and antialiased Pixels views of the same data and sample. Labels and values remain terminal text. Pixels are enabled by default with a measured presenter; `.pixels(false)` keeps the original eighth-block renderer. Try `cargo run --release -p lunatui --example pixel_bar_chart`: arrows change scenes, `u` advances the sample, and `b` switches the right pane to cells and back.
 
-<img src="docs/media/barchart.webp" alt="BarChart widget: a deploy dashboard in the dark theme" width="1028">
+<img src="docs/media/barchart.webp" alt="Matching cell and antialiased pixel BarChart scenes in a real Kitty terminal, including grouped requests, regional latency, build runs, queue states, and restoring pixels after a cell toggle" width="1028">
 
-Screenshot: [docs/media/barchart.png](docs/media/barchart.png). Recorded with `scripts/record-showcase.sh` (`CASE=barchart`, 120×36 at 2x scale, `FRAMES=200`, dark, lossless animated WebP, about 9 seconds).
+Screenshots: [Requests](docs/media/barchart.png), [Regional latency](docs/media/barchart-latency.png). Recorded from a clean source tree at `1843c3a090394c864cb36252bb2c478278f1bbab` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_bar_chart FEATURES=image-presenter WIDTH=168 HEIGHT=36 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:u,6:Right,9:u,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 168×36 cells, 2185×901 pixels, 30 fps, 24 seconds, lossless WebP 43,442 bytes. Eight steps hold for about 3 seconds each; restoring Pixels repeats the earlier Queue state exactly. All 720 source frames and all eight WebP frames match the seven inspected states. The stills are unmodified video frames at 1 and 7 seconds. No compositing or dropped frames.
 
 ### MarkdownView
 
