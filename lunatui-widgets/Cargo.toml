@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = ["pixel-pie-chart"]
+default = ["pixel-pie-chart", "pixel-chart"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
@@ -22,6 +22,7 @@ calendar = ["widget-state"]
 date-picker = ["widget-state", "calendar"]
 sparkline = ["widget-state"]
 chart = ["widget-state"]
+pixel-chart = ["chart", "image"]
 canvas = ["widget-state"]
 
 barchart = ["widget-state"]
@@ -48,7 +49,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "combo-box", "date-picker", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["accordion", "barchart", "bigtext", "calendar", "canvas", "chart", "pixel-chart", "combo-box", "date-picker", "diff-view", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.16", path = "../lunatui-core" }
@@ -291,3 +292,7 @@ required-features = ["combo-box"]
 name = "date_picker"
 path = "tests/date_picker.rs"
 required-features = ["date-picker"]
+
+[[test]]
+name = "pixel_chart"
+required-features = ["pixel-chart"]

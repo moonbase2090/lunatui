@@ -7,13 +7,16 @@ use std::collections::BTreeMap;
 
 use lunatui_core::Rect;
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};
-use lunatui_term::{PixelImage, PixelLayer, PixelMode};
+use lunatui_term::{
+    Caps, CellPixels, GraphicsProtocol, PixelImage, PixelLayer, PixelMode, Protocols,
+};
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 #[derive(Debug)]
 struct Command {
     keys: BTreeMap<String, String>,
     payload: Vec<u8>,
+    cursor: Option<(u16, u16)>,
 }
 
 fn base64_decode(text: &str) -> Result<Vec<u8>, String> {
@@ -62,6 +65,13 @@ fn parse(stream: &[u8]) -> Result<Vec<Command>, String> {
         commands.push(Command {
             keys,
             payload: base64_decode(payload_text)?,
+            cursor: before.rsplit_once("\x1b[").and_then(|(_, sequence)| {
+                let (row, column) = sequence.strip_suffix('H')?.split_once(';')?;
+                Some((
+                    column.parse::<u16>().ok()?.checked_sub(1)?,
+                    row.parse::<u16>().ok()?.checked_sub(1)?,
+                ))
+            }),
         });
         rest = &rest[end + 2..];
     }
@@ -273,6 +283,7 @@ struct Screen {
     images: BTreeMap<u64, Vec<u8>>,
     visible: BTreeMap<u64, Vec<u8>>,
     transfer: Option<(u64, Vec<u8>)>,
+    placements: BTreeMap<u64, (Rect, i32)>,
 }
 
 impl Screen {
@@ -282,17 +293,31 @@ impl Screen {
                 let id = number(command, "i").ok_or("upload without id")?;
                 self.images.remove(&id);
                 self.visible.remove(&id);
+                self.placements.remove(&id);
                 self.transfer = Some((id, Vec::new()));
             }
             Some("p") => {
                 let id = number(command, "i").ok_or("placement without id")?;
                 let pixels = self.images.get(&id).ok_or("placing missing image")?;
                 self.visible.insert(id, pixels.clone());
+                let (x, y) = command.cursor.ok_or("placement without cursor")?;
+                let width = u16::try_from(number(command, "c").ok_or("missing columns")?)
+                    .map_err(|error| error.to_string())?;
+                let height = u16::try_from(number(command, "r").ok_or("missing rows")?)
+                    .map_err(|error| error.to_string())?;
+                let depth = command
+                    .keys
+                    .get("z")
+                    .and_then(|value| value.parse().ok())
+                    .ok_or("missing depth")?;
+                self.placements
+                    .insert(id, (Rect::new(x, y, width, height), depth));
             }
             Some("d") => {
                 let id = number(command, "i").ok_or("delete without id")?;
                 self.images.remove(&id);
                 self.visible.remove(&id);
+                self.placements.remove(&id);
             }
             _ => {}
         }
@@ -306,6 +331,78 @@ impl Screen {
         }
         Ok(())
     }
+
+    fn at(&self, area: Rect, depth: i32) -> Option<&[u8]> {
+        self.placements.iter().find_map(|(id, placement)| {
+            (*placement == (area, depth))
+                .then(|| self.visible.get(id).map(Vec::as_slice))
+                .flatten()
+        })
+    }
+}
+
+#[test]
+fn split_frames_finish_chunked_uploads_before_any_visible_update() -> Result<(), String> {
+    let pixels = [0, 255, 0, 255].repeat(2048);
+    let image = PixelImage::new(2048, 1, &pixels).ok_or("bad image")?;
+    let area = Rect::new(2, 3, 10, 5);
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    let mut screen = Screen::default();
+    layer.begin_frame();
+    layer.image(10, 1, &image, area, 0);
+    let (uploads, updates) = layer.finish_frame_parts();
+    let commands = parse(uploads)?;
+    assert!(commands.len() > 1, "exercise a multi-chunk upload");
+    for command in commands {
+        screen.apply(&command)?;
+        assert!(screen.visible.is_empty(), "upload changed the display");
+        assert!(screen.placements.is_empty());
+    }
+    assert!(
+        screen.transfer.is_none(),
+        "upload must finish before cells change"
+    );
+    assert_eq!(screen.images.values().collect::<Vec<_>>(), vec![&pixels]);
+    for command in parse(updates)? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.at(area, 0), Some(pixels.as_slice()));
+    layer.begin_frame();
+    layer.image(10, 1, &image, area, 0);
+    let (uploads, updates) = layer.finish_frame_parts();
+    assert_eq!(uploads, []);
+    assert_eq!(updates, []);
+    layer.begin_frame();
+    let (uploads, updates) = layer.finish_frame_parts();
+    assert_eq!(uploads, []);
+    for command in parse(updates)? {
+        screen.apply(&command)?;
+    }
+    assert!(screen.visible.is_empty());
+    assert!(screen.images.is_empty());
+    Ok(())
+}
+
+#[test]
+fn immediate_protocols_keep_the_entire_image_after_cell_output() -> Result<(), String> {
+    let image = PixelImage::new(1, 1, &[0, 255, 0, 255]).ok_or("bad image")?;
+    for graphics in [GraphicsProtocol::Iterm2, GraphicsProtocol::Sixel] {
+        let caps = Caps {
+            protocols: Protocols {
+                graphics,
+                ..Protocols::default()
+            },
+            cell_pixels: CellPixels::new(1, 2),
+            ..Caps::default()
+        };
+        let mut layer = PixelLayer::from_caps(&caps);
+        layer.begin_frame();
+        layer.image(10, 1, &image, Rect::new(0, 0, 2, 1), 0);
+        let (uploads, updates) = layer.finish_frame_parts();
+        assert_eq!(uploads, []);
+        assert!(!updates.is_empty(), "immediate image belongs after cells");
+    }
+    Ok(())
 }
 
 #[test]
@@ -402,5 +499,278 @@ fn fit_changes_keep_pixels_visible_and_wire_ids_do_not_collide_with_widget_ids()
     }
     assert!(screen.images.is_empty());
     assert!(screen.visible.is_empty());
+    Ok(())
+}
+
+fn measured_layer() -> PixelLayer {
+    PixelLayer::from_caps(&Caps {
+        protocols: Protocols {
+            graphics: GraphicsProtocol::Kitty,
+            ..Protocols::default()
+        },
+        cell_pixels: CellPixels::new(1, 1),
+        ..Caps::default()
+    })
+}
+
+fn solid_source(width: u32, height: u32, rgba: [u8; 4]) -> Result<ImageSource, String> {
+    ImageSource::rgba8(
+        width,
+        height,
+        rgba.repeat(usize::try_from(width * height).map_err(|error| error.to_string())?)
+            .into_boxed_slice(),
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[test]
+fn automatic_rasters_cache_exact_pixels_and_move_without_losing_the_display() -> Result<(), String>
+{
+    let mut layer = measured_layer();
+    let red = solid_source(1024, 2, [255, 0, 0, 255])?;
+    let green = solid_source(1024, 2, [0, 255, 0, 255])?;
+    let area = Rect::new(0, 0, 1024, 2);
+    let moved = Rect::new(4, 5, 1024, 2);
+    let mut screen = Screen::default();
+    layer.begin_frame();
+    assert!(layer.submit_raster(&red, area, 0));
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(
+        screen.at(area, 0),
+        Some([255, 0, 0, 255].repeat(2048).as_slice())
+    );
+    layer.begin_frame();
+    let equal_but_distinct_source = solid_source(1024, 2, [255, 0, 0, 255])?;
+    assert!(layer.submit_raster(&equal_but_distinct_source, area, 0));
+    assert_eq!(layer.finish_frame(), b"");
+    layer.begin_frame();
+    assert!(layer.submit_raster(&red, moved, -1));
+    let movement = parse(layer.finish_frame())?;
+    assert_eq!(movement.len(), 1);
+    for command in movement {
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.at(moved, -1), Some(red.rgba8_pixels()));
+    layer.begin_frame();
+    assert!(layer.submit_raster(&green, moved, -1));
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+        assert!(screen.at(moved, -1).is_some(), "blank during {command:?}");
+    }
+    assert_eq!(
+        screen.at(moved, -1),
+        Some([0, 255, 0, 255].repeat(2048).as_slice())
+    );
+    assert_eq!(screen.images.len(), 1);
+    for command in parse(layer.clear())? {
+        screen.apply(&command)?;
+    }
+    assert!(screen.images.is_empty());
+    assert!(screen.visible.is_empty());
+    layer.begin_frame();
+    assert!(layer.submit_raster(&green, moved, -1));
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.at(moved, -1), Some(green.rgba8_pixels()));
+    Ok(())
+}
+
+#[test]
+fn automatic_slot_reorders_and_caller_id_extremes_keep_independent_pixels() -> Result<(), String> {
+    let mut layer = measured_layer();
+    let red = solid_source(1, 1, [255, 0, 0, 255])?;
+    let blue = solid_source(1, 1, [0, 0, 255, 255])?;
+    let white = PixelImage::new(1, 1, &[255, 255, 255, 255]).ok_or("bad white")?;
+    let (left, right, caller_one, caller_max) = (
+        Rect::new(0, 0, 1, 1),
+        Rect::new(1, 0, 1, 1),
+        Rect::new(2, 0, 1, 1),
+        Rect::new(3, 0, 1, 1),
+    );
+    let mut screen = Screen::default();
+    for reverse in [false, true, false] {
+        layer.begin_frame();
+        let sources = if reverse {
+            [&blue, &red]
+        } else {
+            [&red, &blue]
+        };
+        assert!(layer.submit_raster(sources[0], left, 0));
+        layer.image(1, 0, &white, caller_one, 0);
+        assert!(layer.submit_raster(sources[1], right, -1));
+        layer.image(u32::MAX, 0, &white, caller_max, 0);
+        for command in parse(layer.finish_frame())? {
+            screen.apply(&command)?;
+        }
+        assert_eq!(screen.at(left, 0), Some(sources[0].rgba8_pixels()));
+        assert_eq!(screen.at(right, -1), Some(sources[1].rgba8_pixels()));
+        assert_eq!(
+            screen.at(caller_one, 0),
+            Some([255, 255, 255, 255].as_slice())
+        );
+        assert_eq!(
+            screen.at(caller_max, 0),
+            Some([255, 255, 255, 255].as_slice())
+        );
+        assert_eq!(screen.images.len(), 4);
+    }
+    layer.begin_frame();
+    assert!(layer.submit_raster(&blue, right, -1));
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.at(right, -1), Some([0, 0, 255, 255].as_slice()));
+    assert_eq!(screen.images.len(), 1);
+    layer.begin_frame();
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert!(screen.images.is_empty());
+    layer.begin_frame();
+    assert!(layer.submit_raster(&red, left, 0));
+    assert!(layer.submit_raster(&blue, right, -1));
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.at(left, 0), Some([255, 0, 0, 255].as_slice()));
+    assert_eq!(screen.at(right, -1), Some([0, 0, 255, 255].as_slice()));
+    Ok(())
+}
+
+#[test]
+fn equal_raster_pixels_can_reorder_placements_and_depth_without_uploads() -> Result<(), String> {
+    let mut layer = measured_layer();
+    let red = solid_source(1, 1, [255, 0, 0, 255])?;
+    let left = Rect::new(0, 0, 1, 1);
+    let right = Rect::new(3, 2, 1, 1);
+    let mut screen = Screen::default();
+    layer.begin_frame();
+    assert!(layer.submit_raster(&red, left, -1));
+    assert!(layer.submit_raster(&red, right, 0));
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    layer.begin_frame();
+    assert!(layer.submit_raster(&red, right, 2));
+    assert!(layer.submit_raster(&red, left, 1));
+    let commands = parse(layer.finish_frame())?;
+    assert_eq!(commands.len(), 2);
+    for command in commands {
+        assert_eq!(command.keys.get("a").map(String::as_str), Some("p"));
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.at(right, 2), Some([255, 0, 0, 255].as_slice()));
+    assert_eq!(screen.at(left, 1), Some([255, 0, 0, 255].as_slice()));
+    assert_eq!(screen.images.len(), 2);
+    Ok(())
+}
+
+#[test]
+fn raster_rejection_does_not_consume_an_accepted_slot() -> Result<(), String> {
+    let mut layer = measured_layer();
+    let red = solid_source(1, 1, [255, 0, 0, 255])?;
+    let blue = solid_source(1, 1, [0, 0, 255, 255])?;
+    let mismatched = solid_source(2, 1, [0, 255, 0, 255])?;
+    let long = solid_source(4097, 1, [0, 255, 0, 255])?;
+    let oversized = solid_source(1025, 1024, [0, 255, 0, 255])?;
+    let area = Rect::new(0, 0, 1, 1);
+    layer.begin_frame();
+    assert!(layer.submit_raster(&red, area, 0));
+    assert!(!layer.submit_raster(&mismatched, area, 0));
+    assert!(!layer.submit_raster(&long, Rect::new(0, 0, 4097, 1), 0));
+    assert!(!layer.submit_raster(&oversized, Rect::new(0, 0, 1025, 1024), 0));
+    assert!(layer.submit_raster(&blue, Rect::new(1, 0, 1, 1), 0));
+    let mut screen = Screen::default();
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.at(area, 0), Some([255, 0, 0, 255].as_slice()));
+    assert_eq!(
+        screen.at(Rect::new(1, 0, 1, 1), 0),
+        Some([0, 0, 255, 255].as_slice())
+    );
+    layer.begin_frame();
+    assert!(layer.submit_raster(&red, area, 0));
+    assert!(layer.submit_raster(&blue, Rect::new(1, 0, 1, 1), 0));
+    assert_eq!(layer.finish_frame(), b"");
+    let mut no_metrics = PixelLayer::new(PixelMode::Kitty);
+    no_metrics.begin_frame();
+    assert!(!no_metrics.submit_raster(&red, area, 0));
+    assert_eq!(no_metrics.finish_frame(), b"");
+    Ok(())
+}
+
+#[test]
+fn maximum_raster_count_does_not_wrap_and_omitted_slots_are_forgotten() -> Result<(), String> {
+    let mut layer = measured_layer();
+    let red = solid_source(1, 1, [255, 0, 0, 255])?;
+    let mut screen = Screen::default();
+    layer.begin_frame();
+    for x in 0..256 {
+        assert!(layer.submit_raster(&red, Rect::new(x, 0, 1, 1), 0));
+    }
+    assert!(!layer.submit_raster(&red, Rect::new(256, 0, 1, 1), 0));
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(screen.images.len(), 256);
+    assert_eq!(
+        screen.at(Rect::new(255, 0, 1, 1), 0),
+        Some([255, 0, 0, 255].as_slice())
+    );
+    layer.begin_frame();
+    for x in 0..256 {
+        assert!(layer.submit_raster(&red, Rect::new(x, 0, 1, 1), 0));
+    }
+    assert_eq!(layer.finish_frame(), b"");
+    layer.begin_frame();
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert!(screen.images.is_empty());
+    assert!(screen.visible.is_empty());
+    layer.begin_frame();
+    assert!(layer.submit_raster(&red, Rect::new(0, 0, 1, 1), 0));
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(
+        screen.at(Rect::new(0, 0, 1, 1), 0),
+        Some([255, 0, 0, 255].as_slice())
+    );
+    Ok(())
+}
+
+#[test]
+fn automatic_rasters_share_the_accepted_frame_pixel_budget() -> Result<(), String> {
+    let mut layer = measured_layer();
+    let large = solid_source(1024, 1024, [255, 0, 0, 255])?;
+    let small = solid_source(1, 1, [0, 0, 255, 255])?;
+    layer.begin_frame();
+    let caller_image =
+        PixelImage::new(1024, 1024, large.rgba8_pixels()).ok_or("bad caller image")?;
+    layer.image(99, 0, &caller_image, Rect::new(0, 0, 1024, 1024), 0);
+    for x in 1..4 {
+        assert!(layer.submit_raster(&large, Rect::new(x * 1024, 0, 1024, 1024), 0));
+    }
+    assert!(!layer.submit_raster(&small, Rect::new(0, 0, 1, 1), 0));
+    let output = layer.finish_frame();
+    assert_eq!(
+        output.windows(7).filter(|part| *part == b"_Ga=t,i").count(),
+        4
+    );
+    layer.begin_frame();
+    assert!(layer.submit_raster(&small, Rect::new(0, 0, 1, 1), 0));
+    let mut screen = Screen::default();
+    for command in parse(layer.finish_frame())? {
+        screen.apply(&command)?;
+    }
+    assert_eq!(
+        screen.at(Rect::new(0, 0, 1, 1), 0),
+        Some([0, 0, 255, 255].as_slice())
+    );
     Ok(())
 }

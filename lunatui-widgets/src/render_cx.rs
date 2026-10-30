@@ -86,12 +86,24 @@ impl<'a> RenderCx<'a> {
             .is_some_and(|sink| sink.supports_pixels() && sink.submit(request))
     }
 
-    #[cfg(feature = "pixel-pie-chart")]
+    #[cfg(feature = "pixel-chart")]
+    pub(crate) fn submit_raster(
+        &mut self,
+        source: &lunatui_image::ImageSource,
+        area: Rect,
+        depth: i32,
+    ) -> bool {
+        self.image_sink
+            .as_deref_mut()
+            .is_some_and(|sink| sink.supports_pixels() && sink.submit_raster(source, area, depth))
+    }
+
+    #[cfg(any(feature = "pixel-pie-chart", feature = "pixel-chart"))]
     pub(crate) fn pixel_target(&self, area: Rect) -> Option<lunatui_image::PixelTarget> {
         self.image_sink.as_deref()?.pixel_target(area)
     }
 
-    #[cfg(feature = "pixel-pie-chart")]
+    #[cfg(any(feature = "pixel-pie-chart", feature = "pixel-chart"))]
     pub(crate) fn pixel_backdrop(
         &self,
         area: Rect,
@@ -102,6 +114,9 @@ impl<'a> RenderCx<'a> {
         for y in area.y..area.y.checked_add(area.height)? {
             for x in area.x..area.x.checked_add(area.width)? {
                 let cell = self.grid.get(x, y)?;
+                if cell.style().attrs.reverse() {
+                    return None;
+                }
                 if !text_underlay
                     && cell.glyph().decode() != lunatui_core::DecodedGlyph::Inline(' ')
                 {
@@ -113,7 +128,7 @@ impl<'a> RenderCx<'a> {
         Some(colors)
     }
 
-    #[cfg(feature = "pixel-pie-chart")]
+    #[cfg(any(feature = "pixel-pie-chart", feature = "pixel-chart"))]
     pub(crate) fn pixel_rgb(&self, mut color: Color, default: Option<[u8; 3]>) -> Option<[u8; 3]> {
         for _ in 0..16 {
             match color {

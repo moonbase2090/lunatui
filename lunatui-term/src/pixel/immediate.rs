@@ -1,7 +1,9 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use super::{PixelImage, PixelLayer, PixelMode, Placed, push_base64, push_decimal, write_cup};
+use super::{
+    ImageKey, PixelImage, PixelLayer, PixelMode, Placed, push_base64, push_decimal, write_cup,
+};
 use lunatui_core::Rect;
 
 const MAX_FRAME_BYTES: usize = 32 * 1024 * 1024;
@@ -10,7 +12,7 @@ const MAX_PIXELS: u32 = 1_048_576;
 impl PixelLayer {
     pub(super) fn immediate_image(
         &mut self,
-        id: u32,
+        id: ImageKey,
         image: &PixelImage<'_>,
         at: Rect,
         z: i32,
@@ -54,7 +56,7 @@ impl PixelLayer {
         self.frame_pixels += u64::from(width) * u64::from(height);
         self.frame.push(Placed {
             id,
-            wire_id: id,
+            wire_id: id.wire_hint(),
             rect: at,
             z,
             fresh: true,

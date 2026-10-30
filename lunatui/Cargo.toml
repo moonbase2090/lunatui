@@ -224,3 +224,9 @@ test = true
 name = "pixel_pie_chart"
 path = "../examples/pixel_pie_chart.rs"
 required-features = ["image-presenter"]
+
+[[example]]
+name = "pixel_chart"
+path = "../examples/pixel_chart.rs"
+required-features = ["image-presenter"]
+test = true
