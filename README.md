@@ -210,9 +210,9 @@ Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scrip
 
 ### Tag input
 
-A journal entry form: typed text becomes a chip on enter, the chips wrap onto a second row when the line is full, the arrow keys select the last chip, and delete removes it.
+A journal editor: the tags wrap onto a second row, typing narrows a list of suggestions, a tag that is already there is refused with a message, the arrow keys select the last chip and delete removes it, and the count beside the label follows.
 
-<img src="docs/media/tag-input.webp" alt="TagInput: tags added one by one as chips that wrap onto a second row, a caret in the field, and the last chip selected for removal in the dark theme" width="1028">
+<img src="docs/media/tag-input.webp" alt="TagInput in a journal editor: wrapping tag chips, a suggestion list under the field, a duplicate tag warning, a chip removed, and the tag count updating in the dark theme" width="1028">
 
 Screenshot: [docs/media/tag-input.png](docs/media/tag-input.png). Recorded with `scripts/record-showcase.sh` (`CASE=tag-input`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
 
