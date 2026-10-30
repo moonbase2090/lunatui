@@ -18,7 +18,7 @@ An owned wrapper was preferred over adding image identity and a caller-maintaine
 
 Pixel rendering and the runtime presenter are enabled by default by owner decision. Both the widget and run options expose `pixels(false)` for an explicit cell fallback. Existing Braille/text chart specifications remain available for mirrored views.
 
-The `--compare` demo mirrors Braille and pixels with the same specification and layout. Its committed framebuffer capture comes from code `0a215085b395fdb8f4c18c1546de4be8b9ffc971` in a clean tracked tree on Ubuntu arm64 with Kitty 0.32.2 (1601×1025, 30 fps, about 8 seconds, 13 distinct frames, 81,084-byte lossless WebP).
+The `--compare` demo mirrors Braille and pixels with the same specification and layout. Its committed framebuffer capture comes from code `a759f35ad0d1571c1e37c8234b97a09da730e647` in a clean tracked tree on Ubuntu arm64 with Kitty 0.32.2 (1601×1025, 30 fps, 8 seconds, 10 distinct frames, 63,368-byte lossless WebP). Scripted arrow keys change the selected region during the capture, so the chart image is uploaded again while it is on screen; a per-frame check of the captured framebuffer finds the Pixels pane drawn in all 240 frames. Replacing an image under the same Kitty id deletes it first and leaves the pane empty until the upload finishes, so each upload gets a new wire id, is placed, and only then is the previous id deleted.
 
 ## Tradeoffs
 

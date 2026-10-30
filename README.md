@@ -156,7 +156,7 @@ For antialiased pixels, wrap the chart in `PixelPieChart` and attach the frame's
 
 <img src="docs/media/pixel-pie-chart.webp" alt="Braille and antialiased pixel pies, mirrored with the same data and geometry in a real Kitty terminal" width="1028">
 
-Pixel comparison screenshot: [docs/media/pixel-pie-chart.png](docs/media/pixel-pie-chart.png). Captured from a real Kitty 0.32.2 window in a clean Linux VM (100×32, font size 20, 30 fps, about 8 seconds). The Braille version remains alongside the pixel version; no compositing.
+Pixel comparison screenshot: [docs/media/pixel-pie-chart.png](docs/media/pixel-pie-chart.png). Captured from a real Kitty 0.32.2 window in a clean Linux VM (100×32, font size 20, 30 fps, 8 seconds, with the selected region changing from the keyboard). The Braille version remains alongside the pixel version; no compositing.
 
 <img src="docs/media/pie-chart.webp" alt="PieChart: a braille pie of live request shares by region, with a regions table and a request trend, on a cluster overview screen in the dark theme" width="1028">
 
