@@ -6969,7 +6969,7 @@ fn tags_state(tick: u32) -> (Vec<String>, String, Option<usize>) {
         if tick >= done {
             tags.push(word.to_owned());
         } else if tick >= start {
-            text = word[..typing(word, start, 12, tick)].to_owned();
+            word[..typing(word, start, 12, tick)].clone_into(&mut text);
         }
     }
     let selected = (tick >= 215).then(|| tags.len() - 1);
