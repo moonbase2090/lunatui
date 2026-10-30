@@ -10,6 +10,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Button` widget, behind the `button` feature: a filled, clickable label centred in its area, with normal, primary, and destructive variants and focused, pressed, and disabled states from theme tokens. It measures as its label plus padding, `hit_area` is empty for a disabled button, and `ButtonState` turns Enter or Space and pointer presses into clicks, so a press released off the button does not click. A built button draws without allocating.
+
 - `Dialog` widget, behind the `dialog` feature: `alert`, `confirm`, and `prompt` dialogs drawn as a centred titled panel over a faded screen, with the message wrapped inside, a one-line text field for prompts, right-aligned buttons, custom labels, and a `destructive` confirm button. `DialogState` opens a dialog with the focus id to restore, keeps Tab and Shift+Tab inside it, and reports `Confirmed` or `Cancelled` with that id from Enter, Escape, or a click found with `Dialog::control_at`. A built dialog draws without allocating.
 
 - `DatePicker` widget, behind the `date-picker` feature: a fixed-size month grid with a cursor, a chosen date or range (filled ends with a band between), `min` and `max` bounds that dim days and arrows, a today marker, Monday or Sunday weeks, `shift_days`, `shift_months`, and `clamped` for moving the cursor, and `prev_area`, `next_area`, and `date_at` for hit testing. `Date` now implements `Ord`.

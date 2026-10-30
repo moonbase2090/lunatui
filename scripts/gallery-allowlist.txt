@@ -24,3 +24,8 @@ helper histogram # constructs Chart hourly datasets and renders the widget
 scope examples/dialog_showcase.rs # the branch manager scene composes Block, Paragraph, LineGauge, StatusBar and Dialog widgets
 helper branches # renders the branch rows through Block and Paragraph
 helper details # renders branch facts through Paragraph and check progress through LineGauge
+scope examples/button_showcase.rs # the release console composes Block, Paragraph, LineGauge, StatusBar and Button widgets
+helper changes # renders release notes through Block and Paragraph
+helper checks # renders check names through Paragraph and their progress through LineGauge
+helper actions # renders the action bar through Block and Button
+helper history # renders release history lines through Block and Paragraph
