@@ -30,6 +30,27 @@ python3 scripts/check-pixel-recording.py target/pixel-capture/terminal.webp \
 
 Choose a rectangle that includes the graph or image and excludes labels, borders, and legends. Inspect the diagnostic contact sheet as well as the pixel counts; a color threshold detects empty frames but does not prove that the drawing is correct. The checker reads the recording without changing or dropping frames. Its contact sheet is for review, not gallery media.
 
+For a held-state demo, also compare every displayed frame with inspected, unmodified stills from settled states. This detects mixed transitions such as new scatter labels over the previous line plot, which still contains colored pixels. Inspect every reference against the matching cell view before using it.
+
+For the 24-second Chart demo, extract its eight states directly from the lossless source:
+
+```sh
+reference_args=()
+for second in 1 4 7 10 13 16 19 22; do
+  ffmpeg -nostdin -loglevel error -y -ss "$second" \
+    -i target/pixel-capture/terminal.mkv -frames:v 1 \
+    "target/pixel-capture/state-$second.png"
+  reference_args+=(--reference-frame "target/pixel-capture/state-$second.png")
+done
+python3 scripts/check-pixel-recording.py target/pixel-capture/terminal.webp \
+  --region 780,400,300,200 --min-colored-pixels 100 \
+  "${reference_args[@]}"
+```
+
+The references must have the same dimensions as the recording. A frame must match one reference exactly, including labels and pixels. Do not add an unexpected transition as a reference to make a check pass. The previous Chart capture fails this check at frames 4 and 7, where the title changed before the image.
+
 A text recorder such as asciinema with agg captures the cell fallback. Use this screen-capture path when the gallery must show actual image pixels. Recordings and captions must identify the path actually exercised.
 
 The committed Image recording was captured from code commit `17012b45cb1a24e0372f78b34945c4dcf64d411b` in a fresh Ubuntu arm64 Tart VM with Kitty 0.32.2 and a clean tracked tree. The actual window is 1301×801 pixels at 30 fps. Its three displayed WebP frames show Contain, Cover, then Contain; all 240 lossless video frames retain the image. The lossless WebP is 1,580,600 bytes. Both the README and site use that uncomposited recording.
+
+The corrected Chart recording comes from clean code commit `757abcef18301fcbe72dfbd17c1bf57ce1d1ad98`, with Kitty 0.32.2, 100×32 cells, a 16-point font, and a 1301×801 pixel window. It is 24 seconds at 30 fps, with an 81,152-byte lossless WebP. All 720 raw frames and all eight displayed WebP frames exactly match one of the inspected settled states. The previous capture fails the reference-state check at frames 4 and 7. Requests and Saturation stills remain pixel-identical; the Latency scatter still is an unmodified video frame at 13 seconds.
