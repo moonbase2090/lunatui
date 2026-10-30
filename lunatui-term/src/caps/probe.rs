@@ -79,10 +79,17 @@ fn exchange(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
         let millis = i32::try_from(left.as_millis()).unwrap_or(i32::MAX);
         match wait_read(fd, millis)? {
             Wait::Timeout => return finish(fd, env, &buf),
-            Wait::Ready => match read_some(fd, &mut tmp)? {
-                Read::Eof => return finish(fd, env, &buf),
-                Read::Bytes(n) => buf.extend_from_slice(&tmp[..n]),
-                Read::Again => {}
+            Wait::Ready => match read_some(fd, &mut tmp) {
+                Ok(Read::Eof) => return finish(fd, env, &buf),
+                Ok(Read::Bytes(n)) => buf.extend_from_slice(&tmp[..n]),
+                Ok(Read::Again) => {}
+                Err(error)
+                    if error.kind() == io::ErrorKind::ConnectionReset
+                        && has_device_attributes(&buf) =>
+                {
+                    return finish(fd, env, &buf);
+                }
+                Err(error) => return Err(error),
             },
             Wait::Interrupted => {}
         }
