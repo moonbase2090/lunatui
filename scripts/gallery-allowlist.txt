@@ -41,6 +41,12 @@ helper requests # renders grouped request data through BarChart
 helper latency # renders regional latency data through horizontal BarChart
 helper runs # renders build data through BarChart
 helper states # renders the same queue data in three BarChart states
+scope examples/pixel_sparkline.rs # live Sparkline twins use the runtime image presenter
+scope examples/spark_scene.rs # shared service board composes real Sparkline, Block and Paragraph widgets
+helper ink_from # resolves semantic colors without writing cells
+helper draw_spark_chrome # composes header labels and background widgets
+helper draw_lane # composes one Sparkline lane and its labels through public widgets
+helper draw_inspector # composes the selected Sparkline and its summary widgets
 scope examples/table_showcase.rs # the service inventory composes Block, Table, Paragraph, LineGauge and StatusBar widgets
 helper details # renders the focused service through Block, Paragraph and LineGauge
 helper status # renders key and action notes through StatusBar
