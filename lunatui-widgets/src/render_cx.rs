@@ -86,7 +86,11 @@ impl<'a> RenderCx<'a> {
             .is_some_and(|sink| sink.supports_pixels() && sink.submit(request))
     }
 
-    #[cfg(any(feature = "pixel-chart", feature = "pixel-canvas"))]
+    #[cfg(any(
+        feature = "pixel-chart",
+        feature = "pixel-canvas",
+        feature = "pixel-barchart"
+    ))]
     pub(crate) fn submit_raster(
         &mut self,
         source: &lunatui_image::ImageSource,
@@ -101,16 +105,22 @@ impl<'a> RenderCx<'a> {
     #[cfg(any(
         feature = "pixel-pie-chart",
         feature = "pixel-chart",
-        feature = "pixel-canvas"
+        feature = "pixel-canvas",
+        feature = "pixel-barchart"
     ))]
     pub(crate) fn pixel_target(&self, area: Rect) -> Option<lunatui_image::PixelTarget> {
-        self.image_sink.as_deref()?.pixel_target(area)
+        let sink = self.image_sink.as_deref()?;
+        if !sink.supports_pixels() {
+            return None;
+        }
+        sink.pixel_target(area)
     }
 
     #[cfg(any(
         feature = "pixel-pie-chart",
         feature = "pixel-chart",
-        feature = "pixel-canvas"
+        feature = "pixel-canvas",
+        feature = "pixel-barchart"
     ))]
     pub(crate) fn pixel_backdrop(
         &self,
@@ -139,7 +149,8 @@ impl<'a> RenderCx<'a> {
     #[cfg(any(
         feature = "pixel-pie-chart",
         feature = "pixel-chart",
-        feature = "pixel-canvas"
+        feature = "pixel-canvas",
+        feature = "pixel-barchart"
     ))]
     pub(crate) fn pixel_rgb(&self, mut color: Color, default: Option<[u8; 3]>) -> Option<[u8; 3]> {
         for _ in 0..16 {
@@ -154,6 +165,12 @@ impl<'a> RenderCx<'a> {
             }
         }
         None
+    }
+
+    #[cfg(feature = "pixel-barchart")]
+    pub(crate) fn pixel_area_in_grid(&self, area: Rect) -> bool {
+        u32::from(area.x) + u32::from(area.width) <= u32::from(self.grid.width())
+            && u32::from(area.y) + u32::from(area.height) <= u32::from(self.grid.height())
     }
 
     /// Borrow token colors prepared at startup or when the theme changes.

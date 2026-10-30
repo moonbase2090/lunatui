@@ -6,6 +6,9 @@ use lunatui_theme::Token;
 
 use crate::{RenderCx, Widget, WidgetState};
 
+#[cfg(feature = "pixel-barchart")]
+mod pixel;
+
 fn clip_area_to_coordinates(area: Rect) -> Rect {
     Rect::new(
         area.x,
@@ -105,7 +108,9 @@ enum Data<'a> {
 /// Bar chart over a series of bars or groups of bars, vertical or horizontal.
 ///
 /// Every bar is scaled to the largest value in the chart, or to [`max`](Self::max). Partial
-/// lengths use eighth blocks, so bar ends move smoothly. `bar_width` is the thickness of a bar
+/// lengths use native antialiased fills with a measured image presenter, or eighth blocks
+/// in cell mode. [`pixels(false)`](Self::pixels) selects cells explicitly.
+/// `bar_width` is the thickness of a bar
 /// (columns when vertical, rows when horizontal); `bar_gap` separates bars in a group and
 /// `group_gap` separates groups. Bar and label colors come from the theme: bars use the accent
 /// token, the focus ring when focused, and dimmed text when disabled, unless a
@@ -138,6 +143,7 @@ pub struct BarChart<'a> {
     bar_style: Option<Style>,
     label_style: Option<Style>,
     value_style: Option<Style>,
+    pixels: bool,
 }
 
 impl<'a> BarChart<'a> {
@@ -167,6 +173,7 @@ impl<'a> BarChart<'a> {
             bar_style: None,
             label_style: None,
             value_style: None,
+            pixels: true,
         }
     }
 
@@ -245,6 +252,15 @@ impl<'a> BarChart<'a> {
     #[must_use]
     pub const fn value_style(mut self, style: Style) -> Self {
         self.value_style = Some(style);
+        self
+    }
+
+    /// Enables native antialiased fills when the active image presenter supports them.
+    /// Missing support or a declined raster retains the original cell renderer.
+    /// Enabled by default; `false` selects cells explicitly.
+    #[must_use]
+    pub const fn pixels(mut self, enabled: bool) -> Self {
+        self.pixels = enabled;
         self
     }
 
@@ -332,181 +348,424 @@ fn fit(text: &str, width: u16) -> String {
     cut
 }
 
-fn put_clipped(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, text: &str, style: Style) {
-    put_styled(cx, x, y, &fit(text, width), style);
+#[derive(Clone, Copy)]
+struct BarPlacement {
+    track: Rect,
+    direction: BarDirection,
+    value: u64,
+    max: u64,
+    style: Style,
 }
 
-fn put_centered(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, text: &str, style: Style) {
-    let shown = fit(text, width);
-    let used = u16::try_from(text_display_width(&shown)).unwrap_or(width);
-    put_styled(cx, x.saturating_add((width - used) / 2), y, &shown, style);
+#[derive(Clone, Copy)]
+enum TextAlign {
+    Start,
+    Center,
 }
 
-impl BarChart<'_> {
-    fn render_vertical(&self, area: Rect, cx: &mut RenderCx<'_>, max: u64) {
-        let colors = self.colors(cx);
-        let has_bar_labels = self
-            .groups()
-            .any(|(_, bars)| bars.iter().any(|bar| bar.label.is_some()));
-        let has_group_labels = self.groups().any(|(label, _)| label.is_some());
-        let plot = area
-            .height
-            .saturating_sub(u16::from(has_bar_labels) + u16::from(has_group_labels));
-        let bottom = area.y.saturating_add(plot);
-        let bar_label_y = bottom;
-        let group_label_y = bottom.saturating_add(u16::from(has_bar_labels));
-        let right = area.x.saturating_add(area.width);
-        let mut x = area.x;
-        for (group_index, (group_label, bars)) in self.groups().enumerate() {
+#[derive(Clone, Copy)]
+struct TextPlacement<'a> {
+    x: u16,
+    y: u16,
+    width: u16,
+    text: &'a str,
+    style: Style,
+    align: TextAlign,
+}
+
+trait Visitor {
+    type Error;
+
+    fn bar(&mut self, bar: BarPlacement) -> Result<(), Self::Error>;
+    fn text(&mut self, text: TextPlacement<'_>) -> Result<(), Self::Error>;
+}
+
+#[derive(Clone, Copy)]
+enum Plot {
+    Vertical { area: Rect, bar_labels: bool },
+    Horizontal { area: Rect, label_width: u16 },
+}
+
+impl Plot {
+    #[cfg(feature = "pixel-barchart")]
+    fn area(self) -> Rect {
+        match self {
+            Self::Vertical { area, .. } | Self::Horizontal { area, .. } => area,
+        }
+    }
+}
+
+struct Layout<'chart, 'data> {
+    chart: &'chart BarChart<'data>,
+    area: Rect,
+    max: u64,
+    colors: Colors,
+    plot: Plot,
+}
+
+impl<'chart, 'data> Layout<'chart, 'data> {
+    fn new(chart: &'chart BarChart<'data>, area: Rect, cx: &RenderCx<'_>) -> Self {
+        let plot = match chart.direction {
+            BarDirection::Vertical => {
+                let bar_labels = chart
+                    .groups()
+                    .any(|(_, bars)| bars.iter().any(|bar| bar.label.is_some()));
+                let group_labels = chart.groups().any(|(label, _)| label.is_some());
+                Plot::Vertical {
+                    area: Rect::new(
+                        area.x,
+                        area.y,
+                        area.width,
+                        area.height
+                            .saturating_sub(u16::from(bar_labels) + u16::from(group_labels)),
+                    ),
+                    bar_labels,
+                }
+            }
+            BarDirection::Horizontal => {
+                let width = chart
+                    .groups()
+                    .flat_map(|(_, bars)| bars.iter())
+                    .filter_map(|bar| bar.label)
+                    .map(text_display_width)
+                    .max()
+                    .unwrap_or(0);
+                let label_width = u16::try_from(width).unwrap_or(u16::MAX).min(area.width / 2);
+                let x = area
+                    .x
+                    .saturating_add(label_width)
+                    .saturating_add(u16::from(label_width > 0));
+                Plot::Horizontal {
+                    area: Rect::new(
+                        x,
+                        area.y,
+                        area.x.saturating_add(area.width).saturating_sub(x),
+                        area.height,
+                    ),
+                    label_width,
+                }
+            }
+        };
+        Self {
+            chart,
+            area,
+            max: chart.max.unwrap_or_else(|| chart.largest()),
+            colors: chart.colors(cx),
+            plot,
+        }
+    }
+
+    fn visit<V: Visitor>(&self, visitor: &mut V) -> Result<(), V::Error> {
+        match self.plot {
+            Plot::Vertical { area, bar_labels } => self.vertical(area, bar_labels, visitor),
+            Plot::Horizontal { area, label_width } => self.horizontal(area, label_width, visitor),
+        }
+    }
+
+    fn vertical<V: Visitor>(
+        &self,
+        plot: Rect,
+        bar_labels: bool,
+        visitor: &mut V,
+    ) -> Result<(), V::Error> {
+        let bottom = plot.y.saturating_add(plot.height);
+        let group_y = bottom.saturating_add(u16::from(bar_labels));
+        let right = self.area.x.saturating_add(self.area.width);
+        let mut x = self.area.x;
+        for (group_index, (group_label, bars)) in self.chart.groups().enumerate() {
             if group_index > 0 {
-                x = x.saturating_add(self.group_gap);
+                x = x.saturating_add(self.chart.group_gap);
             }
             let start = x;
             for (bar_index, bar) in bars.iter().enumerate() {
                 if bar_index > 0 {
-                    x = x.saturating_add(self.bar_gap);
+                    x = x.saturating_add(self.chart.bar_gap);
                 }
                 if x >= right {
-                    return;
+                    return Ok(());
                 }
-                let width = self.bar_width.min(right - x);
-                let style = bar.style.unwrap_or(colors.bar);
-                let filled = ticks(bar.value, max, plot);
-                let whole = filled / 8;
-                for row in 0..whole {
-                    for column in 0..width {
-                        put_styled(cx, x.saturating_add(column), bottom - 1 - row, "█", style);
-                    }
-                }
-                let partial = usize::from(filled % 8);
-                if partial != 0 {
-                    let glyph = EIGHTHS_UP[partial];
-                    for column in 0..width {
-                        put_styled(
-                            cx,
-                            x.saturating_add(column),
-                            bottom - 1 - whole,
-                            glyph,
-                            style,
-                        );
-                    }
-                }
-                for row in whole + u16::from(partial != 0)..plot {
-                    for column in 0..width {
-                        put_styled(cx, x.saturating_add(column), bottom - 1 - row, " ", style);
-                    }
-                }
-                if let Some(text) = self.value_text(bar)
-                    && plot > 0
+                let width = self.chart.bar_width.min(right - x);
+                let style = bar.style.unwrap_or(self.colors.bar);
+                let filled = ticks(bar.value, self.max, plot.height);
+                visitor.bar(BarPlacement {
+                    track: Rect::new(x, plot.y, width, plot.height),
+                    direction: BarDirection::Vertical,
+                    value: bar.value,
+                    max: self.max,
+                    style,
+                })?;
+                if let Some(text) = self.chart.value_text(bar)
+                    && plot.height > 0
                 {
-                    let used = whole + u16::from(partial != 0);
-                    let (text_style, y) = if used == 0 {
-                        (colors.value, bottom - 1)
-                    } else if used < plot {
-                        (colors.value, bottom - 1 - used)
+                    let used = filled / 8 + u16::from(!filled.is_multiple_of(8));
+                    let (style, y) = if used == 0 {
+                        (self.colors.value, bottom - 1)
+                    } else if used < plot.height {
+                        (self.colors.value, bottom - 1 - used)
                     } else {
-                        (Style::new().fg(colors.on_bar).bg(style.fg), bottom - plot)
+                        (
+                            Style::new().fg(self.colors.on_bar).bg(style.fg),
+                            bottom - plot.height,
+                        )
                     };
-                    put_centered(cx, x, y, width, &text, text_style);
+                    visitor.text(TextPlacement {
+                        x,
+                        y,
+                        width,
+                        text: &text,
+                        style,
+                        align: TextAlign::Center,
+                    })?;
                 }
-                if let Some(label) = bar.label {
-                    put_centered(cx, x, bar_label_y, width, label, colors.label);
+                if let Some(text) = bar.label {
+                    visitor.text(TextPlacement {
+                        x,
+                        y: bottom,
+                        width,
+                        text,
+                        style: self.colors.label,
+                        align: TextAlign::Center,
+                    })?;
                 }
-                x = x.saturating_add(self.bar_width);
+                x = x.saturating_add(self.chart.bar_width);
             }
-            if let Some(label) = group_label {
-                let span = x.min(right).saturating_sub(start);
-                put_centered(cx, start, group_label_y, span, label, colors.label);
+            if let Some(text) = group_label {
+                visitor.text(TextPlacement {
+                    x: start,
+                    y: group_y,
+                    width: x.min(right).saturating_sub(start),
+                    text,
+                    style: self.colors.label,
+                    align: TextAlign::Center,
+                })?;
             }
         }
+        Ok(())
     }
 
-    fn render_horizontal(&self, area: Rect, cx: &mut RenderCx<'_>, max: u64) {
-        let colors = self.colors(cx);
-        let label_width = self
-            .groups()
-            .flat_map(|(_, bars)| bars.iter())
-            .filter_map(|bar| bar.label)
-            .map(text_display_width)
-            .max()
-            .unwrap_or(0);
-        let label_width = u16::try_from(label_width)
-            .unwrap_or(u16::MAX)
-            .min(area.width / 2);
-        let track_x = area
-            .x
-            .saturating_add(label_width)
-            .saturating_add(u16::from(label_width > 0));
-        let right = area.x.saturating_add(area.width);
-        let track = right.saturating_sub(track_x);
-        let bottom = area.y.saturating_add(area.height);
-        let mut y = area.y;
-        for (group_index, (group_label, bars)) in self.groups().enumerate() {
+    fn horizontal<V: Visitor>(
+        &self,
+        plot: Rect,
+        label_width: u16,
+        visitor: &mut V,
+    ) -> Result<(), V::Error> {
+        let right = self.area.x.saturating_add(self.area.width);
+        let bottom = self.area.y.saturating_add(self.area.height);
+        let mut y = self.area.y;
+        for (group_index, (group_label, bars)) in self.chart.groups().enumerate() {
             if group_index > 0 {
-                y = y.saturating_add(self.group_gap);
+                y = y.saturating_add(self.chart.group_gap);
             }
-            if let Some(label) = group_label {
+            if let Some(text) = group_label {
                 if y >= bottom {
-                    return;
+                    return Ok(());
                 }
-                put_clipped(cx, area.x, y, area.width, label, colors.label);
+                visitor.text(TextPlacement {
+                    x: self.area.x,
+                    y,
+                    width: self.area.width,
+                    text,
+                    style: self.colors.label,
+                    align: TextAlign::Start,
+                })?;
                 y = y.saturating_add(1);
             }
             for (bar_index, bar) in bars.iter().enumerate() {
                 if bar_index > 0 {
-                    y = y.saturating_add(self.bar_gap);
+                    y = y.saturating_add(self.chart.bar_gap);
                 }
                 if y >= bottom {
-                    return;
+                    return Ok(());
                 }
-                let height = self.bar_width.min(bottom - y);
-                let style = bar.style.unwrap_or(colors.bar);
-                let filled = ticks(bar.value, max, track);
+                let height = self.chart.bar_width.min(bottom - y);
+                let style = bar.style.unwrap_or(self.colors.bar);
+                let filled = ticks(bar.value, self.max, plot.width);
                 let whole = filled / 8;
-                let partial = usize::from(filled % 8);
-                for row in 0..height {
-                    for column in 0..whole {
-                        put_styled(
-                            cx,
-                            track_x.saturating_add(column),
-                            y.saturating_add(row),
-                            "█",
-                            style,
-                        );
-                    }
-                    if partial != 0 {
-                        let glyph = EIGHTHS_ACROSS[partial];
-                        put_styled(
-                            cx,
-                            track_x.saturating_add(whole),
-                            y.saturating_add(row),
-                            glyph,
-                            style,
-                        );
-                    }
+                let partial = !filled.is_multiple_of(8);
+                visitor.bar(BarPlacement {
+                    track: Rect::new(plot.x, y, plot.width, height),
+                    direction: BarDirection::Horizontal,
+                    value: bar.value,
+                    max: self.max,
+                    style,
+                })?;
+                let row = y.saturating_add((height - 1) / 2);
+                if let Some(text) = bar.label {
+                    visitor.text(TextPlacement {
+                        x: self.area.x,
+                        y: row,
+                        width: label_width,
+                        text,
+                        style: self.colors.label,
+                        align: TextAlign::Start,
+                    })?;
                 }
-                if let Some(label) = bar.label {
-                    let row = y.saturating_add((height - 1) / 2);
-                    put_clipped(cx, area.x, row, label_width, label, colors.label);
-                }
-                if let Some(text) = self.value_text(bar) {
-                    let row = y.saturating_add((height - 1) / 2);
+                if let Some(text) = self.chart.value_text(bar) {
                     let used = u16::try_from(text_display_width(&text)).unwrap_or(u16::MAX);
                     if whole >= used.saturating_add(1) {
-                        let inside = Style::new().fg(colors.on_bar).bg(style.fg);
-                        put_clipped(cx, track_x, row, whole, &text, inside);
+                        visitor.text(TextPlacement {
+                            x: plot.x,
+                            y: row,
+                            width: whole,
+                            text: &text,
+                            style: Style::new().fg(self.colors.on_bar).bg(style.fg),
+                            align: TextAlign::Start,
+                        })?;
                     } else {
-                        let after = track_x
+                        let after = plot
+                            .x
                             .saturating_add(whole)
-                            .saturating_add(u16::from(partial != 0))
+                            .saturating_add(u16::from(partial))
                             .saturating_add(1);
-                        let room = right.saturating_sub(after);
-                        put_clipped(cx, after, row, room, &text, colors.value);
+                        visitor.text(TextPlacement {
+                            x: after,
+                            y: row,
+                            width: right.saturating_sub(after),
+                            text: &text,
+                            style: self.colors.value,
+                            align: TextAlign::Start,
+                        })?;
                     }
                 }
-                y = y.saturating_add(self.bar_width);
+                y = y.saturating_add(self.chart.bar_width);
             }
         }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Ink {
+    Cells,
+    #[cfg(feature = "pixel-barchart")]
+    Spaces,
+}
+
+impl Ink {
+    fn glyph(self, glyph: &str) -> &str {
+        match self {
+            Self::Cells => glyph,
+            #[cfg(feature = "pixel-barchart")]
+            Self::Spaces => " ",
+        }
+    }
+}
+
+fn paint_bar_cells(bar: BarPlacement, cx: &mut RenderCx<'_>, ink: Ink) {
+    let Rect {
+        x,
+        y,
+        width,
+        height,
+    } = bar.track;
+    let filled = ticks(
+        bar.value,
+        bar.max,
+        match bar.direction {
+            BarDirection::Vertical => height,
+            BarDirection::Horizontal => width,
+        },
+    );
+    let whole = filled / 8;
+    let partial = usize::from(filled % 8);
+    match bar.direction {
+        BarDirection::Vertical => {
+            let bottom = y.saturating_add(height);
+            for row in 0..whole {
+                for column in 0..width {
+                    put_styled(
+                        cx,
+                        x.saturating_add(column),
+                        bottom - 1 - row,
+                        ink.glyph("█"),
+                        bar.style,
+                    );
+                }
+            }
+            if partial != 0 {
+                for column in 0..width {
+                    put_styled(
+                        cx,
+                        x.saturating_add(column),
+                        bottom - 1 - whole,
+                        ink.glyph(EIGHTHS_UP[partial]),
+                        bar.style,
+                    );
+                }
+            }
+            for row in whole + u16::from(partial != 0)..height {
+                for column in 0..width {
+                    put_styled(
+                        cx,
+                        x.saturating_add(column),
+                        bottom - 1 - row,
+                        " ",
+                        bar.style,
+                    );
+                }
+            }
+        }
+        BarDirection::Horizontal => {
+            for row in 0..height {
+                for column in 0..whole {
+                    put_styled(
+                        cx,
+                        x.saturating_add(column),
+                        y.saturating_add(row),
+                        ink.glyph("█"),
+                        bar.style,
+                    );
+                }
+                if partial != 0 {
+                    put_styled(
+                        cx,
+                        x.saturating_add(whole),
+                        y.saturating_add(row),
+                        ink.glyph(EIGHTHS_ACROSS[partial]),
+                        bar.style,
+                    );
+                }
+            }
+        }
+    }
+}
+
+fn visit_text<E>(
+    text: TextPlacement<'_>,
+    mut write: impl FnMut(u16, u16, char, Style, usize) -> Result<(), E>,
+) -> Result<(), E> {
+    let shown = fit(text.text, text.width);
+    let used = u16::try_from(text_display_width(&shown)).unwrap_or(text.width);
+    let mut column = text.x.saturating_add(match text.align {
+        TextAlign::Start => 0,
+        TextAlign::Center => (text.width - used) / 2,
+    });
+    for glyph in shown.chars() {
+        let mut buffer = [0_u8; 4];
+        let width = text_display_width(glyph.encode_utf8(&mut buffer));
+        write(column, text.y, glyph, text.style, width)?;
+        column = column.saturating_add(u16::try_from(width).unwrap_or(1));
+    }
+    Ok(())
+}
+
+struct CellBackend<'cx, 'frame> {
+    cx: &'cx mut RenderCx<'frame>,
+}
+
+impl Visitor for CellBackend<'_, '_> {
+    type Error = core::convert::Infallible;
+
+    fn bar(&mut self, bar: BarPlacement) -> Result<(), Self::Error> {
+        paint_bar_cells(bar, self.cx, Ink::Cells);
+        Ok(())
+    }
+
+    fn text(&mut self, text: TextPlacement<'_>) -> Result<(), Self::Error> {
+        visit_text(text, |x, y, glyph, style, _| {
+            self.cx.put_char_patched(x, y, glyph, style);
+            Ok(())
+        })
     }
 }
 
@@ -517,10 +776,15 @@ impl Widget for BarChart<'_> {
             return;
         }
         cx.clear_area(area, self.background.unwrap_or_default());
-        let max = self.max.unwrap_or_else(|| self.largest());
-        match self.direction {
-            BarDirection::Vertical => self.render_vertical(area, cx, max),
-            BarDirection::Horizontal => self.render_horizontal(area, cx, max),
+        let layout = Layout::new(self, area, cx);
+        #[cfg(feature = "pixel-barchart")]
+        if self.pixels && pixel::render(&layout, cx) {
+            return;
+        }
+        let result = layout.visit(&mut CellBackend { cx });
+        match result {
+            Ok(()) => (),
+            Err(never) => match never {},
         }
     }
 
