@@ -274,13 +274,11 @@ Screenshot: [docs/media/dialog.png](docs/media/dialog.png). Recorded with `scrip
 
 ### Sparkline
 
-Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
+The service board keeps equal-size Cells and antialiased Pixels views of all ten lanes and the selected inspector. CPU, Network, Requests, Errors, Cache and Connections scenes share their data, styles and layout. Labels and statistics remain terminal text. Pixels are enabled by default with a measured presenter; `.pixels(false)` keeps the original eighth-block renderer. Try `cargo run --release -p lunatui --example pixel_sparkline`: arrows select scenes, `u` advances the sample, and `b` switches the right pane to cells and back.
 
-<img src="docs/media/sparkline.webp" alt="Sparkline service board" width="1028">
+<img src="docs/media/sparkline.webp" alt="Matching Cells and antialiased Pixels Sparkline service boards in a real Kitty terminal, including all ten lanes, the selected inspector, hot error styling, and restoring pixels after a cell toggle" width="1028">
 
-![Sparkline service board, still](docs/media/sparkline.png)
-
-Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+Screenshots: [CPU](docs/media/sparkline.png), [Errors](docs/media/sparkline-errors.png). Recorded from a clean source tree at `489ed9f350a8a7e24f11d4399d0b61f6a9e6e236` after merging current main in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_sparkline FEATURES=image-presenter WIDTH=200 HEIGHT=44 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:Right,6:Right,9:Right,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 200×44 cells, 2601×1101 pixels, 30 fps, 24 seconds, lossless WebP 108,664 bytes. All eight steps hold for 2.7–3.3 seconds. All 720 source frames and all eight WebP frames match the seven inspected states; restoring Pixels repeats the earlier Connections frame exactly. The stills are unmodified video frames at 1 and 10 seconds. No compositing or dropped frames.
 
 ### Calendar
 
