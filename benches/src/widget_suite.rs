@@ -17,14 +17,15 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Button, ButtonVariant, Canvas, Chart, CodeMark, CodeView, CodeViewState, ComboBox, Dataset,
-    Date, DatePicker, Dialog, DialogFocus, DialogKind, DialogState, Diff, DiffView, Form,
-    FormField, Gauge, GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel,
-    LogView, MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
-    NotificationLog, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup,
-    ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider,
-    SortDirection, Sparkline, SplitAxis, SplitTree, Table, TableState, Tabs, TagInput, TextWrap,
-    ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
+    Button, ButtonVariant, Canvas, Chart, CodeMark, CodeView, CodeViewState, ColorPicker,
+    ColorPickerFocus, ColorPickerState, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus,
+    DialogKind, DialogState, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer,
+    KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
+    MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart,
+    PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView,
+    ScrollbarVisibility, SearchBox, Slider, SortDirection, Sparkline, SplitAxis, SplitTree, Table,
+    TableState, Tabs, TagInput, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip,
+    Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -244,6 +245,15 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: button_lunatui,
         ratatui: button_ratatui,
+    },
+    Case {
+        name: "color-picker",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no color picker; its side draws the same half-block square and hue bar, the knob and pointer, the swatch and the hex and numbers by setting cells directly",
+        ),
+        lunatui: color_picker_lunatui,
+        ratatui: color_picker_ratatui,
     },
     Case {
         name: "table-sorted",
@@ -2002,6 +2012,107 @@ fn button_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             .style(style)
             .render(RatRect::new(slot.x, slot.y, slot.width, slot.height), buf);
     }
+}
+
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "the value is rounded and within the picker's cell counts"
+)]
+fn picker_cell(value: f32) -> u16 {
+    value.max(0.0) as u16
+}
+
+fn color_picker_state(tick: u32) -> ColorPickerState {
+    let mut state = ColorPickerState::from_hsv(
+        f32::from(u16::try_from(tick % 120 * 3).unwrap_or(0)),
+        0.85,
+        0.9,
+    );
+    state.set_focus(ColorPickerFocus::Hue);
+    state
+}
+
+fn color_picker_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let state = color_picker_state(tick);
+    ColorPicker::new()
+        .view(&state)
+        .state(WidgetState::Focused)
+        .render(area, &mut cx);
+}
+
+fn color_picker_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let screen = Rect::new(area.x, area.y, area.width, area.height);
+    let state = color_picker_state(tick);
+    let rgb = |hue: f32, saturation: f32, value: f32| {
+        let (r, g, b) = ColorPickerState::from_hsv(hue, saturation, value).rgb();
+        RatColor::Rgb(r, g, b)
+    };
+    let square = ColorPicker::square_area(screen);
+    let samples = f32::from(square.height * 2 - 1);
+    for row in 0..square.height {
+        for column in 0..square.width {
+            let saturation = f32::from(column) / f32::from(square.width - 1);
+            let top = 1.0 - f32::from(row * 2) / samples;
+            let bottom = 1.0 - f32::from(row * 2 + 1) / samples;
+            if let Some(cell) = buf.cell_mut((square.x + column, square.y + row)) {
+                cell.set_symbol("▀")
+                    .set_fg(rgb(state.hue(), saturation, top))
+                    .set_bg(rgb(state.hue(), saturation, bottom));
+            }
+        }
+    }
+    let bar = ColorPicker::hue_area(screen);
+    for row in 0..bar.height {
+        let top = f32::from(row * 2) / samples * 359.0;
+        let bottom = f32::from(row * 2 + 1) / samples * 359.0;
+        for column in 0..bar.width {
+            if let Some(cell) = buf.cell_mut((bar.x + column, bar.y + row)) {
+                cell.set_symbol("▀")
+                    .set_fg(rgb(top, 1.0, 1.0))
+                    .set_bg(rgb(bottom, 1.0, 1.0));
+            }
+        }
+    }
+    let knob_column = (state.saturation() * f32::from(square.width - 1)).round();
+    let knob_sample = ((1.0 - state.value()) * samples).round();
+    let hue_sample = (state.hue() / 359.0 * samples).round();
+    let (knob_x, knob_y) = (picker_cell(knob_column), picker_cell(knob_sample) / 2);
+    if let Some(cell) = buf.cell_mut((square.x + knob_x, square.y + knob_y)) {
+        cell.set_symbol("●").set_fg(RatColor::Rgb(0, 0, 0));
+    }
+    if let Some(cell) = buf.cell_mut((bar.x + bar.width, bar.y + picker_cell(hue_sample) / 2)) {
+        cell.set_symbol("◂").set_fg(color(Token::TextPrimary));
+    }
+    let hex = ColorPicker::hex_area(screen);
+    let (r, g, b) = state.rgb();
+    for offset in 0..4 {
+        if let Some(cell) = buf.cell_mut((hex.x + offset, hex.y)) {
+            cell.set_symbol(" ").set_bg(RatColor::Rgb(r, g, b));
+        }
+    }
+    let hex_text = String::from_utf8_lossy(&state.hex()).into_owned();
+    let line = format!(
+        "{hex_text} H{} S{} V{}",
+        state.hue().round(),
+        (state.saturation() * 100.0).round(),
+        (state.value() * 100.0).round()
+    );
+    buf.set_string(
+        hex.x + 5,
+        hex.y,
+        line,
+        RatStyle::new().fg(color(Token::TextPrimary)),
+    );
 }
 
 const DIALOG_BEHIND: &str = "main\nfeature/login\nfeature/search\nfix/cache-headers";
