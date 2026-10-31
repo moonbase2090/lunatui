@@ -90,3 +90,4 @@ helper matrix # constructs borrowed Heatmap rows and renders them
 helper legend # renders the five Heatmap scale bands
 helper inspector # composes selected-cell BigText, Gauge and labels
 scope lunatui-button/examples/ui_button.rs # the ui-button gallery demo
+scope lunatui-choice/examples/ui_choice.rs # the ui-choice gallery demo

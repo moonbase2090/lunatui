@@ -305,6 +305,14 @@ The `lunatui-button` crate in a deploy console. The run is scripted, not interac
 
 Screenshot: [docs/media/ui-button.png](docs/media/ui-button.png). Recorded from `cargo run --release -p lunatui-button --example ui_button` (120×36, 270 frames at 30 fps, truecolor, dark, about 8 seconds) with the pinned agg.
 
+### UI choice
+
+The `lunatui-choice` crate in a notification preferences screen. The run is scripted, not interactive: focus steps through the checkboxes, a radio group and a switch, and flips them as it goes, and the summary card follows. Checked boxes and the on switch use the primary color, focus uses the ring color, `[-]` marks a group with only some choices on, and the text message switch is disabled and dim.
+
+<img src="docs/media/ui-choice.gif" alt="lunatui-choice: checkboxes, a mixed checkbox, a radio group and switches, with a disabled switch, in a notification preferences screen in the dark theme" width="1028">
+
+Screenshot: [docs/media/ui-choice.png](docs/media/ui-choice.png). Recorded from `cargo run --release -p lunatui-choice --example ui_choice` (120×36, 270 frames at 30 fps, truecolor, dark, about 10 seconds) with the pinned agg.
+
 ### Dialog
 
 A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.
