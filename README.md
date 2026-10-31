@@ -297,6 +297,14 @@ A release console with live checks and a deploy history. Enter presses Run check
 
 Screenshot: [docs/media/button.png](docs/media/button.png). Recorded with `scripts/record-widget.sh` (`CASE=button`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 118 KB).
 
+### UI button
+
+The `lunatui-button` crate in a deploy console. The run is scripted, not interactive: focus steps across the five variants (Deploy, Rollback, Promote, Diff, Logs) and then the four option toggles, and the script presses each one as it goes. The size row shows Small, Medium and Large, and the Disabled button is muted text with no fill.
+
+<img src="docs/media/ui-button.gif" alt="lunatui-button: default, destructive, secondary, outline and ghost buttons, three sizes, a disabled button and option toggles in a deploy console in the dark theme" width="1028">
+
+Screenshot: [docs/media/ui-button.png](docs/media/ui-button.png). Recorded from `cargo run --release -p lunatui-button --example ui_button` (120×36, 270 frames at 30 fps, truecolor, dark, about 8 seconds) with the pinned agg.
+
 ### Dialog
 
 A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.
@@ -320,6 +328,14 @@ A live capacity board for eight services across twelve availability zones. The s
 <img src="docs/media/heatmap.webp" alt="Heatmap capacity board with labeled services and zones, a selected-cell inspector, and a live rebalance event log" width="1028">
 
 Screenshot: [docs/media/heatmap.png](docs/media/heatmap.png). Recorded with `scripts/record-heatmap.sh` at 120×36, 2x scale, 300 frames at 30 fps, dark truecolor, about 10 seconds. The script checks the incident and recovery states against the actual terminal output.
+
+### Color picker
+
+A theme editor for an accent color. Dragging in the square sets saturation and value, Tab moves to the hue bar and the arrow keys turn it, and Tab again reaches the hex entry, where typed digits fill in and Enter applies the color. The preview beside it, the buttons, gauges and link, repaints in the picked color as it changes.
+
+<img src="docs/media/color-picker.webp" alt="Color picker: a saturation and value square, a hue bar and a hex entry beside a live preview of a button, gauges and a link in the picked color" width="1028">
+
+Screenshot: [docs/media/color-picker.png](docs/media/color-picker.png). Recorded with `scripts/record-showcase.sh` (`CASE=color-picker`, 120×36, 2x scale, `FRAMES=250` at 30 fps, dark truecolor, about 8 seconds).
 
 ### Calendar
 

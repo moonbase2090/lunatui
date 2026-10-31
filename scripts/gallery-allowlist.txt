@@ -79,8 +79,14 @@ helper details # renders the focused service through Block, Paragraph and LineGa
 helper status # renders key and action notes through StatusBar
 helper pointer # renders the pointer glyph through Paragraph at a Table column position
 
+scope examples/color_picker_showcase.rs # the theme editor composes Block, Paragraph, Button, LineGauge, StatusBar and ColorPicker widgets
+helper pane # renders a titled pane through Block
+helper editor_notes # renders the editing hint and caption through Paragraph
+helper preview_pane # renders the preview through Paragraph, Button and LineGauge
+helper saved_colors # renders swatches and names through Paragraph
 scope examples/heatmap_showcase.rs # capacity screen uses public Heatmap, BigText, Gauge, LogView, Block and Paragraph widgets
 helper label # renders a Paragraph without writing cells
 helper matrix # constructs borrowed Heatmap rows and renders them
 helper legend # renders the five Heatmap scale bands
 helper inspector # composes selected-cell BigText, Gauge and labels
+scope lunatui-button/examples/ui_button.rs # the ui-button gallery demo

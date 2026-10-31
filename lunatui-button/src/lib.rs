@@ -3,7 +3,7 @@
 
 #![doc = include_str!("../README.md")]
 
-use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
+use lunatui_core::{Attrs, Rect, Size, Style, UnderlineStyle, clip_display_prefix, width};
 use lunatui_ui_tokens::{Role, Tone, surface};
 use lunatui_widgets::{RenderCx, Widget};
 
@@ -96,20 +96,33 @@ fn state_style(
     tone_text: bool,
     on: Role,
 ) -> Style {
+    let page = cx.token(on.token());
     if matches!(state, WidgetState::Disabled) {
-        return base.with_attrs(Attrs::new().set_dim(true));
+        let muted = cx.token(Role::Muted.token());
+        return Style::new()
+            .fg(muted)
+            .bg(page)
+            .with_attrs(Attrs::new().set_dim(true));
     }
     let ring = cx.token(Role::Ring.token());
-    let page = cx.token(on.token());
     let bold = Attrs::new().set_bold(true);
     if pressed {
         let fg = if tone_text { base.bg } else { ring };
-        return Style::new().fg(fg).bg(page).with_attrs(bold);
+        return stand_out(Style::new().fg(fg).bg(page).with_attrs(bold), base);
     }
     if matches!(state, WidgetState::Focused) {
-        return Style::new().fg(page).bg(ring).with_attrs(bold);
+        return stand_out(Style::new().fg(page).bg(ring).with_attrs(bold), base);
     }
     base
+}
+
+fn stand_out(style: Style, base: Style) -> Style {
+    if style == base {
+        let underline = style.attrs.set_underline(UnderlineStyle::Single);
+        style.with_attrs(underline)
+    } else {
+        style
+    }
 }
 
 /// A clickable one-line label in a [`Variant`] and size.
