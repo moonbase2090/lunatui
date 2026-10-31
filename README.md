@@ -272,6 +272,14 @@ A deploy console with a toolbar, a table of deploys and an activity log. Filter 
 
 Screenshot: [docs/media/popover.png](docs/media/popover.png). Recorded with `scripts/record-showcase.sh` (`CASE=popover`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds plus a 2-second hold).
 
+### Code view
+
+A code review screen with a file list, the source with line numbers and gutter marks for changes, an error, a warning and a breakpoint, and a problems pane whose check run keeps moving. The cursor walks down the file and the view scrolls with it. `]e` jumps to the error, `l` scrolls right to the end of its long line, `0` scrolls back, and `]c` jumps to the next change. A small highlighter written against the highlight hook colors keywords, strings, numbers and comments.
+
+<img src="docs/media/code-view.gif" alt="Code view: line numbers, gutter marks and highlighted Rust source in a review screen in the dark theme" width="1028">
+
+Screenshot: [docs/media/code-view.png](docs/media/code-view.png). Recorded with `scripts/record-widget.sh` (`CASE=code-view`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 243 KB).
+
 ### Button
 
 A release console with live checks and a deploy history. Enter presses Run checks and the four checks start. Tab moves focus to Roll back, then Cancel, then back, and skips the disabled Deploy to prod button until the checks pass. A pointer then presses Deploy to prod and the rollout starts. The buttons show the normal, primary and destructive variants and the focused, pressed and disabled states.

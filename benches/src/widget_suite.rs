@@ -17,14 +17,14 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Button, ButtonVariant, Canvas, Chart, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus,
-    DialogKind, DialogState, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer,
-    KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
-    MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart,
-    PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView,
-    ScrollbarVisibility, SearchBox, Slider, SortDirection, Sparkline, SplitAxis, SplitTree, Table,
-    TableState, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
-    WidgetState,
+    Button, ButtonVariant, Canvas, Chart, CodeMark, CodeView, CodeViewState, ComboBox, Dataset,
+    Date, DatePicker, Dialog, DialogFocus, DialogKind, DialogState, Diff, DiffView, Form,
+    FormField, Gauge, GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel,
+    LogView, MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
+    NotificationLog, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup,
+    ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider,
+    SortDirection, Sparkline, SplitAxis, SplitTree, Table, TableState, Tabs, TextWrap, ToastKind,
+    ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -208,6 +208,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: popover_lunatui,
         ratatui: popover_ratatui,
+    },
+    Case {
+        name: "code-view",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no code viewer; its side draws the same numbered, scrolled lines as a Paragraph of styled spans, without gutter marks or a scrollbar",
+        ),
+        lunatui: code_view_lunatui,
+        ratatui: code_view_ratatui,
     },
     Case {
         name: "button",
@@ -1797,6 +1806,71 @@ fn progress_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             .collect();
         RatParagraph::new(Line::from(spans)).render(RatRect::new(area.x, y, area.width, 1), buf);
     }
+}
+
+const CODE_LINES: [&str; 12] = [
+    "use std::collections::HashMap;",
+    "",
+    "fn tally(words: &[&str]) -> HashMap<&str, usize> {",
+    "    let mut counts = HashMap::new();",
+    "    for word in words {",
+    "        *counts.entry(*word).or_insert(0) += 1;",
+    "    }",
+    "    counts",
+    "}",
+    "",
+    "fn main() {",
+    "    println!(\"{:?}\", tally(&[\"a\", \"b\", \"a\"]));",
+];
+const CODE_MARKS: [(usize, CodeMark); 2] = [(3, CodeMark::Changed), (5, CodeMark::Error)];
+
+fn code_view_state(area: Rect, tick: u32) -> CodeViewState {
+    let mut state = CodeViewState::new();
+    CodeView::new(&CODE_LINES).sync(area, &mut state);
+    state.set_cursor(Some(usize::try_from(tick % 12).unwrap_or(0)));
+    state
+}
+
+fn code_view_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let state = code_view_state(area, tick);
+    CodeView::new(&CODE_LINES)
+        .view(&state)
+        .marks(&CODE_MARKS)
+        .render(area, &mut cx);
+}
+
+fn code_view_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let screen = Rect::new(area.x, area.y, area.width, area.height);
+    let state = code_view_state(screen, tick);
+    let lines: Vec<Line> = CODE_LINES
+        .iter()
+        .enumerate()
+        .skip(state.top())
+        .map(|(index, text)| {
+            let current = state.cursor() == Some(index);
+            let base = if current {
+                RatStyle::new()
+                    .fg(color(Token::TextPrimary))
+                    .bg(color(Token::Surface1))
+            } else {
+                RatStyle::new().fg(color(Token::TextPrimary))
+            };
+            Line::from(vec![
+                Span::styled(format!(" {:>2} ", index + 1), base),
+                Span::styled(*text, base),
+            ])
+        })
+        .collect();
+    RatParagraph::new(lines).render(area, buf);
 }
 
 const BUTTON_LABELS: [&str; 3] = ["Run checks", "Deploy", "Roll back"];

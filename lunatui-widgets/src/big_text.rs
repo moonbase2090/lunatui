@@ -20,9 +20,9 @@ const GLYPH_COLUMNS: usize = 16;
 /// Bitmap font used to draw large text.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum BigTextFont {
-    /// The built-in 8×8 Press Start 2P bitmap.
+    /// A modified 8×8 face derived from Press Start 2P by `CodeMan38` under OFL-1.1.
     #[default]
-    PressStart2P,
+    Modified8x8,
     /// A compact 5×7 clock font for the digits `0`–`9` and `:` made from full-cell blocks.
     /// Other non-control characters render as blank glyphs with the standard inter-glyph gap.
     FiveBySeven,
@@ -75,10 +75,10 @@ impl PixelSize {
 
 /// Large text drawn from a bitmap font.
 ///
-/// Glyph bitmaps for digits, capitals, and `:.-%` are derived from Press Start 2P by `CodeMan38`,
-/// SIL Open Font License 1.1 (`assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII is a
-/// hollow box. The opt-in [`BigTextFont::FiveBySeven`] font is a compact clock face for the
-/// digits and `:`.
+/// Glyph bitmaps for digits, capitals, and `:.-%` use a modified 8×8 face with 2px strokes,
+/// derived from Press Start 2P by `CodeMan38` under OFL-1.1. The copyright and license notice is
+/// included in `assets/fonts/PressStart2P-OFL.txt`. Other printable ASCII is a hollow box.
+/// The opt-in [`BigTextFont::FiveBySeven`] font is a compact clock face for the digits and `:`.
 ///
 /// With [`style`](Self::style) set, that style is used as given. Otherwise the text follows theme
 /// tokens: primary text at rest, accent and bold when focused, and dimmed primary text when
@@ -121,7 +121,7 @@ impl<'a> BigText<'a> {
     pub fn new(text: &'a str) -> Self {
         Self {
             text,
-            font: BigTextFont::PressStart2P,
+            font: BigTextFont::Modified8x8,
             row_styles: Vec::new(),
             pixel_size: PixelSize::Full,
             subcell_glyphs: false,
