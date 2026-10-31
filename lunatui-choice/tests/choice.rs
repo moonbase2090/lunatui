@@ -245,3 +245,26 @@ fn a_disabled_group_dims_every_option() -> Result<(), &'static str> {
     assert!(!style_at(&grid, 2, 0)?.attrs.bold());
     Ok(())
 }
+
+#[test]
+fn a_label_wider_than_u16_measures_to_the_available_width() {
+    let long = "x".repeat(70_000);
+    let avail = Size::new(40, 4);
+    assert_eq!(Checkbox::new(&long).measure(avail), Size::new(40, 1));
+    assert_eq!(Switch::new(&long, true).measure(avail), Size::new(40, 1));
+    let wide = Size::new(u16::MAX, 4);
+    assert_eq!(Checkbox::new(&long).measure(wide), Size::new(u16::MAX, 1));
+    assert_eq!(
+        Switch::new(&long, false).measure(wide),
+        Size::new(u16::MAX, 1)
+    );
+}
+
+#[test]
+fn a_very_long_label_still_draws_clipped() {
+    let long = "y".repeat(70_000);
+    let (grid, clusters, _) = draw(10, 1, &Checkbox::new(&long));
+    assert_eq!(grid.row_display(0, &clusters), "[ ] yyyyyy");
+    let (grid, clusters, _) = draw(10, 1, &Switch::new(&long, true));
+    assert_eq!(grid.row_display(0, &clusters), "━━● yyyyyy");
+}

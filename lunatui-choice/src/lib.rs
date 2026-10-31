@@ -98,7 +98,7 @@ fn paint(
     let room = area.width.saturating_sub(glyph_width + 1);
     if room > 0 {
         cx.put_str(
-            area.x + glyph_width + 1,
+            area.x.saturating_add(glyph_width).saturating_add(1),
             area.y,
             clip_display_prefix(label, room),
             styles.1,
@@ -166,7 +166,13 @@ impl Widget for Checkbox<'_> {
     }
 
     fn measure(&self, avail: Size) -> Size {
-        Size::new(BOX_WIDTH + 1 + label_width(self.label), 1).clamp(avail)
+        Size::new(
+            BOX_WIDTH
+                .saturating_add(1)
+                .saturating_add(label_width(self.label)),
+            1,
+        )
+        .clamp(avail)
     }
 }
 
@@ -229,7 +235,13 @@ impl Widget for Switch<'_> {
     }
 
     fn measure(&self, avail: Size) -> Size {
-        Size::new(TRACK_WIDTH + 1 + label_width(self.label), 1).clamp(avail)
+        Size::new(
+            TRACK_WIDTH
+                .saturating_add(1)
+                .saturating_add(label_width(self.label)),
+            1,
+        )
+        .clamp(avail)
     }
 }
 
