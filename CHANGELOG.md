@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `graphite_pixels` example and a `graphite-pixels` test feature in the bench crate (off by default) that prove a Graphite pixel-buffer frame survives the Kitty `PixelLayer` byte for byte and matches the half-block cell fallback.
 - `ColorPicker` widget, behind the `color-picker` feature: a saturation and value square beside a hue bar, drawn with half blocks so each cell holds two color samples, with a swatch, the `#RRGGBB` code and the hue, saturation and value below. `ColorPickerState` keeps the color as hue, saturation and value, so a gray keeps its hue, and `set_rgb` and `rgb` round-trip every byte. `nudge` moves the focused part from the keyboard, `type_digit`, `backspace` and `commit_hex` edit a three or six digit hex, and `pointer` sets the square or the bar from a click or drag. A built picker draws without allocating.
 
 - `lunatui-button` adds `Button` (default, secondary, outline, ghost and destructive variants in three sizes, drawn for rest, focus, pressed and disabled) and `Toggle` (a button that stays pressed), styled from `lunatui-ui-tokens`; the `ui_button` example is a deploy console built from them.
