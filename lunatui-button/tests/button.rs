@@ -129,6 +129,23 @@ fn disabled_button_has_no_hit_area_and_dims() -> Result<(), &'static str> {
 }
 
 #[test]
+fn disabled_button_is_muted_without_its_variant_fill() -> Result<(), &'static str> {
+    let theme = Theme::builtin(ThemeVariant::Dark);
+    for variant in [Variant::Default, Variant::Destructive, Variant::Secondary] {
+        let live = Button::new("Go").variant(variant).on(Role::Card);
+        let off = live.state(WidgetState::Disabled);
+        let (grid, _, _) = draw(8, &off);
+        let cell = grid.get(3, 0).ok_or("missing cell")?;
+        assert_eq!(cell.style().fg, theme.resolve(Role::Muted.token()));
+        assert_eq!(cell.style().bg, theme.resolve(Role::Card.token()));
+        let (grid, _, _) = draw(8, &live);
+        let on = grid.get(3, 0).ok_or("missing cell")?;
+        assert_ne!(cell.style().bg, on.style().bg, "{variant:?} kept its fill");
+    }
+    Ok(())
+}
+
+#[test]
 fn state_turns_a_press_into_a_click() {
     let hit = Button::new("Go").hit_area(Rect::new(0, 0, 8, 1));
     let mut state = ButtonState::new();

@@ -17,6 +17,7 @@ Every PR adds its entry under **Unreleased**.
 ### Changed
 
 - `lunatui-button` keeps focus and press visible when a theme gives the focus ring and the variant fill the same colors: `Button` and `Toggle` add a single underline whenever their focused or pressed style would equal the resting one.
+- `lunatui-button` draws a disabled `Button` in the muted text color on the page background with no fill, so it no longer looks like the variant it belongs to. The `ui_button` example labels its size row Small, Medium and Large, and the README gallery shows the demo.
 
 ## [0.1.18] - 2026-10-31
 

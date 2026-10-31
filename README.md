@@ -297,6 +297,14 @@ A release console with live checks and a deploy history. Enter presses Run check
 
 Screenshot: [docs/media/button.png](docs/media/button.png). Recorded with `scripts/record-widget.sh` (`CASE=button`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 118 KB).
 
+### UI button
+
+The `lunatui-button` crate in a deploy console. The run is scripted, not interactive: focus steps across the five variants (Deploy, Rollback, Promote, Diff, Logs) and then the four option toggles, and the script presses each one as it goes. The size row shows Small, Medium and Large, and the Disabled button is muted text with no fill.
+
+<img src="docs/media/ui-button.gif" alt="lunatui-button: default, destructive, secondary, outline and ghost buttons, three sizes, a disabled button and option toggles in a deploy console in the dark theme" width="1028">
+
+Screenshot: [docs/media/ui-button.png](docs/media/ui-button.png). Recorded from `cargo run --release -p lunatui-button --example ui_button` (120×36, 270 frames at 30 fps, truecolor, dark, about 8 seconds) with the pinned agg.
+
 ### Dialog
 
 A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.
