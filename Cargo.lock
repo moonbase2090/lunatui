@@ -1103,6 +1103,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "lunatui-field"
+version = "0.1.18"
+dependencies = [
+ "lunatui-badge",
+ "lunatui-button",
+ "lunatui-card",
+ "lunatui-core",
+ "lunatui-term",
+ "lunatui-theme",
+ "lunatui-ui-tokens",
+ "lunatui-widgets",
+]
+
+[[package]]
 name = "lunatui-image"
 version = "0.1.18"
 dependencies = [

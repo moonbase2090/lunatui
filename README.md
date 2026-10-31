@@ -305,6 +305,14 @@ The `lunatui-button` crate in a deploy console. The run is scripted, not interac
 
 Screenshot: [docs/media/ui-button.png](docs/media/ui-button.png). Recorded from `cargo run --release -p lunatui-button --example ui_button` (120×36, 270 frames at 30 fps, truecolor, dark, about 8 seconds) with the pinned agg.
 
+### UI field
+
+The `lunatui-field` crate in a profile settings form. The run is scripted, not interactive: the email is typed out, its error message ("Enter a full address") gives way to the help line once the address is complete, the toggle flips, and focus moves between fields. A required field marks its label with `*`, the focused label takes the ring color, and the Workspace ID field is disabled and dim. Each field wraps a real control: a text input or a toggle.
+
+<img src="docs/media/ui-field.gif" alt="lunatui-field: labelled text inputs and a toggle with help text, a required marker, an error message and a disabled field in a profile form in the dark theme" width="1028">
+
+Screenshot: [docs/media/ui-field.png](docs/media/ui-field.png). Recorded from `cargo run --release -p lunatui-field --example ui_field` (120×36, 270 frames at 30 fps, truecolor, dark, about 7 seconds) with the pinned agg.
+
 ### Dialog
 
 A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.
