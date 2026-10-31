@@ -12,7 +12,7 @@ version = 2
 # Widen deliberately as dependencies arrive. MIT, Apache-2.0 and Unicode-3.0
 # arrived with criterion and gungraun (PR 02), Zlib with ratatui (foldhash).
 # BSD-3-Clause covers tiny-skia; BSD-2-Clause covers its arrayref dependency.
-# OFL-1.1 covers the site face.
+# OFL-1.1 covers the bitmap face shipped in lunatui-widgets.
 allow = ["MIT", "MIT", "Apache-2.0", "Unicode-3.0", "Zlib", "OFL-1.1", "BSD-3-Clause", "BSD-2-Clause"]
 confidence-threshold = 0.9
 
