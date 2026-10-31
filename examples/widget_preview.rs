@@ -1863,10 +1863,15 @@ fn deploy_native(
     grid: &mut Grid,
     clusters: &mut ClusterTable,
     theme: &Theme,
-    _area: Rect,
+    area: Rect,
     tick: u32,
 ) {
-    deploy_board::draw(grid, clusters, theme, u64::from(tick).saturating_mul(100));
+    deploy_board::draw(
+        area,
+        u64::from(tick).saturating_mul(100),
+        false,
+        &mut RenderCx::new(grid, clusters, theme),
+    );
 }
 
 fn deploy_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
