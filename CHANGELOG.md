@@ -22,6 +22,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
+- BigText digits, capitals, and `:.-%` use a modified 8×8 face with uniform 2px strokes, derived from Press Start 2P by `CodeMan38` under OFL-1.1. Other printable ASCII stays a hollow box. The default font selector is renamed from `BigTextFont::PressStart2P` to `BigTextFont::Modified8x8`.
+
 - `Table` no longer allocates while drawing: rows are cleared without building strings, the solved columns are kept between renders of the same area, and cells are read through the new `RowSource::cell`, which `VecSource` and `SliceSource` answer with borrowed text. A source that does not answer it is read through `RowSource::row` as before.
 
 ## [0.1.17] - 2026-10-30
