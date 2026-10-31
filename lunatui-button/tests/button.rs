@@ -64,18 +64,54 @@ fn outline_draws_brackets() {
 
 #[test]
 fn focus_and_press_change_the_fill() -> Result<(), &'static str> {
-    let fill = |button: Button<'_>| -> Result<_, &'static str> {
+    let style = |button: Button<'_>| -> Result<_, &'static str> {
         let (grid, _, theme) = draw(8, &button);
         let cell = grid.get(3, 0).ok_or("missing cell")?;
-        Ok((cell.style().bg, theme))
+        Ok((cell.style(), theme))
     };
-    let (focused, theme) = fill(Button::new("Go").state(WidgetState::Focused))?;
-    assert_eq!(focused, theme.resolve(Role::Ring.token()));
-    let (pressed, theme) = fill(Button::new("Go").pressed(true))?;
-    assert_eq!(pressed, theme.resolve(Role::Background.token()));
-    let (resting, _) = fill(Button::new("Go"))?;
+    let (focused, theme) = style(Button::new("Go").state(WidgetState::Focused))?;
+    assert_eq!(focused.bg, theme.resolve(Role::Ring.token()));
+    assert!(focused.attrs.bold());
+    let (pressed, theme) = style(Button::new("Go").pressed(true))?;
+    assert_eq!(pressed.bg, theme.resolve(Role::Background.token()));
+    assert!(pressed.attrs.bold());
+    let (resting, _) = style(Button::new("Go"))?;
     assert_ne!(resting, focused);
     assert_ne!(resting, pressed);
+    assert_ne!(focused, pressed);
+    Ok(())
+}
+
+#[test]
+fn focus_stays_visible_for_every_variant_and_toggle() -> Result<(), &'static str> {
+    let cell = |widget: &dyn Widget| -> Result<_, &'static str> {
+        let (grid, _, _) = draw(10, widget);
+        grid.get(4, 0)
+            .map(lunatui_core::Cell::style)
+            .ok_or("missing cell")
+    };
+    for variant in [
+        Variant::Default,
+        Variant::Secondary,
+        Variant::Outline,
+        Variant::Ghost,
+        Variant::Destructive,
+    ] {
+        let resting = cell(&Button::new("Go").variant(variant))?;
+        let focused = cell(
+            &Button::new("Go")
+                .variant(variant)
+                .state(WidgetState::Focused),
+        )?;
+        let pressed = cell(&Button::new("Go").variant(variant).pressed(true))?;
+        assert_ne!(resting, focused, "{variant:?} focus is invisible");
+        assert_ne!(resting, pressed, "{variant:?} press is invisible");
+    }
+    for on in [false, true] {
+        let resting = cell(&Toggle::new("Go", on))?;
+        let focused = cell(&Toggle::new("Go", on).state(WidgetState::Focused))?;
+        assert_ne!(resting, focused, "toggle on={on} focus is invisible");
+    }
     Ok(())
 }
 

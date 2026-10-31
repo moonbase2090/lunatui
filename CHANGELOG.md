@@ -10,10 +10,13 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `ColorPicker` widget, behind the `color-picker` feature: a saturation and value square beside a hue bar, drawn with half blocks so each cell holds two color samples, with a swatch, the `#RRGGBB` code and the hue, saturation and value below. `ColorPickerState` keeps the color as hue, saturation and value, so a gray keeps its hue, and `set_rgb` and `rgb` round-trip every byte. `nudge` moves the focused part from the keyboard, `type_digit`, `backspace` and `commit_hex` edit a three or six digit hex, and `pointer` sets the square or the bar from a click or drag. A built picker draws without allocating.
+
 - `lunatui-button` adds `Button` (default, secondary, outline, ghost and destructive variants in three sizes, drawn for rest, focus, pressed and disabled) and `Toggle` (a button that stays pressed), styled from `lunatui-ui-tokens`; the `ui_button` example is a deploy console built from them.
 
 ### Changed
 
+- `lunatui-button` keeps focus and press visible when a theme gives the focus ring and the variant fill the same colors: `Button` and `Toggle` add a single underline whenever their focused or pressed style would equal the resting one.
 - `lunatui-button` draws a disabled `Button` in the muted text color on the page background with no fill, so it no longer looks like the variant it belongs to. The `ui_button` example labels its size row Small, Medium and Large, and the README gallery shows the demo.
 
 ## [0.1.18] - 2026-10-31

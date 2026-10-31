@@ -25,6 +25,8 @@ pub mod canvas;
 mod chart;
 #[cfg(feature = "code-view")]
 mod code_view;
+#[cfg(feature = "color-picker")]
+mod color_picker;
 #[cfg(feature = "combo-box")]
 mod combo_box;
 #[cfg(feature = "date-picker")]
@@ -127,6 +129,8 @@ pub use canvas::Canvas;
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
 #[cfg(feature = "code-view")]
 pub use code_view::{CodeHighlight, CodeMark, CodeView, CodeViewState};
+#[cfg(feature = "color-picker")]
+pub use color_picker::{ColorPicker, ColorPickerFocus, ColorPickerState};
 #[cfg(feature = "combo-box")]
 pub use combo_box::ComboBox;
 #[cfg(feature = "date-picker")]
