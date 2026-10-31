@@ -82,7 +82,7 @@ pub fn render(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area:
         "REGION CAPACITY     8 services / 12 zones     refresh 100 ms",
         ground,
     );
-    if area.width < 100 || area.height < 34 {
+    if area.width < 100 || area.height < 36 {
         matrix(
             &mut cx,
             Rect::new(
