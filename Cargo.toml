@@ -15,6 +15,7 @@ members = [
     "lunatui-prismattyc",
     "benches",
     "xtask",
+    "spike-web",
 ]
 
 [workspace.package]

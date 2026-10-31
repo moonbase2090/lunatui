@@ -1,0 +1,16 @@
+[package]
+name = "lunatui-web-spike"
+version = "0.0.0"
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lunatui-core = { path = "../lunatui-core" }
+lunatui-runtime = { path = "../lunatui-runtime", default-features = false, features = ["app"] }
+lunatui-term = { path = "../lunatui-term" }
+lunatui-theme = { path = "../lunatui-theme" }
+lunatui-widgets = { path = "../lunatui-widgets" }
+wasm-bindgen = "0.2.106"
