@@ -22,8 +22,9 @@ use lunatui_widgets::{
     KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
     MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart,
     PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView,
-    ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap,
-    ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
+    ScrollbarVisibility, SearchBox, Slider, SortDirection, Sparkline, SplitAxis, SplitTree, Table,
+    TableState, Tabs, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget,
+    WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -214,6 +215,15 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: button_lunatui,
         ratatui: button_ratatui,
+    },
+    Case {
+        name: "table-sorted",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui's Table has no sort state or range selection; its side draws the rows in the same sorted order with the marker in the header title and styles the cursor and range rows directly",
+        ),
+        lunatui: table_sorted_lunatui,
+        ratatui: table_sorted_ratatui,
     },
     Case {
         name: "dialog",
@@ -605,6 +615,89 @@ fn table_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             RatConstraint::Fill(1),
         ],
     )
+    .column_spacing(0)
+    .style(rat_text())
+    .render(area, buf);
+}
+
+const SORTED_HEADER: [&str; 4] = ["Check", "State", "Time ▼", "Path"];
+
+fn sorted_state() -> &'static TableState {
+    static STATE: OnceLock<TableState> = OnceLock::new();
+    STATE.get_or_init(|| {
+        let mut state = TableState::new();
+        state.sort(
+            &SliceSource::new(row_slices()),
+            2,
+            SortDirection::Descending,
+        );
+        state
+    })
+}
+
+fn sorted_columns() -> Vec<Constraint> {
+    vec![
+        Constraint::Length(12),
+        Constraint::Length(6),
+        Constraint::Length(9),
+        Constraint::Fill(1),
+    ]
+}
+
+fn table_sorted_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    cx.set_style(area, text_style());
+    let source = SliceSource::new(row_slices());
+    let top = offset(tick);
+    Table::new(sorted_state().view(&source), sorted_columns())
+        .style(text_style())
+        .header([
+            ("Check", text_style()),
+            ("State", text_style()),
+            ("Time", text_style()),
+            ("Path", text_style()),
+        ])
+        .sort_indicator(Some((2, SortDirection::Descending)))
+        .offset(top)
+        .selected(Some(top + 3))
+        .selection(Some(top + 1..=top + 3))
+        .highlight_style(text_style().bg(rgb(ACCENT)))
+        .selection_style(dim_style())
+        .render(area, &mut cx);
+}
+
+fn table_sorted_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let state = sorted_state();
+    let top = offset(tick);
+    let rows = (top..table_rows().len())
+        .take(usize::from(area.height.saturating_sub(1)))
+        .map(|view| {
+            let row = &table_rows()[state.source_row(view)];
+            let style = if view == top + 3 {
+                rat_text().bg(rat_rgb(ACCENT))
+            } else if (top + 1..=top + 2).contains(&view) {
+                rat_base().fg(rat_rgb(DIM))
+            } else {
+                rat_text()
+            };
+            Row::new(row.iter().map(String::as_str)).style(style)
+        });
+    RatTable::new(
+        rows,
+        [
+            RatConstraint::Length(12),
+            RatConstraint::Length(6),
+            RatConstraint::Length(9),
+            RatConstraint::Fill(1),
+        ],
+    )
+    .header(Row::new(SORTED_HEADER))
     .column_spacing(0)
     .style(rat_text())
     .render(area, buf);

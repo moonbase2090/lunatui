@@ -251,6 +251,10 @@ path = "tests/button.rs"
 required-features = ["button"]
 
 [[test]]
+name = "table_upgrades"
+path = "tests/table_upgrades.rs"
+
+[[test]]
 name = "slider"
 path = "tests/slider.rs"
 required-features = ["slider"]

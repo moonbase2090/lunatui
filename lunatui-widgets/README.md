@@ -131,4 +131,6 @@ assert_eq!(
 
 Render with `Menu::new(&state)` and provide a `WidgetState` for token-based styling. The feature enables Graphite token support; applications choose their own key bindings and event loop.
 
+`Table` sorts, selects ranges and resizes columns through `TableState`. `sort` orders the rows by one column's text, comparing numbers by value and other text without regard to case, and keeps the cursor on the same source row; draw with `Table::new(state.view(&source), columns).state(&state)`, which shows the rows in that order and applies the cursor, the selected range (`selection_style`), a `▲` or `▼` marker after the sorted column's title, and column widths set with `set_column_width` or a divider drag (`start_resize`, `drag_resize`, `end_resize` with `Table::divider_at`). `Table::column_at` finds a clicked column, `Table::sync` or `data_rows` with `TableState::fit` keeps the cursor on screen, and a closure `Fn(row, column) -> Style` styles single cells. Over a source that answers `RowSource::cell`, as `VecSource` and `SliceSource` do, a built table draws without allocating.
+
 Snapshot tests use `lunatui_test::styled_snapshot`. See [Getting started](../docs/getting-started.md).

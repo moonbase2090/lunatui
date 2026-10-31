@@ -52,3 +52,7 @@ helper changes # renders release notes through Block and Paragraph
 helper checks # renders check names through Paragraph and their progress through LineGauge
 helper actions # renders the action bar through Block and Button
 helper history # renders release history lines through Block and Paragraph
+scope examples/table_showcase.rs # the service inventory composes Block, Table, Paragraph, LineGauge and StatusBar widgets
+helper details # renders the focused service through Block, Paragraph and LineGauge
+helper status # renders key and action notes through StatusBar
+helper pointer # renders the pointer glyph through Paragraph at a Table column position

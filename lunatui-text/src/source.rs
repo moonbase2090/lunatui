@@ -32,6 +32,28 @@ pub trait RowSource {
 
     /// Fills `out` with column values for row `index`.
     fn row(&self, index: usize, out: &mut RowBuilder);
+
+    /// The text of cell `column` in row `index`, borrowed, for a source that keeps its cells as
+    /// text: an empty string for a column the row does not have, and `None` for a row it does
+    /// not have. Readers try it before [`row`](Self::row), so a source that answers draws without
+    /// copying its cells. Answers `None` by default.
+    fn cell(&self, _index: usize, _column: usize) -> Option<&str> {
+        None
+    }
+}
+
+impl<S: RowSource + ?Sized> RowSource for &S {
+    fn len(&self) -> usize {
+        (**self).len()
+    }
+
+    fn row(&self, index: usize, out: &mut RowBuilder) {
+        (**self).row(index, out);
+    }
+
+    fn cell(&self, index: usize, column: usize) -> Option<&str> {
+        (**self).cell(index, column)
+    }
 }
 
 /// In-memory [`RowSource`] from owned rows.
@@ -64,6 +86,12 @@ impl RowSource for VecSource {
         self.rows.len()
     }
 
+    fn cell(&self, index: usize, column: usize) -> Option<&str> {
+        self.rows
+            .get(index)
+            .map(|row| row.get(column).map_or("", String::as_str))
+    }
+
     fn row(&self, index: usize, out: &mut RowBuilder) {
         out.clear();
         if let Some(row) = self.rows.get(index) {
@@ -88,6 +116,12 @@ impl<'a> SliceSource<'a> {
 impl RowSource for SliceSource<'_> {
     fn len(&self) -> usize {
         self.rows.len()
+    }
+
+    fn cell(&self, index: usize, column: usize) -> Option<&str> {
+        self.rows
+            .get(index)
+            .map(|row| row.get(column).map_or("", String::as_str))
     }
 
     fn row(&self, index: usize, out: &mut RowBuilder) {
