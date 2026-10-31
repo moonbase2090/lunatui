@@ -82,23 +82,71 @@ fn source(bytes: &[u8]) -> Result<ImageSource, String> {
     .map_err(|error| error.to_string())
 }
 
-fn base64_decode(text: &str) -> Vec<u8> {
+fn base64_decode(text: &str) -> Result<Vec<u8>, String> {
+    let body = text
+        .strip_suffix("==")
+        .or_else(|| text.strip_suffix('='))
+        .unwrap_or(text);
+    if body.len() % 4 == 1 {
+        return Err(format!("{} symbols cannot be base64", body.len()));
+    }
     let mut out = Vec::new();
     let mut bits = 0_u32;
     let mut count = 0;
-    for byte in text.bytes().filter(|byte| *byte != b'=') {
+    for byte in body.bytes() {
         let value = ALPHABET
             .iter()
             .position(|candidate| *candidate == byte)
-            .unwrap_or(0);
-        bits = bits << 6 | u32::try_from(value).unwrap_or(0);
+            .ok_or_else(|| format!("byte {byte} is not base64"))?;
+        bits = bits << 6 | u32::try_from(value).map_err(|error| error.to_string())?;
         count += 6;
         if count >= 8 {
             count -= 8;
-            out.push(u8::try_from((bits >> count) & 0xff).unwrap_or(0));
+            out.push(u8::try_from((bits >> count) & 0xff).map_err(|error| error.to_string())?);
         }
     }
-    out
+    Ok(out)
+}
+
+fn emitted_stream(pixels: &[u8]) -> Result<String, String> {
+    let mut grid = Grid::new(100, 32);
+    let mut clusters = ClusterTable::new();
+    let theme = Theme::builtin(Variant::Dark);
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    layer.begin_frame();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(&mut layer);
+    Image::new(source(pixels)?)
+        .id(ImageId::new(81).ok_or("zero image id")?)
+        .fit(ImageFit::Contain)
+        .render(CellRect::new(4, 4, 92, 25), &mut cx);
+    String::from_utf8(layer.finish_frame().to_vec()).map_err(|error| error.to_string())
+}
+
+fn transmitted_pixels(stream: &str) -> Result<Vec<u8>, String> {
+    let mut payload = Vec::new();
+    let mut transmitted = 0;
+    for command in stream.split("\x1b_G").skip(1) {
+        let body = command
+            .split("\x1b\\")
+            .next()
+            .ok_or("unterminated command")?;
+        let (keys, data) = body.split_once(';').unwrap_or((body, ""));
+        if keys.contains("a=p") {
+            continue;
+        }
+        if keys.contains("a=t") {
+            transmitted += 1;
+            if !keys.contains("f=32") || !keys.contains("s=320,v=96") {
+                return Err(format!("not a 320x96 RGBA transmit: {keys}"));
+            }
+        }
+        payload.extend(base64_decode(data)?);
+    }
+    if transmitted == 1 {
+        Ok(payload)
+    } else {
+        Err(format!("{transmitted} transmit commands"))
+    }
 }
 
 #[test]
@@ -121,41 +169,51 @@ fn the_committed_fixture_is_the_frame_graphite_draws() -> Result<(), String> {
 #[test]
 fn the_kitty_stream_carries_every_graphite_pixel_unchanged() -> Result<(), String> {
     let buffer = frame()?;
-    let mut grid = Grid::new(100, 32);
-    let mut clusters = ClusterTable::new();
-    let theme = Theme::builtin(Variant::Dark);
-    let mut layer = PixelLayer::new(PixelMode::Kitty);
-    layer.begin_frame();
-    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(&mut layer);
-    Image::new(source(buffer.as_rgba())?)
-        .id(ImageId::new(81).ok_or("zero image id")?)
-        .fit(ImageFit::Contain)
-        .render(CellRect::new(4, 4, 92, 25), &mut cx);
-    let stream = String::from_utf8(layer.finish_frame().to_vec()).map_err(|e| e.to_string())?;
-    let mut payload = Vec::new();
-    let mut transmitted = 0;
-    for command in stream.split("\x1b_G").skip(1) {
-        let body = command
-            .split("\x1b\\")
-            .next()
-            .ok_or("unterminated command")?;
-        let (keys, data) = body.split_once(';').unwrap_or((body, ""));
-        if keys.contains("a=p") {
-            continue;
-        }
-        if keys.contains("a=t") {
-            transmitted += 1;
-            assert!(keys.contains("f=32"), "not 32-bit RGBA: {keys}");
-            assert!(keys.contains("s=320,v=96"), "wrong size: {keys}");
-        }
-        payload.extend(base64_decode(data));
-    }
-    assert_eq!(transmitted, 1);
+    let stream = emitted_stream(buffer.as_rgba())?;
+    let payload = transmitted_pixels(&stream)?;
     assert_eq!(payload.len(), WIDTH * HEIGHT * 4);
     assert!(
         payload == buffer.as_rgba(),
         "stream pixels differ from the Graphite frame"
     );
+    Ok(())
+}
+
+#[test]
+fn the_decoder_rejects_a_corrupted_stream_and_a_changed_pixel_is_seen() -> Result<(), String> {
+    let buffer = frame()?;
+    let stream = emitted_stream(buffer.as_rgba())?;
+    let data_start = stream.find(';').ok_or("no payload")? + 1;
+    let letter = stream[data_start..]
+        .find('A')
+        .map(|at| at + data_start)
+        .ok_or("no A in the payload")?;
+    let mut invalid = stream.clone();
+    invalid.replace_range(letter..=letter, "!");
+    assert!(
+        transmitted_pixels(&invalid).is_err(),
+        "an invalid symbol was accepted"
+    );
+    let mut padded = stream.clone();
+    padded.replace_range(letter..=letter, "=");
+    assert!(
+        transmitted_pixels(&padded).is_err(),
+        "padding inside the payload was accepted"
+    );
+    let mut changed = buffer.as_rgba().to_vec();
+    changed[WIDTH * 4 * 40 + 4 * 100] ^= 0x01;
+    let other = transmitted_pixels(&emitted_stream(&changed)?)?;
+    assert!(other != buffer.as_rgba(), "a changed pixel went unseen");
+    assert_eq!(
+        other
+            .iter()
+            .zip(buffer.as_rgba())
+            .filter(|(a, b)| a != b)
+            .count(),
+        1
+    );
+    assert_eq!(base64_decode("QQ==")?, b"A");
+    assert!(base64_decode("Q").is_err());
     Ok(())
 }
 
