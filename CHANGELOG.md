@@ -12,6 +12,8 @@ Every PR adds its entry under **Unreleased**.
 
 - Keyboard mnemonics for `Menu`: `MenuItem::mnemonic` sets an item's key and `Menu` underlines its letter in the bar and the dropdowns (`Menu::mnemonics(false)` hides them). `MenuState::press_mnemonic` chooses the matching item in the open dropdown or the bar, without regard to case, and moves between items that share a key. `Menu::bar_item_at` and `MenuState::open` handle clicks on the bar. Items without a mnemonic draw as before.
 
+- `CodeView` widget, behind the `code-view` feature: read-only lines with a right-aligned line-number gutter, `CodeMark` gutter signs (added, changed, removed, error, warning, info, breakpoint), a cursor line, tab stops, horizontal and vertical scrolling, and a vertical scrollbar when the lines overflow. A `CodeHighlight` hook styles byte ranges of each visible line, and closures implement it. `CodeViewState` keeps the cursor on screen through `down`, `up`, `page_down`, `page_up`, and `set_cursor`, and `line_at` finds the line under a click. The lines are borrowed, so a built view draws without allocating.
+
 - `lunatui-ui-tokens` is the shared base for the `lunatui-<name>` UI component crates: `Role` and `Tone` map semantic names (card, primary, border, ring, danger) onto core theme tokens, with a `Spacing` scale and the default border style.
 - `Table` sorting, range selection, column resizing, and closure cell styles. `TableState` sorts by a column (numbers by value, other text without regard to case, equal rows in source order) and keeps the cursor on its source row; `TableState::view` shows a source in that order, and `Table::state` draws the cursor, the selected range in `selection_style`, a `▲` or `▼` marker after the sorted column's title, and column widths set on the state. `start_resize`, `drag_resize`, and `Table::divider_at` resize a column from its header divider, and `Table::column_at` finds the column under a click. A closure `Fn(row, column) -> Style` works as a `CellStyle`.
 
@@ -21,6 +23,8 @@ Every PR adds its entry under **Unreleased**.
 - `NotificationCenter` widget and `NotificationLog`, behind the `notification-center` feature: a history of past notifications, newest first, under a header that counts the unread ones. Each row has a read or unread mark in the color of its `ToastKind`, a time label, the message, and a dismiss cross. The log is a ring buffer with `push`, `dismiss`, `clear`, `mark_read`, `mark_all_read`, and `unread`; the widget scrolls to keep the selected row in view, and `row_at` and `dismiss_at` give hit testing.
 
 ### Changed
+
+- BigText digits, capitals, and `:.-%` use a modified 8×8 face with uniform 2px strokes, derived from Press Start 2P by `CodeMan38` under OFL-1.1. Other printable ASCII stays a hollow box. The default font selector is renamed from `BigTextFont::PressStart2P` to `BigTextFont::Modified8x8`.
 
 - `Table` no longer allocates while drawing: rows are cleared without building strings, the solved columns are kept between renders of the same area, and cells are read through the new `RowSource::cell`, which `VecSource` and `SliceSource` answer with borrowed text. A source that does not answer it is read through `RowSource::row` as before.
 
