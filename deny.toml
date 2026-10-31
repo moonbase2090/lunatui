@@ -102,6 +102,7 @@ allow = [
     "foldhash",
     "getrandom",
     "gif",
+    "graphite-core",
     "gungraun",
     "gungraun-common",
     "gungraun-macros",
@@ -235,3 +236,4 @@ allow = [
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
+allow-git = ["https://github.com/moonbase2090/graphite"]
