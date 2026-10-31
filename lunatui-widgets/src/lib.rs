@@ -38,6 +38,8 @@ mod form;
 mod gauge;
 #[cfg(feature = "graphite-render")]
 pub mod graphite;
+#[cfg(feature = "heatmap")]
+mod heatmap;
 #[cfg(feature = "hex-viewer")]
 mod hex_viewer;
 #[cfg(feature = "image")]
@@ -136,6 +138,8 @@ pub use diff_view::{Diff, DiffHunk, DiffKind, DiffLayout, DiffLine, DiffView};
 #[cfg(feature = "form")]
 pub use form::{FieldArea, Form, FormField};
 pub use gauge::Gauge;
+#[cfg(feature = "heatmap")]
+pub use heatmap::{Heatmap, HeatmapCell, HeatmapRow};
 #[cfg(feature = "hex-viewer")]
 pub use hex_viewer::{HexViewer, HexViewerState};
 #[cfg(feature = "image")]

@@ -78,3 +78,9 @@ scope examples/table_showcase.rs # the service inventory composes Block, Table, 
 helper details # renders the focused service through Block, Paragraph and LineGauge
 helper status # renders key and action notes through StatusBar
 helper pointer # renders the pointer glyph through Paragraph at a Table column position
+
+scope examples/heatmap_showcase.rs # capacity screen uses public Heatmap, BigText, Gauge, LogView, Block and Paragraph widgets
+helper label # renders a Paragraph without writing cells
+helper matrix # constructs borrowed Heatmap rows and renders them
+helper legend # renders the five Heatmap scale bands
+helper inspector # composes selected-cell BigText, Gauge and labels
