@@ -48,12 +48,19 @@ impl ButtonSize {
     }
 }
 
-fn resting(cx: &RenderCx<'_>, variant: Variant) -> Style {
+fn resting(cx: &RenderCx<'_>, variant: Variant, on: Role) -> Style {
     match variant {
         Variant::Default => Tone::Primary.style(cx),
-        Variant::Secondary => surface(cx, Role::Card),
-        Variant::Outline | Variant::Ghost => surface(cx, Role::Background),
+        Variant::Secondary => surface(cx, inset(on)),
+        Variant::Outline | Variant::Ghost => surface(cx, on),
         Variant::Destructive => Tone::Danger.style(cx),
+    }
+}
+
+const fn inset(on: Role) -> Role {
+    match on {
+        Role::Card | Role::Popover => Role::Background,
+        _ => Role::Card,
     }
 }
 
@@ -87,12 +94,13 @@ fn state_style(
     state: WidgetState,
     pressed: bool,
     tone_text: bool,
+    on: Role,
 ) -> Style {
     if matches!(state, WidgetState::Disabled) {
         return base.with_attrs(Attrs::new().set_dim(true));
     }
     let ring = cx.token(Role::Ring.token());
-    let page = cx.token(Role::Background.token());
+    let page = cx.token(on.token());
     let bold = Attrs::new().set_bold(true);
     if pressed {
         let fg = if tone_text { base.bg } else { ring };
@@ -117,6 +125,7 @@ pub struct Button<'a> {
     size: ButtonSize,
     state: WidgetState,
     pressed: bool,
+    on: Role,
 }
 
 impl<'a> Button<'a> {
@@ -129,6 +138,7 @@ impl<'a> Button<'a> {
             size: ButtonSize::Medium,
             state: WidgetState::Normal,
             pressed: false,
+            on: Role::Background,
         }
     }
 
@@ -160,6 +170,14 @@ impl<'a> Button<'a> {
         self
     }
 
+    /// Names the surface the button sits on, [`Role::Background`] by default. Outline and ghost
+    /// buttons use it as their fill, and a secondary button turns darker than a card.
+    #[must_use]
+    pub const fn on(mut self, role: Role) -> Self {
+        self.on = role;
+        self
+    }
+
     /// The cells a click should reach in `area`: all of it, or none when disabled.
     #[must_use]
     pub const fn hit_area(&self, area: Rect) -> Rect {
@@ -172,11 +190,11 @@ impl<'a> Button<'a> {
 
 impl Widget for Button<'_> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let base = resting(cx, self.variant);
+        let base = resting(cx, self.variant, self.on);
         let ghost = matches!(self.variant, Variant::Ghost | Variant::Outline);
-        let style = state_style(cx, base, self.state, self.pressed, !ghost);
+        let style = state_style(cx, base, self.state, self.pressed, !ghost, self.on);
         let edge = if matches!(self.variant, Variant::Outline) && style == base {
-            surface(cx, Role::Background).fg(cx.token(Role::Border.token()))
+            surface(cx, self.on).fg(cx.token(Role::Border.token()))
         } else {
             style
         };
@@ -198,6 +216,7 @@ pub struct Toggle<'a> {
     on: bool,
     size: ButtonSize,
     state: WidgetState,
+    on_surface: Role,
 }
 
 impl<'a> Toggle<'a> {
@@ -209,6 +228,7 @@ impl<'a> Toggle<'a> {
             on,
             size: ButtonSize::Medium,
             state: WidgetState::Normal,
+            on_surface: Role::Background,
         }
     }
 
@@ -223,6 +243,13 @@ impl<'a> Toggle<'a> {
     #[must_use]
     pub const fn state(mut self, state: WidgetState) -> Self {
         self.state = state;
+        self
+    }
+
+    /// Names the surface the toggle sits on, [`Role::Background`] by default.
+    #[must_use]
+    pub const fn on(mut self, role: Role) -> Self {
+        self.on_surface = role;
         self
     }
 
@@ -249,8 +276,8 @@ impl Widget for Toggle<'_> {
         } else {
             Variant::Secondary
         };
-        let base = resting(cx, variant);
-        let style = state_style(cx, base, self.state, false, true);
+        let base = resting(cx, variant, self.on_surface);
+        let style = state_style(cx, base, self.state, false, true, self.on_surface);
         paint(area, self.label, false, style, style, cx);
     }
 

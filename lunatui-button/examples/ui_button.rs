@@ -58,19 +58,25 @@ impl Widget for Actions {
             let button = Button::new(label)
                 .variant(*variant)
                 .state(state)
-                .pressed(focus == index && down);
+                .pressed(focus == index && down)
+                .on(Role::Card);
             let w = button.measure(Size::new(30, 1)).width;
             button.render(Rect::new(x, area.y, w, 1), cx);
             x += w + 2;
         }
         let mut x = area.x;
         for size in [ButtonSize::Small, ButtonSize::Medium, ButtonSize::Large] {
-            let button = Button::new("Size").size(size).variant(Variant::Secondary);
+            let button = Button::new("Size")
+                .size(size)
+                .variant(Variant::Secondary)
+                .on(Role::Card);
             let w = button.measure(Size::new(30, 1)).width;
             button.render(Rect::new(x, area.y + 2, w, 1), cx);
             x += w + 2;
         }
-        let disabled = Button::new("Disabled").state(WidgetState::Disabled);
+        let disabled = Button::new("Disabled")
+            .state(WidgetState::Disabled)
+            .on(Role::Card);
         let w = disabled.measure(Size::new(30, 1)).width;
         disabled.render(Rect::new(x, area.y + 2, w, 1), cx);
     }
@@ -97,7 +103,7 @@ impl Widget for Flags {
             } else {
                 WidgetState::Normal
             };
-            let toggle = Toggle::new(label, on).state(state);
+            let toggle = Toggle::new(label, on).state(state).on(Role::Card);
             let w = toggle.measure(Size::new(30, 1)).width;
             toggle.render(Rect::new(x, area.y, w, 1), cx);
             x += w + 2;

@@ -117,3 +117,17 @@ fn toggle_fills_only_when_on() -> Result<(), &'static str> {
     assert_eq!(Toggle::new("dry", true).measure(Size::new(30, 1)).width, 7);
     Ok(())
 }
+
+#[test]
+fn on_card_secondary_insets_and_ghost_blends() -> Result<(), &'static str> {
+    let fill = |button: Button<'_>| -> Result<_, &'static str> {
+        let (grid, _, theme) = draw(8, &button.on(Role::Card));
+        let cell = grid.get(3, 0).ok_or("missing cell")?;
+        Ok((cell.style().bg, theme))
+    };
+    let (secondary, theme) = fill(Button::new("Go").variant(Variant::Secondary))?;
+    assert_eq!(secondary, theme.resolve(Role::Background.token()));
+    let (ghost, theme) = fill(Button::new("Go").variant(Variant::Ghost))?;
+    assert_eq!(ghost, theme.resolve(Role::Card.token()));
+    Ok(())
+}
