@@ -28,6 +28,8 @@ No rules yet.
 | `lunatui-widgets/src/canvas/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, bounded canvas coordinates and extents to tiny-skia's f32 coordinates | Pixel Canvas |
 | `benches/src/widget_suite.rs`, `picker_cell` | `clippy::cast_possible_truncation` | Turn a rounded unit fraction of a few cells into a cell index for the ratatui twin | ColorPicker |
 | `benches/src/widget_suite.rs`, `picker_cell` | `clippy::cast_sign_loss` | The fraction is clamped at zero first, so the cast cannot wrap | ColorPicker |
+| `lunatui-widgets/src/color_picker.rs`, `round_index`, `round_degrees`, `percent`, `hsv_to_rgb` | `clippy::cast_possible_truncation` | Turn a rounded and clamped unit fraction into a cell index, degree, percent or color byte | ColorPicker |
+| `lunatui-widgets/src/color_picker.rs`, `round_index`, `round_degrees`, `percent`, `hsv_to_rgb` | `clippy::cast_sign_loss` | The value is clamped at zero before the cast, so it cannot wrap | ColorPicker |
 
 ## Checks
 

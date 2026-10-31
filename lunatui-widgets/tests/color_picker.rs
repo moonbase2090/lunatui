@@ -235,12 +235,8 @@ fn the_square_runs_white_to_the_hue_across_and_down_to_black() {
     let (grid, _) = draw(&picker, AREA, 20, 6);
     let square = ColorPicker::square_area(AREA);
     let corner = |x: u16, y: u16| style_at(&grid, square.x + x, square.y + y);
-    // Top-left cell: the top sample is white.
     assert_eq!(corner(0, 0).fg, Color::Rgb(255, 255, 255));
-    // Second to last column, top: nearly full saturation red at full value. The last column
-    // holds the knob for this color.
     assert_eq!(corner(14, 0).fg, Color::Rgb(255, 17, 17));
-    // Bottom row, bottom sample (bg): black at every saturation.
     for x in 0..square.width {
         assert_eq!(corner(x, 4).bg, Color::Rgb(0, 0, 0), "column {x}");
     }
@@ -266,13 +262,11 @@ fn the_knob_marks_the_color_and_the_pointer_marks_the_hue() {
     let state = ColorPickerState::from_rgb(0, 0, 255);
     let picker = ColorPicker::new().view(&state);
     let lines = rows(&picker, AREA, 20, 6);
-    // Saturation and value are both one: top-right corner of the square.
     assert_eq!(lines[0].chars().nth(15), Some('●'));
     assert_eq!(
         lines.iter().map(|l| l.matches('●').count()).sum::<usize>(),
         1
     );
-    // Hue 240 of 359 is about two thirds down the five-row bar.
     let pointer_row = lines.iter().position(|l| l.chars().nth(19) == Some('◂'));
     assert_eq!(pointer_row, Some(3));
 }
@@ -330,7 +324,6 @@ fn only_the_focused_part_is_in_the_focus_ring_color() {
     let mut state = ColorPickerState::from_rgb(18, 171, 205);
     let picker = ColorPicker::new().state(WidgetState::Focused);
     let area = Rect::new(0, 0, 26, 6);
-    // Columns: swatch 0-3, hex 5-11, H at 13, S at 18, V at 22.
     for (focus, hex, hue, sat) in [
         (ColorPickerFocus::Square, text, text, ring),
         (ColorPickerFocus::Hue, text, ring, text),
@@ -490,7 +483,6 @@ fn a_hue_just_below_zero_wraps_to_zero_not_360() {
 
 #[test]
 fn the_knob_ink_counts_the_blue_channel() {
-    // About (136, 136, 255): the red and green alone read dark, the blue makes it light.
     let state = ColorPickerState::from_rgb(138, 138, 255);
     let (grid, _) = draw(&ColorPicker::new().view(&state), AREA, 20, 6);
     let square = ColorPicker::square_area(AREA);

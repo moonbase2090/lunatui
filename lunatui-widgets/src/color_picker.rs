@@ -11,7 +11,6 @@ const UPPER_HALF: &str = "▀";
 const KNOB: &str = "●";
 const POINTER: &str = "◂";
 const SWATCH_WIDTH: u16 = 4;
-/// Blank column, two columns of hue bar, and one column for the hue pointer.
 const HUE_COLUMNS: u16 = 4;
 const MIN_WIDTH: u16 = 6;
 const HEX_DIGITS: &[u8; 16] = b"0123456789ABCDEF";
@@ -123,7 +122,6 @@ impl ColorPickerState {
     /// Shows the color `red`, `green`, `blue` and drops any half-typed hex.
     pub fn set_rgb(&mut self, red: u8, green: u8, blue: u8) {
         let (hue, saturation, value) = rgb_to_hsv(red, green, blue);
-        // A gray has no hue of its own, so the hue already chosen is kept.
         if saturation > 0.0 && value > 0.0 {
             self.hue = hue;
         }
@@ -433,8 +431,6 @@ fn contains(area: Rect, column: u16, row: u16) -> bool {
     column >= area.x && column - area.x < area.width && row >= area.y && row - area.y < area.height
 }
 
-/// `index` of `count` cells as a fraction from zero to one. `samples` is how many color samples
-/// each cell holds (one for columns, two for the half-block rows), so the last sample is one.
 fn fraction(index: u16, count: u16, samples: u16) -> f32 {
     let last = count.saturating_mul(samples).saturating_sub(1);
     if last == 0 {
@@ -444,7 +440,6 @@ fn fraction(index: u16, count: u16, samples: u16) -> f32 {
     f32::from(position.min(last)) / f32::from(last)
 }
 
-/// The hue of sample `sub` (0 top, 1 bottom) of bar cell `index` of `count`.
 fn hue_at(index: u16, count: u16, sub: u16) -> f32 {
     let last = count.saturating_mul(2).saturating_sub(1);
     if last == 0 {
@@ -486,7 +481,6 @@ fn draw_square(cx: &mut RenderCx<'_>, square: Rect, view: &ColorPickerState, dim
     cx.put_str(column, row, KNOB, style);
 }
 
-/// How far down the square sample `sub` of `row` is, from zero to one.
 fn sub_fraction(row: u16, sub: u16, height: u16) -> f32 {
     fraction(
         row.saturating_mul(2).saturating_add(sub),
@@ -498,7 +492,6 @@ fn sub_fraction(row: u16, sub: u16, height: u16) -> f32 {
 fn round_index(unit: f32, count: u16) -> u16 {
     let last = count.saturating_sub(1);
     let scaled = (unit.clamp(0.0, 1.0) * f32::from(last)).round();
-    // The product is within 0..=last, so the cast cannot truncate or go negative.
     #[expect(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
@@ -562,7 +555,6 @@ fn draw_readout(
     let swatch_cells = SWATCH_WIDTH.min(end.saturating_sub(x));
     cx.fill(Rect::new(x, hex.y, swatch_cells, 1), swatch, ' ');
     x = x.saturating_add(swatch_cells + 1);
-    // The hex entry: `#` then the typed digits padded with `_`, or the color.
     let mut buffer = [0_u8; 7];
     if view.editing {
         buffer[0] = b'#';
@@ -601,7 +593,6 @@ fn draw_readout(
     }
 }
 
-/// Writes `bytes` from `*x`, cut at `end`, and moves `*x` past them.
 fn put_ascii(cx: &mut RenderCx<'_>, x: &mut u16, end: u16, y: u16, bytes: &[u8], style: Style) {
     for &byte in bytes {
         if *x >= end {
@@ -614,7 +605,6 @@ fn put_ascii(cx: &mut RenderCx<'_>, x: &mut u16, end: u16, y: u16, bytes: &[u8],
     }
 }
 
-/// `label` then `number` in decimal (up to three digits), as in `H210`. Returns the length.
 fn field(label: u8, number: u32, out: &mut [u8; 5]) -> usize {
     out[0] = label;
     let number = number.min(999);
@@ -657,7 +647,6 @@ fn rgb_color((red, green, blue): (u8, u8, u8)) -> Color {
     Color::Rgb(red, green, blue)
 }
 
-/// Black or white, whichever reads better on `(red, green, blue)`.
 fn contrast((red, green, blue): (u8, u8, u8)) -> Color {
     let luma = 299 * u32::from(red) + 587 * u32::from(green) + 114 * u32::from(blue);
     if luma > 128_000 {
@@ -678,7 +667,6 @@ fn hex_value(digit: u8) -> u8 {
 
 fn wrap_hue(hue: f32) -> f32 {
     let wrapped = hue.rem_euclid(360.0);
-    // rem_euclid can round up to exactly 360 for tiny negative inputs.
     if wrapped >= 360.0 { 0.0 } else { wrapped }
 }
 

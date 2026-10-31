@@ -30,7 +30,6 @@ fn drawing_measuring_and_hit_testing_a_color_picker_allocates_nothing() {
     states[2].set_focus(ColorPickerFocus::Hex);
     states[2].type_digit('f');
     states[2].type_digit('0');
-    // Draw once so the grid holds its first cells before anything is measured.
     for state in &states {
         let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
         ColorPicker::new()
