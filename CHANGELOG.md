@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.18] - 2026-10-31
+
 ### Added
 
 - `Heatmap`, behind the opt-in `heatmap` feature: labeled borrowed rows, missing readings, fixed cell dimensions, five theme bands, selection, disabled swatches, and shared pointer geometry. The capacity-board showcase follows a hot shard through rebalance and recovery.
