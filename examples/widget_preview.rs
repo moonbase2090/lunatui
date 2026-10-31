@@ -23,10 +23,10 @@ use lunatui_widgets::{
     DividerId, FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState, KeyHintBar,
     List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
     Monthly, NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph,
-    PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx,
-    Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
-    StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput, TextInput, ToastKind, ToastScope,
-    ToastStack, Toggle, VecSource, Widget, WidgetState,
+    PieChart, PieSlice, PixelSize, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox,
+    SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
+    Tabs, TabsDrag, TagInput, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource,
+    Widget, WidgetState,
 };
 
 mod bar_scene;
@@ -37,6 +37,7 @@ mod canvas_showcase;
 use bar_scene::BarBoard;
 mod chart_scene;
 mod heatmap_showcase;
+mod progress_scene;
 mod spark_scene;
 use chart_scene::ChartBoard;
 #[path = "code_view_showcase.rs"]
@@ -5179,43 +5180,6 @@ fn ac_summary(cx: &mut RenderCx<'_>, right: Rect, tick: u32, theme: &Theme, styl
 
 fn accordion_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
-const PG_STAGES: [(&str, u32, u32); 5] = [
-    ("Checkout", 0, 40),
-    ("Compile", 30, 110),
-    ("Test suites", 100, 80),
-    ("Package", 170, 30),
-    ("Upload", 195, 45),
-];
-
-fn pg_progress(tick: u32, start: u32, span: u32) -> f64 {
-    if tick <= start {
-        0.0
-    } else {
-        f64::from((tick - start).min(span)) / f64::from(span)
-    }
-}
-
-fn pg_bar(index: usize, tick: u32) -> ProgressBar<'static> {
-    let (_, start, span) = PG_STAGES[index];
-    let done = pg_progress(tick, start, span);
-    match index {
-        1 => ProgressBar::new()
-            .segment(0.5_f64.min(done), ProgressTone::Accent)
-            .segment((done - 0.5).max(0.0) * 0.9, ProgressTone::Ok)
-            .segment(if done >= 1.0 { 0.04 } else { 0.0 }, ProgressTone::Fail),
-        2 => ProgressBar::new()
-            .segment(done * 0.78, ProgressTone::Ok)
-            .segment(done * 0.15, ProgressTone::Warn)
-            .segment(
-                if done > 0.6 { (done - 0.6) * 0.1 } else { 0.0 },
-                ProgressTone::Fail,
-            ),
-        4 if done > 0.0 && done < 1.0 => ProgressBar::new().indeterminate(tick),
-        4 if done >= 1.0 => ProgressBar::new().segment(1.0, ProgressTone::Ok),
-        _ => ProgressBar::new().segment(done, ProgressTone::Ok),
-    }
-}
-
 fn progress_native(
     grid: &mut Grid,
     clusters: &mut ClusterTable,
@@ -5223,132 +5187,21 @@ fn progress_native(
     area: Rect,
     tick: u32,
 ) {
-    let surface = theme.resolve(Token::Surface0);
-    let raised = theme.resolve(Token::Surface1);
-    let text = theme.resolve(Token::TextPrimary);
-    let accent = theme.resolve(Token::Accent);
-    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
-    let mut cx = RenderCx::new(grid, clusters, theme);
-    let fill = Style::new().fg(text).bg(surface);
-    let dim = fill.with_attrs(Attrs::new().set_dim(true));
-    let head = Style::new()
-        .fg(accent)
-        .bg(raised)
-        .with_attrs(Attrs::new().set_bold(true));
-    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
-    cx.put_str(
-        area.x + 1,
-        area.y,
-        "Release pipeline  ·  lunatui v0.1.15",
-        head,
+    grid.fill(
+        area,
+        Style::new()
+            .fg(theme.resolve(Token::TextPrimary))
+            .bg(theme.resolve(Token::Surface0)),
+        ' ',
+        clusters,
     );
-    let left = Rect::new(area.x + 2, area.y + 2, 74, 24);
-    let right = Rect::new(
-        left.x + left.width + 1,
-        left.y,
-        area.width.saturating_sub(left.width + 5),
-        24,
+    progress_scene::draw(
+        area,
+        tick,
+        false,
+        WidgetState::Normal,
+        &mut RenderCx::new(grid, clusters, theme),
     );
-    for (title, pane) in [(" Stages ", left), (" Log ", right)] {
-        Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(title)
-            .style(fill)
-            .border_style(dim)
-            .title_style(Style::new().fg(accent).bg(surface))
-            .render(pane, &mut cx);
-    }
-    pg_stages(&mut cx, left, tick, [fill, dim]);
-    pg_log(&mut cx, right, tick, [fill, dim]);
-    let total: f64 = (0..PG_STAGES.len())
-        .map(|i| pg_progress(tick, PG_STAGES[i].1, PG_STAGES[i].2))
-        .sum::<f64>()
-        / 5.0;
-    let overall = Rect::new(area.x + 2, left.y + 25, area.width.saturating_sub(4), 1);
-    ProgressBar::new()
-        .ratio(total)
-        .label("Overall ")
-        .show_percent(true)
-        .render(overall, &mut cx);
-    StatusBar::new(" r rerun stage  ●  l follow log  ●  q quit")
-        .style(Style::new().fg(text).bg(raised))
-        .render(
-            Rect::new(
-                area.x,
-                area.y + area.height.saturating_sub(1),
-                area.width,
-                1,
-            ),
-            &mut cx,
-        );
-}
-
-fn pg_stages(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {
-    let [fill, dim] = styles;
-    let notes = [
-        "14 files",
-        "412 of 760 crates cached",
-        "1,087 tests",
-        "2 artifacts",
-        "uploading to the release",
-    ];
-    for (index, (name, start, span)) in PG_STAGES.iter().enumerate() {
-        let y = area.y + 2 + u16::try_from(index).unwrap_or(0) * 4;
-        let done = pg_progress(tick, *start, *span);
-        let state = if done >= 1.0 && index != 4 {
-            "done"
-        } else if done > 0.0 {
-            "running"
-        } else {
-            "waiting"
-        };
-        cx.put_str(area.x + 3, y, name, fill);
-        cx.put_str(
-            area.x + 3 + 56,
-            y,
-            state,
-            if state == "running" { fill } else { dim },
-        );
-        pg_bar(index, tick)
-            .show_percent(index != 4)
-            .render(Rect::new(area.x + 3, y + 1, area.width - 6, 1), cx);
-        cx.put_str(area.x + 3, y + 2, notes[index], dim);
-    }
-}
-
-fn pg_log(cx: &mut RenderCx<'_>, area: Rect, tick: u32, styles: [Style; 2]) {
-    let [fill, dim] = styles;
-    let lines = [
-        "checkout main @ 7577d26",
-        "fetch 14 files",
-        "cargo build --release",
-        "compiling lunatui-widgets",
-        "compiling lunatui-runtime",
-        "cargo test --workspace",
-        "test form ... ok",
-        "test slider ... ok",
-        "test toast ... ok",
-        "1 warning: unused import",
-        "package lunatui-0.1.15.crate",
-        "upload release assets",
-    ];
-    let shown = usize::try_from(tick / 20).unwrap_or(0).min(lines.len());
-    for (row, line) in (0_u16..).zip(&lines[..shown]) {
-        let style = if row + 1 == u16::try_from(shown).unwrap_or(0) {
-            fill
-        } else {
-            dim
-        };
-        cx.put_str(
-            area.x + 2,
-            area.y + 1 + row,
-            clip_display_prefix(
-                &format!("{:02}  {line}", row + 1),
-                area.width.saturating_sub(4),
-            ),
-            style,
-        );
-    }
 }
 
 fn progress_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}

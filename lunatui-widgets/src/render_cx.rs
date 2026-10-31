@@ -91,7 +91,8 @@ impl<'a> RenderCx<'a> {
         feature = "pixel-canvas",
         feature = "pixel-barchart",
         feature = "pixel-sparkline",
-        feature = "pixel-gauge"
+        feature = "pixel-gauge",
+        feature = "pixel-progress"
     ))]
     pub(crate) fn submit_raster(
         &mut self,
@@ -110,7 +111,8 @@ impl<'a> RenderCx<'a> {
         feature = "pixel-canvas",
         feature = "pixel-barchart",
         feature = "pixel-sparkline",
-        feature = "pixel-gauge"
+        feature = "pixel-gauge",
+        feature = "pixel-progress"
     ))]
     pub(crate) fn pixel_target(&self, area: Rect) -> Option<lunatui_image::PixelTarget> {
         let sink = self.image_sink.as_deref()?;
@@ -158,7 +160,8 @@ impl<'a> RenderCx<'a> {
         feature = "pixel-canvas",
         feature = "pixel-barchart",
         feature = "pixel-sparkline",
-        feature = "pixel-gauge"
+        feature = "pixel-gauge",
+        feature = "pixel-progress"
     ))]
     pub(crate) fn pixel_rgb(&self, mut color: Color, default: Option<[u8; 3]>) -> Option<[u8; 3]> {
         for _ in 0..16 {
@@ -178,7 +181,8 @@ impl<'a> RenderCx<'a> {
     #[cfg(any(
         feature = "pixel-barchart",
         feature = "pixel-sparkline",
-        feature = "pixel-gauge"
+        feature = "pixel-gauge",
+        feature = "pixel-progress"
     ))]
     pub(crate) fn pixel_area_in_grid(&self, area: Rect) -> bool {
         u32::from(area.x) + u32::from(area.width) <= u32::from(self.grid.width())

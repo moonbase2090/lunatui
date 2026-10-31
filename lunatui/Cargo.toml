@@ -254,3 +254,9 @@ name = "pixel_gauge"
 path = "../examples/pixel_gauge.rs"
 required-features = ["image-presenter"]
 test = true
+
+[[example]]
+name = "pixel_progress"
+path = "../examples/pixel_progress.rs"
+required-features = ["image-presenter"]
+test = true
