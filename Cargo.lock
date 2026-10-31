@@ -736,6 +736,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "graphite-core"
+version = "0.1.5"
+source = "git+https://github.com/moonbase2090/graphite?rev=b11b9f7fce8ccc9750faed957342fc3eba1fa930#b11b9f7fce8ccc9750faed957342fc3eba1fa930"
+dependencies = [
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "gungraun"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1047,6 +1055,7 @@ name = "lunatui-bench"
 version = "0.1.18"
 dependencies = [
  "criterion",
+ "graphite-core",
  "gungraun",
  "libc",
  "lunatui-core",
