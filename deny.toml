@@ -29,6 +29,7 @@ allow = [
     # Workspace crates.
     "lunatui",
     "lunatui-bench",
+    "lunatui-card",
     "lunatui-core",
     "lunatui-image",
     "lunatui-layout",

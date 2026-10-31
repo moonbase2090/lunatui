@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `lunatui-card` adds `Card` (a raised, rounded container with title, description, body widget and footer), `Separator` and `Empty`, styled from `lunatui-ui-tokens`; the `ui_card` example is a deploy console built from them.
 - `Gauge` uses continuous antialiased pixel fills by default with a measured presenter. `.pixels(false)` preserves its whole-cell or eighth-block fallback, including styles, dirty spans and wide-cell cleanup. The new `pixel_gauge` example mirrors the full deployment board in equal Cells and Pixels panes.
 - Keyboard mnemonics for `Menu`: `MenuItem::mnemonic` sets an item's key and `Menu` underlines its letter in the bar and the dropdowns (`Menu::mnemonics(false)` hides them). `MenuState::press_mnemonic` chooses the matching item in the open dropdown or the bar, without regard to case, and moves between items that share a key. `Menu::bar_item_at` and `MenuState::open` handle clicks on the bar. Items without a mnemonic draw as before.
 
