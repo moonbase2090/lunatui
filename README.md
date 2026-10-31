@@ -321,6 +321,14 @@ A live capacity board for eight services across twelve availability zones. The s
 
 Screenshot: [docs/media/heatmap.png](docs/media/heatmap.png). Recorded with `scripts/record-heatmap.sh` at 120×36, 2x scale, 300 frames at 30 fps, dark truecolor, about 10 seconds. The script checks the incident and recovery states against the actual terminal output.
 
+### Color picker
+
+A theme editor for an accent color. Dragging in the square sets saturation and value, Tab moves to the hue bar and the arrow keys turn it, and Tab again reaches the hex entry, where typed digits fill in and Enter applies the color. The preview beside it, the buttons, gauges and link, repaints in the picked color as it changes.
+
+<img src="docs/media/color-picker.webp" alt="Color picker: a saturation and value square, a hue bar and a hex entry beside a live preview of a button, gauges and a link in the picked color" width="1028">
+
+Screenshot: [docs/media/color-picker.png](docs/media/color-picker.png). Recorded with `scripts/record-showcase.sh` (`CASE=color-picker`, 120×36, 2x scale, `FRAMES=250` at 30 fps, dark truecolor, about 8 seconds).
+
 ### Calendar
 
 A team schedule: the month beside that day's agenda, colored release, review, on-call, and incident days, today held in a raised cell, and the selection walking from late October into November.
