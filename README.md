@@ -2,7 +2,7 @@
 
 lunatui is a hyperspeed Rust TUI library being built from scratch, keeping a simple "render widgets into a rectangle" model while fixing its structural costs with a 16-byte packed cell, damage-tracked diffing and a single-write output encoder, plus first-class input, focus, animation, capability and theme layers. It is open source under the [MIT](LICENSE) license.
 
-**Status: v0.1.17 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
+**Status: v0.1.18 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
 
 ## Performance
 
@@ -188,11 +188,12 @@ Screenshot: [docs/media/hex-viewer.png](docs/media/hex-viewer.png). Recorded wit
 
 ### Progress bar
 
-A release pipeline: a determinate bar for checkout, a stacked bar for compile (cached, compiled, and failed crates in their own colors), a stacked bar for the test suites (passed, skipped, failed), an indeterminate block bouncing along the track while the upload runs, and an overall bar with a percentage. The fill moves in eighths of a cell, and a cell where two segments meet shows both colors.
+A release pipeline with determinate checkout and overall bars, colored compile and test segments, and an indeterminate upload. Both panes share the original stages, notes and log at the same tick. The left uses eighth-block cells; the right uses continuous pixel bands. The recording also shows completion, focused and disabled states, then switches native rendering off and on.
 
-<img src="docs/media/progress-bar.webp" alt="ProgressBar: determinate, stacked, and indeterminate bars across a release pipeline in the dark theme" width="1028">
+<img src="docs/media/progress-bar.webp" alt="ProgressBar: the complete release pipeline in matching Cells and Pixels panes, with all modes and states" width="1400">
 
-Screenshot: [docs/media/progress-bar.png](docs/media/progress-bar.png). Recorded with `scripts/record-showcase.sh` (`CASE=progress-bar`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+Screenshot: [docs/media/progress-bar.png](docs/media/progress-bar.png). Recorded from a real Kitty window with `scripts/record-pixels.sh` (`EXAMPLE=pixel_progress`, `FEATURES=image-presenter`, 248×44, font size 14, 30 fps, 30 seconds, lossless animated WebP). Each scene holds for about three seconds.
+
 ### Accordion
 
 A pipeline settings screen: sections with a caret, a title, and a badge open and close one after another, each body growing and shrinking through a reveal fraction the app raises and lowers every tick. The accordion draws the headers and gives back the body rectangles, so the app fills them with its own content, and the summary pane follows the focused section.

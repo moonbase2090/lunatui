@@ -23,9 +23,11 @@ CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}" cargo build --release --locked -p luna
 X_PID=''
 K_PID=''
 EVENTS_PID=''
+CAPTURE_PID=''
 KEYS="${KEYS:-}"
 cleanup() {
   if [[ -n "$EVENTS_PID" ]]; then kill "$EVENTS_PID" 2>/dev/null || true; wait "$EVENTS_PID" 2>/dev/null || true; fi
+  if [[ -n "$CAPTURE_PID" ]]; then kill "$CAPTURE_PID" 2>/dev/null || true; wait "$CAPTURE_PID" 2>/dev/null || true; fi
   if [[ -n "$K_PID" ]]; then kill "$K_PID" 2>/dev/null || true; wait "$K_PID" 2>/dev/null || true; fi
   if [[ -n "$X_PID" ]]; then kill "$X_PID" 2>/dev/null || true; wait "$X_PID" 2>/dev/null || true; fi
   rm -f "$OUT/kitty.sock" "$OUT/start-app"
@@ -58,25 +60,37 @@ if ! kitty @ --to "$(cat "$OUT/listen.txt")" get-colors > /dev/null 2>"$OUT/read
 fi
 touch "$OUT/start-app"
 sleep 2
+: > "$OUT/record-progress.txt"
+ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -framerate "$FPS" \
+  -window_id "$WINDOW" -i "$DISPLAY" -t "$SECONDS_TO_RECORD" -r "$FPS" -fps_mode cfr \
+  -stats_period 0.05 -progress "$OUT/record-progress.txt" -c:v png -compression_level 1 "$OUT/terminal.mkv" &
+CAPTURE_PID=$!
 if [[ -n "$KEYS" ]]; then
-  python3 - "$WINDOW" "$KEYS" <<'PYKEYS' &
-import math,subprocess,sys,time
-started=time.monotonic()
+  python3 - "$WINDOW" "$KEYS" "$OUT/record-progress.txt" "$CAPTURE_PID" <<'PYKEYS' &
+import math,os,pathlib,subprocess,sys,time
+progress=pathlib.Path(sys.argv[3])
 for event in sys.argv[2].split(','):
     when,key=event.split(':',1)
     delay=float(when)
     if not math.isfinite(delay) or delay < 0 or delay > 60 or not key.isalnum(): raise SystemExit('invalid capture key sequence')
-    time.sleep(max(0,started+delay-time.monotonic()))
+    while True:
+        values=[line.split('=',1)[1] for line in progress.read_text().splitlines() if line.startswith('out_time_us=')]
+        if values and values[-1].isdigit() and int(values[-1])/1000000 >= delay: break
+        try: os.kill(int(sys.argv[4]),0)
+        except ProcessLookupError: raise SystemExit('capture ended before the scheduled key')
+        time.sleep(0.01)
     subprocess.run(['xdotool','key','--window',sys.argv[1],key],check=True)
 PYKEYS
   EVENTS_PID=$!
 fi
-ffmpeg -nostdin -loglevel error -y -f x11grab -draw_mouse 0 -framerate "$FPS" \
-  -window_id "$WINDOW" -i "$DISPLAY" -t "$SECONDS_TO_RECORD" -c:v ffv1 "$OUT/terminal.mkv"
+wait "$CAPTURE_PID"
+CAPTURE_PID=''
+if [[ -n "$EVENTS_PID" ]]; then wait "$EVENTS_PID"; EVENTS_PID=''; fi
 ffmpeg -nostdin -loglevel error -y -sseof -0.1 -i "$OUT/terminal.mkv" -frames:v 1 "$OUT/terminal.png"
 ffmpeg -nostdin -loglevel error -y -i "$OUT/terminal.mkv" -c:v libwebp_anim -lossless 1 -loop 0 "$OUT/terminal.webp"
-ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate -show_entries format=duration -of json "$OUT/terminal.mkv" > "$OUT/capture.json"
+ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,r_frame_rate -show_entries format=duration -of json "$OUT/terminal.mkv" > "$OUT/capture.json"
 LUNATUI_CAPTURE_COLUMNS="$WIDTH" LUNATUI_CAPTURE_ROWS="$HEIGHT" LUNATUI_CAPTURE_FONT_SIZE="$FONT_SIZE" \
+  LUNATUI_CAPTURE_FPS="$FPS" LUNATUI_CAPTURE_SECONDS="$SECONDS_TO_RECORD" \
   python3 - "$OUT" "$EXAMPLE" "$KEYS" "$@" <<'PY'
 import hashlib,json,os,pathlib,subprocess,sys
 out=pathlib.Path(sys.argv[1]); receipt=json.loads((out/'capture.json').read_text())
@@ -84,10 +98,17 @@ geometry=dict(line.split('=',1) for line in (out/'geometry.txt').read_text().spl
 stream=receipt['streams'][0]
 assert (stream['width'],stream['height']) == (int(geometry['WIDTH']),int(geometry['HEIGHT'])), 'capture must match the real terminal window'
 subprocess.run(['ffmpeg','-nostdin','-loglevel','error','-y','-i',str(out/'terminal.mkv'),'-f','framemd5',str(out/'frames.md5')],check=True)
-frames={line.rsplit(',',1)[-1].strip() for line in (out/'frames.md5').read_text().splitlines() if line and not line.startswith('#')}
+frame_lines=[line for line in (out/'frames.md5').read_text().splitlines() if line and not line.startswith('#')]
+assert len(frame_lines)==int(os.environ['LUNATUI_CAPTURE_FPS'])*int(os.environ['LUNATUI_CAPTURE_SECONDS']), 'capture must retain the requested constant frame count'
+frames={line.rsplit(',',1)[-1].strip() for line in frame_lines}
 if sys.argv[3]: assert len(frames)>1, 'scripted input must change the real terminal frames'
 assert (out/'terminal.webp').stat().st_size < 2000000, 'recording exceeds the 2 MB gallery limit'
 receipt['distinct_frames']=len(frames)
+receipt['frames']=len(frame_lines)
+receipt['timing']='Keys scheduled from ffmpeg output timestamps; constant-frame-rate recording.'
+progress=dict(line.split('=',1) for line in (out/'record-progress.txt').read_text().splitlines() if '=' in line)
+receipt['duplicated_frames']=int(progress['dup_frames'])
+receipt['dropped_frames']=int(progress['drop_frames'])
 receipt['keys']=sys.argv[3]
 receipt['args']=sys.argv[4:]
 receipt['example']=sys.argv[2]
