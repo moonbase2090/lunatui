@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `lunatui-button` adds `Button` (default, secondary, outline, ghost and destructive variants in three sizes, drawn for rest, focus, pressed and disabled) and `Toggle` (a button that stays pressed), styled from `lunatui-ui-tokens`; the `ui_button` example is a deploy console built from them.
 
+### Changed
+
+- `lunatui-button` keeps focus and press visible when a theme gives the focus ring and the variant fill the same colors: `Button` and `Toggle` add a single underline whenever their focused or pressed style would equal the resting one.
+
 ## [0.1.18] - 2026-10-31
 
 ### Added
