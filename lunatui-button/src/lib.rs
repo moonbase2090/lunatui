@@ -96,11 +96,15 @@ fn state_style(
     tone_text: bool,
     on: Role,
 ) -> Style {
+    let page = cx.token(on.token());
     if matches!(state, WidgetState::Disabled) {
-        return base.with_attrs(Attrs::new().set_dim(true));
+        let muted = cx.token(Role::Muted.token());
+        return Style::new()
+            .fg(muted)
+            .bg(page)
+            .with_attrs(Attrs::new().set_dim(true));
     }
     let ring = cx.token(Role::Ring.token());
-    let page = cx.token(on.token());
     let bold = Attrs::new().set_bold(true);
     if pressed {
         let fg = if tone_text { base.bg } else { ring };

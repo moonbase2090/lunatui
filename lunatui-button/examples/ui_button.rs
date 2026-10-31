@@ -65,8 +65,12 @@ impl Widget for Actions {
             x += w + 2;
         }
         let mut x = area.x;
-        for size in [ButtonSize::Small, ButtonSize::Medium, ButtonSize::Large] {
-            let button = Button::new("Size")
+        for (label, size) in [
+            ("Small", ButtonSize::Small),
+            ("Medium", ButtonSize::Medium),
+            ("Large", ButtonSize::Large),
+        ] {
+            let button = Button::new(label)
                 .size(size)
                 .variant(Variant::Secondary)
                 .on(Role::Card);

@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `lunatui-button` adds `Button` (default, secondary, outline, ghost and destructive variants in three sizes, drawn for rest, focus, pressed and disabled) and `Toggle` (a button that stays pressed), styled from `lunatui-ui-tokens`; the `ui_button` example is a deploy console built from them.
 
+### Changed
+
+- `lunatui-button` draws a disabled `Button` in the muted text color on the page background with no fill, so it no longer looks like the variant it belongs to. The `ui_button` example labels its size row Small, Medium and Large, and the README gallery shows the demo.
+
 ## [0.1.18] - 2026-10-31
 
 ### Added
