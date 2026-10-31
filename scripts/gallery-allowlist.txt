@@ -41,6 +41,9 @@ helper requests # renders grouped request data through BarChart
 helper latency # renders regional latency data through horizontal BarChart
 helper runs # renders build data through BarChart
 helper states # renders the same queue data in three BarChart states
+scope examples/menu_mnemonic_showcase.rs # the notes editor composes Block, Paragraph, StatusBar and the Menu widget with mnemonics
+helper editor_pane # renders the open file through Block and Paragraph
+helper outline_pane # renders the outline headings through Block and Paragraph
 scope examples/code_view_showcase.rs # the review screen composes Block, Paragraph, LineGauge, StatusBar and CodeView widgets
 helper files_pane # renders the file list through Block and Paragraph
 helper problems_pane # renders diagnostics through Block and Paragraph and the check run through LineGauge
