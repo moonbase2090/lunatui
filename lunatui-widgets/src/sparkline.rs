@@ -7,6 +7,9 @@ use lunatui_theme::Token;
 use crate::render_cx::patch_style;
 use crate::{Block, RenderCx, Widget, WidgetState};
 
+#[cfg(feature = "pixel-sparkline")]
+mod pixel;
+
 /// One column in a [`Sparkline`].
 ///
 /// `None` is a missing sample. Zero is a present sample with no height.
@@ -187,7 +190,9 @@ pub const NINE_LEVELS: BarSet = BarSet {
 
 /// A column chart of sampled values, one bar per cell of width.
 ///
-/// Heights use the eight block steps in [`NINE_LEVELS`]. An explicit [`style`](Sparkline::style)
+/// Heights use native antialiased fills with a measured image presenter, or the eight
+/// block steps in [`NINE_LEVELS`] in cell mode. [`pixels(false)`](Self::pixels) selects cells.
+/// An explicit [`style`](Sparkline::style)
 /// is painted as given, which is how the ratatui parity case locks colors. Without that style,
 /// bars take semantic tokens from [`WidgetState`]: the series uses primary text, the latest
 /// sample uses the accent, focus uses the focus ring, and disabled bars are dim.
@@ -205,6 +210,7 @@ pub struct Sparkline<'a, T> {
     direction: RenderDirection,
     baseline: Baseline,
     state: WidgetState,
+    pixels: bool,
 }
 
 impl<'a, T> Sparkline<'a, T> {
@@ -241,6 +247,7 @@ impl<'a, T> Sparkline<'a, T> {
             direction: RenderDirection::LeftToRight,
             baseline: Baseline::Zero,
             state: WidgetState::Normal,
+            pixels: true,
         }
     }
 
@@ -309,6 +316,15 @@ impl<'a, T> Sparkline<'a, T> {
         self
     }
 
+    /// Enables native antialiased fills with a measured image presenter.
+    /// Unsupported glyphs, styles, metrics or declined rasters retain cells.
+    /// Enabled by default; `false` selects the original cell renderer.
+    #[must_use]
+    pub const fn pixels(mut self, enabled: bool) -> Self {
+        self.pixels = enabled;
+        self
+    }
+
     /// Interaction state used when no explicit [`style`](Self::style) is set.
     #[must_use]
     pub const fn state(mut self, state: WidgetState) -> Self {
@@ -346,6 +362,12 @@ impl<T: SparklineValue> Sparkline<'_, T> {
             return;
         }
         let limit = usize::from(area.width).min(self.data.len());
+        #[cfg(feature = "pixel-sparkline")]
+        let mut recording = if self.pixels {
+            pixel::Recording::new(area, limit, self.direction, cx)
+        } else {
+            None
+        };
         let (floor, scale) = self.scale_ends();
         for index in 0..limit {
             let bar = self.data[index].sparkline_bar();
@@ -357,6 +379,10 @@ impl<T: SparklineValue> Sparkline<'_, T> {
                     .saturating_add(area.width.saturating_sub(1))
                     .saturating_sub(column),
             };
+            #[cfg(feature = "pixel-sparkline")]
+            if let Some(recording) = &mut recording {
+                recording.record(x, bar.sample());
+            }
             let (height, symbol, style) = match bar.sample() {
                 Some(value) => (
                     scale_height(value.saturating_sub(floor), scale, area.height),
@@ -374,6 +400,10 @@ impl<T: SparklineValue> Sparkline<'_, T> {
                 style.unwrap_or_default(),
             );
             self.paint_column(cx, x, area, height, symbol, column_style);
+        }
+        #[cfg(feature = "pixel-sparkline")]
+        if let Some(recording) = recording {
+            recording.finish(self, floor, scale, cx);
         }
     }
 

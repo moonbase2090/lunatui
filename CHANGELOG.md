@@ -12,7 +12,17 @@ Every PR adds its entry under **Unreleased**.
 
 - Keyboard mnemonics for `Menu`: `MenuItem::mnemonic` sets an item's key and `Menu` underlines its letter in the bar and the dropdowns (`Menu::mnemonics(false)` hides them). `MenuState::press_mnemonic` chooses the matching item in the open dropdown or the bar, without regard to case, and moves between items that share a key. `Menu::bar_item_at` and `MenuState::open` handle clicks on the bar. Items without a mnemonic draw as before.
 
+- `lunatui-ui-tokens` is the shared base for the `lunatui-<name>` UI component crates: `Role` and `Tone` map semantic names (card, primary, border, ring, danger) onto core theme tokens, with a `Spacing` scale and the default border style.
+- `Table` sorting, range selection, column resizing, and closure cell styles. `TableState` sorts by a column (numbers by value, other text without regard to case, equal rows in source order) and keeps the cursor on its source row; `TableState::view` shows a source in that order, and `Table::state` draws the cursor, the selected range in `selection_style`, a `▲` or `▼` marker after the sorted column's title, and column widths set on the state. `start_resize`, `drag_resize`, and `Table::divider_at` resize a column from its header divider, and `Table::column_at` finds the column under a click. A closure `Fn(row, column) -> Style` works as a `CellStyle`.
+
+- `Button` widget, behind the `button` feature: a filled, clickable label centred in its area, with normal, primary, and destructive variants and focused, pressed, and disabled states from theme tokens. It measures as its label plus padding, `hit_area` is empty for a disabled button, and `ButtonState` turns Enter or Space and pointer presses into clicks, so a press released off the button does not click. A built button draws without allocating.
+
+- Default-on `pixel-sparkline` rendering for `Sparkline`: native antialiased heights with per-row colors, focused and disabled styles, preserved missing/coarse block shapes, exact cell fallback and unchanged sample callback order. The `pixel_sparkline` example shares the existing service board in equal-size Cells/Pixels panes and can switch the right pane to cells and back.
 - `NotificationCenter` widget and `NotificationLog`, behind the `notification-center` feature: a history of past notifications, newest first, under a header that counts the unread ones. Each row has a read or unread mark in the color of its `ToastKind`, a time label, the message, and a dismiss cross. The log is a ring buffer with `push`, `dismiss`, `clear`, `mark_read`, `mark_all_read`, and `unread`; the widget scrolls to keep the selected row in view, and `row_at` and `dismiss_at` give hit testing.
+
+### Changed
+
+- `Table` no longer allocates while drawing: rows are cleared without building strings, the solved columns are kept between renders of the same area, and cells are read through the new `RowSource::cell`, which `VecSource` and `SliceSource` answer with borrowed text. A source that does not answer it is read through `RowSource::row` as before.
 
 ## [0.1.17] - 2026-10-30
 

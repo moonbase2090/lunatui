@@ -14,6 +14,8 @@ mod big_text;
 mod block;
 mod borders;
 mod breadcrumbs;
+#[cfg(feature = "button")]
+mod button;
 #[cfg(feature = "calendar")]
 mod calendar;
 /// Shapes for [`Canvas`] and the painter they draw with.
@@ -87,6 +89,7 @@ mod state;
 mod status_bar;
 mod status_dot;
 mod table;
+mod table_state;
 mod tabs;
 mod text_input;
 #[cfg(feature = "toast")]
@@ -108,6 +111,8 @@ pub use big_text::{BigText, BigTextFont, PixelSize};
 pub use block::{Alignment, Block, TitlePosition};
 pub use borders::{BorderType, Borders};
 pub use breadcrumbs::Breadcrumbs;
+#[cfg(feature = "button")]
+pub use button::{Button, ButtonState, ButtonVariant};
 #[cfg(feature = "calendar")]
 pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 #[cfg(feature = "canvas")]
@@ -190,6 +195,7 @@ pub use state::WidgetState;
 pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
 pub use table::{CellStyle, Table};
+pub use table_state::{SortDirection, TableState, TableView};
 pub use tabs::{TabMove, Tabs, TabsDrag};
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]

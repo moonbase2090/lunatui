@@ -242,3 +242,9 @@ name = "pixel_bar_chart"
 path = "../examples/pixel_bar_chart.rs"
 required-features = ["image-presenter"]
 test = true
+
+[[example]]
+name = "pixel_sparkline"
+path = "../examples/pixel_sparkline.rs"
+required-features = ["image-presenter"]
+test = true

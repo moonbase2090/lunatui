@@ -1,0 +1,21 @@
+[package]
+name = "lunatui-ui-tokens"
+description = "Shared semantic design tokens for lunatui UI component crates."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = []
+# Maps roles onto the richer graphite tokens (border, muted text, raised surface).
+graphite = ["lunatui-theme/graphite-tokens"]
+
+[dependencies]
+lunatui-core = { version = "0.1.13", path = "../lunatui-core" }
+lunatui-theme = { version = "0.1.13", path = "../lunatui-theme" }
+lunatui-widgets = { version = "0.1.13", path = "../lunatui-widgets" }
