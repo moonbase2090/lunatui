@@ -55,6 +55,8 @@ use tui_scrollview::{
 /// Terminal sizes every case runs at.
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
 
+mod heatmap;
+
 const BG: (u8, u8, u8) = (0x1a, 0x1b, 0x26);
 const TEXT: (u8, u8, u8) = (0xc0, 0xca, 0xf5);
 const DIM: (u8, u8, u8) = (0x56, 0x5f, 0x89);
@@ -115,6 +117,15 @@ pub struct Case {
 
 /// Every widget case, in report order.
 pub static CASES: &[Case] = &[
+    Case {
+        name: "heatmap",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no heatmap widget; the reference draws the same fixed matrix directly into its Buffer",
+        ),
+        lunatui: heatmap::native,
+        ratatui: heatmap::baseline,
+    },
     Case {
         name: "block",
         gated: false,

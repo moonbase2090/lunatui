@@ -61,6 +61,10 @@ def main(path: str, fps: int = 0, frames: int = 0) -> None:
     for line in events:
         event = json.loads(line)
         if event[1] == "o" and EXIT in event[2]:
+            prefix = event[2].split(EXIT, 1)[0].removesuffix("\x1b[0m\x1b[?25h")
+            if prefix:
+                event[2] = prefix
+                kept.append(json.dumps(event, ensure_ascii=False))
             break
         kept.append(line)
     if kept:

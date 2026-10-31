@@ -10,6 +10,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Heatmap`, behind the opt-in `heatmap` feature: labeled borrowed rows, missing readings, fixed cell dimensions, five theme bands, selection, disabled swatches, and shared pointer geometry. The capacity-board showcase follows a hot shard through rebalance and recovery.
+
 - `CodeView` widget, behind the `code-view` feature: read-only lines with a right-aligned line-number gutter, `CodeMark` gutter signs (added, changed, removed, error, warning, info, breakpoint), a cursor line, tab stops, horizontal and vertical scrolling, and a vertical scrollbar when the lines overflow. A `CodeHighlight` hook styles byte ranges of each visible line, and closures implement it. `CodeViewState` keeps the cursor on screen through `down`, `up`, `page_down`, `page_up`, and `set_cursor`, and `line_at` finds the line under a click. The lines are borrowed, so a built view draws without allocating.
 
 - `lunatui-ui-tokens` is the shared base for the `lunatui-<name>` UI component crates: `Role` and `Tone` map semantic names (card, primary, border, ring, danger) onto core theme tokens, with a `Spacing` scale and the default border style.
@@ -25,6 +27,11 @@ Every PR adds its entry under **Unreleased**.
 - BigText digits, capitals, and `:.-%` use a modified 8×8 face with uniform 2px strokes, derived from Press Start 2P by `CodeMan38` under OFL-1.1. Other printable ASCII stays a hollow box. The default font selector is renamed from `BigTextFont::PressStart2P` to `BigTextFont::Modified8x8`.
 
 - `Table` no longer allocates while drawing: rows are cleared without building strings, the solved columns are kept between renders of the same area, and cells are read through the new `RowSource::cell`, which `VecSource` and `SliceSource` answer with borrowed text. A source that does not answer it is read through `RowSource::row` as before.
+
+### Fixed
+
+- `Grid::fill` preserves requested text attributes for scalar, wide, and clipped cells, including dimmed disabled heatmap swatches.
+- Recording trimming keeps a final frame that shares an output event with the alternate-screen exit.
 
 ## [0.1.17] - 2026-10-30
 

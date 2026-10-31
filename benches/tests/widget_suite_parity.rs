@@ -121,6 +121,20 @@ fn documented_cases_state_a_reason() {
 }
 
 #[test]
+fn heatmap_matches_its_independent_buffer_reference() -> Result<(), String> {
+    let case = CASES
+        .iter()
+        .find(|case| case.name == "heatmap")
+        .ok_or("missing heatmap case")?;
+    for (width, height) in SIZES {
+        for tick in [0, 1, 30, 75, 150, 299] {
+            check(case, width, height, tick)?;
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn every_case_has_a_unique_name() {
     let mut names: Vec<_> = CASES.iter().map(|case| case.name).collect();
     names.sort_unstable();

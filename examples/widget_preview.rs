@@ -36,6 +36,7 @@ mod button_showcase;
 mod canvas_showcase;
 use bar_scene::BarBoard;
 mod chart_scene;
+mod heatmap_showcase;
 mod spark_scene;
 use chart_scene::ChartBoard;
 #[path = "code_view_showcase.rs"]
@@ -77,6 +78,11 @@ struct Preview {
 }
 
 const PREVIEWS: &[Preview] = &[
+    Preview {
+        name: "heatmap",
+        native: heatmap_showcase::render,
+        baseline: heatmap_baseline,
+    },
     Preview {
         name: "toast",
         native: toast_native,
@@ -1779,6 +1785,12 @@ fn bigtext_native(
         return;
     }
     draw_cut_board(&mut cx, &scene);
+}
+
+fn heatmap_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "heatmap") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn bigtext_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
