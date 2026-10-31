@@ -99,6 +99,14 @@ A release pipelines screen with a boxed tab strip reordered by the pointer. Pres
 
 Screenshot: [docs/media/tabs-drag.png](docs/media/tabs-drag.png). Recorded with `scripts/record-showcase.sh` (`CASE=tabs-drag`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Table sorting, selection and resizing
+
+A live service inventory whose latencies and error rates update while you work. The cursor walks the services, and slow or failing values are colored by a per-cell style closure. A click on the p95 header sorts slowest first and marks the column `▼`, keeping the cursor on its service. Shift+Down selects a range of four services, listed in the details pane. Dragging the Service divider widens that column while the others keep their widths.
+
+<img src="docs/media/table-upgrades.gif" alt="Table: sorting by p95, a range selection, per-cell colors and a resized column in a live service inventory in the dark theme" width="1028">
+
+Screenshot: [docs/media/table-upgrades.png](docs/media/table-upgrades.png). Recorded with `scripts/record-widget.sh` (`CASE=table-sorted`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 234 KB).
+
 ### Key hint bar
 
 A release console whose bottom line is a `KeyHintBar` built from the keymap of the current mode: browsing shows move, open, search, publish, and quit; typing a search filter swaps it for apply, clear, and cancel; the publish confirmation shows yes, go back, and cancel. The bar redraws from whichever keymap is active, so it never lists a key that does nothing.
@@ -264,6 +272,14 @@ A code review screen with a file list, the source with line numbers and gutter m
 
 Screenshot: [docs/media/code-view.png](docs/media/code-view.png). Recorded with `scripts/record-widget.sh` (`CASE=code-view`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 243 KB).
 
+### Button
+
+A release console with live checks and a deploy history. Enter presses Run checks and the four checks start. Tab moves focus to Roll back, then Cancel, then back, and skips the disabled Deploy to prod button until the checks pass. A pointer then presses Deploy to prod and the rollout starts. The buttons show the normal, primary and destructive variants and the focused, pressed and disabled states.
+
+<img src="docs/media/button.gif" alt="Button: focused, pressed, disabled, primary and destructive buttons in a release console in the dark theme" width="1028">
+
+Screenshot: [docs/media/button.png](docs/media/button.png). Recorded with `scripts/record-widget.sh` (`CASE=button`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 118 KB).
+
 ### Dialog
 
 A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.
@@ -274,13 +290,11 @@ Screenshot: [docs/media/dialog.png](docs/media/dialog.png). Recorded with `scrip
 
 ### Sparkline
 
-Live service board. Ten series scroll in eighth-block bars, the highlight moves from row to row, and the error series turns red while it is over its threshold.
+The service board keeps equal-size Cells and antialiased Pixels views of all ten lanes and the selected inspector. CPU, Network, Requests, Errors, Cache and Connections scenes share their data, styles and layout. Labels and statistics remain terminal text. Pixels are enabled by default with a measured presenter; `.pixels(false)` keeps the original eighth-block renderer. Try `cargo run --release -p lunatui --example pixel_sparkline`: arrows select scenes, `u` advances the sample, and `b` switches the right pane to cells and back.
 
-<img src="docs/media/sparkline.webp" alt="Sparkline service board" width="1028">
+<img src="docs/media/sparkline.webp" alt="Matching Cells and antialiased Pixels Sparkline service boards in a real Kitty terminal, including all ten lanes, the selected inspector, hot error styling, and restoring pixels after a cell toggle" width="1028">
 
-![Sparkline service board, still](docs/media/sparkline.png)
-
-Recorded with `scripts/record-showcase.sh` (`CASE=sparkline`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+Screenshots: [CPU](docs/media/sparkline.png), [Errors](docs/media/sparkline-errors.png). Recorded from a clean source tree at `489ed9f350a8a7e24f11d4399d0b61f6a9e6e236` after merging current main in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_sparkline FEATURES=image-presenter WIDTH=200 HEIGHT=44 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:Right,6:Right,9:Right,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 200×44 cells, 2601×1101 pixels, 30 fps, 24 seconds, lossless WebP 108,664 bytes. All eight steps hold for 2.7–3.3 seconds. All 720 source frames and all eight WebP frames match the seven inspected states; restoring Pixels repeats the earlier Connections frame exactly. The stills are unmodified video frames at 1 and 10 seconds. No compositing or dropped frames.
 
 ### Calendar
 
