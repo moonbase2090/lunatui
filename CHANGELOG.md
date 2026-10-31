@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Heatmap`, behind the opt-in `heatmap` feature: labeled borrowed rows, missing readings, fixed cell dimensions, five theme bands, selection, disabled swatches, and shared pointer geometry. The capacity-board showcase follows a hot shard through rebalance and recovery.
 - `TagInput` widget, behind the `tag-input` feature: tags drawn as chips with a `×` that wrap across rows, followed by a text field with a caret for the next tag, and a selected chip for removal. `commit` turns the typed text into a tag (trimmed, skipping empty and duplicate ones), `step` moves the selection between the chips and the field, `rows` and `measure` report the height needed, and `tag_at`, `remove_at`, and `field_area` give hit testing.
 - `lunatui-card` adds `Card` (a raised, rounded container with title, description, body widget and footer), `Separator` and `Empty`, styled from `lunatui-ui-tokens`; the `ui_card` example is a deploy console built from them.
 - `Gauge` uses continuous antialiased pixel fills by default with a measured presenter. `.pixels(false)` preserves its whole-cell or eighth-block fallback, including styles, dirty spans and wide-cell cleanup. The new `pixel_gauge` example mirrors the full deployment board in equal Cells and Pixels panes.
@@ -30,6 +31,11 @@ Every PR adds its entry under **Unreleased**.
 - BigText digits, capitals, and `:.-%` use a modified 8×8 face with uniform 2px strokes, derived from Press Start 2P by `CodeMan38` under OFL-1.1. Other printable ASCII stays a hollow box. The default font selector is renamed from `BigTextFont::PressStart2P` to `BigTextFont::Modified8x8`.
 
 - `Table` no longer allocates while drawing: rows are cleared without building strings, the solved columns are kept between renders of the same area, and cells are read through the new `RowSource::cell`, which `VecSource` and `SliceSource` answer with borrowed text. A source that does not answer it is read through `RowSource::row` as before.
+
+### Fixed
+
+- `Grid::fill` preserves requested text attributes for scalar, wide, and clipped cells, including dimmed disabled heatmap swatches.
+- Recording trimming keeps a final frame that shares an output event with the alternate-screen exit.
 
 ## [0.1.17] - 2026-10-30
 

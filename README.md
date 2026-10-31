@@ -312,6 +312,14 @@ The service board keeps equal-size Cells and antialiased Pixels views of all ten
 
 Screenshots: [CPU](docs/media/sparkline.png), [Errors](docs/media/sparkline-errors.png). Recorded from a clean source tree at `489ed9f350a8a7e24f11d4399d0b61f6a9e6e236` after merging current main in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_sparkline FEATURES=image-presenter WIDTH=200 HEIGHT=44 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:Right,6:Right,9:Right,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 200×44 cells, 2601×1101 pixels, 30 fps, 24 seconds, lossless WebP 108,664 bytes. All eight steps hold for 2.7–3.3 seconds. All 720 source frames and all eight WebP frames match the seven inspected states; restoring Pixels repeats the earlier Connections frame exactly. The stills are unmodified video frames at 1 and 10 seconds. No compositing or dropped frames.
 
+### Heatmap
+
+A live capacity board for eight services across twelve availability zones. The selected cell updates the inspector, a hot shard turns red, and the event log follows its rebalance and recovery. Missing readings remain visible.
+
+<img src="docs/media/heatmap.webp" alt="Heatmap capacity board with labeled services and zones, a selected-cell inspector, and a live rebalance event log" width="1028">
+
+Screenshot: [docs/media/heatmap.png](docs/media/heatmap.png). Recorded with `scripts/record-heatmap.sh` at 120×36, 2x scale, 300 frames at 30 fps, dark truecolor, about 10 seconds. The script checks the incident and recovery states against the actual terminal output.
+
 ### Calendar
 
 A team schedule: the month beside that day's agenda, colored release, review, on-call, and incident days, today held in a raised cell, and the selection walking from late October into November.
