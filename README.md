@@ -51,6 +51,14 @@ Grouped requests, regional latency, build runs, and queue states keep equal-size
 
 Screenshots: [Requests](docs/media/barchart.png), [Regional latency](docs/media/barchart-latency.png). Recorded from a clean source tree at `1843c3a090394c864cb36252bb2c478278f1bbab` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_bar_chart FEATURES=image-presenter WIDTH=168 HEIGHT=36 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:u,6:Right,9:u,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 168×36 cells, 2185×901 pixels, 30 fps, 24 seconds, lossless WebP 43,442 bytes. Eight steps hold for about 3 seconds each; restoring Pixels repeats the earlier Queue state exactly. All 720 source frames and all eight WebP frames match the seven inspected states. The stills are unmodified video frames at 1 and 7 seconds. No compositing or dropped frames.
 
+### Gauge
+
+The complete deployment board keeps equal-size Cells and antialiased Pixels views of the same rollout stage, with all three cards, seven tasks, event history and status text. The native fill uses the continuous ratio; `.pixels(false)` keeps the original whole-cell or eighth-block renderer. Try `cargo run --release -p lunatui --example pixel_gauge`: arrows change stages, `u` advances the sample, and `b` switches the right pane to cells and back.
+
+<img src="docs/media/gauge.webp" alt="Matching Cells and antialiased Pixels Gauge fills in the complete deployment board, including retiring the native image when cells are selected and restoring it afterward" width="1028">
+
+Screenshot: [Ramp](docs/media/gauge.png). Recorded from a clean source tree at `edff78a97f2d303b2362eb0875e0e43a9c3b9dcf` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_gauge FEATURES=image-presenter WIDTH=200 HEIGHT=44 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:Right,6:Right,9:Right,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 200×44 cells, 2601×1101 pixels, 30 fps, 24 seconds, lossless WebP 98,418 bytes. All eight steps hold between 2.5 and 3.5 seconds. All 720 source frames and all eight WebP frames match the seven inspected states; restoring Pixels repeats the earlier Almost frame exactly. Pixel checks confirm native fractional width and image retirement on the cell toggle. The still is the unmodified video frame at 13 seconds. No compositing or dropped frames.
+
 ### MarkdownView
 
 A docs reader: a page list beside a scrolling Markdown view, with headings and rules, hanging-indent lists, task items, quotes, code blocks, boxed tables, inline emphasis, code, and underlined links, and a scrollbar sized from the document. The reader moves through three pages.
