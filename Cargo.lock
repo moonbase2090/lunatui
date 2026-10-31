@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-ui-tokens"
-version = "0.1.13"
+version = "0.1.17"
 dependencies = [
  "lunatui-core",
  "lunatui-theme",

@@ -7,6 +7,23 @@ use lunatui_core::{Attrs, Style};
 use lunatui_theme::Token;
 use lunatui_widgets::{BorderType, RenderCx};
 
+#[cfg(feature = "graphite")]
+const RAISED: Token = Token::SurfaceRaised;
+#[cfg(not(feature = "graphite"))]
+const RAISED: Token = Token::Surface1;
+#[cfg(feature = "graphite")]
+const MUTED: Token = Token::TextMuted;
+#[cfg(not(feature = "graphite"))]
+const MUTED: Token = Token::TextPrimary;
+#[cfg(feature = "graphite")]
+const BORDER_TOKEN: Token = Token::Border;
+#[cfg(not(feature = "graphite"))]
+const BORDER_TOKEN: Token = Token::FocusRing;
+#[cfg(feature = "graphite")]
+const ON_DANGER: Token = Token::OnDanger;
+#[cfg(not(feature = "graphite"))]
+const ON_DANGER: Token = Token::Surface0;
+
 /// Semantic color roles shared by UI components.
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -40,11 +57,11 @@ impl Role {
         match self {
             Self::Background => Token::Surface0,
             Self::Foreground => Token::TextPrimary,
-            Self::Card | Self::Popover => Token::SurfaceRaised,
+            Self::Card | Self::Popover => RAISED,
             Self::Primary | Self::Accent => Token::Accent,
-            Self::Muted => Token::TextMuted,
+            Self::Muted => MUTED,
             Self::Destructive => Token::Fail,
-            Self::Border => Token::Border,
+            Self::Border => BORDER_TOKEN,
             Self::Ring => Token::FocusRing,
         }
     }
@@ -72,7 +89,7 @@ impl Tone {
     #[must_use]
     pub const fn fill(self) -> Token {
         match self {
-            Self::Neutral => Token::SurfaceRaised,
+            Self::Neutral => RAISED,
             Self::Primary => Token::Accent,
             Self::Success => Token::Ok,
             Self::Warning => Token::Warn,
@@ -85,7 +102,7 @@ impl Tone {
     pub const fn on_fill(self) -> Token {
         match self {
             Self::Neutral => Token::TextPrimary,
-            Self::Danger => Token::OnDanger,
+            Self::Danger => ON_DANGER,
             Self::Primary | Self::Success | Self::Warning => Token::Surface0,
         }
     }
