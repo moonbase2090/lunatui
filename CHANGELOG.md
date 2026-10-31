@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Fixed
+
+- The `lunatui-badge` lockfile entry matches the workspace version, so `--locked` builds work after merging Badge into v0.1.18.
+
 ## [0.1.18] - 2026-10-31
 
 ### Added
