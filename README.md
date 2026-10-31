@@ -330,6 +330,14 @@ Screenshot: [Recent submenu over the editor](docs/media/nested-menu.png), taken 
 
 Widget-parity Lunatui and Ratatui recordings: truecolor dark at [80×24](docs/media/nested-menu-80x24-truecolor-dark-side-by-side.mp4) and [200×60](docs/media/nested-menu-200x60-truecolor-dark-side-by-side.mp4), ANSI16 light at [80×24](docs/media/nested-menu-80x24-ansi16-light-side-by-side.mp4) and [200×60](docs/media/nested-menu-200x60-ansi16-light-side-by-side.mp4). Screenshots: [truecolor dark](docs/media/nested-menu-80x24-truecolor-dark.png) and [ANSI16 light](docs/media/nested-menu-80x24-ansi16-light.png). Reproduce with `CASE=nested-menu WIDTH=80 HEIGHT=24 PROFILE=truecolor THEME=dark FRAMES=180 FPS=30 scripts/record-widget.sh`, changing the size, profile, and theme for each variant.
 
+### Menu mnemonics
+
+A notes editor with a menu bar whose underlined letters choose items. Alt+F opens File, R opens Recent and N opens `notes.md`. Alt+E opens Edit, where C is on both Copy and Cut, so each press moves between them, and P pastes a line into the note. A click on View in the bar opens it, and W turns on word wrap.
+
+<img src="docs/media/menu-mnemonics.gif" alt="Menu mnemonics: underlined letters open File, Recent and Edit and choose items in a notes editor in the dark theme" width="1028">
+
+Screenshot: [docs/media/menu-mnemonics.png](docs/media/menu-mnemonics.png). Recorded with `scripts/record-widget.sh` (`CASE=menu-mnemonics`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 60 KB).
+
 ### Popup and ScrollView
 
 A release console. The build log is a `ScrollView` wider and taller than its pane, scrolled and panned with both scrollbars. A deploy `Popup` opens over a faded backdrop, the choice moves to Deploy, and the dialog is dragged aside. After the confirm, new log lines fill the last page and the services roll to the new build. An alerts `Popup` then opens above its status-bar chip with a scrolling `ScrollView` inside.
