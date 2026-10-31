@@ -23,6 +23,8 @@ mod calendar;
 pub mod canvas;
 #[cfg(feature = "chart")]
 mod chart;
+#[cfg(feature = "code-view")]
+mod code_view;
 #[cfg(feature = "combo-box")]
 mod combo_box;
 #[cfg(feature = "date-picker")]
@@ -119,6 +121,8 @@ pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use canvas::Canvas;
 #[cfg(feature = "chart")]
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
+#[cfg(feature = "code-view")]
+pub use code_view::{CodeHighlight, CodeMark, CodeView, CodeViewState};
 #[cfg(feature = "combo-box")]
 pub use combo_box::ComboBox;
 #[cfg(feature = "date-picker")]

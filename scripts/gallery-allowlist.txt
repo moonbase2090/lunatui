@@ -41,6 +41,9 @@ helper requests # renders grouped request data through BarChart
 helper latency # renders regional latency data through horizontal BarChart
 helper runs # renders build data through BarChart
 helper states # renders the same queue data in three BarChart states
+scope examples/code_view_showcase.rs # the review screen composes Block, Paragraph, LineGauge, StatusBar and CodeView widgets
+helper files_pane # renders the file list through Block and Paragraph
+helper problems_pane # renders diagnostics through Block and Paragraph and the check run through LineGauge
 scope examples/pixel_sparkline.rs # live Sparkline twins use the runtime image presenter
 scope examples/spark_scene.rs # shared service board composes real Sparkline, Block and Paragraph widgets
 helper ink_from # resolves semantic colors without writing cells

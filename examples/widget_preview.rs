@@ -38,6 +38,8 @@ use bar_scene::BarBoard;
 mod chart_scene;
 mod spark_scene;
 use chart_scene::ChartBoard;
+#[path = "code_view_showcase.rs"]
+mod code_view_showcase;
 #[path = "deploy_board.rs"]
 mod deploy_board;
 #[path = "dialog_showcase.rs"]
@@ -119,6 +121,11 @@ const PREVIEWS: &[Preview] = &[
         name: "popover",
         native: popover_showcase::render,
         baseline: popover_baseline,
+    },
+    Preview {
+        name: "code-view",
+        native: code_view_showcase::render,
+        baseline: code_view_baseline,
     },
     Preview {
         name: "button",
@@ -4012,6 +4019,12 @@ fn toggle_native(
             ),
             &mut cx,
         );
+}
+
+fn code_view_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "code-view") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn button_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
