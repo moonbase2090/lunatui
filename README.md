@@ -299,7 +299,7 @@ Screenshot: [docs/media/button.png](docs/media/button.png). Recorded with `scrip
 
 ### UI button
 
-The `lunatui-button` crate in a deploy console. Tab moves focus across the five variants (Deploy, Rollback, Promote, Diff, Logs) and then the four option toggles, and Enter presses the focused one. The size row shows Small, Medium and Large, and the Disabled button is muted text with no fill.
+The `lunatui-button` crate in a deploy console. The run is scripted, not interactive: focus steps across the five variants (Deploy, Rollback, Promote, Diff, Logs) and then the four option toggles, and the script presses each one as it goes. The size row shows Small, Medium and Large, and the Disabled button is muted text with no fill.
 
 <img src="docs/media/ui-button.gif" alt="lunatui-button: default, destructive, secondary, outline and ghost buttons, three sizes, a disabled button and option toggles in a deploy console in the dark theme" width="1028">
 

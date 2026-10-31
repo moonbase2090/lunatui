@@ -15,7 +15,7 @@ use lunatui_core::{Attrs, ClusterTable, Grid, Rect, Size};
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Variant as ThemeVariant};
 use lunatui_ui_tokens::{Role, Tone, surface};
-use lunatui_widgets::{RenderCx, Widget};
+use lunatui_widgets::{Block, Paragraph, RenderCx, Widget};
 
 const ACTIONS: [(&str, Variant); 5] = [
     ("Deploy", Variant::Default),
@@ -132,10 +132,15 @@ struct Pipeline;
 
 impl Widget for Pipeline {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let text = surface(cx, Role::Card);
         for (row, (name, time, tone)) in STAGES.iter().enumerate() {
             let y = area.y + u16::try_from(row).unwrap_or(0);
-            cx.put_str(area.x, y, name, surface(cx, Role::Card));
-            cx.put_str(area.x + 20, y, time, surface(cx, Role::Card));
+            Paragraph::new(*name)
+                .style(text)
+                .render(Rect::new(area.x, y, 20, 1), cx);
+            Paragraph::new(*time)
+                .style(text)
+                .render(Rect::new(area.x + 20, y, 20, 1), cx);
             Badge::new(if *tone == Tone::Success {
                 "passed"
             } else {
@@ -155,16 +160,23 @@ struct Hints;
 
 impl Widget for Hints {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let hints: [(&[&str], &str); 3] =
-            [(&["Tab"], "next"), (&["Enter"], "press"), (&["q"], "quit")];
-        let mut x = area.x;
+        let hints: [(&[&str], &str); 2] = [(&["Tab"], "next"), (&["Enter"], "press")];
+        let page = surface(cx, Role::Background);
+        let lead = "Scripted keys:";
+        Paragraph::new(lead)
+            .style(page)
+            .render(Rect::new(area.x, area.y, 14, 1), cx);
+        let mut x = area.x + 17;
         for (keys, label) in hints {
             let chip = Kbd::new(keys);
             let w = chip.measure(Size::new(30, 1)).width;
             chip.render(Rect::new(x, area.y, w, 1), cx);
             let text = format!(" {label}");
-            cx.put_str(x + w, area.y, &text, surface(cx, Role::Background));
-            x += w + u16::try_from(text.chars().count()).unwrap_or(0) + 3;
+            let text_width = u16::try_from(text.chars().count()).unwrap_or(0);
+            Paragraph::new(text)
+                .style(page)
+                .render(Rect::new(x + w, area.y, text_width, 1), cx);
+            x += w + text_width + 3;
         }
     }
 
@@ -176,17 +188,19 @@ impl Widget for Hints {
 fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
     let mut cx = RenderCx::new(grid, clusters, theme);
     let backdrop = surface(&cx, Role::Background);
-    cx.fill(area, backdrop, ' ');
+    Block::new().style(backdrop).render(area, &mut cx);
     let title = backdrop
         .fg(cx.token(Role::Primary.token()))
         .with_attrs(Attrs::new().set_bold(true));
-    cx.put_str(2, 0, "LUNATUI  /  Deploy console", title);
+    Paragraph::new("LUNATUI  /  Deploy console")
+        .style(title)
+        .render(Rect::new(2, 0, 40, 1), &mut cx);
     let badge = Badge::new("production").tone(Tone::Success);
     badge.render(Rect::new(106, 0, 12, 1), &mut cx);
     let actions = Actions { tick };
     let flags = Flags { tick };
     Card::new("Release 2.41.0")
-        .description("Choose an action; Tab moves focus, Enter presses")
+        .description("A scripted run: focus steps through each action and presses it")
         .body(&actions)
         .render(Rect::new(1, 2, 118, 10), &mut cx);
     Card::new("Options")
