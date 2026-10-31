@@ -53,6 +53,16 @@ helper ink_from # resolves semantic colors without writing cells
 helper draw_spark_chrome # composes header labels and background widgets
 helper draw_lane # composes one Sparkline lane and its labels through public widgets
 helper draw_inspector # composes the selected Sparkline and its summary widgets
+scope examples/pixel_gauge.rs # the complete deployment board uses the runtime image presenter for Gauge only
+scope examples/deploy_board.rs # shared deployment scenes compose real widgets and preserve controlled cell callers
+helper paint_header # renders the deployment header through Paragraph
+helper paint_cards # lays out the three real deployment cards
+helper paint_card # composes a Block, Paragraphs and a Spinner
+helper paint_tasks # renders task labels and real Spinner widgets
+helper paint_events # renders event history through Block and Paragraph
+helper paint_gauge # renders the original rollout Gauge with optional native fills
+helper paint_status # composes the status background and StatusBar
+helper paint_spinner # measures and renders a Spinner preset
 scope examples/button_showcase.rs # the release console composes Block, Paragraph, LineGauge, StatusBar and Button widgets
 helper changes # renders release notes through Block and Paragraph
 helper checks # renders check names through Paragraph and their progress through LineGauge

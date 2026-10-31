@@ -8,9 +8,10 @@ use std::io::{self, Write};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use lunatui_core::{ClusterTable, Grid};
+use lunatui_core::{ClusterTable, Grid, Rect};
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Variant};
+use lunatui_widgets::RenderCx;
 
 #[path = "deploy_board.rs"]
 mod deploy_board;
@@ -26,7 +27,13 @@ struct Options {
 fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, tick: u32, fps: u32) {
     let fps = u64::from(fps.max(1));
     let elapsed = u64::from(tick).saturating_mul(1_000) / fps;
-    deploy_board::draw(grid, clusters, theme, elapsed);
+    let area = Rect::new(0, 0, grid.width(), grid.height());
+    deploy_board::draw(
+        area,
+        elapsed,
+        false,
+        &mut RenderCx::new(grid, clusters, theme),
+    );
 }
 
 fn snapshot(options: &Options) -> io::Result<()> {
