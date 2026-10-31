@@ -16,10 +16,13 @@ pixel-layer = ["lunatui-term/pixel-layer"]
 render-color = ["lunatui-core/render-color"]
 subcell = ["lunatui-core/subcell"]
 graphite-tokens = ["lunatui-theme/graphite-tokens", "lunatui-theme/color-profiles"]
+# Graphite pixel-buffer frames through the Kitty PixelLayer; off by default.
+graphite-pixels = ["dep:graphite-core"]
 # gungraun needs Linux and valgrind, so its benchmarks are opt-in.
 gungraun = ["dep:gungraun"]
 
 [dependencies]
+graphite-core = { git = "https://github.com/moonbase2090/graphite", rev = "b11b9f7fce8ccc9750faed957342fc3eba1fa930", features = ["pixel-buffer"], optional = true }
 gungraun = { version = "0.20.0", optional = true }
 lunatui-core = { version = "0.1.18", path = "../lunatui-core" }
 lunatui-layout = { version = "0.1.18", path = "../lunatui-layout" }
@@ -117,3 +120,8 @@ required-features = ["subcell"]
 name = "graphite_token_allocs"
 path = "tests/graphite_token_allocs.rs"
 required-features = ["graphite-tokens"]
+
+[[test]]
+name = "graphite_pixels"
+path = "tests/graphite_pixels.rs"
+required-features = ["graphite-pixels"]
