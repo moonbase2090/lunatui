@@ -11,6 +11,7 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `Heatmap`, behind the opt-in `heatmap` feature: labeled borrowed rows, missing readings, fixed cell dimensions, five theme bands, selection, disabled swatches, and shared pointer geometry. The capacity-board showcase follows a hot shard through rebalance and recovery.
+- Keyboard mnemonics for `Menu`: `MenuItem::mnemonic` sets an item's key and `Menu` underlines its letter in the bar and the dropdowns (`Menu::mnemonics(false)` hides them). `MenuState::press_mnemonic` chooses the matching item in the open dropdown or the bar, without regard to case, and moves between items that share a key. `Menu::bar_item_at` and `MenuState::open` handle clicks on the bar. Items without a mnemonic draw as before.
 
 - `CodeView` widget, behind the `code-view` feature: read-only lines with a right-aligned line-number gutter, `CodeMark` gutter signs (added, changed, removed, error, warning, info, breakpoint), a cursor line, tab stops, horizontal and vertical scrolling, and a vertical scrollbar when the lines overflow. A `CodeHighlight` hook styles byte ranges of each visible line, and closures implement it. `CodeViewState` keeps the cursor on screen through `down`, `up`, `page_down`, `page_up`, and `set_cursor`, and `line_at` finds the line under a click. The lines are borrowed, so a built view draws without allocating.
 

@@ -221,6 +221,15 @@ pub static CASES: &[Case] = &[
         ratatui: popover_ratatui,
     },
     Case {
+        name: "menu-mnemonics",
+        gated: false,
+        parity: Parity::Documented(
+            "tui-menu has no mnemonics; its side draws the same bar and dropdowns without the underlined letters, which are the only differing cells",
+        ),
+        lunatui: menu_mnemonics_lunatui,
+        ratatui: nested_menu_ratatui,
+    },
+    Case {
         name: "code-view",
         gated: false,
         parity: Parity::Documented(
@@ -2209,6 +2218,39 @@ fn benchmark_menu_state() -> MenuState<&'static str> {
     state
 }
 
+fn benchmark_mnemonic_state() -> MenuState<&'static str> {
+    let items = benchmark_menu_items()
+        .into_iter()
+        .map(|item| match item.label().chars().next() {
+            Some(key) => item.mnemonic(key),
+            None => item,
+        })
+        .collect();
+    let mut state = MenuState::new(items);
+    state.activate();
+    state.down();
+    state.down();
+    state.down();
+    state.right();
+    state
+}
+
+fn menu_mnemonics_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    MNEMONIC_STATES.with_borrow(|states| {
+        let state = &states[usize::try_from(tick % 2).unwrap_or(0)];
+        let mut cx = RenderCx::new(grid, clusters, theme);
+        Menu::new(state)
+            .state(WidgetState::Focused)
+            .render(area, &mut cx);
+    });
+}
+
 fn benchmark_rat_menu_state() -> RatMenuState<&'static str> {
     let mut state = RatMenuState::new(vec![
         RatMenuItem::group(
@@ -2254,6 +2296,12 @@ thread_local! {
     static MENU_STATES: RefCell<[MenuState<&'static str>; 2]> = RefCell::new({
         let first = benchmark_menu_state();
         let mut second = benchmark_menu_state();
+        second.down();
+        [first, second]
+    });
+    static MNEMONIC_STATES: RefCell<[MenuState<&'static str>; 2]> = RefCell::new({
+        let first = benchmark_mnemonic_state();
+        let mut second = benchmark_mnemonic_state();
         second.down();
         [first, second]
     });
