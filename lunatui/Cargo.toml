@@ -260,3 +260,9 @@ name = "pixel_progress"
 path = "../examples/pixel_progress.rs"
 required-features = ["image-presenter"]
 test = true
+
+[[example]]
+name = "graphite_pixels"
+path = "../examples/graphite_pixels.rs"
+required-features = ["image-presenter"]
+test = true

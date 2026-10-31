@@ -67,3 +67,22 @@ python3 scripts/check-pixel-recording.py target/pixel-capture/terminal.webp \
 ```
 
 The committed Canvas recording comes from clean code commit `2c45e6a1d57b4c0ca5cce5ed89b95ac90e8cdfc7`, with Kitty 0.32.2, a 120×36 cell configuration, 16-point font, and an actual 1561×901 pixel window. All 720 source frames and eight displayed WebP frames retain graph pixels. The lossless WebP is 292,106 bytes. A previous capture exposed a 166 ms blank when returning from cells to pixels; the same rectangle check rejects that frame. The runtime now uploads Kitty data before changing cells, then presents cells and placements in a new synchronized frame.
+
+## Graphite pixel frames
+
+`examples/graphite_pixels.rs` presents a frame that Graphite's CPU pixel buffer drew, a command palette over a status bar, through the same `Image` and `PixelLayer` path as any other picture. The frame is committed as 320×96 straight-alpha RGBA8 bytes in `examples/data/graphite-status-palette.rgba`, so the example needs no Graphite dependency.
+
+`cargo test -p lunatui-bench --features graphite-pixels --test graphite_pixels` links `graphite-core` (a git dependency pinned to a commit, only in the unpublished bench crate and off by default) and checks three things:
+
+- the committed bytes equal what Graphite draws now (rerun with `GRAPHITE_PIXELS_BLESS=1` to rewrite the file after a deliberate change);
+- the Kitty stream the `PixelLayer` emits for that frame decodes back to exactly the same 122,880 bytes, with one transmit command (`f=32`, `s=320,v=96`);
+- the half-block cell fallback of the same frame has every pixel pair in the right cell colors, 15,360 cells checked.
+
+To capture the example in a real Kitty window on Linux:
+
+```sh
+EXAMPLE=graphite_pixels FEATURES=image-presenter \
+WIDTH=100 HEIGHT=32 FONT_SIZE=16 FPS=30 SECONDS_TO_RECORD=4 scripts/record-pixels.sh
+```
+
+The terminal scales the picture to its cells, so compare colors inside the large flat areas (the status bar and the palette background), not edge pixels.
