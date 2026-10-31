@@ -341,6 +341,7 @@ impl Grid {
         let display = char_width(ch);
         let word = (display == 1).then(|| {
             let meta = Meta {
+                attrs: style.attrs,
                 width: CellWidth::One,
                 ..Meta::default()
             };
@@ -387,6 +388,7 @@ impl Grid {
                         glyph,
                         style,
                         Meta {
+                            attrs: style.attrs,
                             width: CellWidth::Two,
                             ..Meta::default()
                         },
@@ -399,6 +401,7 @@ impl Grid {
                         GlyphSlot::continuation(),
                         style,
                         Meta {
+                            attrs: style.attrs,
                             width: CellWidth::Continuation,
                             ..Meta::default()
                         },
@@ -419,6 +422,7 @@ impl Grid {
                         glyph,
                         style,
                         Meta {
+                            attrs: style.attrs,
                             width: CellWidth::One,
                             ..Meta::default()
                         },
@@ -611,6 +615,7 @@ impl Grid {
             GlyphSlot::inline_scalar(' ').unwrap_or(GlyphSlot::continuation()),
             style,
             Meta {
+                attrs: style.attrs,
                 width: CellWidth::One,
                 ..Meta::default()
             },
@@ -801,6 +806,27 @@ mod tests {
                 .map(|style| (style.fg, style.attrs.bold())),
             Some((Color::Indexed(2), true))
         );
+    }
+
+    #[test]
+    fn fill_keeps_attributes_for_scalar_wide_and_clipped_cells() {
+        let style = Style::new().with_attrs(Attrs::new().set_bold(true).set_dim(true));
+        for glyph in ['a', '░', '界'] {
+            let mut grid = Grid::new(3, 1);
+            let mut clusters = ClusterTable::new();
+            grid.fill(Rect::new(0, 0, 3, 1), style, glyph, &mut clusters);
+            let expected = match glyph {
+                'a' => "aaa",
+                '░' => "░░░",
+                _ => "界 ",
+            };
+            assert_eq!(grid.row_display(0, &clusters), expected);
+            for column in 0..3 {
+                let attrs = grid.get(column, 0).map(|cell| cell.style().attrs);
+                assert_eq!(attrs.map(Attrs::bold), Some(true));
+                assert_eq!(attrs.map(Attrs::dim), Some(true));
+            }
+        }
     }
 
     #[test]

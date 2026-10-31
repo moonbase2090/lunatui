@@ -1055,6 +1055,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "lunatui-card"
+version = "0.1.17"
+dependencies = [
+ "lunatui-core",
+ "lunatui-term",
+ "lunatui-test",
+ "lunatui-theme",
+ "lunatui-ui-tokens",
+ "lunatui-widgets",
+]
+
+[[package]]
 name = "lunatui-core"
 version = "0.1.18"
 dependencies = [
@@ -1159,6 +1171,15 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
+]
+
+[[package]]
+name = "lunatui-ui-tokens"
+version = "0.1.17"
+dependencies = [
+ "lunatui-core",
+ "lunatui-theme",
+ "lunatui-widgets",
 ]
 
 [[package]]

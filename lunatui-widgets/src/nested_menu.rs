@@ -3,7 +3,7 @@
 
 use std::borrow::Cow;
 
-use lunatui_core::{Rect, Size, Style, clip_display_prefix, width};
+use lunatui_core::{Rect, Size, Style, UnderlineStyle, clip_display_prefix, width};
 use lunatui_theme::Token;
 
 use crate::{Block, Borders, RenderCx, Widget, WidgetState};
@@ -22,6 +22,7 @@ pub struct MenuItem<T> {
     data: Option<T>,
     children: Vec<Self>,
     disabled: bool,
+    mnemonic: Option<char>,
 }
 
 impl<T> MenuItem<T> {
@@ -33,6 +34,7 @@ impl<T> MenuItem<T> {
             data: Some(data),
             children: Vec::new(),
             disabled: false,
+            mnemonic: None,
         }
     }
 
@@ -44,6 +46,7 @@ impl<T> MenuItem<T> {
             data: None,
             children,
             disabled: false,
+            mnemonic: None,
         }
     }
 
@@ -52,6 +55,20 @@ impl<T> MenuItem<T> {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+
+    /// The key that chooses this item through [`MenuState::press_mnemonic`], matched without
+    /// regard to case. The first letter of the label that matches is underlined.
+    #[must_use]
+    pub const fn mnemonic(mut self, key: char) -> Self {
+        self.mnemonic = Some(key);
+        self
+    }
+
+    /// The item's mnemonic key, if it has one.
+    #[must_use]
+    pub const fn mnemonic_key(&self) -> Option<char> {
+        self.mnemonic
     }
 
     /// The displayed label.
@@ -209,6 +226,82 @@ impl<T> MenuState<T> {
         }
     }
 
+    /// Highlights top-level item `index`, as a click on it in the bar does. Returns whether the
+    /// item exists and is enabled.
+    pub fn open(&mut self, index: usize) -> bool {
+        if self.items.get(index).is_none_or(|item| item.disabled) {
+            return false;
+        }
+        self.selected_path.clear();
+        self.selected_path.push(index);
+        true
+    }
+
+    /// Chooses the enabled item whose mnemonic is `key`, matched without regard to case.
+    ///
+    /// Keys are looked up in the deepest open dropdown: the one with a selected row, or the
+    /// dropdown of a highlighted top-level group, such as after [`open`](Self::open). A key no
+    /// item there has is looked up in the bar. When one item has the key, it is chosen as
+    /// [`select`](Self::select) would choose it: a group opens and a leaf queues its action.
+    /// When several share it, each press moves to the next of them without choosing. Returns
+    /// whether an item had the key.
+    pub fn press_mnemonic(&mut self, key: char) -> bool
+    where
+        T: Clone,
+    {
+        let open_group = self.selected_path.len() == 1
+            && self
+                .selected()
+                .is_some_and(|item| !item.disabled && item.is_group());
+        if open_group {
+            self.selected_path.push(usize::MAX);
+            if self.choose_mnemonic(key) {
+                return true;
+            }
+            self.selected_path.pop();
+            let root = self.selected_path.pop();
+            if self.choose_mnemonic(key) {
+                return true;
+            }
+            self.selected_path.extend(root);
+            return false;
+        }
+        self.choose_mnemonic(key)
+    }
+
+    fn choose_mnemonic(&mut self, key: char) -> bool
+    where
+        T: Clone,
+    {
+        let depth = self.selected_path.len().max(1);
+        let parent = &self.selected_path[..depth - 1];
+        let Some(siblings) = items_at_path(&self.items, parent) else {
+            return false;
+        };
+        let matches = |item: &MenuItem<T>| {
+            !item.disabled && item.mnemonic.is_some_and(|own| same_key(own, key))
+        };
+        let count = siblings.iter().filter(|item| matches(item)).count();
+        let start = self
+            .selected_path
+            .get(depth - 1)
+            .copied()
+            .filter(|index| *index < siblings.len())
+            .map_or(0, |index| index + 1);
+        let Some(target) = (0..siblings.len())
+            .map(|step| (start + step) % siblings.len())
+            .find(|index| matches(&siblings[*index]))
+        else {
+            return false;
+        };
+        self.selected_path.truncate(depth - 1);
+        self.selected_path.push(target);
+        if count == 1 {
+            self.select();
+        }
+        true
+    }
+
     /// Closes every open level while leaving queued actions available to drain.
     pub fn reset(&mut self) -> bool {
         if self.selected_path.is_empty() {
@@ -286,6 +379,7 @@ pub struct Menu<'a, T> {
     state: &'a MenuState<T>,
     dropdown_width: u16,
     widget_state: WidgetState,
+    mnemonics: bool,
 }
 
 impl<'a, T> Menu<'a, T> {
@@ -296,6 +390,7 @@ impl<'a, T> Menu<'a, T> {
             state,
             dropdown_width: 20,
             widget_state: WidgetState::Normal,
+            mnemonics: true,
         }
     }
 
@@ -311,6 +406,63 @@ impl<'a, T> Menu<'a, T> {
     pub const fn state(mut self, state: WidgetState) -> Self {
         self.widget_state = state;
         self
+    }
+
+    /// Whether to underline mnemonic letters, on by default.
+    #[must_use]
+    pub const fn mnemonics(mut self, show: bool) -> Self {
+        self.mnemonics = show;
+        self
+    }
+
+    /// The top-level item drawn at `(column, row)` in the bar along the top of `area`.
+    #[must_use]
+    pub fn bar_item_at(&self, area: Rect, column: u16, row: u16) -> Option<usize> {
+        if row != area.y || column < area.x || column - area.x >= area.width {
+            return None;
+        }
+        let mut x = usize::from(area.x) + 1;
+        let column = usize::from(column);
+        for (index, item) in self.state.items.iter().enumerate() {
+            let end = x + width(&item.label) + 2;
+            if column >= x && column < end {
+                return Some(index);
+            }
+            x = end;
+        }
+        None
+    }
+
+    fn underline(
+        &self,
+        cx: &mut RenderCx<'_>,
+        item: &MenuItem<T>,
+        at: (u16, u16),
+        shown: u16,
+        style: Style,
+    ) {
+        if !self.mnemonics || item.disabled {
+            return;
+        }
+        let Some(key) = item.mnemonic else {
+            return;
+        };
+        let Some((byte, letter)) = item.label.char_indices().find(|(_, ch)| same_key(*ch, key))
+        else {
+            return;
+        };
+        let offset = u16::try_from(width(&item.label[..byte])).unwrap_or(u16::MAX);
+        let cells = u16::try_from(lunatui_core::char_width(letter))
+            .unwrap_or(1)
+            .max(1);
+        if offset.saturating_add(cells) > shown {
+            return;
+        }
+        let underlined = style.with_attrs(style.attrs.set_underline(UnderlineStyle::Single));
+        cx.set_style(
+            Rect::new(at.0.saturating_add(offset), at.1, cells, 1),
+            underlined,
+        );
     }
 }
 
@@ -427,7 +579,9 @@ impl<T> Menu<'_, T> {
             };
             let start = x;
             x = x.saturating_add(put_clipped(cx, area, x, area.y, " ", style));
-            x = x.saturating_add(put_clipped(cx, area, x, area.y, &item.label, style));
+            let shown = put_clipped(cx, area, x, area.y, &item.label, style);
+            self.underline(cx, item, (x, area.y), shown, style);
+            x = x.saturating_add(shown);
             x = x.saturating_add(put_clipped(cx, area, x, area.y, " ", style));
             if x == start {
                 break;
@@ -507,7 +661,7 @@ impl<T> Menu<'_, T> {
                 );
         }
         let max_label = u16::try_from(child_width).unwrap_or(u16::MAX);
-        render_dropdown_items(dropdown, panel, cx, colors, max_label);
+        self.render_dropdown_items(dropdown, panel, cx, colors, max_label);
 
         let Some(index) = selected else {
             return;
@@ -536,49 +690,51 @@ impl<T> Menu<'_, T> {
             },
         );
     }
-}
 
-fn render_dropdown_items<T>(
-    dropdown: &Dropdown<'_, T>,
-    panel: Rect,
-    cx: &mut RenderCx<'_>,
-    colors: MenuColors,
-    max_label: u16,
-) {
-    let selected = dropdown.selected_path.first().copied();
-    for (index, item) in dropdown.items.iter().enumerate() {
-        let row_y = panel
-            .y
-            .saturating_add(1)
-            .saturating_add(u16::try_from(index).unwrap_or(u16::MAX));
-        if row_y >= panel.y.saturating_add(panel.height).saturating_sub(1) {
-            break;
+    fn render_dropdown_items(
+        &self,
+        dropdown: &Dropdown<'_, T>,
+        panel: Rect,
+        cx: &mut RenderCx<'_>,
+        colors: MenuColors,
+        max_label: u16,
+    ) {
+        let selected = dropdown.selected_path.first().copied();
+        for (index, item) in dropdown.items.iter().enumerate() {
+            let row_y = panel
+                .y
+                .saturating_add(1)
+                .saturating_add(u16::try_from(index).unwrap_or(u16::MAX));
+            if row_y >= panel.y.saturating_add(panel.height).saturating_sub(1) {
+                break;
+            }
+            let is_selected = selected == Some(index);
+            let style = if item.disabled {
+                colors.disabled
+            } else if is_selected {
+                colors.selected
+            } else {
+                colors.panel
+            };
+            let row_x = panel.x.saturating_add(2);
+            let mut label_x = row_x;
+            label_x = label_x.saturating_add(put_clipped(cx, panel, label_x, row_y, " ", style));
+            let shown = put_clipped(cx, panel, label_x, row_y, &item.label, style);
+            self.underline(cx, item, (label_x, row_y), shown, style);
+            label_x = label_x.saturating_add(shown);
+            let label_width = u16::try_from(width(&item.label)).unwrap_or(u16::MAX);
+            let padding = max_label.saturating_sub(label_width);
+            fill_spaces(cx, panel, label_x, row_y, padding, style);
+            label_x = label_x.saturating_add(padding);
+            put_clipped(
+                cx,
+                panel,
+                label_x,
+                row_y,
+                if item.is_group() { ">" } else { " " },
+                style,
+            );
         }
-        let is_selected = selected == Some(index);
-        let style = if item.disabled {
-            colors.disabled
-        } else if is_selected {
-            colors.selected
-        } else {
-            colors.panel
-        };
-        let row_x = panel.x.saturating_add(2);
-        let mut label_x = row_x;
-        label_x = label_x.saturating_add(put_clipped(cx, panel, label_x, row_y, " ", style));
-        label_x =
-            label_x.saturating_add(put_clipped(cx, panel, label_x, row_y, &item.label, style));
-        let label_width = u16::try_from(width(&item.label)).unwrap_or(u16::MAX);
-        let padding = max_label.saturating_sub(label_width);
-        fill_spaces(cx, panel, label_x, row_y, padding, style);
-        label_x = label_x.saturating_add(padding);
-        put_clipped(
-            cx,
-            panel,
-            label_x,
-            row_y,
-            if item.is_group() { ">" } else { " " },
-            style,
-        );
     }
 }
 
@@ -647,6 +803,10 @@ fn dropdown_count<T>(items: &[MenuItem<T>], selected_path: &[usize]) -> u16 {
         level = &item.children;
     }
     count
+}
+
+fn same_key(a: char, b: char) -> bool {
+    a == b || a.to_lowercase().eq(b.to_lowercase())
 }
 
 fn first_enabled<T>(items: &[MenuItem<T>]) -> Option<usize> {

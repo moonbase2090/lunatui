@@ -17,12 +17,13 @@ use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
-    Button, ButtonVariant, Canvas, Chart, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus,
-    DialogKind, DialogState, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer,
-    KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
-    MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart,
-    PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView,
-    ScrollbarVisibility, SearchBox, Slider, Sparkline, SplitAxis, SplitTree, Table, Tabs, TextWrap,
+    Button, ButtonVariant, Canvas, Chart, CodeMark, CodeView, CodeViewState, ComboBox, Dataset,
+    Date, DatePicker, Dialog, DialogFocus, DialogKind, DialogState, Diff, DiffView, Form,
+    FormField, Gauge, GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel,
+    LogView, MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
+    NotificationLog, NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup,
+    ProgressBar, RadioGroup, RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Slider,
+    SortDirection, Sparkline, SplitAxis, SplitTree, Table, TableState, Tabs, TagInput, TextWrap,
     ToastKind, ToastScope, ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
@@ -53,6 +54,8 @@ use tui_scrollview::{
 
 /// Terminal sizes every case runs at.
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
+
+mod heatmap;
 
 const BG: (u8, u8, u8) = (0x1a, 0x1b, 0x26);
 const TEXT: (u8, u8, u8) = (0xc0, 0xca, 0xf5);
@@ -114,6 +117,15 @@ pub struct Case {
 
 /// Every widget case, in report order.
 pub static CASES: &[Case] = &[
+    Case {
+        name: "heatmap",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no heatmap widget; the reference draws the same fixed matrix directly into its Buffer",
+        ),
+        lunatui: heatmap::native,
+        ratatui: heatmap::baseline,
+    },
     Case {
         name: "block",
         gated: false,
@@ -209,11 +221,38 @@ pub static CASES: &[Case] = &[
         ratatui: popover_ratatui,
     },
     Case {
+        name: "menu-mnemonics",
+        gated: false,
+        parity: Parity::Documented(
+            "tui-menu has no mnemonics; its side draws the same bar and dropdowns without the underlined letters, which are the only differing cells",
+        ),
+        lunatui: menu_mnemonics_lunatui,
+        ratatui: nested_menu_ratatui,
+    },
+    Case {
+        name: "code-view",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no code viewer; its side draws the same numbered, scrolled lines as a Paragraph of styled spans, without gutter marks or a scrollbar",
+        ),
+        lunatui: code_view_lunatui,
+        ratatui: code_view_ratatui,
+    },
+    Case {
         name: "button",
         gated: true,
         parity: Parity::Exact,
         lunatui: button_lunatui,
         ratatui: button_ratatui,
+    },
+    Case {
+        name: "table-sorted",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui's Table has no sort state or range selection; its side draws the rows in the same sorted order with the marker in the header title and styles the cursor and range rows directly",
+        ),
+        lunatui: table_sorted_lunatui,
+        ratatui: table_sorted_ratatui,
     },
     Case {
         name: "dialog",
@@ -329,6 +368,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: notification_center_lunatui,
         ratatui: notification_center_ratatui,
+    },
+    Case {
+        name: "tag-input",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no tag input; its side draws the same chips and typed text as one Paragraph of styled spans, without wrapping, a caret, or hit testing",
+        ),
+        lunatui: tag_input_lunatui,
+        ratatui: tag_input_ratatui,
     },
     Case {
         name: "log-view",
@@ -605,6 +653,89 @@ fn table_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
             RatConstraint::Fill(1),
         ],
     )
+    .column_spacing(0)
+    .style(rat_text())
+    .render(area, buf);
+}
+
+const SORTED_HEADER: [&str; 4] = ["Check", "State", "Time ▼", "Path"];
+
+fn sorted_state() -> &'static TableState {
+    static STATE: OnceLock<TableState> = OnceLock::new();
+    STATE.get_or_init(|| {
+        let mut state = TableState::new();
+        state.sort(
+            &SliceSource::new(row_slices()),
+            2,
+            SortDirection::Descending,
+        );
+        state
+    })
+}
+
+fn sorted_columns() -> Vec<Constraint> {
+    vec![
+        Constraint::Length(12),
+        Constraint::Length(6),
+        Constraint::Length(9),
+        Constraint::Fill(1),
+    ]
+}
+
+fn table_sorted_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    cx.set_style(area, text_style());
+    let source = SliceSource::new(row_slices());
+    let top = offset(tick);
+    Table::new(sorted_state().view(&source), sorted_columns())
+        .style(text_style())
+        .header([
+            ("Check", text_style()),
+            ("State", text_style()),
+            ("Time", text_style()),
+            ("Path", text_style()),
+        ])
+        .sort_indicator(Some((2, SortDirection::Descending)))
+        .offset(top)
+        .selected(Some(top + 3))
+        .selection(Some(top + 1..=top + 3))
+        .highlight_style(text_style().bg(rgb(ACCENT)))
+        .selection_style(dim_style())
+        .render(area, &mut cx);
+}
+
+fn table_sorted_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let state = sorted_state();
+    let top = offset(tick);
+    let rows = (top..table_rows().len())
+        .take(usize::from(area.height.saturating_sub(1)))
+        .map(|view| {
+            let row = &table_rows()[state.source_row(view)];
+            let style = if view == top + 3 {
+                rat_text().bg(rat_rgb(ACCENT))
+            } else if (top + 1..=top + 2).contains(&view) {
+                rat_base().fg(rat_rgb(DIM))
+            } else {
+                rat_text()
+            };
+            Row::new(row.iter().map(String::as_str)).style(style)
+        });
+    RatTable::new(
+        rows,
+        [
+            RatConstraint::Length(12),
+            RatConstraint::Length(6),
+            RatConstraint::Length(9),
+            RatConstraint::Fill(1),
+        ],
+    )
+    .header(Row::new(SORTED_HEADER))
     .column_spacing(0)
     .style(rat_text())
     .render(area, buf);
@@ -1706,6 +1837,71 @@ fn progress_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     }
 }
 
+const CODE_LINES: [&str; 12] = [
+    "use std::collections::HashMap;",
+    "",
+    "fn tally(words: &[&str]) -> HashMap<&str, usize> {",
+    "    let mut counts = HashMap::new();",
+    "    for word in words {",
+    "        *counts.entry(*word).or_insert(0) += 1;",
+    "    }",
+    "    counts",
+    "}",
+    "",
+    "fn main() {",
+    "    println!(\"{:?}\", tally(&[\"a\", \"b\", \"a\"]));",
+];
+const CODE_MARKS: [(usize, CodeMark); 2] = [(3, CodeMark::Changed), (5, CodeMark::Error)];
+
+fn code_view_state(area: Rect, tick: u32) -> CodeViewState {
+    let mut state = CodeViewState::new();
+    CodeView::new(&CODE_LINES).sync(area, &mut state);
+    state.set_cursor(Some(usize::try_from(tick % 12).unwrap_or(0)));
+    state
+}
+
+fn code_view_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let state = code_view_state(area, tick);
+    CodeView::new(&CODE_LINES)
+        .view(&state)
+        .marks(&CODE_MARKS)
+        .render(area, &mut cx);
+}
+
+fn code_view_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let screen = Rect::new(area.x, area.y, area.width, area.height);
+    let state = code_view_state(screen, tick);
+    let lines: Vec<Line> = CODE_LINES
+        .iter()
+        .enumerate()
+        .skip(state.top())
+        .map(|(index, text)| {
+            let current = state.cursor() == Some(index);
+            let base = if current {
+                RatStyle::new()
+                    .fg(color(Token::TextPrimary))
+                    .bg(color(Token::Surface1))
+            } else {
+                RatStyle::new().fg(color(Token::TextPrimary))
+            };
+            Line::from(vec![
+                Span::styled(format!(" {:>2} ", index + 1), base),
+                Span::styled(*text, base),
+            ])
+        })
+        .collect();
+    RatParagraph::new(lines).render(area, buf);
+}
+
 const BUTTON_LABELS: [&str; 3] = ["Run checks", "Deploy", "Roll back"];
 
 fn button_slots(area: Rect) -> impl Iterator<Item = (usize, Rect)> {
@@ -2031,6 +2227,39 @@ fn benchmark_menu_state() -> MenuState<&'static str> {
     state
 }
 
+fn benchmark_mnemonic_state() -> MenuState<&'static str> {
+    let items = benchmark_menu_items()
+        .into_iter()
+        .map(|item| match item.label().chars().next() {
+            Some(key) => item.mnemonic(key),
+            None => item,
+        })
+        .collect();
+    let mut state = MenuState::new(items);
+    state.activate();
+    state.down();
+    state.down();
+    state.down();
+    state.right();
+    state
+}
+
+fn menu_mnemonics_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    MNEMONIC_STATES.with_borrow(|states| {
+        let state = &states[usize::try_from(tick % 2).unwrap_or(0)];
+        let mut cx = RenderCx::new(grid, clusters, theme);
+        Menu::new(state)
+            .state(WidgetState::Focused)
+            .render(area, &mut cx);
+    });
+}
+
 fn benchmark_rat_menu_state() -> RatMenuState<&'static str> {
     let mut state = RatMenuState::new(vec![
         RatMenuItem::group(
@@ -2076,6 +2305,12 @@ thread_local! {
     static MENU_STATES: RefCell<[MenuState<&'static str>; 2]> = RefCell::new({
         let first = benchmark_menu_state();
         let mut second = benchmark_menu_state();
+        second.down();
+        [first, second]
+    });
+    static MNEMONIC_STATES: RefCell<[MenuState<&'static str>; 2]> = RefCell::new({
+        let first = benchmark_mnemonic_state();
+        let mut second = benchmark_mnemonic_state();
         second.down();
         [first, second]
     });
@@ -3207,4 +3442,39 @@ fn notification_center_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         ),
         buf,
     );
+}
+
+const TAGS: [&str; 5] = ["rust", "tui", "async", "widgets", "grid"];
+
+fn tag_input_text(tick: u32) -> &'static str {
+    let typed = "terminal";
+    &typed[..usize::try_from((tick / 10) % 9).unwrap_or(0)]
+}
+
+fn tag_input_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let text = tag_input_text(tick);
+    TagInput::new(&TAGS, text, text.len())
+        .placeholder("Add a tag")
+        .state(WidgetState::Focused)
+        .render(area, &mut cx);
+}
+
+fn tag_input_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let chip = rat_text().add_modifier(ratatui::style::Modifier::REVERSED);
+    let mut spans = Vec::new();
+    for tag in TAGS {
+        spans.push(Span::styled(format!(" {tag} × "), chip));
+        spans.push(Span::raw(" "));
+    }
+    spans.push(Span::styled(tag_input_text(tick), rat_text()));
+    RatParagraph::new(Line::from(spans))
+        .style(rat_text())
+        .render(area, buf);
 }

@@ -5,6 +5,9 @@ use lunatui_core::{Rect, Size, Style, clip_display_prefix};
 
 use crate::{Block, RenderCx, Widget};
 
+#[cfg(feature = "pixel-gauge")]
+mod pixel;
+
 /// Horizontal progress bar in `[0.0, 1.0]`.
 #[derive(Clone, Debug)]
 pub struct Gauge {
@@ -13,6 +16,7 @@ pub struct Gauge {
     fill_style: Style,
     track_style: Option<Style>,
     sub_cell: bool,
+    pixels: bool,
 }
 
 impl Gauge {
@@ -25,6 +29,7 @@ impl Gauge {
             fill_style: Style::new(),
             track_style: None,
             sub_cell: false,
+            pixels: true,
         }
     }
 
@@ -55,6 +60,16 @@ impl Gauge {
     #[must_use]
     pub fn sub_cell(mut self, enabled: bool) -> Self {
         self.sub_cell = enabled;
+        self
+    }
+
+    /// Uses antialiased pixel fills when the frame supports them.
+    ///
+    /// Native fills use the continuous ratio. `sub_cell` controls only the cell fallback.
+    /// Set this to false to keep the cell renderer. Builds without `pixel-gauge` use cells.
+    #[must_use]
+    pub fn pixels(mut self, enabled: bool) -> Self {
+        self.pixels = enabled;
         self
     }
 }
@@ -104,6 +119,8 @@ impl Widget for Gauge {
         let y = inner.y + inner.height / 2;
         cx.put_str(inner.x, y, draw, self.fill_style);
         let mut next = filled;
+        #[cfg(feature = "pixel-gauge")]
+        let mut partial = None;
         if self.sub_cell && filled < inner.width {
             let fraction = self.ratio * f32::from(inner.width) - f32::from(filled);
             if fraction > 0.0 {
@@ -113,6 +130,10 @@ impl Widget for Gauge {
                     .last()
                     .map_or(LEFT_EIGHTHS[0].1, |(_, glyph)| *glyph);
                 cx.put_str(inner.x + filled, y, eighths, self.fill_style);
+                #[cfg(feature = "pixel-gauge")]
+                {
+                    partial = eighths.chars().next();
+                }
                 next = filled + 1;
             }
         }
@@ -123,6 +144,16 @@ impl Widget for Gauge {
                 y,
                 &rest,
                 self.track_style.unwrap_or_default(),
+            );
+        }
+        #[cfg(feature = "pixel-gauge")]
+        if self.pixels {
+            pixel::render(
+                self,
+                Rect::new(inner.x, y, inner.width, 1),
+                filled,
+                partial,
+                cx,
             );
         }
     }

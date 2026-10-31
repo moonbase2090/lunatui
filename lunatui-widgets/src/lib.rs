@@ -23,6 +23,8 @@ mod calendar;
 pub mod canvas;
 #[cfg(feature = "chart")]
 mod chart;
+#[cfg(feature = "code-view")]
+mod code_view;
 #[cfg(feature = "combo-box")]
 mod combo_box;
 #[cfg(feature = "date-picker")]
@@ -36,6 +38,8 @@ mod form;
 mod gauge;
 #[cfg(feature = "graphite-render")]
 pub mod graphite;
+#[cfg(feature = "heatmap")]
+mod heatmap;
 #[cfg(feature = "hex-viewer")]
 mod hex_viewer;
 #[cfg(feature = "image")]
@@ -89,7 +93,10 @@ mod state;
 mod status_bar;
 mod status_dot;
 mod table;
+mod table_state;
 mod tabs;
+#[cfg(feature = "tag-input")]
+mod tag_input;
 mod text_input;
 #[cfg(feature = "toast")]
 mod toast;
@@ -118,6 +125,8 @@ pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use canvas::Canvas;
 #[cfg(feature = "chart")]
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
+#[cfg(feature = "code-view")]
+pub use code_view::{CodeHighlight, CodeMark, CodeView, CodeViewState};
 #[cfg(feature = "combo-box")]
 pub use combo_box::ComboBox;
 #[cfg(feature = "date-picker")]
@@ -129,6 +138,8 @@ pub use diff_view::{Diff, DiffHunk, DiffKind, DiffLayout, DiffLine, DiffView};
 #[cfg(feature = "form")]
 pub use form::{FieldArea, Form, FormField};
 pub use gauge::Gauge;
+#[cfg(feature = "heatmap")]
+pub use heatmap::{Heatmap, HeatmapCell, HeatmapRow};
 #[cfg(feature = "hex-viewer")]
 pub use hex_viewer::{HexViewer, HexViewerState};
 #[cfg(feature = "image")]
@@ -194,7 +205,10 @@ pub use state::WidgetState;
 pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
 pub use table::{CellStyle, Table};
+pub use table_state::{SortDirection, TableState, TableView};
 pub use tabs::{TabMove, Tabs, TabsDrag};
+#[cfg(feature = "tag-input")]
+pub use tag_input::TagInput;
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]
 pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};

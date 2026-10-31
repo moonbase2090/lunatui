@@ -10,6 +10,8 @@ members = [
     "lunatui-theme",
     "lunatui-image",
     "lunatui-widgets",
+    "lunatui-ui-tokens",
+    "lunatui-card",
     "lunatui-test",
     "lunatui-ratatui",
     "lunatui-prismattyc",

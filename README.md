@@ -51,6 +51,14 @@ Grouped requests, regional latency, build runs, and queue states keep equal-size
 
 Screenshots: [Requests](docs/media/barchart.png), [Regional latency](docs/media/barchart-latency.png). Recorded from a clean source tree at `1843c3a090394c864cb36252bb2c478278f1bbab` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_bar_chart FEATURES=image-presenter WIDTH=168 HEIGHT=36 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:u,6:Right,9:u,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 168×36 cells, 2185×901 pixels, 30 fps, 24 seconds, lossless WebP 43,442 bytes. Eight steps hold for about 3 seconds each; restoring Pixels repeats the earlier Queue state exactly. All 720 source frames and all eight WebP frames match the seven inspected states. The stills are unmodified video frames at 1 and 7 seconds. No compositing or dropped frames.
 
+### Gauge
+
+The complete deployment board keeps equal-size Cells and antialiased Pixels views of the same rollout stage, with all three cards, seven tasks, event history and status text. The native fill uses the continuous ratio; `.pixels(false)` keeps the original whole-cell or eighth-block renderer. Try `cargo run --release -p lunatui --example pixel_gauge`: arrows change stages, `u` advances the sample, and `b` switches the right pane to cells and back.
+
+<img src="docs/media/gauge.webp" alt="Matching Cells and antialiased Pixels Gauge fills in the complete deployment board, including retiring the native image when cells are selected and restoring it afterward" width="1028">
+
+Screenshot: [Ramp](docs/media/gauge.png). Recorded from a clean source tree at `edff78a97f2d303b2362eb0875e0e43a9c3b9dcf` in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_gauge FEATURES=image-presenter WIDTH=200 HEIGHT=44 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:Right,6:Right,9:Right,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 200×44 cells, 2601×1101 pixels, 30 fps, 24 seconds, lossless WebP 98,418 bytes. All eight steps hold between 2.5 and 3.5 seconds. All 720 source frames and all eight WebP frames match the seven inspected states; restoring Pixels repeats the earlier Almost frame exactly. Pixel checks confirm native fractional width and image retirement on the cell toggle. The still is the unmodified video frame at 13 seconds. No compositing or dropped frames.
+
 ### MarkdownView
 
 A docs reader: a page list beside a scrolling Markdown view, with headings and rules, hanging-indent lists, task items, quotes, code blocks, boxed tables, inline emphasis, code, and underlined links, and a scrollbar sized from the document. The reader moves through three pages.
@@ -98,6 +106,14 @@ A release pipelines screen with a boxed tab strip reordered by the pointer. Pres
 <img src="docs/media/tabs-drag.webp" alt="TabsDrag: a tab lifted off a boxed strip and dropped into a new position over builds, deploys and logs panes, in the dark theme" width="1028">
 
 Screenshot: [docs/media/tabs-drag.png](docs/media/tabs-drag.png). Recorded with `scripts/record-showcase.sh` (`CASE=tabs-drag`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
+### Table sorting, selection and resizing
+
+A live service inventory whose latencies and error rates update while you work. The cursor walks the services, and slow or failing values are colored by a per-cell style closure. A click on the p95 header sorts slowest first and marks the column `▼`, keeping the cursor on its service. Shift+Down selects a range of four services, listed in the details pane. Dragging the Service divider widens that column while the others keep their widths.
+
+<img src="docs/media/table-upgrades.gif" alt="Table: sorting by p95, a range selection, per-cell colors and a resized column in a live service inventory in the dark theme" width="1028">
+
+Screenshot: [docs/media/table-upgrades.png](docs/media/table-upgrades.png). Recorded with `scripts/record-widget.sh` (`CASE=table-sorted`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 234 KB).
 
 ### Key hint bar
 
@@ -200,6 +216,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Tag input
+
+A journal editor: the tags wrap onto a second row, typing narrows a list of suggestions, a tag that is already there is refused with a message, the arrow keys select the last chip and delete removes it, and the count beside the label follows.
+
+<img src="docs/media/tag-input.webp" alt="TagInput in a journal editor: wrapping tag chips, a suggestion list under the field, a duplicate tag warning, a chip removed, and the tag count updating in the dark theme" width="1028">
+
+Screenshot: [docs/media/tag-input.png](docs/media/tag-input.png). Recorded with `scripts/record-showcase.sh` (`CASE=tag-input`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
 ### Notification center
 
 An inbox beside a deploy dashboard: toasts pop up as events arrive and each one lands in the history with an unread mark and a count in the header, the arrow keys move through the list and read what they pass, a dismissed entry drops out, and marking all read turns the header to "All read".
@@ -256,6 +280,14 @@ A deploy console with a toolbar, a table of deploys and an activity log. Filter 
 
 Screenshot: [docs/media/popover.png](docs/media/popover.png). Recorded with `scripts/record-showcase.sh` (`CASE=popover`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds plus a 2-second hold).
 
+### Code view
+
+A code review screen with a file list, the source with line numbers and gutter marks for changes, an error, a warning and a breakpoint, and a problems pane whose check run keeps moving. The cursor walks down the file and the view scrolls with it. `]e` jumps to the error, `l` scrolls right to the end of its long line, `0` scrolls back, and `]c` jumps to the next change. A small highlighter written against the highlight hook colors keywords, strings, numbers and comments.
+
+<img src="docs/media/code-view.gif" alt="Code view: line numbers, gutter marks and highlighted Rust source in a review screen in the dark theme" width="1028">
+
+Screenshot: [docs/media/code-view.png](docs/media/code-view.png). Recorded with `scripts/record-widget.sh` (`CASE=code-view`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 243 KB).
+
 ### Button
 
 A release console with live checks and a deploy history. Enter presses Run checks and the four checks start. Tab moves focus to Roll back, then Cancel, then back, and skips the disabled Deploy to prod button until the checks pass. A pointer then presses Deploy to prod and the rollout starts. The buttons show the normal, primary and destructive variants and the focused, pressed and disabled states.
@@ -279,6 +311,14 @@ The service board keeps equal-size Cells and antialiased Pixels views of all ten
 <img src="docs/media/sparkline.webp" alt="Matching Cells and antialiased Pixels Sparkline service boards in a real Kitty terminal, including all ten lanes, the selected inspector, hot error styling, and restoring pixels after a cell toggle" width="1028">
 
 Screenshots: [CPU](docs/media/sparkline.png), [Errors](docs/media/sparkline-errors.png). Recorded from a clean source tree at `489ed9f350a8a7e24f11d4399d0b61f6a9e6e236` after merging current main in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_sparkline FEATURES=image-presenter WIDTH=200 HEIGHT=44 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:Right,6:Right,9:Right,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 200×44 cells, 2601×1101 pixels, 30 fps, 24 seconds, lossless WebP 108,664 bytes. All eight steps hold for 2.7–3.3 seconds. All 720 source frames and all eight WebP frames match the seven inspected states; restoring Pixels repeats the earlier Connections frame exactly. The stills are unmodified video frames at 1 and 10 seconds. No compositing or dropped frames.
+
+### Heatmap
+
+A live capacity board for eight services across twelve availability zones. The selected cell updates the inspector, a hot shard turns red, and the event log follows its rebalance and recovery. Missing readings remain visible.
+
+<img src="docs/media/heatmap.webp" alt="Heatmap capacity board with labeled services and zones, a selected-cell inspector, and a live rebalance event log" width="1028">
+
+Screenshot: [docs/media/heatmap.png](docs/media/heatmap.png). Recorded with `scripts/record-heatmap.sh` at 120×36, 2x scale, 300 frames at 30 fps, dark truecolor, about 10 seconds. The script checks the incident and recovery states against the actual terminal output.
 
 ### Calendar
 
@@ -313,6 +353,14 @@ An editor opens File, steps past a disabled Save item, and opens Recent. Selecti
 Screenshot: [Recent submenu over the editor](docs/media/nested-menu.png), taken at 3.8 seconds. Recorded at 120×36 and 2× scale in the dark theme with `CASE=menu-editor FRAMES=300 FPS=30 LAST_FRAME_DURATION=1 MAX_BYTES=2000000 scripts/record-showcase.sh`, as a lossless animated WebP, about 11 seconds.
 
 Widget-parity Lunatui and Ratatui recordings: truecolor dark at [80×24](docs/media/nested-menu-80x24-truecolor-dark-side-by-side.mp4) and [200×60](docs/media/nested-menu-200x60-truecolor-dark-side-by-side.mp4), ANSI16 light at [80×24](docs/media/nested-menu-80x24-ansi16-light-side-by-side.mp4) and [200×60](docs/media/nested-menu-200x60-ansi16-light-side-by-side.mp4). Screenshots: [truecolor dark](docs/media/nested-menu-80x24-truecolor-dark.png) and [ANSI16 light](docs/media/nested-menu-80x24-ansi16-light.png). Reproduce with `CASE=nested-menu WIDTH=80 HEIGHT=24 PROFILE=truecolor THEME=dark FRAMES=180 FPS=30 scripts/record-widget.sh`, changing the size, profile, and theme for each variant.
+
+### Menu mnemonics
+
+A notes editor with a menu bar whose underlined letters choose items. Alt+F opens File, R opens Recent and N opens `notes.md`. Alt+E opens Edit, where C is on both Copy and Cut, so each press moves between them, and P pastes a line into the note. A click on View in the bar opens it, and W turns on word wrap.
+
+<img src="docs/media/menu-mnemonics.gif" alt="Menu mnemonics: underlined letters open File, Recent and Edit and choose items in a notes editor in the dark theme" width="1028">
+
+Screenshot: [docs/media/menu-mnemonics.png](docs/media/menu-mnemonics.png). Recorded with `scripts/record-widget.sh` (`CASE=menu-mnemonics`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 60 KB).
 
 ### Popup and ScrollView
 

@@ -24,9 +24,9 @@ use lunatui_widgets::{
     List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
     Monthly, NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph,
     PieChart, PieSlice, PixelSize, ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx,
-    Scrollbar, SearchBox, SearchMatch, Slider, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove,
-    Table, Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget,
-    WidgetState,
+    Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree,
+    StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput, TextInput, ToastKind, ToastScope,
+    ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 mod bar_scene;
@@ -36,18 +36,25 @@ mod button_showcase;
 mod canvas_showcase;
 use bar_scene::BarBoard;
 mod chart_scene;
+mod heatmap_showcase;
 mod spark_scene;
 use chart_scene::ChartBoard;
+#[path = "code_view_showcase.rs"]
+mod code_view_showcase;
 #[path = "deploy_board.rs"]
 mod deploy_board;
 #[path = "dialog_showcase.rs"]
 mod dialog_showcase;
+#[path = "menu_mnemonic_showcase.rs"]
+mod menu_mnemonic_showcase;
 #[path = "menu_showcase.rs"]
 mod menu_showcase;
 #[path = "popover_showcase.rs"]
 mod popover_showcase;
 #[path = "release_console.rs"]
 mod release_console;
+#[path = "table_showcase.rs"]
+mod table_showcase;
 #[path = "tooltip_showcase.rs"]
 mod tooltip_showcase;
 use ratatui::backend::CrosstermBackend;
@@ -73,6 +80,11 @@ struct Preview {
 }
 
 const PREVIEWS: &[Preview] = &[
+    Preview {
+        name: "heatmap",
+        native: heatmap_showcase::render,
+        baseline: heatmap_baseline,
+    },
     Preview {
         name: "toast",
         native: toast_native,
@@ -119,9 +131,24 @@ const PREVIEWS: &[Preview] = &[
         baseline: popover_baseline,
     },
     Preview {
+        name: "menu-mnemonics",
+        native: menu_mnemonic_showcase::render,
+        baseline: menu_mnemonics_baseline,
+    },
+    Preview {
+        name: "code-view",
+        native: code_view_showcase::render,
+        baseline: code_view_baseline,
+    },
+    Preview {
         name: "button",
         native: button_showcase::render,
         baseline: button_baseline,
+    },
+    Preview {
+        name: "table-sorted",
+        native: table_showcase::render,
+        baseline: table_sorted_baseline,
     },
     Preview {
         name: "dialog",
@@ -177,6 +204,11 @@ const PREVIEWS: &[Preview] = &[
         name: "date-picker",
         native: datepick_native,
         baseline: datepick_baseline,
+    },
+    Preview {
+        name: "tag-input",
+        native: tags_native,
+        baseline: tags_baseline,
     },
     Preview {
         name: "notification-center",
@@ -1589,6 +1621,97 @@ fn readout(scene: &CutScene) -> String {
     }
 }
 
+fn draw_cut_activity(cx: &mut RenderCx<'_>, scene: &CutScene, y: u16) {
+    let height = scene.height.saturating_sub(y.saturating_add(1));
+    if height < 5 {
+        return;
+    }
+    let width = scene.width.saturating_sub(6) * 2 / 5;
+    let plot = Rect::new(2, y, width, height);
+    let events = Rect::new(width + 4, y, scene.width.saturating_sub(width + 6), height);
+    let ground = Style::new().fg(scene.ink.text).bg(scene.ink.surface);
+    let frame = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" REQUEST RATE ")
+        .style(ground)
+        .border_style(ground.fg(scene.ink.accent));
+    frame.render(plot, cx);
+    let inner = frame.inner(plot);
+    let samples: Vec<u64> = (0..inner.width)
+        .map(|column| {
+            let age = u32::from(inner.width - column - 1) * 6;
+            u64::from(requests(scene.tick.saturating_sub(age)))
+        })
+        .collect();
+    Sparkline::new(&samples)
+        .max(2_200)
+        .style(ground.fg(scene.ink.ok))
+        .render(
+            Rect::new(inner.x, inner.y, inner.width, inner.height - 1),
+            cx,
+        );
+    let min = samples.first().copied().unwrap_or(0);
+    let label = format!(
+        "{} req/s   min {min}   max {}",
+        requests(scene.tick),
+        requests(scene.tick)
+    );
+    Paragraph::new(&label).style(ground).render(
+        Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
+        cx,
+    );
+
+    let frame = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" CUTOVER EVENTS ")
+        .style(ground)
+        .border_style(ground.fg(scene.ink.accent));
+    frame.render(events, cx);
+    let mut log = LogBuffer::new(8);
+    for (at, level, message) in [
+        (0, LogLevel::Info, "Standby pool ready".to_owned()),
+        (
+            30,
+            LogLevel::Info,
+            format!("Warmup: {} req/s", requests(30)),
+        ),
+        (
+            90,
+            LogLevel::Info,
+            format!("Readiness p99: {} ms", latency(90)),
+        ),
+        (
+            150,
+            LogLevel::Warn,
+            format!("Retry queue: {} errors", error_count(150)),
+        ),
+        (
+            180,
+            LogLevel::Info,
+            "Cutover complete; traffic live".to_owned(),
+        ),
+        (
+            210,
+            LogLevel::Info,
+            format!("Recovery: {} errors", error_count(210)),
+        ),
+        (
+            270,
+            LogLevel::Info,
+            format!("Serving {} req/s", requests(270)),
+        ),
+        (300, LogLevel::Info, "Standby pool drained".to_owned()),
+    ] {
+        if scene.tick >= at {
+            log.push(LogEntry::new(level, "", message).stamp(format!("14:02:{:02}", at / 30)));
+        }
+    }
+    LogView::new(&log)
+        .target_width(0)
+        .follow(true)
+        .render(frame.inner(events), cx);
+}
+
 fn draw_cut_board(cx: &mut RenderCx<'_>, scene: &CutScene) {
     let clock_y = 2;
     draw_clock(cx, scene, clock_y);
@@ -1633,6 +1756,11 @@ fn draw_cut_board(cx: &mut RenderCx<'_>, scene: &CutScene) {
         &note,
         Style::new().fg(scene.ink.focus).bg(scene.ink.surface),
     );
+    draw_cut_activity(
+        cx,
+        scene,
+        metrics_y.saturating_add(metric_h).saturating_add(2),
+    );
 }
 
 fn draw_compact(cx: &mut RenderCx<'_>, scene: &CutScene) {
@@ -1669,6 +1797,12 @@ fn bigtext_native(
         return;
     }
     draw_cut_board(&mut cx, &scene);
+}
+
+fn heatmap_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "heatmap") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn bigtext_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
@@ -1734,10 +1868,15 @@ fn deploy_native(
     grid: &mut Grid,
     clusters: &mut ClusterTable,
     theme: &Theme,
-    _area: Rect,
+    area: Rect,
     tick: u32,
 ) {
-    deploy_board::draw(grid, clusters, theme, u64::from(tick).saturating_mul(100));
+    deploy_board::draw(
+        area,
+        u64::from(tick).saturating_mul(100),
+        false,
+        &mut RenderCx::new(grid, clusters, theme),
+    );
 }
 
 fn deploy_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
@@ -4007,8 +4146,26 @@ fn toggle_native(
         );
 }
 
+fn menu_mnemonics_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "menu-mnemonics") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+fn code_view_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "code-view") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
 fn button_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "button") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+fn table_sorted_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "table-sorted") {
         (case.ratatui)(buffer, area, tick);
     }
 }
@@ -6825,3 +6982,214 @@ fn notify_native(
 }
 
 fn notify_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const TAGS_START: [&str; 7] = [
+    "rust",
+    "tui",
+    "async",
+    "terminal",
+    "rendering",
+    "zero-alloc",
+    "benchmarks",
+];
+const TAGS_VOCAB: [&str; 9] = [
+    "widgets",
+    "widget-state",
+    "wide-screen",
+    "grid",
+    "gradient",
+    "graphite",
+    "rust-analyzer",
+    "profiling",
+    "kitty",
+];
+const TAGS_LIMIT: usize = 10;
+
+struct TagsScene {
+    tags: Vec<String>,
+    text: String,
+    selected: Option<usize>,
+    message: Option<(Token, &'static str)>,
+}
+
+fn tags_prefix(word: &str, start: u32, per: u32, tick: u32) -> &str {
+    let typed = usize::try_from(tick.saturating_sub(start) / per + 1).unwrap_or(0);
+    &word[..typed.min(word.len())]
+}
+
+fn tags_scene(tick: u32) -> TagsScene {
+    let mut scene = TagsScene {
+        tags: TAGS_START.iter().map(|tag| (*tag).to_owned()).collect(),
+        text: String::new(),
+        selected: None,
+        message: None,
+    };
+    if (20..62).contains(&tick) {
+        tags_prefix("wid", 20, 7, tick).clone_into(&mut scene.text);
+    }
+    if tick >= 62 {
+        scene.tags.push("widgets".to_owned());
+    }
+    if (62..140).contains(&tick) {
+        scene.message = Some((Token::Ok, "Added widgets"));
+    }
+    if (80..108).contains(&tick) {
+        tags_prefix("rust", 80, 6, tick).clone_into(&mut scene.text);
+    }
+    if (108..150).contains(&tick) {
+        scene.message = Some((Token::Warn, "rust is already a tag"));
+    }
+    if (150..176).contains(&tick) {
+        scene.selected = Some(scene.tags.len() - 1);
+    }
+    if tick >= 176 {
+        scene.tags.pop();
+        scene.message = Some((Token::Accent, "Removed widgets"));
+    }
+    if (196..226).contains(&tick) {
+        tags_prefix("grid", 196, 7, tick).clone_into(&mut scene.text);
+    }
+    if tick >= 226 {
+        scene.tags.push("grid".to_owned());
+        scene.message = Some((Token::Ok, "Added grid"));
+    }
+    scene
+}
+
+fn tags_form(cx: &mut RenderCx<'_>, theme: &Theme, editor: Rect, tick: u32) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let bold = fill.with_attrs(Attrs::new().set_bold(true));
+    let (px, py, pw) = (editor.x + 2, editor.y + 1, editor.width - 4);
+    cx.put_str(px, py, "Title", dim);
+    Block::bordered()
+        .border_style(dim)
+        .style(fill)
+        .render(Rect::new(px, py + 1, pw, 3), cx);
+    cx.put_str(px + 2, py + 2, "Zero-allocation renders", bold);
+    cx.put_str(px, py + 6, "Entry", dim);
+    let paragraph = [
+        "Profiled the render loop this morning. Moving the label cache out",
+        "of the hot path means a full redraw of the dashboard no longer",
+        "allocates, and the diff encoder now spends most of its time",
+        "skipping rows that did not change.",
+        "",
+        "Next: record the benchmark numbers, compare them with last week's",
+        "run, and write up what the pixel layer does when a frame is",
+        "identical to the one before it.",
+    ];
+    for (row, line) in (0_u16..).zip(paragraph) {
+        cx.put_str(px + 1, py + 7 + row, line, fill);
+    }
+    let scene = tags_scene(tick);
+    cx.put_str(px, py + 16, "Tags", dim);
+    let count = format!("{} of {TAGS_LIMIT}", scene.tags.len());
+    let count_at = px + pw - u16::try_from(count.len()).unwrap_or(0);
+    cx.put_str(count_at, py + 16, &count, dim);
+    let frame = Rect::new(px, py + 17, pw, 6);
+    Block::bordered()
+        .border_style(dim)
+        .style(fill)
+        .render(frame, cx);
+    TagInput::new(&scene.tags, scene.text.as_str(), scene.text.len())
+        .placeholder("Type a tag and press enter")
+        .selected(scene.selected)
+        .state(WidgetState::Focused)
+        .render(Rect::new(frame.x + 2, frame.y + 1, frame.width - 4, 4), cx);
+    let matches: Vec<&str> = TAGS_VOCAB
+        .iter()
+        .copied()
+        .filter(|word| {
+            !scene.text.is_empty()
+                && word.starts_with(scene.text.as_str())
+                && !scene.tags.iter().any(|tag| tag == word)
+        })
+        .collect();
+    for (row, word) in (0_u16..).zip(matches.iter().take(3)) {
+        let line = Rect::new(frame.x + 2, frame.y + 6 + row, 30, 1);
+        let style = if row == 0 {
+            Style::new().fg(surface).bg(accent)
+        } else {
+            Style::new().fg(text).bg(raised)
+        };
+        cx.fill(line, style, ' ');
+        cx.put_str(line.x + 1, line.y, word, style);
+    }
+    if let Some((token, message)) = scene.message {
+        let style = fill.fg(theme.resolve(token));
+        cx.put_str(px + 1, py + 27, message, style);
+    }
+}
+
+fn tags_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Journal  ·  Oct 30  ·  7 entries", head);
+    let body_height = area.height.saturating_sub(3);
+    let list = Rect::new(area.x + 1, area.y + 2, 36, body_height);
+    let editor = Rect::new(area.x + 39, area.y + 2, area.width - 40, body_height);
+    for (title, pane) in [(" Entries ", list), (" Edit entry ", editor)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let entries = [
+        "Oct 30  Zero-allocation renders",
+        "Oct 29  Pixel chart notes",
+        "Oct 28  Release checklist",
+        "Oct 27  Kitty graphics bug",
+        "Oct 26  Layout ideas",
+        "Oct 24  Reading list",
+        "Oct 22  Benchmark notes",
+    ];
+    for (row, entry) in (0_u16..).zip(entries) {
+        let line = Rect::new(list.x + 1, list.y + 2 + row * 2, list.width - 2, 1);
+        let style = if row == 0 {
+            Style::new().fg(surface).bg(accent)
+        } else {
+            fill
+        };
+        cx.fill(line, style, ' ');
+        cx.put_str(
+            line.x + 1,
+            line.y,
+            clip_display_prefix(entry, line.width - 2),
+            style,
+        );
+    }
+    tags_form(&mut cx, theme, editor, tick);
+    StatusBar::new(
+        " enter add  ●  tab accept suggestion  ●  ← select tag  ●  delete remove  ●  esc cancel",
+    )
+    .style(Style::new().fg(text).bg(raised))
+    .render(
+        Rect::new(
+            area.x,
+            area.y + area.height.saturating_sub(1),
+            area.width,
+            1,
+        ),
+        &mut cx,
+    );
+}
+
+fn tags_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
