@@ -26,6 +26,8 @@ No rules yet.
 | `lunatui-widgets/src/pie_chart/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, bounded chart coordinates to tiny-skia's f32 coordinates | Pixel PieChart |
 | `lunatui-widgets/src/chart/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, clipped chart coordinates bounded to 4096 pixels to tiny-skia's f32 coordinates | Pixel Chart |
 | `lunatui-widgets/src/canvas/pixel.rs`, `scalar` | `clippy::cast_possible_truncation` | Convert finite, bounded canvas coordinates and extents to tiny-skia's f32 coordinates | Pixel Canvas |
+| `benches/src/widget_suite.rs`, `picker_cell` | `clippy::cast_possible_truncation` | Turn a rounded unit fraction of a few cells into a cell index for the ratatui twin | ColorPicker |
+| `benches/src/widget_suite.rs`, `picker_cell` | `clippy::cast_sign_loss` | The fraction is clamped at zero first, so the cast cannot wrap | ColorPicker |
 
 ## Checks
 

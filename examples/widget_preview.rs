@@ -34,6 +34,8 @@ mod bar_scene;
 mod button_showcase;
 #[path = "canvas_showcase.rs"]
 mod canvas_showcase;
+#[path = "color_picker_showcase.rs"]
+mod color_picker_showcase;
 use bar_scene::BarBoard;
 mod chart_scene;
 mod heatmap_showcase;
@@ -145,6 +147,11 @@ const PREVIEWS: &[Preview] = &[
         name: "button",
         native: button_showcase::render,
         baseline: button_baseline,
+    },
+    Preview {
+        name: "color-picker",
+        native: color_picker_showcase::render,
+        baseline: color_picker_baseline,
     },
     Preview {
         name: "table-sorted",
@@ -4161,6 +4168,12 @@ fn code_view_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: 
 
 fn button_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "button") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+fn color_picker_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "color-picker") {
         (case.ratatui)(buffer, area, tick);
     }
 }
