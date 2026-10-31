@@ -24,8 +24,9 @@ use lunatui_widgets::{
     List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
     Monthly, NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph,
     PieChart, PieSlice, PixelSize, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox,
-    SearchMatch, Slider, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs,
-    TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
+    Tabs, TabsDrag, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget,
+    WidgetState,
 };
 
 mod bar_scene;
@@ -38,16 +39,22 @@ mod chart_scene;
 mod progress_scene;
 mod spark_scene;
 use chart_scene::ChartBoard;
+#[path = "code_view_showcase.rs"]
+mod code_view_showcase;
 #[path = "deploy_board.rs"]
 mod deploy_board;
 #[path = "dialog_showcase.rs"]
 mod dialog_showcase;
+#[path = "menu_mnemonic_showcase.rs"]
+mod menu_mnemonic_showcase;
 #[path = "menu_showcase.rs"]
 mod menu_showcase;
 #[path = "popover_showcase.rs"]
 mod popover_showcase;
 #[path = "release_console.rs"]
 mod release_console;
+#[path = "table_showcase.rs"]
+mod table_showcase;
 #[path = "tooltip_showcase.rs"]
 mod tooltip_showcase;
 use ratatui::backend::CrosstermBackend;
@@ -119,9 +126,24 @@ const PREVIEWS: &[Preview] = &[
         baseline: popover_baseline,
     },
     Preview {
+        name: "menu-mnemonics",
+        native: menu_mnemonic_showcase::render,
+        baseline: menu_mnemonics_baseline,
+    },
+    Preview {
+        name: "code-view",
+        native: code_view_showcase::render,
+        baseline: code_view_baseline,
+    },
+    Preview {
         name: "button",
         native: button_showcase::render,
         baseline: button_baseline,
+    },
+    Preview {
+        name: "table-sorted",
+        native: table_showcase::render,
+        baseline: table_sorted_baseline,
     },
     Preview {
         name: "dialog",
@@ -1589,6 +1611,97 @@ fn readout(scene: &CutScene) -> String {
     }
 }
 
+fn draw_cut_activity(cx: &mut RenderCx<'_>, scene: &CutScene, y: u16) {
+    let height = scene.height.saturating_sub(y.saturating_add(1));
+    if height < 5 {
+        return;
+    }
+    let width = scene.width.saturating_sub(6) * 2 / 5;
+    let plot = Rect::new(2, y, width, height);
+    let events = Rect::new(width + 4, y, scene.width.saturating_sub(width + 6), height);
+    let ground = Style::new().fg(scene.ink.text).bg(scene.ink.surface);
+    let frame = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" REQUEST RATE ")
+        .style(ground)
+        .border_style(ground.fg(scene.ink.accent));
+    frame.render(plot, cx);
+    let inner = frame.inner(plot);
+    let samples: Vec<u64> = (0..inner.width)
+        .map(|column| {
+            let age = u32::from(inner.width - column - 1) * 6;
+            u64::from(requests(scene.tick.saturating_sub(age)))
+        })
+        .collect();
+    Sparkline::new(&samples)
+        .max(2_200)
+        .style(ground.fg(scene.ink.ok))
+        .render(
+            Rect::new(inner.x, inner.y, inner.width, inner.height - 1),
+            cx,
+        );
+    let min = samples.first().copied().unwrap_or(0);
+    let label = format!(
+        "{} req/s   min {min}   max {}",
+        requests(scene.tick),
+        requests(scene.tick)
+    );
+    Paragraph::new(&label).style(ground).render(
+        Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
+        cx,
+    );
+
+    let frame = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" CUTOVER EVENTS ")
+        .style(ground)
+        .border_style(ground.fg(scene.ink.accent));
+    frame.render(events, cx);
+    let mut log = LogBuffer::new(8);
+    for (at, level, message) in [
+        (0, LogLevel::Info, "Standby pool ready".to_owned()),
+        (
+            30,
+            LogLevel::Info,
+            format!("Warmup: {} req/s", requests(30)),
+        ),
+        (
+            90,
+            LogLevel::Info,
+            format!("Readiness p99: {} ms", latency(90)),
+        ),
+        (
+            150,
+            LogLevel::Warn,
+            format!("Retry queue: {} errors", error_count(150)),
+        ),
+        (
+            180,
+            LogLevel::Info,
+            "Cutover complete; traffic live".to_owned(),
+        ),
+        (
+            210,
+            LogLevel::Info,
+            format!("Recovery: {} errors", error_count(210)),
+        ),
+        (
+            270,
+            LogLevel::Info,
+            format!("Serving {} req/s", requests(270)),
+        ),
+        (300, LogLevel::Info, "Standby pool drained".to_owned()),
+    ] {
+        if scene.tick >= at {
+            log.push(LogEntry::new(level, "", message).stamp(format!("14:02:{:02}", at / 30)));
+        }
+    }
+    LogView::new(&log)
+        .target_width(0)
+        .follow(true)
+        .render(frame.inner(events), cx);
+}
+
 fn draw_cut_board(cx: &mut RenderCx<'_>, scene: &CutScene) {
     let clock_y = 2;
     draw_clock(cx, scene, clock_y);
@@ -1632,6 +1745,11 @@ fn draw_cut_board(cx: &mut RenderCx<'_>, scene: &CutScene) {
         scene.width.saturating_sub(4),
         &note,
         Style::new().fg(scene.ink.focus).bg(scene.ink.surface),
+    );
+    draw_cut_activity(
+        cx,
+        scene,
+        metrics_y.saturating_add(metric_h).saturating_add(2),
     );
 }
 
@@ -1734,10 +1852,15 @@ fn deploy_native(
     grid: &mut Grid,
     clusters: &mut ClusterTable,
     theme: &Theme,
-    _area: Rect,
+    area: Rect,
     tick: u32,
 ) {
-    deploy_board::draw(grid, clusters, theme, u64::from(tick).saturating_mul(100));
+    deploy_board::draw(
+        area,
+        u64::from(tick).saturating_mul(100),
+        false,
+        &mut RenderCx::new(grid, clusters, theme),
+    );
 }
 
 fn deploy_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
@@ -4007,8 +4130,26 @@ fn toggle_native(
         );
 }
 
+fn menu_mnemonics_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "menu-mnemonics") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+fn code_view_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "code-view") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
 fn button_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "button") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+fn table_sorted_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "table-sorted") {
         (case.ratatui)(buffer, area, tick);
     }
 }

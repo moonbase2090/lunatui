@@ -41,6 +41,12 @@ helper requests # renders grouped request data through BarChart
 helper latency # renders regional latency data through horizontal BarChart
 helper runs # renders build data through BarChart
 helper states # renders the same queue data in three BarChart states
+scope examples/menu_mnemonic_showcase.rs # the notes editor composes Block, Paragraph, StatusBar and the Menu widget with mnemonics
+helper editor_pane # renders the open file through Block and Paragraph
+helper outline_pane # renders the outline headings through Block and Paragraph
+scope examples/code_view_showcase.rs # the review screen composes Block, Paragraph, LineGauge, StatusBar and CodeView widgets
+helper files_pane # renders the file list through Block and Paragraph
+helper problems_pane # renders diagnostics through Block and Paragraph and the check run through LineGauge
 scope examples/pixel_sparkline.rs # live Sparkline twins use the runtime image presenter
 scope examples/spark_scene.rs # shared service board composes real Sparkline, Block and Paragraph widgets
 helper ink_from # resolves semantic colors without writing cells
@@ -53,8 +59,22 @@ scope examples/progress_scene.rs # shared release pipeline composes real Progres
 helper stages # renders original stage data with ProgressBar and Paragraph
 helper log # renders original pipeline log lines with Paragraph
 helper frame # comparison test setup attaches a capture sink and delegates to the real scene
+scope examples/pixel_gauge.rs # the complete deployment board uses the runtime image presenter for Gauge only
+scope examples/deploy_board.rs # shared deployment scenes compose real widgets and preserve controlled cell callers
+helper paint_header # renders the deployment header through Paragraph
+helper paint_cards # lays out the three real deployment cards
+helper paint_card # composes a Block, Paragraphs and a Spinner
+helper paint_tasks # renders task labels and real Spinner widgets
+helper paint_events # renders event history through Block and Paragraph
+helper paint_gauge # renders the original rollout Gauge with optional native fills
+helper paint_status # composes the status background and StatusBar
+helper paint_spinner # measures and renders a Spinner preset
 scope examples/button_showcase.rs # the release console composes Block, Paragraph, LineGauge, StatusBar and Button widgets
 helper changes # renders release notes through Block and Paragraph
 helper checks # renders check names through Paragraph and their progress through LineGauge
 helper actions # renders the action bar through Block and Button
 helper history # renders release history lines through Block and Paragraph
+scope examples/table_showcase.rs # the service inventory composes Block, Table, Paragraph, LineGauge and StatusBar widgets
+helper details # renders the focused service through Block, Paragraph and LineGauge
+helper status # renders key and action notes through StatusBar
+helper pointer # renders the pointer glyph through Paragraph at a Table column position

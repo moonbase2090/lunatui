@@ -23,6 +23,8 @@ mod calendar;
 pub mod canvas;
 #[cfg(feature = "chart")]
 mod chart;
+#[cfg(feature = "code-view")]
+mod code_view;
 #[cfg(feature = "combo-box")]
 mod combo_box;
 #[cfg(feature = "date-picker")]
@@ -89,6 +91,7 @@ mod state;
 mod status_bar;
 mod status_dot;
 mod table;
+mod table_state;
 mod tabs;
 mod text_input;
 #[cfg(feature = "toast")]
@@ -118,6 +121,8 @@ pub use calendar::{Date, DateStyle, Monthly, WeekStart};
 pub use canvas::Canvas;
 #[cfg(feature = "chart")]
 pub use chart::{Axis, Chart, Dataset, GraphType, LegendPosition};
+#[cfg(feature = "code-view")]
+pub use code_view::{CodeHighlight, CodeMark, CodeView, CodeViewState};
 #[cfg(feature = "combo-box")]
 pub use combo_box::ComboBox;
 #[cfg(feature = "date-picker")]
@@ -194,6 +199,7 @@ pub use state::WidgetState;
 pub use status_bar::StatusBar;
 pub use status_dot::{StatusDot, StatusState};
 pub use table::{CellStyle, Table};
+pub use table_state::{SortDirection, TableState, TableView};
 pub use tabs::{TabMove, Tabs, TabsDrag};
 pub use text_input::TextInput;
 #[cfg(feature = "toast")]
