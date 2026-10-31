@@ -85,7 +85,7 @@ impl From<SessionError> for io::Error {
 
 /// Owns raw mode and the alternate screen until dropped.
 pub struct Session<W> {
-    writer: W,
+    _writer: std::marker::PhantomData<W>,
 }
 
 impl<W: Write> Session<W> {

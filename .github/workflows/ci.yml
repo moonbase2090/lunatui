@@ -110,3 +110,25 @@ jobs:
       - run: ./scripts/check-gallery-real-output-selftest.sh
       - run: ./scripts/check-gallery-real-output.sh
       - run: ./scripts/trim-cast-selftest.sh
+
+  web-sandbox:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install wasm-bindgen CLI
+        run: ./scripts/install-wasm-bindgen.sh
+      - run: npm ci --prefix site --ignore-scripts
+      - run: cargo test --locked --package lunatui-web
+      - run: node scripts/sync-quickstart-source.mjs --check
+      - run: node scripts/build-web-sandbox.mjs
+      - run: git diff --exit-code -- site/assets/sandbox
+      - run: npm exec --prefix site -- playwright install --with-deps chromium
+      - run: npm run test:sandbox --prefix site
