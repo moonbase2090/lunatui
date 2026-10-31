@@ -30,6 +30,7 @@ allow = [
     "lunatui",
     "lunatui-bench",
     "lunatui-badge",
+    "lunatui-button",
     "lunatui-card",
     "lunatui-core",
     "lunatui-image",
