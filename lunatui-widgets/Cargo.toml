@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = ["pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline"]
+default = ["pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
@@ -31,6 +31,7 @@ pixel-canvas = ["canvas", "image"]
 
 barchart = ["widget-state"]
 pixel-barchart = ["barchart", "image"]
+pixel-gauge = ["image"]
 toast = ["widget-state"]
 notification-center = ["widget-state", "toast"]
 slider = ["widget-state"]
@@ -56,7 +57,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "pixel-sparkline", "toast", "toggle", "tooltip"]
+all-widgets = ["pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "pixel-sparkline", "toast", "toggle", "tooltip"]
 
 [dependencies]
 lunatui-core = { version = "0.1.17", path = "../lunatui-core" }
@@ -339,8 +340,13 @@ required-features = ["pixel-canvas"]
 
 [[test]]
 name = "pixel_bar_chart"
-required-features = ["pixel-barchart"]
+required-features = ["pixel-barchart", "pixel-gauge"]
 
 [[test]]
 name = "pixel_sparkline"
 required-features = ["pixel-sparkline"]
+
+[[test]]
+name = "pixel_gauge"
+path = "tests/pixel_gauge.rs"
+required-features = ["pixel-gauge"]

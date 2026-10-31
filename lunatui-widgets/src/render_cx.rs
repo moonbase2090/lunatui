@@ -90,7 +90,8 @@ impl<'a> RenderCx<'a> {
         feature = "pixel-chart",
         feature = "pixel-canvas",
         feature = "pixel-barchart",
-        feature = "pixel-sparkline"
+        feature = "pixel-sparkline",
+        feature = "pixel-gauge"
     ))]
     pub(crate) fn submit_raster(
         &mut self,
@@ -108,7 +109,8 @@ impl<'a> RenderCx<'a> {
         feature = "pixel-chart",
         feature = "pixel-canvas",
         feature = "pixel-barchart",
-        feature = "pixel-sparkline"
+        feature = "pixel-sparkline",
+        feature = "pixel-gauge"
     ))]
     pub(crate) fn pixel_target(&self, area: Rect) -> Option<lunatui_image::PixelTarget> {
         let sink = self.image_sink.as_deref()?;
@@ -123,7 +125,8 @@ impl<'a> RenderCx<'a> {
         feature = "pixel-chart",
         feature = "pixel-canvas",
         feature = "pixel-barchart",
-        feature = "pixel-sparkline"
+        feature = "pixel-sparkline",
+        feature = "pixel-gauge"
     ))]
     pub(crate) fn pixel_backdrop(
         &self,
@@ -154,7 +157,8 @@ impl<'a> RenderCx<'a> {
         feature = "pixel-chart",
         feature = "pixel-canvas",
         feature = "pixel-barchart",
-        feature = "pixel-sparkline"
+        feature = "pixel-sparkline",
+        feature = "pixel-gauge"
     ))]
     pub(crate) fn pixel_rgb(&self, mut color: Color, default: Option<[u8; 3]>) -> Option<[u8; 3]> {
         for _ in 0..16 {
@@ -171,18 +175,22 @@ impl<'a> RenderCx<'a> {
         None
     }
 
-    #[cfg(any(feature = "pixel-barchart", feature = "pixel-sparkline"))]
+    #[cfg(any(
+        feature = "pixel-barchart",
+        feature = "pixel-sparkline",
+        feature = "pixel-gauge"
+    ))]
     pub(crate) fn pixel_area_in_grid(&self, area: Rect) -> bool {
         u32::from(area.x) + u32::from(area.width) <= u32::from(self.grid.width())
             && u32::from(area.y) + u32::from(area.height) <= u32::from(self.grid.height())
     }
 
-    #[cfg(feature = "pixel-sparkline")]
+    #[cfg(any(feature = "pixel-sparkline", feature = "pixel-gauge"))]
     pub(crate) fn has_image_sink(&self) -> bool {
         self.image_sink.is_some()
     }
 
-    #[cfg(feature = "pixel-sparkline")]
+    #[cfg(any(feature = "pixel-sparkline", feature = "pixel-gauge"))]
     pub(crate) fn pixel_cell(&self, x: u16, y: u16) -> Option<lunatui_core::Cell> {
         self.grid.get(x, y)
     }
