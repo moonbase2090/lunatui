@@ -19,6 +19,8 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
+- BigText digits, capitals, and `:.-%` use an 8×8 bitmap with uniform 2px strokes. Other printable ASCII stays a hollow box.
+
 - `Table` no longer allocates while drawing: rows are cleared without building strings, the solved columns are kept between renders of the same area, and cells are read through the new `RowSource::cell`, which `VecSource` and `SliceSource` answer with borrowed text. A source that does not answer it is read through `RowSource::row` as before.
 
 ## [0.1.17] - 2026-10-30

@@ -20,7 +20,7 @@ const GLYPH_COLUMNS: usize = 16;
 /// Bitmap font used to draw large text.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum BigTextFont {
-    /// The built-in 8×8 Press Start 2P bitmap.
+    /// The built-in 8×8 bitmap.
     #[default]
     PressStart2P,
     /// A compact 5×7 clock font for the digits `0`–`9` and `:` made from full-cell blocks.
@@ -75,10 +75,9 @@ impl PixelSize {
 
 /// Large text drawn from a bitmap font.
 ///
-/// Glyph bitmaps for digits, capitals, and `:.-%` are derived from Press Start 2P by `CodeMan38`,
-/// SIL Open Font License 1.1 (`assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII is a
-/// hollow box. The opt-in [`BigTextFont::FiveBySeven`] font is a compact clock face for the
-/// digits and `:`.
+/// Glyph bitmaps for digits, capitals, and `:.-%` are an 8×8 face with 2px strokes. Other
+/// printable ASCII is a hollow box. The opt-in [`BigTextFont::FiveBySeven`] font is a compact
+/// clock face for the digits and `:`.
 ///
 /// With [`style`](Self::style) set, that style is used as given. Otherwise the text follows theme
 /// tokens: primary text at rest, accent and bold when focused, and dimmed primary text when
