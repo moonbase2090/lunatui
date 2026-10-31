@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Deploy console built from `lunatui-card`. `ui_card` plays an animated run (`--width`,
-//! `--height`, `--frames`, `--fps`); `ui_card --snapshot` prints one frame as text.
+#![doc = include_str!("README.md")]
 
 use std::env;
 use std::io::{self, Write};
@@ -16,7 +15,6 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_ui_tokens::{Role, Tone, surface};
 use lunatui_widgets::{Gauge, Paragraph, RenderCx, Widget};
 
-/// Big number over a gauge.
 struct Stat {
     value: String,
     ratio: f32,
@@ -43,7 +41,6 @@ impl Widget for Stat {
     }
 }
 
-/// Deploy rows separated by rules, newest first.
 struct Deploys {
     rows: Vec<(String, &'static str, Tone)>,
 }
@@ -92,7 +89,6 @@ fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect,
     cx.put_str(2, 0, "LUNATUI  /  Deploy console", bold);
 
     let seconds = tick / 30;
-    // Triangle wave in 0..=100 so the demo needs no float casts.
     let wave = |period: u32, offset: u32| -> u16 {
         let phase = (tick + offset) % period;
         let half = period / 2;
@@ -139,7 +135,6 @@ fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect,
         ("docs  v1.3.0  to production", "live", Tone::Success),
         ("mail  v2.8.8  to staging", "live", Tone::Success),
     ];
-    // A new deploy lands every 1.5 seconds and pushes the rest down.
     let newest = (tick / 45) as usize;
     let deploys = Deploys {
         rows: (0..7)

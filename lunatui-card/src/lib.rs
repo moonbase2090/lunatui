@@ -93,7 +93,6 @@ impl Widget for Card<'_> {
             put_clipped(cx, inner.x, bottom, inner.width, self.footer, muted);
         }
         if let Some(body) = self.body {
-            // One blank row between the header and the body.
             let body_top = top + 1;
             if bottom > body_top {
                 body.render(
