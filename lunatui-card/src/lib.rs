@@ -110,11 +110,19 @@ impl Widget for Card<'_> {
             .max()
             .unwrap_or(0);
         let body = self.body.map_or(Size::new(0, 0), |b| b.measure(avail));
-        let w = u16::try_from(text_w).unwrap_or(u16::MAX).max(body.width) + 6;
-        let h = 4
-            + self.header_rows()
-            + u16::from(self.body.is_some()) * (1 + body.height)
-            + u16::from(!self.footer.is_empty());
+        let w = u16::try_from(text_w)
+            .unwrap_or(u16::MAX)
+            .max(body.width)
+            .saturating_add(6);
+        let body_rows = if self.body.is_some() {
+            body.height.saturating_add(1)
+        } else {
+            0
+        };
+        let h = 4_u16
+            .saturating_add(self.header_rows())
+            .saturating_add(body_rows)
+            .saturating_add(u16::from(!self.footer.is_empty()));
         Size::new(w, h).clamp(avail)
     }
 }
@@ -179,8 +187,8 @@ impl Widget for Separator {
 
     fn measure(&self, avail: Size) -> Size {
         match self.orientation {
-            Orientation::Horizontal => Size::new(avail.width, 1),
-            Orientation::Vertical => Size::new(1, avail.height),
+            Orientation::Horizontal => Size::new(avail.width, 1).clamp(avail),
+            Orientation::Vertical => Size::new(1, avail.height).clamp(avail),
         }
     }
 }

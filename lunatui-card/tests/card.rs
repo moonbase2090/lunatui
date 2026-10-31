@@ -4,7 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_card::{Card, Empty, Separator};
-use lunatui_core::{ClusterTable, Grid, Rect};
+use lunatui_core::{ClusterTable, Grid, Rect, Size};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{RenderCx, Widget};
 
@@ -36,11 +36,35 @@ fn card_draws_header_body_and_footer() {
 }
 
 #[test]
-fn card_survives_tiny_areas() {
+fn card_in_tiny_areas_draws_only_what_fits() {
     let card = Card::new("Title").footer("f");
     for (w, h) in [(0, 0), (1, 1), (3, 2), (8, 4)] {
-        let _ = draw(w, h, &card);
+        let (grid, clusters) = draw(w, h, &card);
+        let text = grid.display_text(&clusters);
+        assert!(
+            text.lines()
+                .all(|row| row.chars().count() <= usize::from(w))
+        );
+        assert!(!text.contains("Title") || w >= 5 + 6);
     }
+    let (grid, clusters) = draw(12, 6, &card);
+    assert!(grid.display_text(&clusters).contains("Title"));
+}
+
+#[test]
+fn measure_never_exceeds_the_available_size() {
+    let long = "x".repeat(70_000);
+    let card = Card::new(&long).description(&long).footer(&long);
+    let avail = Size::new(80, 24);
+    assert_eq!(card.measure(avail), Size::new(80, 7));
+    for sep in [Separator::horizontal(), Separator::vertical()] {
+        for avail in [Size::new(5, 0), Size::new(0, 5), Size::new(5, 5)] {
+            let size = sep.measure(avail);
+            assert!(size.width <= avail.width && size.height <= avail.height);
+        }
+    }
+    let empty = Empty::new(&long, &long).measure(avail);
+    assert!(empty.width <= avail.width && empty.height <= avail.height);
 }
 
 #[test]
