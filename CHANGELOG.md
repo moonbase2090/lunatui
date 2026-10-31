@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `lunatui-card` adds `Card` (a raised, rounded container with title, description, body widget and footer), `Separator` and `Empty`, styled from `lunatui-ui-tokens`; the `ui_card` example is a deploy console built from them.
 - `CodeView` widget, behind the `code-view` feature: read-only lines with a right-aligned line-number gutter, `CodeMark` gutter signs (added, changed, removed, error, warning, info, breakpoint), a cursor line, tab stops, horizontal and vertical scrolling, and a vertical scrollbar when the lines overflow. A `CodeHighlight` hook styles byte ranges of each visible line, and closures implement it. `CodeViewState` keeps the cursor on screen through `down`, `up`, `page_down`, `page_up`, and `set_cursor`, and `line_at` finds the line under a click. The lines are borrowed, so a built view draws without allocating.
 
 - `lunatui-ui-tokens` is the shared base for the `lunatui-<name>` UI component crates: `Role` and `Tone` map semantic names (card, primary, border, ring, danger) onto core theme tokens, with a `Spacing` scale and the default border style.
