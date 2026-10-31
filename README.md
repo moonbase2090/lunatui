@@ -217,6 +217,14 @@ A studio mixer: eight channel faders with a focus knob and the value beside each
 
 Screenshot: [docs/media/slider.png](docs/media/slider.png). Recorded with `scripts/record-showcase.sh` (`CASE=slider`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Tag input
+
+A journal editor: the tags wrap onto a second row, typing narrows a list of suggestions, a tag that is already there is refused with a message, the arrow keys select the last chip and delete removes it, and the count beside the label follows.
+
+<img src="docs/media/tag-input.webp" alt="TagInput in a journal editor: wrapping tag chips, a suggestion list under the field, a duplicate tag warning, a chip removed, and the tag count updating in the dark theme" width="1028">
+
+Screenshot: [docs/media/tag-input.png](docs/media/tag-input.png). Recorded with `scripts/record-showcase.sh` (`CASE=tag-input`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
 ### Notification center
 
 An inbox beside a deploy dashboard: toasts pop up as events arrive and each one lands in the history with an unread mark and a count in the header, the arrow keys move through the list and read what they pass, a dismissed entry drops out, and marking all read turns the header to "All read".
