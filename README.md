@@ -107,6 +107,14 @@ A release pipelines screen with a boxed tab strip reordered by the pointer. Pres
 
 Screenshot: [docs/media/tabs-drag.png](docs/media/tabs-drag.png). Recorded with `scripts/record-showcase.sh` (`CASE=tabs-drag`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
 
+### Table sorting, selection and resizing
+
+A live service inventory whose latencies and error rates update while you work. The cursor walks the services, and slow or failing values are colored by a per-cell style closure. A click on the p95 header sorts slowest first and marks the column `▼`, keeping the cursor on its service. Shift+Down selects a range of four services, listed in the details pane. Dragging the Service divider widens that column while the others keep their widths.
+
+<img src="docs/media/table-upgrades.gif" alt="Table: sorting by p95, a range selection, per-cell colors and a resized column in a live service inventory in the dark theme" width="1028">
+
+Screenshot: [docs/media/table-upgrades.png](docs/media/table-upgrades.png). Recorded with `scripts/record-widget.sh` (`CASE=table-sorted`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 234 KB).
+
 ### Key hint bar
 
 A release console whose bottom line is a `KeyHintBar` built from the keymap of the current mode: browsing shows move, open, search, publish, and quit; typing a search filter swaps it for apply, clear, and cancel; the publish confirmation shows yes, go back, and cancel. The bar redraws from whichever keymap is active, so it never lists a key that does nothing.

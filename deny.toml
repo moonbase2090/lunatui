@@ -39,6 +39,7 @@ allow = [
     "lunatui-test",
     "lunatui-text",
     "lunatui-theme",
+    "lunatui-ui-tokens",
     "lunatui-widgets",
     "xtask",
     # External crates.
