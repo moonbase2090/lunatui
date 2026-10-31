@@ -128,7 +128,7 @@ impl Widget for Field<'_> {
             let marker = self.dim(page.fg(text(cx, Role::Destructive).fg));
             let room = area.width.saturating_sub(used);
             cx.put_str(
-                area.x + used,
+                area.x.saturating_add(used),
                 area.y,
                 clip_display_prefix(MARKER, room),
                 marker,
@@ -139,7 +139,10 @@ impl Widget for Field<'_> {
         if let Some(body) = self.body
             && body_rows > 0
         {
-            body.render(Rect::new(area.x, area.y + 1, area.width, body_rows), cx);
+            body.render(
+                Rect::new(area.x, area.y.saturating_add(1), area.width, body_rows),
+                cx,
+            );
         }
         let message = self.message();
         if !message.is_empty() && rest > body_rows {
@@ -150,7 +153,12 @@ impl Widget for Field<'_> {
             };
             let style = self.dim(page.fg(color));
             let shown = clip_display_prefix(message, area.width);
-            cx.put_str(area.x, area.y + 1 + body_rows, shown, style);
+            cx.put_str(
+                area.x,
+                area.y.saturating_add(1).saturating_add(body_rows),
+                shown,
+                style,
+            );
         }
     }
 

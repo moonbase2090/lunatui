@@ -152,3 +152,17 @@ fn on_sets_the_surface_behind_the_field() -> Result<(), &'static str> {
     );
     Ok(())
 }
+
+#[test]
+fn very_long_text_measures_and_draws_without_overflow() {
+    let long = "z".repeat(70_000);
+    let field = Field::new(&long).required().help(&long);
+    assert_eq!(field.measure(Size::new(40, 6)), Size::new(40, 2));
+    assert_eq!(
+        field.measure(Size::new(u16::MAX, 6)),
+        Size::new(u16::MAX, 2)
+    );
+    let (grid, clusters, _) = draw(8, 2, &field);
+    assert_eq!(grid.row_display(0, &clusters), "zzzzzzzz");
+    assert_eq!(grid.row_display(1, &clusters), "zzzzzzzz");
+}
