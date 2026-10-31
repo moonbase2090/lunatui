@@ -1056,7 +1056,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-card"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "lunatui-core",
  "lunatui-term",
@@ -1175,7 +1175,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-ui-tokens"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "lunatui-core",
  "lunatui-theme",

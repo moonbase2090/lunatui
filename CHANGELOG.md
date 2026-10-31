@@ -8,7 +8,7 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
-## [0.1.18] - 2026-10-30
+## [0.1.18] - 2026-10-31
 
 ### Added
 

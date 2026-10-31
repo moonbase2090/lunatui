@@ -16,6 +16,6 @@ default = []
 graphite = ["lunatui-theme/graphite-tokens"]
 
 [dependencies]
-lunatui-core = { version = "0.1.13", path = "../lunatui-core" }
-lunatui-theme = { version = "0.1.13", path = "../lunatui-theme" }
-lunatui-widgets = { version = "0.1.13", path = "../lunatui-widgets" }
+lunatui-core = { version = "0.1.18", path = "../lunatui-core" }
+lunatui-theme = { version = "0.1.18", path = "../lunatui-theme" }
+lunatui-widgets = { version = "0.1.18", path = "../lunatui-widgets" }
