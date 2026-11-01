@@ -6,6 +6,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { spawnSync } from 'node:child_process';
+import { homedir } from 'node:os';
 
 const WASM_BINDGEN_VERSION = '0.2.129';
 const WASM_GZIP_BUDGET = 400 * 1024;
@@ -36,9 +37,11 @@ if (!skipRust) {
     throw new Error(`expected wasm-bindgen ${WASM_BINDGEN_VERSION}, found ${installedVersion}`);
   }
 
+  const cargoHome = resolve(process.env.CARGO_HOME || join(homedir(), '.cargo'));
   const rustflags = [
     process.env.RUSTFLAGS?.trim(),
     `--remap-path-prefix=${root}=.`,
+    `--remap-path-prefix=${cargoHome}=cargo-home`,
   ].filter(Boolean).join(' ');
   run('cargo', [
     'build',
