@@ -15,6 +15,7 @@ members = [
     "lunatui-badge",
     "lunatui-button",
     "lunatui-choice",
+    "lunatui-field",
     "lunatui-test",
     "lunatui-ratatui",
     "lunatui-prismattyc",

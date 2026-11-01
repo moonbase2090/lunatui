@@ -1,0 +1,28 @@
+[package]
+name = "lunatui-field"
+description = "Field component for lunatui: a label, a control, and a help or error line."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lunatui-core = { version = "0.1.18", path = "../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.18", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.18", path = "../lunatui-widgets", features = ["widget-state"] }
+
+[dev-dependencies]
+lunatui-badge = { version = "0.1.18", path = "../lunatui-badge" }
+lunatui-button = { version = "0.1.18", path = "../lunatui-button" }
+lunatui-card = { version = "0.1.18", path = "../lunatui-card" }
+lunatui-term = { version = "0.1.18", path = "../lunatui-term" }
+lunatui-theme = { version = "0.1.18", path = "../lunatui-theme" }
+
+[[example]]
+name = "ui_field"
+path = "examples/ui_field.rs"
+test = true

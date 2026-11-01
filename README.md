@@ -312,6 +312,13 @@ The `lunatui-choice` crate in a notification preferences screen. The run is scri
 <img src="docs/media/ui-choice.gif" alt="lunatui-choice: checkboxes, a mixed checkbox, a radio group and switches, with a disabled switch, in a notification preferences screen in the dark theme" width="1028">
 
 Screenshot: [docs/media/ui-choice.png](docs/media/ui-choice.png). Recorded from `cargo run --release -p lunatui-choice --example ui_choice` (120×36, 270 frames at 30 fps, truecolor, dark, about 10 seconds) with the pinned agg.
+### UI field
+
+The `lunatui-field` crate in a profile settings form. The run is scripted, not interactive: the email is typed out, its error message ("Enter a full address") gives way to the help line once the address is complete, the toggle flips, and focus moves between fields. A required field marks its label with `*`, the focused label takes the ring color, and the Workspace ID field is disabled and dim. Each field wraps a real control: a text input or a toggle.
+
+<img src="docs/media/ui-field.gif" alt="lunatui-field: labelled text inputs and a toggle with help text, a required marker, an error message and a disabled field in a profile form in the dark theme" width="1028">
+
+Screenshot: [docs/media/ui-field.png](docs/media/ui-field.png). Recorded from `cargo run --release -p lunatui-field --example ui_field` (120×36, 270 frames at 30 fps, truecolor, dark, about 7 seconds) with the pinned agg.
 
 ### Dialog
 
