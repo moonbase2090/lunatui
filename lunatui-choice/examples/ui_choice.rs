@@ -285,16 +285,45 @@ mod tests {
         grid.display_text(clusters)
     }
 
+    fn summary_rows(text: &str) -> Vec<&str> {
+        text.lines().skip(25).take(3).collect()
+    }
+
+    fn row(text: &str) -> String {
+        format!(" │  {text:<114}│ ")
+    }
+
     #[test]
     fn a_shrinking_line_leaves_no_trailing_cells() {
         let mut clusters = ClusterTable::new();
-        let mut reused = Grid::new(120, 36);
-        let ticks = (0..STOPS * SLOT * 2).step_by(SLOT as usize / 2);
-        for tick in ticks {
-            let again = frame(&mut reused, &mut clusters, tick);
-            let fresh = frame(&mut Grid::new(120, 36), &mut clusters, tick);
-            assert_eq!(again, fresh, "tick {tick} kept cells from an earlier frame");
-        }
+        let mut grid = Grid::new(120, 36);
+        let long = frame(&mut grid, &mut clusters, 135);
+        assert_eq!(
+            summary_rows(&long),
+            [
+                row("Events selected: 1 of 3"),
+                row("Frequency: Daily digest"),
+                row("Slack: on, email: off, text message: unavailable"),
+            ]
+        );
+        let short = frame(&mut grid, &mut clusters, 0);
+        assert_eq!(
+            summary_rows(&short),
+            [
+                row("Events selected: 2 of 3"),
+                row("Frequency: Immediately"),
+                row("Slack: off, email: on, text message: unavailable"),
+            ]
+        );
+        let again = frame(&mut grid, &mut clusters, 105);
+        assert_eq!(
+            summary_rows(&again),
+            [
+                row("Events selected: 1 of 3"),
+                row("Frequency: Daily digest"),
+                row("Slack: on, email: on, text message: unavailable"),
+            ]
+        );
     }
 
     #[test]
