@@ -37,14 +37,17 @@ h2{font:600 36px var(--serif);margin-bottom:8px}
 .sandbox [hidden]{display:none!important}
 .sandbox-terminal{height:340px}
 .sandbox-terminal>.xterm{height:100%;padding:12px}
-.sandbox-mobile{display:none;padding:12px 22px 16px;border-bottom:1px solid var(--line);background:rgba(10,13,28,.72)}
-.sandbox-mobile label{display:block;margin-bottom:6px;color:var(--ink2);font:500 13px var(--sans)}
-.sandbox-input{width:100%;min-height:44px;border:1px solid var(--edge);border-radius:8px;padding:9px 12px;background:#111638;color:var(--ink);font:16px var(--mono)}
-.sandbox-input:focus{outline:2px solid var(--peri);outline-offset:2px;border-color:transparent}
-.sandbox-keys{display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:8px;margin-top:10px}
+.sandbox-mobile{display:none;position:relative;padding:12px 22px 16px;border-bottom:1px solid var(--line);background:rgba(10,13,28,.96)}
+.sandbox-mobile label,.sandbox-input{position:absolute;width:1px;height:1px;min-width:0;min-height:0;padding:0;border:0;overflow:hidden;clip-path:inset(50%);opacity:0;white-space:nowrap}
+.sandbox-input{font:16px var(--mono)}
+.sandbox-input:focus{outline:0}
+.sandbox-keys{display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:8px}
 .sandbox-keys button{min-width:44px;min-height:44px;border:1px solid var(--edge);border-radius:8px;background:#171c43;color:var(--ink);font:500 14px var(--sans);touch-action:manipulation}
 .sandbox-keys button:focus-visible{outline:2px solid var(--peri);outline-offset:2px}
 .sandbox-status{min-height:48px;padding:11px 22px;font-size:14px}
+.sandbox-keyboard-open{overflow:visible;padding-bottom:var(--sandbox-controls-height,112px)}
+.sandbox-keyboard-open .sandbox-stage{scroll-margin-bottom:calc(var(--sandbox-controls-height,112px) + 8px)}
+.sandbox-keyboard-open .sandbox-mobile{position:fixed;z-index:20;left:var(--sandbox-controls-left,0);width:var(--sandbox-controls-width,100%);bottom:var(--sandbox-keyboard-inset,0);padding:8px 14px max(8px,env(safe-area-inset-bottom));border:1px solid var(--edge);border-bottom:0;border-radius:12px 12px 0 0;box-shadow:0 -8px 24px rgba(4,6,18,.5)}
 @media(max-width:767px),(pointer:coarse){.sandbox-mobile{display:block}}
 @media(max-width:640px){.nav .bar{height:68px;padding:0 16px}.logo{font-size:25px}.nav a.back{font-size:14px}main{min-width:0;padding:32px 12px 56px}h1{font-size:48px}.lede{margin-bottom:28px}.card{padding:16px;margin-bottom:20px}.sandbox{padding:0}.sandbox-copy{padding:18px 14px 0}.sandbox-copy h2{font-size:32px}.sandbox-toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:14px;gap:8px}.sandbox-toolbar button{padding:8px 6px}.sandbox-toolbar .sandbox-start{grid-column:1/-1;width:100%;margin-left:0}.sandbox-stage,.sandbox-terminal{min-height:280px;height:280px}.sandbox-terminal>.xterm{padding:8px}.sandbox-mobile{padding:12px 14px 14px}.sandbox-status{padding:11px 14px}.sandbox-keyboard-open .sandbox-stage{min-height:180px}.sandbox-keyboard-open .sandbox-terminal{min-height:180px;height:clamp(180px,calc(var(--sandbox-visual-height,100vh) - 250px),280px)}}
 @media(max-width:319px){.sandbox-toolbar,.sandbox-mobile{display:none!important}.sandbox-stage{min-height:0}.sandbox-status{min-height:0}.sandbox-copy p{font-size:14px}}
@@ -81,7 +84,7 @@ footer a{text-decoration:none;min-height:44px;display:inline-flex;align-items:ce
   <div class="sandbox-terminal" data-sandbox-terminal aria-label="Live Lunatui terminal" hidden></div>
  </div>
  <div class="sandbox-mobile" data-sandbox-mobile hidden>
-  <label for="sandbox-input">Type in the terminal</label>
+  <label for="sandbox-input">Terminal text input</label>
   <input class="sandbox-input" id="sandbox-input" data-sandbox-input type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="enter">
   <div class="sandbox-keys" data-sandbox-keys role="toolbar" aria-label="Terminal keys">
    <button type="button" data-sandbox-key="ArrowUp" aria-label="Up arrow">↑</button>
