@@ -34,6 +34,7 @@ if (panel) {
   let session;
   let selectedTemplate = 'minimal';
   let resizeFrame = 0;
+  let viewportFrame = 0;
   let inputQueue = Promise.resolve();
   let pendingInput = '';
   let composing = false;
@@ -89,13 +90,13 @@ if (panel) {
     panel.dataset.rows = String(terminal.rows);
   }
 
-  function showMobileInput() {
+  function showMobileControls() {
     mobileControls.hidden = false;
   }
 
   function focusTerminal() {
     if (mobileInputQuery.matches) {
-      showMobileInput();
+      showMobileControls();
       mobileInput.focus({ preventScroll: true });
     } else {
       terminal?.focus();
@@ -181,20 +182,43 @@ if (panel) {
   }
 
   function syncVisualViewport() {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    panel.style.setProperty('--sandbox-visual-height', `${Math.round(viewport.height)}px`);
-    const inputFocused = document.activeElement === mobileInput;
-    if (inputFocused) expandedViewportHeight = Math.max(expandedViewportHeight, viewport.height);
-    else expandedViewportHeight = viewport.height;
-    const keyboardOpen = mobileInputQuery.matches
-      && inputFocused
-      && expandedViewportHeight - viewport.height > 120;
-    panel.classList.toggle('sandbox-keyboard-open', keyboardOpen);
-    scheduleFit();
-    if (keyboardOpen && document.activeElement === mobileInput) {
-      host.scrollIntoView({ block: 'nearest' });
-    }
+    cancelAnimationFrame(viewportFrame);
+    viewportFrame = requestAnimationFrame(() => {
+      const viewport = window.visualViewport;
+      if (!viewport) return;
+      panel.style.setProperty('--sandbox-visual-height', `${Math.round(viewport.height)}px`);
+      const inputFocused = document.activeElement === mobileInput;
+      const viewportBottom = viewport.offsetTop + viewport.height;
+      if (inputFocused) expandedViewportHeight = Math.max(expandedViewportHeight, viewportBottom);
+      else expandedViewportHeight = viewportBottom;
+      const keyboardHeight = Math.max(0, expandedViewportHeight - viewportBottom);
+      const keyboardInset = Math.max(0, window.innerHeight - viewportBottom);
+      const keyboardOpen = mobileInputQuery.matches
+        && inputFocused
+        && keyboardHeight > 120;
+      const panelBox = panel.getBoundingClientRect();
+      panel.style.setProperty('--sandbox-controls-left', `${Math.round(panelBox.left)}px`);
+      panel.style.setProperty('--sandbox-controls-width', `${Math.round(panelBox.width)}px`);
+      panel.style.setProperty('--sandbox-keyboard-inset', `${Math.round(keyboardInset)}px`);
+      panel.classList.toggle('sandbox-keyboard-open', keyboardOpen);
+      if (keyboardOpen) {
+        panel.style.setProperty(
+          '--sandbox-controls-height',
+          `${Math.ceil(mobileControls.getBoundingClientRect().height)}px`,
+        );
+        requestAnimationFrame(() => {
+          const settledViewport = window.visualViewport;
+          if (!settledViewport) return;
+          const settledBottom = settledViewport.offsetTop + settledViewport.height;
+          const settledInset = Math.max(0, window.innerHeight - settledBottom);
+          panel.style.setProperty('--sandbox-keyboard-inset', `${Math.round(settledInset)}px`);
+        });
+      }
+      scheduleFit();
+      if (keyboardOpen && document.activeElement === mobileInput) {
+        host.scrollIntoView({ block: 'nearest' });
+      }
+    });
   }
 
   async function selectTemplate(name, focus) {
@@ -221,7 +245,7 @@ if (panel) {
       await sendInput(data);
     }
     terminal.refresh(0, terminal.rows - 1);
-    status.textContent = `Live ${name} template. Tap the input below or use a keyboard.`;
+    status.textContent = `Live ${name} template. Tap the terminal to type, or use the keys below.`;
     if (focus) focusTerminal();
   }
 
@@ -257,7 +281,7 @@ if (panel) {
       host.hidden = false;
       startButton.disabled = false;
       startButton.textContent = 'Focus terminal';
-      showMobileInput();
+      showMobileControls();
 
       new ResizeObserver(scheduleFit).observe(host);
       syncVisualViewport();
@@ -316,13 +340,13 @@ if (panel) {
   host.addEventListener('pointerdown', (event) => {
     if (!mobileInputQuery.matches) return;
     event.preventDefault();
-    showMobileInput();
+    showMobileControls();
     mobileInput.focus({ preventScroll: true });
   }, { capture: true });
 
   startButton.addEventListener('click', () => {
     if (mobileInputQuery.matches) {
-      showMobileInput();
+      showMobileControls();
       mobileInput.focus({ preventScroll: true });
       void boot(false);
     } else {
