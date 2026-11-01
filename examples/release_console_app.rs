@@ -323,6 +323,7 @@ fn right_column(cx: &mut RenderCx<'_>, area: Rect) {
     block.render(bottom, cx);
     let log = logs();
     LogView::new(&log)
+        .target_width(8)
         .follow(true)
         .render(block.inner(bottom), cx);
 }
@@ -417,11 +418,35 @@ fn form(cx: &mut RenderCx<'_>, area: Rect) {
 }
 
 fn progress(cx: &mut RenderCx<'_>, area: Rect) {
-    ProgressBar::new()
-        .segment(0.86, ProgressTone::Ok)
-        .segment(0.07, ProgressTone::Warn)
-        .segment(0.03, ProgressTone::Fail)
-        .render(Rect::new(area.x, area.y, area.width, 1), cx);
+    let stages: [(&str, &str, Color); 4] = [
+        ("checkout", "done", DIM),
+        ("compile", "72%", FG),
+        ("test", "1 failed", FAIL),
+        ("upload", "queued", DIM),
+    ];
+    for (index, (name, status, tone)) in stages.iter().enumerate() {
+        let y = area.y + u16::try_from(index).unwrap_or(0) * 2;
+        cx.put_str(area.x, y, name, style(FG, BG));
+        let status_w = u16::try_from(status.chars().count()).unwrap_or(0);
+        cx.put_str(
+            area.x + area.width.saturating_sub(status_w),
+            y,
+            status,
+            style(*tone, BG),
+        );
+        let bar = Rect::new(area.x, y + 1, area.width, 1);
+        let base = ProgressBar::new().style(style(OK, BG));
+        match index {
+            0 => base.ratio(1.0),
+            1 => base.ratio(0.72).style(style(ACCENT, BG)),
+            2 => base
+                .segment(0.86, ProgressTone::Ok)
+                .segment(0.07, ProgressTone::Warn)
+                .segment(0.03, ProgressTone::Fail),
+            _ => base.ratio(0.0),
+        }
+        .render(bar, cx);
+    }
 }
 
 fn logview(cx: &mut RenderCx<'_>, area: Rect) {
@@ -589,14 +614,14 @@ pub fn main() -> io::Result<()> {
     if plain || styled_out {
         let (cols, rows) = match app.scene.as_deref() {
             None => (width, if width >= 70 { HEIGHT } else { 27 }),
-            Some("form") => (44, 9),
-            Some("progress") => (44, 1),
-            Some("logview") => (70, 8),
-            Some("calendar") => (21, 8),
-            Some("sparkline") => (44, 6),
-            Some("barchart") => (44, 9),
-            Some("accordion") => (44, 9),
-            Some(_) => (44, 4),
+            Some("form") => (46, 11),
+            Some("progress") => (46, 8),
+            Some("logview") => (48, 10),
+            Some("calendar") => (25, 8),
+            Some("sparkline") => (46, 7),
+            Some("barchart") => (46, 10),
+            Some("accordion") => (46, 7),
+            Some(_) => (46, 8),
         };
         let (grid, clusters) = render_once(&mut app, cols, rows);
         let text = if styled_out {
