@@ -33,6 +33,7 @@ allow = [
     "lunatui-button",
     "lunatui-card",
     "lunatui-core",
+    "lunatui-field",
     "lunatui-image",
     "lunatui-layout",
     "lunatui-prismattyc",
