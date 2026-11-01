@@ -8,26 +8,36 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.19] - 2026-10-31
+
 ### Added
 
 - `lunatui-field` adds `Field`: a bold label above any control widget with a muted help line under it. An error message replaces the help line in the destructive color, `required` marks the label with `*`, `focused` draws the label in the ring color, and `disabled` dims it. It measures as the label, the control and the message, and keeps the label, then the control, then the message when it is short of rows. The `ui_field` example is a profile settings screen.
 - `graphite_pixels` example and a `graphite-pixels` test feature in the bench crate (off by default) that prove a Graphite pixel-buffer frame survives the Kitty `PixelLayer` byte for byte and matches the half-block cell fallback.
+
 - `ColorPicker` widget, behind the `color-picker` feature: a saturation and value square beside a hue bar, drawn with half blocks so each cell holds two color samples, with a swatch, the `#RRGGBB` code and the hue, saturation and value below. `ColorPickerState` keeps the color as hue, saturation and value, so a gray keeps its hue, and `set_rgb` and `rgb` round-trip every byte. `nudge` moves the focused part from the keyboard, `type_digit`, `backspace` and `commit_hex` edit a three or six digit hex, and `pointer` sets the square or the bar from a click or drag. A built picker draws without allocating.
 
 - `lunatui-button` adds `Button` (default, secondary, outline, ghost and destructive variants in three sizes, drawn for rest, focus, pressed and disabled) and `Toggle` (a button that stays pressed), styled from `lunatui-ui-tokens`; the `ui_button` example is a deploy console built from them.
 
+- Default-on `pixel-progress` rendering for `ProgressBar`: continuous multicolor bands, the existing indeterminate clock, focused and disabled states, and exact eighth-block fallback. The `pixel_progress` example mirrors the complete release pipeline at equal sizes and ticks, with a right-pane cell/native switch.
+
+- `lunatui-badge` adds `Badge` (a one-line label on a neutral, primary, success, warning or danger tone, filled or subtle) and `Kbd` (a key or chord as raised chips), styled from `lunatui-ui-tokens`; the `ui_badge` example is a release board built from them.
+
 ### Changed
 
 - `lunatui-button` keeps focus and press visible when a theme gives the focus ring and the variant fill the same colors: `Button` and `Toggle` add a single underline whenever their focused or pressed style would equal the resting one.
+
 - `lunatui-button` draws a disabled `Button` in the muted text color on the page background with no fill, so it no longer looks like the variant it belongs to. The `ui_button` example labels its size row Small, Medium and Large, and the README gallery shows the demo.
+
+### Fixed
+
+- Pixel recordings schedule scripted input from media timestamps and retain the requested frame count. Lossless PNG capture avoids startup stalls that could skip early scene holds.
 
 ## [0.1.18] - 2026-10-31
 
 ### Added
 
-- Default-on `pixel-progress` rendering for `ProgressBar`: continuous multicolor bands, the existing indeterminate clock, focused and disabled states, and exact eighth-block fallback. The `pixel_progress` example mirrors the complete release pipeline at equal sizes and ticks, with a right-pane cell/native switch.
 - `Heatmap`, behind the opt-in `heatmap` feature: labeled borrowed rows, missing readings, fixed cell dimensions, five theme bands, selection, disabled swatches, and shared pointer geometry. The capacity-board showcase follows a hot shard through rebalance and recovery.
-- `lunatui-badge` adds `Badge` (a one-line label on a neutral, primary, success, warning or danger tone, filled or subtle) and `Kbd` (a key or chord as raised chips), styled from `lunatui-ui-tokens`; the `ui_badge` example is a release board built from them.
 - `TagInput` widget, behind the `tag-input` feature: tags drawn as chips with a `×` that wrap across rows, followed by a text field with a caret for the next tag, and a selected chip for removal. `commit` turns the typed text into a tag (trimmed, skipping empty and duplicate ones), `step` moves the selection between the chips and the field, `rows` and `measure` report the height needed, and `tag_at`, `remove_at`, and `field_area` give hit testing.
 - `lunatui-card` adds `Card` (a raised, rounded container with title, description, body widget and footer), `Separator` and `Empty`, styled from `lunatui-ui-tokens`; the `ui_card` example is a deploy console built from them.
 - `Gauge` uses continuous antialiased pixel fills by default with a measured presenter. `.pixels(false)` preserves its whole-cell or eighth-block fallback, including styles, dirty spans and wide-cell cleanup. The new `pixel_gauge` example mirrors the full deployment board in equal Cells and Pixels panes.
@@ -51,7 +61,6 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
-- Pixel recordings schedule scripted input from media timestamps and retain the requested frame count. Lossless PNG capture avoids startup stalls that could skip early scene holds.
 - `Grid::fill` preserves requested text attributes for scalar, wide, and clipped cells, including dimmed disabled heatmap swatches.
 - Recording trimming keeps a final frame that shares an output event with the alternate-screen exit.
 
