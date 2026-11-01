@@ -193,9 +193,6 @@ function updateMotionToggle() {
   motionToggle.disabled = reducedMotionQuery.matches;
   motionToggle.textContent = reducedMotionQuery.matches ? 'Motion reduced' : paused ? 'Play motion' : 'Pause motion';
   document.documentElement.classList.toggle('motion-paused', paused);
-  galleryImages.forEach((image) => {
-    if (image.dataset.loaded === 'true') setGalleryImage(image);
-  });
 }
 
 function updateHeroMotion() {
@@ -243,54 +240,8 @@ document.addEventListener('keydown', (event) => {
 });
 mobileMenu.addEventListener('change', () => setMenuOpen(false));
 
-const galleryImages = [...document.querySelectorAll('.widget-demo[data-static]')];
-function setGalleryImage(image) {
-  const source = motionPaused() || !image.dataset.gif ? image.dataset.static : image.dataset.gif;
-  if (source && image.getAttribute('src') !== source) image.src = source;
-}
-const galleryLoader = new IntersectionObserver((entries, observer) => {
-  entries.forEach((entry) => {
-    if (!entry.isIntersecting) return;
-    entry.target.dataset.loaded = 'true';
-    setGalleryImage(entry.target);
-    observer.unobserve(entry.target);
-  });
-}, { rootMargin: '200px' });
-galleryImages.forEach((image) => galleryLoader.observe(image));
 updateMotionToggle();
 updateHeroMotion();
-
-const carousel = document.querySelector('#carousel');
-const dots = [...document.querySelectorAll('.dots button')];
-dots.forEach((button, index) => {
-  button.addEventListener('click', () => {
-    const cardIndex = Math.round(index * (carousel.children.length - 1) / Math.max(1, dots.length - 1));
-    carousel.children[cardIndex].scrollIntoView({
-      behavior: reducedMotion.matches ? 'auto' : 'smooth',
-      inline: 'center',
-      block: 'nearest',
-    });
-  });
-});
-let scrollQueued = false;
-carousel.addEventListener('scroll', () => {
-  if (scrollQueued) return;
-  scrollQueued = true;
-  requestAnimationFrame(() => {
-    const cards = [...carousel.children];
-    const center = carousel.getBoundingClientRect().left + carousel.clientWidth / 2;
-    const index = cards.reduce((best, card, i) => {
-      const distance = Math.abs(card.getBoundingClientRect().left + card.offsetWidth / 2 - center);
-      return distance < best.distance ? { index: i, distance } : best;
-    }, { index: 0, distance: Infinity }).index;
-    const pageIndex = Math.round(index * (dots.length - 1) / Math.max(1, cards.length - 1));
-    dots.forEach((dot, i) => {
-      if (i === pageIndex) dot.setAttribute('aria-current', 'true');
-      else dot.removeAttribute('aria-current');
-    });
-    scrollQueued = false;
-  });
-}, { passive: true });
 
 const copyButton = document.querySelector('.copy');
 copyButton.addEventListener('click', async () => {

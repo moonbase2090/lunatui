@@ -538,6 +538,13 @@ fn class_of(color: Color) -> &'static str {
     }
 }
 
+fn push_run(out: &mut String, class: &str, text: &str) {
+    out.push_str(class);
+    out.push('\t');
+    out.push_str(text);
+    out.push('\n');
+}
+
 fn styled(grid: &Grid, clusters: &ClusterTable) -> String {
     let mut out = String::new();
     let text = grid.display_text(clusters);
@@ -576,7 +583,7 @@ fn styled(grid: &Grid, clusters: &ClusterTable) -> String {
                 Some((open, text)) if *open == class => text.push(ch),
                 _ => {
                     if let Some((open, text)) = current.take() {
-                        out.push_str(&format!("{open}\t{text}\n"));
+                        push_run(&mut out, &open, &text);
                     }
                     current = Some((class, ch.to_string()));
                 }
@@ -584,7 +591,7 @@ fn styled(grid: &Grid, clusters: &ClusterTable) -> String {
             col += if width == CellWidth::Two { 2 } else { 1 };
         }
         if let Some((open, text)) = current.take() {
-            out.push_str(&format!("{open}\t{text}\n"));
+            push_run(&mut out, &open, &text);
         }
         out.push_str("--\n");
     }
@@ -615,13 +622,11 @@ pub fn main() -> io::Result<()> {
         let (cols, rows) = match app.scene.as_deref() {
             None => (width, if width >= 70 { HEIGHT } else { 27 }),
             Some("form") => (46, 11),
-            Some("progress") => (46, 8),
             Some("logview") => (48, 10),
             Some("calendar") => (25, 8),
-            Some("sparkline") => (46, 7),
             Some("barchart") => (46, 10),
-            Some("accordion") => (46, 7),
-            Some(_) => (46, 8),
+            Some("sparkline" | "accordion") => (46, 7),
+            Some("progress" | _) => (46, 8),
         };
         let (grid, clusters) = render_once(&mut app, cols, rows);
         let text = if styled_out {

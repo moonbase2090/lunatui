@@ -59,6 +59,8 @@ footer .bar{max-width:1180px;margin:0 auto;display:flex;justify-content:space-be
 footer nav{display:flex;gap:16px}
 footer a{text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
 </style>
+<link rel="stylesheet" href="assets/showcase.css">
+<link rel="stylesheet" href="assets/quickstart-units.css">
 </head>
 <body>
 <header class="nav"><div class="bar">
@@ -67,7 +69,20 @@ footer a{text-decoration:none;min-height:44px;display:inline-flex;align-items:ce
 </div></header>
 <main>
  <h1>Quickstart</h1>
- <p class="lede">Six copy-paste templates. Each picture is one frame from running that example. The guide is <a href="https://github.com/moonbase2090/lunatui/blob/main/docs/getting-started.md">Getting started</a>.</p>
+ <p class="lede">Install Lunatui, try it in your browser, then copy a template. The full guide is <a href="https://github.com/moonbase2090/lunatui/blob/main/docs/getting-started.md">Getting started</a>.</p>
+<section class="install-unit" aria-labelledby="install-title">
+ <h2 id="install-title">Install</h2>
+ <p class="q-lede">Lunatui needs Rust 1.88 or newer.</p>
+ <div class="tabs-frame" data-tabs>
+  <div class="tabs-head" role="tablist" aria-label="Install method">
+   <button type="button" role="tab" id="t-cli" aria-controls="p-cli" aria-selected="true">cargo add</button>
+   <button type="button" role="tab" id="t-toml" aria-controls="p-toml" aria-selected="false" tabindex="-1">Cargo.toml</button>
+  </div>
+  <div role="tabpanel" id="p-cli" aria-labelledby="t-cli"><div class="code" style="--peek:4" data-static><pre><code data-lang="sh" data-start="1">cargo add lunatui</code></pre></div></div>
+  <div role="tabpanel" id="p-toml" aria-labelledby="t-toml" hidden><div class="code" style="--peek:4" data-static><pre><code data-lang="toml" data-start="1">[dependencies]
+lunatui = &quot;0.1&quot;</code></pre></div></div>
+ </div>
+</section>
 <section class="card sandbox" data-sandbox aria-labelledby="sandbox-title">
  <div class="sandbox-copy">
   <h2 id="sandbox-title">Try it</h2>
@@ -99,17 +114,26 @@ footer a{text-decoration:none;min-height:44px;display:inline-flex;align-items:ce
  <p class="sandbox-status" data-sandbox-status role="status">Static preview. The live demo loads when this panel enters the viewport.</p>
  <noscript><p class="sandbox-status">Enable JavaScript to run the live terminal. The static frame above comes from the same template.</p></noscript>
 </section>
-<article class="card" id="minimal">
- <h2>Minimal</h2>
- <p class="run"><code>cargo run --example template_minimal</code></p>
- <p>A titled box. Press q to quit.</p>
- <img src="assets/media/quickstart-minimal.png" alt="Minimal template: a bordered box that says hello" width="960">
- <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
-// SPDX-License-Identifier: MIT
-
-#![doc = include_str!(&quot;../README.md&quot;)]
-
-#[cfg(any(unix, windows))]
+<section class="tpls" aria-labelledby="tpl-title">
+ <h2 id="tpl-title">Templates</h2>
+ <p class="q-lede">Six starting points. Each one shows its complete source beside the frame it draws, cell for cell.</p>
+<article class="tpl" id="minimal">
+ <div class="tpl-h"><h3>Minimal</h3><p>A titled box. Press q to quit.</p></div>
+ <div class="tpl-frame">
+  <div class="tpl-render">
+   <div class="tpl-run"><code>cargo run --example template_minimal</code><span>48 × 10 cells</span></div>
+   <div class="tpl-cells"><pre class="term " style="--cols:48;--rows:10" role="img" aria-label="Minimal template, 48 by 10 cells: a green box titled hello containing Hello. Press q to quit."><span class="a">┌ hello ───────────────────────────────────────┐</span>
+<span class="a">│</span>Hello. Press q to quit.                       <span class="a">│</span>
+<span class="a">│</span>                                              <span class="a">│</span>
+<span class="a">│</span>                                              <span class="a">│</span>
+<span class="a">│</span>                                              <span class="a">│</span>
+<span class="a">│</span>                                              <span class="a">│</span>
+<span class="a">│</span>                                              <span class="a">│</span>
+<span class="a">│</span>                                              <span class="a">│</span>
+<span class="a">│</span>                                              <span class="a">│</span>
+<span class="a">└──────────────────────────────────────────────┘</span></pre></div>
+  </div>
+  <div class="code tpl-code" style="--peek:12"><pre><code data-lang="rust" data-start="6">#[cfg(any(unix, windows))]
 use std::env;
 #[cfg(any(unix, windows))]
 use std::io::{self, Write};
@@ -177,20 +201,30 @@ pub fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}
-</code></pre>
+}</code></pre></div>
+ </div>
 </article>
-<article class="card" id="list">
- <h2>List</h2>
- <p class="run"><code>cargo run --example template_list</code></p>
- <p>Up and down move the selection.</p>
- <img src="assets/media/quickstart-list.png" alt="List template: five widgets with Gauge selected" width="960">
- <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
-// SPDX-License-Identifier: MIT
-
-#![doc = include_str!(&quot;../README.md&quot;)]
-
-#[cfg(any(unix, windows))]
+<article class="tpl" id="list">
+ <div class="tpl-h"><h3>List</h3><p>Up and down move the selection.</p></div>
+ <div class="tpl-frame">
+  <div class="tpl-render">
+   <div class="tpl-run"><code>cargo run --example template_list</code><span>42 × 14 cells</span></div>
+   <div class="tpl-cells"><pre class="term " style="--cols:42;--rows:14" role="img" aria-label="List template, 42 by 14 cells: a box titled items listing Calendar, Gauge, Table, Sparkline and Form with Gauge selected, and a key hint line below."><span class="a">┌ items ─────────────────────────────────┐</span>
+<span class="a">│</span>  Calendar                              <span class="a">│</span>
+<span class="a">│&gt; </span><span class="sel">Gauge                                 </span><span class="a">│</span>
+<span class="a">│</span>  Table                                 <span class="a">│</span>
+<span class="a">│</span>  Sparkline                             <span class="a">│</span>
+<span class="a">│</span>  Form                                  <span class="a">│</span>
+<span class="a">│</span>                                        <span class="a">│</span>
+<span class="a">│</span>                                        <span class="a">│</span>
+<span class="a">│</span>                                        <span class="a">│</span>
+<span class="a">│</span>                                        <span class="a">│</span>
+<span class="a">│</span>                                        <span class="a">│</span>
+<span class="a">│</span>                                        <span class="a">│</span>
+<span class="a">└────────────────────────────────────────┘</span>
+ Up and down move the row. q quits.       </pre></div>
+  </div>
+  <div class="code tpl-code" style="--peek:12"><pre><code data-lang="rust" data-start="6">#[cfg(any(unix, windows))]
 use std::env;
 #[cfg(any(unix, windows))]
 use std::io::{self, Write};
@@ -309,20 +343,28 @@ pub fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}
-</code></pre>
+}</code></pre></div>
+ </div>
 </article>
-<article class="card" id="form">
- <h2>Form</h2>
- <p class="run"><code>cargo run --example template_form</code></p>
- <p>Tab moves focus. Typed keys edit the focused field.</p>
- <img src="assets/media/quickstart-form.png" alt="Form template: a name and a role, with the name filled in" width="960">
- <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
-// SPDX-License-Identifier: MIT
-
-#![doc = include_str!(&quot;../README.md&quot;)]
-
-#[cfg(any(unix, windows))]
+<article class="tpl" id="form">
+ <div class="tpl-h"><h3>Form</h3><p>Tab moves focus. Typed keys edit the focused field.</p></div>
+ <div class="tpl-frame">
+  <div class="tpl-render">
+   <div class="tpl-run"><code>cargo run --example template_form</code><span>56 × 12 cells</span></div>
+   <div class="tpl-cells"><pre class="term " style="--cols:56;--rows:12" role="img" aria-label="Form template, 56 by 12 cells: a box titled account with a focused required Name field holding Ada and a Role field with the hint shown on the card."><span class="a">┌ account ─────────────────────────────────────────────┐</span>
+<span class="a">│</span><span class="a b fld">Name</span><span class="fld"> </span><span class="f fld">*</span>  Ada▏                                          <span class="a">│</span>
+<span class="a">│</span>                                                      <span class="a">│</span>
+<span class="a">│</span>                                                      <span class="a">│</span>
+<span class="a">│</span><span class="fld">Role</span>                                                  <span class="a">│</span>
+<span class="a">│</span>        <span class="d fld">shown on the card</span>                             <span class="a">│</span>
+<span class="a">│</span>                                                      <span class="a">│</span>
+<span class="a">│</span>                                                      <span class="a">│</span>
+<span class="a">│</span>                                                      <span class="a">│</span>
+<span class="a">│</span>                                                      <span class="a">│</span>
+<span class="a">│</span>                                                      <span class="a">│</span>
+<span class="a">└──────────────────────────────────────────────────────┘</span></pre></div>
+  </div>
+  <div class="code tpl-code" style="--peek:12"><pre><code data-lang="rust" data-start="6">#[cfg(any(unix, windows))]
 use std::env;
 #[cfg(any(unix, windows))]
 use std::io::{self, Write};
@@ -458,20 +500,38 @@ pub fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}
-</code></pre>
+}</code></pre></div>
+ </div>
 </article>
-<article class="card" id="dashboard">
- <h2>Dashboard</h2>
- <p class="run"><code>cargo run --example template_dashboard</code></p>
- <p>A sparkline, a gauge, and a table. The samples advance while it runs.</p>
- <img src="assets/media/quickstart-dashboard.png" alt="Dashboard template: a sparkline, a capacity gauge, and a service table" width="960">
- <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
-// SPDX-License-Identifier: MIT
-
-#![doc = include_str!(&quot;../README.md&quot;)]
-
-use std::env;
+<article class="tpl" id="dashboard">
+ <div class="tpl-h"><h3>Dashboard</h3><p>A sparkline, a gauge and a table. The samples advance while it runs.</p></div>
+ <div class="tpl-frame">
+  <div class="tpl-render">
+   <div class="tpl-run"><code>cargo run --example template_dashboard</code><span>72 × 22 cells</span></div>
+   <div class="tpl-cells"><pre class="term " style="--cols:72;--rows:22" role="img" aria-label="Dashboard template, 72 by 22 cells: a requests sparkline, a capacity gauge at about a quarter and a services table with api selected, worker and edge."><span class="a">┌ requests ────────────────────────────────────────────────────────────┐</span>
+<span class="a">│               </span><span class="a eb e7"> </span><span class="a eb e3"> </span><span class="a">               </span><span class="a eb e3"> </span><span class="a">               </span>                      <span class="a">│</span>
+<span class="a">│     </span><span class="a eb e1"> </span><span class="a eb e5"> </span><span class="a eb e2"> </span><span class="a">      </span><span class="a hb"> </span><span class="a bg">  </span><span class="a eb e1"> </span><span class="a">             </span><span class="a eb e5"> </span><span class="a bg"> </span><span class="a eb e7"> </span><span class="a">       </span><span class="a eb e2"> </span><span class="a eb e1"> </span><span class="a">     </span>                      <span class="a">│</span>
+<span class="a">│    </span><span class="a eb e2"> </span><span class="a bg">   </span><span class="a eb e3"> </span><span class="a">    </span><span class="a eb e2"> </span><span class="a bg">    </span><span class="a hb"> </span><span class="a eb e2"> </span><span class="a">  </span><span class="a eb e1"> </span><span class="a eb e3"> </span><span class="a eb e6"> </span><span class="a hb"> </span><span class="a eb e1"> </span><span class="a">   </span><span class="a hb"> </span><span class="a bg">    </span><span class="a hb"> </span><span class="a eb e2"> </span><span class="a">  </span><span class="a eb e1"> </span><span class="a eb e5"> </span><span class="a bg">  </span><span class="a eb e6"> </span><span class="a hb"> </span><span class="a eb e2"> </span><span class="a">  </span>                      <span class="a">│</span>
+<span class="a">│</span><span class="a eb e1"> </span><span class="a eb e3"> </span><span class="a hb"> </span><span class="a eb e6"> </span><span class="a bg">     </span><span class="a eb e7"> </span><span class="a hb">  </span><span class="a eb e6"> </span><span class="a bg">        </span><span class="a eb e7"> </span><span class="a bg">     </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a eb e7"> </span><span class="a bg">        </span><span class="a eb e7"> </span><span class="a bg">        </span><span class="a eb e6"> </span>                      <span class="a">│</span>
+<span class="a">│</span><span class="a bg">                                                </span>                      <span class="a">│</span>
+<span class="a">│</span><span class="a bg">                                                </span>                      <span class="a">│</span>
+<span class="a">└──────────────────────────────────────────────────────────────────────┘</span>
+<span class="a">┌ capacity ────────────────────────────────────────────────────────────┐</span>
+<span class="a">│</span><span class="a bg">                 </span>                                                     <span class="a">│</span>
+<span class="a">└──────────────────────────────────────────────────────────────────────┘</span>
+<span class="a">┌ services ────────────────────────────────────────────────────────────┐</span>
+<span class="a">│</span>service     state   latency                                           <span class="a">│</span>
+<span class="a">│</span><span class="sel">api         ok      12 ms                                             </span><span class="a">│</span>
+<span class="a">│</span>worker      warn    40 ms                                             <span class="a">│</span>
+<span class="a">│</span>edge        ok      9 ms                                              <span class="a">│</span>
+<span class="a">│</span>                                                                      <span class="a">│</span>
+<span class="a">│</span>                                                                      <span class="a">│</span>
+<span class="a">│</span>                                                                      <span class="a">│</span>
+<span class="a">│</span>                                                                      <span class="a">│</span>
+<span class="a">│</span>                                                                      <span class="a">│</span>
+<span class="a">└──────────────────────────────────────────────────────────────────────┘</span></pre></div>
+  </div>
+  <div class="code tpl-code" style="--peek:12"><pre><code data-lang="rust" data-start="6">use std::env;
 use std::io::{self, Write};
 use std::time::Instant;
 
@@ -631,20 +691,32 @@ fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}
-</code></pre>
+}</code></pre></div>
+ </div>
 </article>
-<article class="card" id="popover">
- <h2>Popover</h2>
- <p class="run"><code>cargo run --example template_popover</code></p>
- <p>A panel beside an anchor. Enter toggles it.</p>
- <img src="assets/media/quickstart-popover.png" alt="Popover template: a filters panel open under a views anchor" width="960">
- <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
-// SPDX-License-Identifier: MIT
-
-#![doc = include_str!(&quot;../README.md&quot;)]
-
-use std::env;
+<article class="tpl" id="popover">
+ <div class="tpl-h"><h3>Popover</h3><p>A panel beside an anchor. Enter toggles it.</p></div>
+ <div class="tpl-frame">
+  <div class="tpl-render">
+   <div class="tpl-run"><code>cargo run --example template_popover</code><span>56 × 16 cells</span></div>
+   <div class="tpl-cells"><pre class="term " style="--cols:56;--rows:16" role="img" aria-label="Popover template, 56 by 16 cells: a views anchor box with a rounded filters panel opened below it listing Open items, Assigned to me and Closed.">                                                        
+  <span class="a">┌ views ───────┐</span>                                      
+  <span class="a">│</span>              <span class="a">│</span>                                      
+  <span class="a">└──────────────┘</span>                                      
+  <span class="a">╭ filters ───────────╮</span>                                
+  <span class="a">│</span>Open items          <span class="a">│</span>                                
+  <span class="a">│</span>Assigned to me      <span class="a">│</span>                                
+  <span class="a">│</span>Closed              <span class="a">│</span>                                
+  <span class="a">│</span>                    <span class="a">│</span>                                
+  <span class="a">│</span>                    <span class="a">│</span>                                
+  <span class="a">╰────────────────────╯</span>                                
+                                                        
+                                                        
+                                                        
+  Enter toggles the panel. q quits.                     
+                                                        </pre></div>
+  </div>
+  <div class="code tpl-code" style="--peek:12"><pre><code data-lang="rust" data-start="6">use std::env;
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
@@ -727,20 +799,38 @@ fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}
-</code></pre>
+}</code></pre></div>
+ </div>
 </article>
-<article class="card" id="layout">
- <h2>Layout</h2>
- <p class="run"><code>cargo run --example template_layout</code></p>
- <p>Header, sidebar, body, and a status bar.</p>
- <img src="assets/media/quickstart-layout.png" alt="Layout template: header, sidebar, body, and a status bar" width="960">
- <pre><code>// Copyright (c) 2026 Moonbase 2090 LLC
-// SPDX-License-Identifier: MIT
-
-#![doc = include_str!(&quot;../README.md&quot;)]
-
-use std::env;
+<article class="tpl" id="layout">
+ <div class="tpl-h"><h3>Layout</h3><p>Header, sidebar, body and a status bar.</p></div>
+ <div class="tpl-frame">
+  <div class="tpl-render">
+   <div class="tpl-run"><code>cargo run --example template_layout</code><span>72 × 22 cells</span></div>
+   <div class="tpl-cells"><pre class="term " style="--cols:72;--rows:22" role="img" aria-label="Layout template, 72 by 22 cells: a header box reading Quickstart, a sidebar with Templates selected, Gallery and Docs, a body box, and a status bar reading templates, ready."><span class="a">┌ header ──────────────────────────────────────────────────────────────┐</span>
+<span class="a">│</span>Quickstart                                                            <span class="a">│</span>
+<span class="a">└──────────────────────────────────────────────────────────────────────┘</span>
+<span class="a">┌ sidebar ───────────┐</span><span class="a">┌ body ──────────────────────────────────────────┐</span>
+<span class="a">│</span><span class="sel">Templates           </span><span class="a">│</span><span class="a">│</span>The body fills the space beside the sidebar.    <span class="a">│</span>
+<span class="a">│</span>Gallery             <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>Docs                <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
+<span class="a">└────────────────────┘</span><span class="a">└────────────────────────────────────────────────┘</span>
+<span class="a">templates</span><span class="sel">  ready                                                        </span></pre></div>
+  </div>
+  <div class="code tpl-code" style="--peek:12"><pre><code data-lang="rust" data-start="6">use std::env;
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
@@ -853,13 +943,15 @@ fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}
-</code></pre>
+}</code></pre></div>
+ </div>
 </article>
+</section>
 </main>
 <footer><div class="bar">
  <div>Rust terminal UI library · MIT License</div>
  <nav aria-label="Footer"><a href="index.html">Home</a><a href="https://github.com/moonbase2090/lunatui">Source</a></nav>
 </div></footer>
 <script type="module" src="assets/quickstart-sandbox.js"></script>
+<script src="assets/showcase.js" defer></script>
 </body></html>
