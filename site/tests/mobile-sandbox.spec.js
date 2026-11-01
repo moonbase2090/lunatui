@@ -3,6 +3,22 @@
 
 import { expect, test } from '@playwright/test';
 
+async function expectTerminalToFit(panel) {
+  const edges = await panel.locator('[data-sandbox-terminal]').evaluate((host) => {
+    const screen = host.querySelector('.xterm-screen');
+    const hostBox = host.getBoundingClientRect();
+    const hostStyle = getComputedStyle(host);
+    const pixels = (value) => Number.parseFloat(value) || 0;
+    return {
+      screenRight: screen.getBoundingClientRect().right,
+      hostContentRight: hostBox.right
+        - pixels(hostStyle.borderRightWidth)
+        - pixels(hostStyle.paddingRight),
+    };
+  });
+  expect(edges.screenRight).toBeLessThanOrEqual(edges.hostContentRight + 0.5);
+}
+
 test('phone input, composition, touch keys, and resizing preserve the session', async ({ page }, testInfo) => {
   await page.goto('/quickstart.html');
   const panel = page.locator('[data-sandbox]');
@@ -17,6 +33,7 @@ test('phone input, composition, touch keys, and resizing preserve the session', 
   await expect(input).toHaveAttribute('autocapitalize', 'none');
   await expect(input).toHaveAttribute('autocorrect', 'off');
   await expect(input).toHaveAttribute('spellcheck', 'false');
+  await expectTerminalToFit(panel);
 
   await input.tap();
   await input.fill('Z');
@@ -61,6 +78,7 @@ test('phone input, composition, touch keys, and resizing preserve the session', 
   await expect.poll(() => panel.getAttribute('data-cols')).not.toBe(originalColumns);
   await expect(rows).toContainText('AdaXY');
   await expect(rows).toContainText('Dev');
+  await expectTerminalToFit(panel);
   expect(await page.evaluate(() => document.body.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
