@@ -239,5 +239,5 @@ jobs:
       - run: node scripts/sync-quickstart-source.mjs --check
       - run: node scripts/build-web-sandbox.mjs
       - run: git diff --exit-code -- site/assets/sandbox
-      - run: npm exec --prefix site -- playwright install --with-deps chromium
+      - run: npm exec --prefix site -- playwright install --with-deps chromium webkit
       - run: npm run test:sandbox --prefix site

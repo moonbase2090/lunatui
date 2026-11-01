@@ -8,9 +8,24 @@ if (panel) {
   const fallback = panel.querySelector('[data-sandbox-fallback]');
   const host = panel.querySelector('[data-sandbox-terminal]');
   const status = panel.querySelector('[data-sandbox-status]');
+  const mobileControls = panel.querySelector('[data-sandbox-mobile]');
+  const mobileInput = panel.querySelector('[data-sandbox-input]');
   const templateButtons = [...panel.querySelectorAll('[data-sandbox-template]')];
+  const keyButtons = [...panel.querySelectorAll('[data-sandbox-key]')];
+  const mobileInputQuery = window.matchMedia('(max-width: 767px), (pointer: coarse)');
+  const liveScreenQuery = window.matchMedia('(min-width: 320px)');
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
+  const keyData = {
+    ArrowUp: '\u001b[A',
+    ArrowDown: '\u001b[B',
+    ArrowRight: '\u001b[C',
+    ArrowLeft: '\u001b[D',
+    Tab: '\t',
+    Enter: '\r',
+    Escape: '\u001b',
+    Backspace: '\u007f',
+  };
 
   let bootPromise;
   let terminal;
@@ -19,6 +34,10 @@ if (panel) {
   let session;
   let selectedTemplate = 'minimal';
   let resizeFrame = 0;
+  let inputQueue = Promise.resolve();
+  let pendingInput = '';
+  let composing = false;
+  let expandedViewportHeight = window.visualViewport?.height ?? window.innerHeight;
 
   function loadStylesheet(href) {
     return new Promise((resolve, reject) => {
@@ -70,6 +89,51 @@ if (panel) {
     panel.dataset.rows = String(terminal.rows);
   }
 
+  function showMobileInput() {
+    mobileControls.hidden = false;
+  }
+
+  function focusTerminal() {
+    if (mobileInputQuery.matches) {
+      showMobileInput();
+      mobileInput.focus({ preventScroll: true });
+    } else {
+      terminal?.focus();
+    }
+  }
+
+  function sendInput(data) {
+    if (!data) return inputQueue;
+    if (!session) {
+      pendingInput += data;
+      return inputQueue;
+    }
+
+    const currentSession = session;
+    inputQueue = inputQueue.then(async () => {
+      if (session !== currentSession) return;
+      await write(currentSession.input(encoder.encode(data)));
+      terminal.refresh(0, terminal.rows - 1);
+      if (session === currentSession && !currentSession.is_running()) {
+        status.textContent = 'Session ended. Choose a template to start again.';
+      }
+    }).catch((error) => {
+      console.error(error);
+      status.textContent = 'The terminal could not process that input. Choose a template to restart it.';
+    });
+    return inputQueue;
+  }
+
+  function configureTerminalInput() {
+    const textarea = terminal.textarea;
+    if (!textarea) return;
+    textarea.autocapitalize = 'none';
+    textarea.autocomplete = 'off';
+    textarea.setAttribute('autocorrect', 'off');
+    textarea.inputMode = 'text';
+    textarea.spellcheck = false;
+  }
+
   function openTerminal() {
     terminal = new window.Terminal({
       cols: 48,
@@ -90,18 +154,14 @@ if (panel) {
     fitAddon = new window.FitAddon.FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(host);
-    terminal.onData(async (data) => {
-      const currentSession = session;
-      if (!currentSession) return;
-      await write(currentSession.input(encoder.encode(data)));
-      terminal.refresh(0, terminal.rows - 1);
-      if (session === currentSession && !currentSession.is_running()) {
-        status.textContent = 'Session ended. Choose a template to start again.';
-      }
+    configureTerminalInput();
+    terminal.onData((data) => {
+      void sendInput(data);
     });
   }
 
   async function fit() {
+    if (!terminal) return;
     const columns = terminal.cols;
     const rows = terminal.rows;
     fitAddon.fit();
@@ -110,6 +170,30 @@ if (panel) {
       terminal.reset();
       await write(session.resize(terminal.cols, terminal.rows));
       terminal.refresh(0, terminal.rows - 1);
+    }
+  }
+
+  function scheduleFit() {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+      void fit();
+    });
+  }
+
+  function syncVisualViewport() {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    panel.style.setProperty('--sandbox-visual-height', `${Math.round(viewport.height)}px`);
+    const inputFocused = document.activeElement === mobileInput;
+    if (inputFocused) expandedViewportHeight = Math.max(expandedViewportHeight, viewport.height);
+    else expandedViewportHeight = viewport.height;
+    const keyboardOpen = mobileInputQuery.matches
+      && inputFocused
+      && expandedViewportHeight - viewport.height > 120;
+    panel.classList.toggle('sandbox-keyboard-open', keyboardOpen);
+    scheduleFit();
+    if (keyboardOpen && document.activeElement === mobileInput) {
+      host.scrollIntoView({ block: 'nearest' });
     }
   }
 
@@ -131,19 +215,28 @@ if (panel) {
     await fit();
     session = new Session(name, terminal.cols, terminal.rows);
     await write(session.tick(performance.now()));
+    if (pendingInput) {
+      const data = pendingInput;
+      pendingInput = '';
+      await sendInput(data);
+    }
     terminal.refresh(0, terminal.rows - 1);
-    status.textContent = `Live ${name} template. Use the keyboard in the terminal.`;
-    if (focus) terminal.focus();
+    status.textContent = `Live ${name} template. Tap the input below or use a keyboard.`;
+    if (focus) focusTerminal();
   }
 
   async function boot(focus = false) {
+    if (!liveScreenQuery.matches) {
+      status.textContent = 'Static preview. Open this page on a wider screen to run the live terminal.';
+      return;
+    }
     if (terminal) {
-      if (focus) terminal.focus();
+      if (focus) focusTerminal();
       return;
     }
     if (bootPromise) {
       await bootPromise;
-      if (focus) terminal?.focus();
+      if (focus) focusTerminal();
       return;
     }
 
@@ -164,12 +257,10 @@ if (panel) {
       host.hidden = false;
       startButton.disabled = false;
       startButton.textContent = 'Focus terminal';
+      showMobileInput();
 
-      new ResizeObserver(() => {
-        cancelAnimationFrame(resizeFrame);
-        resizeFrame = requestAnimationFrame(() => fit());
-      }).observe(host);
-
+      new ResizeObserver(scheduleFit).observe(host);
+      syncVisualViewport();
       await selectTemplate(selectedTemplate, focus);
     })();
 
@@ -183,7 +274,61 @@ if (panel) {
     }
   }
 
-  startButton.addEventListener('click', () => boot(true));
+  mobileInput.addEventListener('compositionstart', () => {
+    composing = true;
+  });
+  mobileInput.addEventListener('compositionend', () => {
+    composing = false;
+    const data = mobileInput.value;
+    mobileInput.value = '';
+    void sendInput(data);
+  });
+  mobileInput.addEventListener('input', (event) => {
+    if (composing || event.isComposing) return;
+    const data = mobileInput.value;
+    mobileInput.value = '';
+    void sendInput(data);
+  });
+  mobileInput.addEventListener('keydown', (event) => {
+    const data = keyData[event.key];
+    if (!data) return;
+    event.preventDefault();
+    void sendInput(data);
+  });
+  mobileInput.addEventListener('focus', () => {
+    if (!terminal) void boot(false);
+  });
+
+  keyButtons.forEach((button) => {
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      void sendInput(keyData[button.dataset.sandboxKey]);
+      mobileInput.focus({ preventScroll: true });
+    });
+    button.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      void sendInput(keyData[button.dataset.sandboxKey]);
+      mobileInput.focus({ preventScroll: true });
+    });
+  });
+
+  host.addEventListener('pointerdown', (event) => {
+    if (!mobileInputQuery.matches) return;
+    event.preventDefault();
+    showMobileInput();
+    mobileInput.focus({ preventScroll: true });
+  }, { capture: true });
+
+  startButton.addEventListener('click', () => {
+    if (mobileInputQuery.matches) {
+      showMobileInput();
+      mobileInput.focus({ preventScroll: true });
+      void boot(false);
+    } else {
+      void boot(true);
+    }
+  });
   templateButtons.forEach((button) => {
     button.addEventListener('click', async () => {
       await boot(false);
@@ -191,11 +336,17 @@ if (panel) {
     });
   });
 
-  if ('IntersectionObserver' in window) {
+  window.visualViewport?.addEventListener('resize', syncVisualViewport);
+  window.visualViewport?.addEventListener('scroll', syncVisualViewport);
+
+  if (!liveScreenQuery.matches) {
+    startButton.hidden = true;
+    status.textContent = 'Static preview. Open this page on a wider screen to run the live terminal.';
+  } else if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       observer.disconnect();
-      boot(false);
+      void boot(false);
     }, { rootMargin: '200px' });
     observer.observe(panel);
   }
