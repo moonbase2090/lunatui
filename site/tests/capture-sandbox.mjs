@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { chromium } from '@playwright/test';
+import { chromium, devices, webkit } from '@playwright/test';
 
 const output = resolve(process.env.SANDBOX_CAPTURE_DIR ?? 'test-results/sandbox-frames');
 mkdirSync(output, { recursive: true });
@@ -22,37 +22,74 @@ for (let attempt = 0; attempt < 50; attempt += 1) {
   await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
 }
 
-const browser = await chromium.launch();
+async function screenshotWebp(page, locator, path) {
+  const png = await locator.screenshot();
+  const data = await page.evaluate(async (base64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    canvas.getContext('2d').drawImage(image, 0, 0);
+    return canvas.toDataURL('image/webp', 0.9).split(',')[1];
+  }, png.toString('base64'));
+  writeFileSync(path, Buffer.from(data, 'base64'));
+}
+
 try {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await page.goto('http://127.0.0.1:4173/quickstart.html');
-  const panel = page.locator('[data-sandbox]');
-  const rows = panel.locator('.xterm-accessibility-tree');
-  await rows.getByText(/Hello\. Press q to quit\./).waitFor();
-  await panel.screenshot({ path: join(output, '01-minimal.png') });
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto('http://127.0.0.1:4173/quickstart.html');
+    const panel = page.locator('[data-sandbox]');
+    const rows = panel.locator('.xterm-accessibility-tree');
+    await rows.getByText(/Hello\. Press q to quit\./).waitFor();
+    await panel.screenshot({ path: join(output, '01-minimal.png') });
 
-  await panel.locator('[data-sandbox-template="list"]').click();
-  await rows.getByText(/Gauge/).waitFor();
-  await page.keyboard.press('ArrowDown');
-  await panel.screenshot({ path: join(output, '02-list.png') });
+    await panel.locator('[data-sandbox-template="list"]').click();
+    await rows.getByText(/Gauge/).waitFor();
+    await page.keyboard.press('ArrowDown');
+    await panel.screenshot({ path: join(output, '02-list.png') });
 
-  await panel.locator('[data-sandbox-template="form"]').click();
-  await rows.getByText(/Ada/).waitFor();
-  await page.keyboard.type('Lovelace');
-  await rows.getByText(/AdaLovelace/).waitFor();
-  await panel.screenshot({ path: join(output, '03-form.png') });
+    await panel.locator('[data-sandbox-template="form"]').click();
+    await rows.getByText(/Ada/).waitFor();
+    await page.keyboard.type('Lovelace');
+    await rows.getByText(/AdaLovelace/).waitFor();
+    await panel.screenshot({ path: join(output, '03-form.png') });
 
-  writeFileSync(join(output, 'frames.txt'), [
-    "file '01-minimal.png'",
-    'duration 3',
-    "file '02-list.png'",
-    'duration 3',
-    "file '03-form.png'",
-    'duration 3',
-    "file '03-form.png'",
-    '',
-  ].join('\n'));
+    writeFileSync(join(output, 'frames.txt'), [
+      "file '01-minimal.png'",
+      'duration 3',
+      "file '02-list.png'",
+      'duration 3',
+      "file '03-form.png'",
+      'duration 3',
+      "file '03-form.png'",
+      '',
+    ].join('\n'));
+  } finally {
+    await browser.close();
+  }
+
+  for (const [name, engine, deviceName] of [
+    ['android', chromium, 'Pixel 7'],
+    ['iphone', webkit, 'iPhone 13'],
+  ]) {
+    const phoneBrowser = await engine.launch();
+    try {
+      const context = await phoneBrowser.newContext({ ...devices[deviceName] });
+      const page = await context.newPage();
+      await page.goto('http://127.0.0.1:4173/quickstart.html');
+      const panel = page.locator('[data-sandbox]');
+      const rows = panel.locator('.xterm-accessibility-tree');
+      await panel.locator('[data-sandbox-template="form"]').tap();
+      await rows.getByText(/Ada/).waitFor();
+      await screenshotWebp(page, panel, join(output, `quickstart-sandbox-${name}.webp`));
+    } finally {
+      await phoneBrowser.close();
+    }
+  }
 } finally {
-  await browser.close();
   server.kill();
 }

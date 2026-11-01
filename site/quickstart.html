@@ -34,10 +34,19 @@ h2{font:600 36px var(--serif);margin-bottom:8px}
 .sandbox-toolbar button:disabled{cursor:wait;opacity:.65}
 .sandbox-stage{position:relative;background:var(--term);border-top:1px solid var(--line);border-bottom:1px solid var(--line);min-height:340px}
 .sandbox-stage img{width:100%;margin:0;border-radius:0}
-.sandbox-stage [hidden]{display:none}
+.sandbox [hidden]{display:none!important}
 .sandbox-terminal{height:340px;padding:12px}
+.sandbox-mobile{display:none;padding:12px 22px 16px;border-bottom:1px solid var(--line);background:rgba(10,13,28,.72)}
+.sandbox-mobile label{display:block;margin-bottom:6px;color:var(--ink2);font:500 13px var(--sans)}
+.sandbox-input{width:100%;min-height:44px;border:1px solid var(--edge);border-radius:8px;padding:9px 12px;background:#111638;color:var(--ink);font:16px var(--mono)}
+.sandbox-input:focus{outline:2px solid var(--peri);outline-offset:2px;border-color:transparent}
+.sandbox-keys{display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:8px;margin-top:10px}
+.sandbox-keys button{min-width:44px;min-height:44px;border:1px solid var(--edge);border-radius:8px;background:#171c43;color:var(--ink);font:500 14px var(--sans);touch-action:manipulation}
+.sandbox-keys button:focus-visible{outline:2px solid var(--peri);outline-offset:2px}
 .sandbox-status{min-height:48px;padding:11px 22px;font-size:14px}
-@media(max-width:640px){.sandbox-toolbar .sandbox-start{width:100%;margin-left:0}.sandbox-stage,.sandbox-terminal{min-height:280px;height:280px}}
+@media(max-width:767px),(pointer:coarse){.sandbox-mobile{display:block}}
+@media(max-width:640px){.nav .bar{height:68px;padding:0 16px}.logo{font-size:25px}.nav a.back{font-size:14px}main{min-width:0;padding:32px 12px 56px}h1{font-size:48px}.lede{margin-bottom:28px}.card{padding:16px;margin-bottom:20px}.sandbox{padding:0}.sandbox-copy{padding:18px 14px 0}.sandbox-copy h2{font-size:32px}.sandbox-toolbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:14px;gap:8px}.sandbox-toolbar button{padding:8px 6px}.sandbox-toolbar .sandbox-start{grid-column:1/-1;width:100%;margin-left:0}.sandbox-stage,.sandbox-terminal{min-height:280px;height:280px}.sandbox-terminal{padding:8px}.sandbox-mobile{padding:12px 14px 14px}.sandbox-status{padding:11px 14px}.sandbox-keyboard-open .sandbox-stage{min-height:180px}.sandbox-keyboard-open .sandbox-terminal{min-height:180px;height:clamp(180px,calc(var(--sandbox-visual-height,100vh) - 250px),280px)}}
+@media(max-width:319px){.sandbox-toolbar,.sandbox-mobile{display:none!important}.sandbox-stage{min-height:0}.sandbox-status{min-height:0}.sandbox-copy p{font-size:14px}}
 img{display:block;max-width:100%;height:auto;margin:16px 0;border-radius:8px;background:var(--term)}
 pre{overflow:auto;max-height:480px;background:var(--term);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
 code{font:13px/1.5 var(--mono)}
@@ -69,6 +78,19 @@ footer a{text-decoration:none;min-height:44px;display:inline-flex;align-items:ce
  <div class="sandbox-stage">
   <img data-sandbox-fallback src="assets/media/quickstart-minimal.png" alt="Static preview of the minimal quickstart template" width="960">
   <div class="sandbox-terminal" data-sandbox-terminal aria-label="Live Lunatui terminal" hidden></div>
+ </div>
+ <div class="sandbox-mobile" data-sandbox-mobile hidden>
+  <label for="sandbox-input">Type in the terminal</label>
+  <input class="sandbox-input" id="sandbox-input" data-sandbox-input type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="enter">
+  <div class="sandbox-keys" data-sandbox-keys role="toolbar" aria-label="Terminal keys">
+   <button type="button" data-sandbox-key="ArrowUp" aria-label="Up arrow">↑</button>
+   <button type="button" data-sandbox-key="ArrowDown" aria-label="Down arrow">↓</button>
+   <button type="button" data-sandbox-key="ArrowLeft" aria-label="Left arrow">←</button>
+   <button type="button" data-sandbox-key="ArrowRight" aria-label="Right arrow">→</button>
+   <button type="button" data-sandbox-key="Tab">Tab</button>
+   <button type="button" data-sandbox-key="Enter">Enter</button>
+   <button type="button" data-sandbox-key="Escape">Esc</button>
+  </div>
  </div>
  <p class="sandbox-status" data-sandbox-status role="status">Static preview. The live demo loads when this panel enters the viewport.</p>
  <noscript><p class="sandbox-status">Enable JavaScript to run the live terminal. The static frame above comes from the same template.</p></noscript>
