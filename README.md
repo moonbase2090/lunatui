@@ -307,7 +307,7 @@ Screenshot: [docs/media/ui-button.png](docs/media/ui-button.png). Recorded from 
 
 ### UI choice
 
-The `lunatui-choice` crate in a notification preferences screen. The run is scripted, not interactive: focus steps through the checkboxes, a radio group and a switch, and flips them as it goes, and the summary card follows. Checked boxes and the on switch use the primary color, focus uses the ring color, `[-]` marks a group with only some choices on, and the text message switch is disabled and dim.
+The `lunatui-choice` crate in a notification preferences screen. The run is scripted, not interactive: focus steps through the checkboxes, a radio group, two switches and the Save button, and flips them as it goes. The summary card follows, `[-]` follows how many events are on, and the badge reads unsaved until Save is pressed. Checked boxes and the on switch use the primary color, focus uses the ring color, `[-]` marks a group with only some choices on, and the text message switch is disabled and dim.
 
 <img src="docs/media/ui-choice.gif" alt="lunatui-choice: checkboxes, a mixed checkbox, a radio group and switches, with a disabled switch, in a notification preferences screen in the dark theme" width="1028">
 

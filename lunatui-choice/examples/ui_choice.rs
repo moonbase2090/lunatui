@@ -18,13 +18,10 @@ use lunatui_theme::{Theme, Variant as ThemeVariant};
 use lunatui_ui_tokens::{Role, Tone, surface};
 use lunatui_widgets::{Block, Paragraph, RenderCx, Widget};
 
-const SLOT: u32 = 38;
+const SLOT: u32 = 15;
 const FREQUENCIES: [&str; 3] = ["Immediately", "Hourly digest", "Daily digest"];
 const EVENTS: [&str; 3] = ["Deploys", "Failed checks", "Review requests"];
-
-fn step(tick: u32) -> u32 {
-    tick / SLOT
-}
+const STOPS: u32 = 9;
 
 fn state_for(focus: u32, slot: u32) -> WidgetState {
     if focus == slot {
@@ -42,25 +39,72 @@ fn checked(on: bool) -> CheckState {
     }
 }
 
+fn flips(step: u32, slot: u32) -> u32 {
+    if step > slot {
+        (step - slot - 1) / STOPS + 1
+    } else {
+        0
+    }
+}
+
+struct Model {
+    focus: u32,
+    events: [bool; 3],
+    frequency: usize,
+    switches: [bool; 2],
+    saved: bool,
+    pressing: bool,
+}
+
+impl Model {
+    fn at(tick: u32) -> Self {
+        let step = tick / SLOT;
+        let focus = step % STOPS;
+        let on = |base: bool, slot: u32| base != (flips(step, slot) % 2 == 1);
+        let frequency = if focus >= 3 {
+            (focus - 3).min(2) as usize
+        } else if step < STOPS {
+            0
+        } else {
+            2
+        };
+        Self {
+            focus,
+            events: [on(true, 0), on(true, 1), on(false, 2)],
+            frequency,
+            switches: [on(false, 6), on(true, 7)],
+            saved: step == 0 || (step > 8 && step < 10),
+            pressing: step == 8 && tick % SLOT >= SLOT / 2,
+        }
+    }
+
+    fn all(&self) -> CheckState {
+        let count = self.events.iter().filter(|on| **on).count();
+        match count {
+            0 => CheckState::Unchecked,
+            3 => CheckState::Checked,
+            _ => CheckState::Mixed,
+        }
+    }
+}
+
 struct Events {
-    tick: u32,
+    model: Model,
 }
 
 impl Widget for Events {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let focus = step(self.tick);
-        let on = [true, focus <= 1, focus > 2];
         for (index, label) in EVENTS.iter().enumerate() {
             let slot = u32::try_from(index).unwrap_or(0);
             let row = Rect::new(area.x, area.y + u16::try_from(index).unwrap_or(0), 30, 1);
             Checkbox::new(label)
-                .checked(checked(on[index]))
-                .state(state_for(focus, slot))
+                .checked(checked(self.model.events[index]))
+                .state(state_for(self.model.focus, slot))
                 .on(Role::Card)
                 .render(row, cx);
         }
         Checkbox::new("Select all")
-            .checked(CheckState::Mixed)
+            .checked(self.model.all())
             .on(Role::Card)
             .render(Rect::new(area.x + 32, area.y, 30, 1), cx);
     }
@@ -71,24 +115,23 @@ impl Widget for Events {
 }
 
 struct Delivery {
-    tick: u32,
+    model: Model,
 }
 
 impl Widget for Delivery {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let focus = step(self.tick);
-        let picked = usize::from(focus >= 5);
-        let on_radio = (3..=5).contains(&focus);
+        let focus = self.model.focus;
         Radio::new(FREQUENCIES)
-            .selected(Some(picked))
-            .focused(on_radio.then(|| (focus - 3) as usize))
+            .selected(Some(self.model.frequency))
+            .focused((3..=5).contains(&focus).then(|| (focus - 3) as usize))
             .on(Role::Card)
             .render(Rect::new(area.x, area.y, 30, 3), cx);
-        Switch::new("Post to Slack", focus >= 6)
+        Switch::new("Post to Slack", self.model.switches[0])
             .state(state_for(focus, 6))
             .on_surface(Role::Card)
             .render(Rect::new(area.x + 32, area.y, 30, 1), cx);
-        Switch::new("Email me", true)
+        Switch::new("Email me", self.model.switches[1])
+            .state(state_for(focus, 7))
             .on_surface(Role::Card)
             .render(Rect::new(area.x + 32, area.y + 1, 30, 1), cx);
         Switch::new("Text message", false)
@@ -103,19 +146,22 @@ impl Widget for Delivery {
 }
 
 struct Summary {
-    tick: u32,
+    model: Model,
 }
 
 impl Widget for Summary {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        let focus = step(self.tick);
-        let events = 1 + u32::from(focus <= 1) + u32::from(focus > 2);
-        let frequency = FREQUENCIES[usize::from(focus >= 5)];
-        let slack = if focus >= 6 { "on" } else { "off" };
+        let model = &self.model;
+        let events = model.events.iter().filter(|on| **on).count();
+        let onoff = |on: bool| if on { "on" } else { "off" };
         let lines = [
             format!("Events selected: {events} of 3"),
-            format!("Frequency: {frequency}"),
-            format!("Slack: {slack}, email: on, text message: unavailable"),
+            format!("Frequency: {}", FREQUENCIES[model.frequency]),
+            format!(
+                "Slack: {}, email: {}, text message: unavailable",
+                onoff(model.switches[0]),
+                onoff(model.switches[1])
+            ),
         ];
         for (row, line) in lines.iter().enumerate() {
             let y = area.y + u16::try_from(row).unwrap_or(0);
@@ -131,6 +177,7 @@ impl Widget for Summary {
 }
 
 fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    *grid = Grid::new(area.width, area.height);
     let mut cx = RenderCx::new(grid, clusters, theme);
     let backdrop = surface(&cx, Role::Background);
     Block::new().style(backdrop).render(area, &mut cx);
@@ -140,12 +187,24 @@ fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect,
     Paragraph::new("LUNATUI  /  Notification preferences")
         .style(title)
         .render(Rect::new(2, 0, 50, 1), &mut cx);
-    Badge::new("saved")
-        .tone(Tone::Success)
+    let model = Model::at(tick);
+    let (badge, tone) = if model.saved {
+        ("saved", Tone::Success)
+    } else {
+        ("unsaved", Tone::Warning)
+    };
+    Badge::new(badge)
+        .tone(tone)
         .render(Rect::new(106, 0, 12, 1), &mut cx);
-    let events = Events { tick };
-    let delivery = Delivery { tick };
-    let summary = Summary { tick };
+    let events = Events {
+        model: Model::at(tick),
+    };
+    let delivery = Delivery {
+        model: Model::at(tick),
+    };
+    let summary = Summary {
+        model: Model::at(tick),
+    };
     Card::new("Events")
         .description("A scripted run: focus steps through the choices and flips them")
         .body(&events)
@@ -159,6 +218,8 @@ fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect,
         .body(&summary)
         .render(Rect::new(1, 20, 118, 10), &mut cx);
     Button::new("Save preferences")
+        .state(state_for(model.focus, 8))
+        .pressed(model.pressing)
         .on(Role::Background)
         .render(Rect::new(3, 31, 20, 1), &mut cx);
     Paragraph::new("[-] means some choices in the group are on. Dimmed rows are unavailable.")
@@ -212,4 +273,56 @@ fn main() -> io::Result<()> {
     }
     out.write_all(b"\x1b[0m\x1b[?25h\x1b[?1049l")?;
     out.flush()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn frame(grid: &mut Grid, clusters: &mut ClusterTable, tick: u32) -> String {
+        let theme = Theme::builtin(ThemeVariant::Dark);
+        draw(grid, clusters, &theme, Rect::new(0, 0, 120, 36), tick);
+        grid.display_text(clusters)
+    }
+
+    #[test]
+    fn a_shrinking_line_leaves_no_trailing_cells() {
+        let mut clusters = ClusterTable::new();
+        let mut reused = Grid::new(120, 36);
+        let ticks = (0..STOPS * SLOT * 2).step_by(SLOT as usize / 2);
+        for tick in ticks {
+            let again = frame(&mut reused, &mut clusters, tick);
+            let fresh = frame(&mut Grid::new(120, 36), &mut clusters, tick);
+            assert_eq!(again, fresh, "tick {tick} kept cells from an earlier frame");
+        }
+    }
+
+    #[test]
+    fn the_summary_line_reads_cleanly_after_it_shrinks() {
+        let mut clusters = ClusterTable::new();
+        let mut grid = Grid::new(120, 36);
+        let slack_off = frame(&mut grid, &mut clusters, 0);
+        assert!(slack_off.contains("Slack: off, email: on, text message: unavailable "));
+        let slack_on = frame(&mut grid, &mut clusters, 7 * SLOT);
+        assert!(slack_on.contains("Slack: on, email: on, text message: unavailable "));
+        assert!(!slack_on.contains("unavailablee"));
+    }
+
+    #[test]
+    fn the_script_changes_something_every_stop() {
+        let mut clusters = ClusterTable::new();
+        let mut frames = Vec::new();
+        for step in 0..18 {
+            let mut grid = Grid::new(120, 36);
+            let text = frame(&mut grid, &mut clusters, step * SLOT);
+            let styles: Vec<_> = (0..36)
+                .flat_map(|y| (0..120).map(move |x| (x, y)))
+                .map(|(x, y)| grid.get(x, y).map(lunatui_core::Cell::style))
+                .collect();
+            frames.push((text, styles));
+        }
+        for pair in frames.windows(2) {
+            assert_ne!(pair[0], pair[1]);
+        }
+    }
 }
