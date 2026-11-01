@@ -24,6 +24,20 @@ h1{font:600 64px/1 var(--serif)}
 h2{font:600 36px var(--serif);margin-bottom:8px}
 .run{font:15px var(--mono);color:var(--lav);margin-bottom:8px}
 .card p{color:var(--ink2)}
+.sandbox{padding:0;overflow:hidden}
+.sandbox-copy{padding:22px 22px 0}
+.sandbox-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px 22px}
+.sandbox-toolbar button{min-height:44px;border:1px solid var(--edge);border-radius:8px;padding:8px 14px;background:#111638;color:var(--ink);font:500 14px var(--sans);cursor:pointer}
+.sandbox-toolbar button[aria-pressed="true"]{border-color:var(--lav);background:#282d57}
+.sandbox-toolbar .sandbox-start{margin-left:auto;background:var(--lav);border-color:var(--lav);color:#11152e}
+.sandbox-toolbar button:focus-visible{outline:2px solid var(--peri);outline-offset:2px}
+.sandbox-toolbar button:disabled{cursor:wait;opacity:.65}
+.sandbox-stage{position:relative;background:var(--term);border-top:1px solid var(--line);border-bottom:1px solid var(--line);min-height:340px}
+.sandbox-stage img{width:100%;margin:0;border-radius:0}
+.sandbox-stage [hidden]{display:none}
+.sandbox-terminal{height:340px;padding:12px}
+.sandbox-status{min-height:48px;padding:11px 22px;font-size:14px}
+@media(max-width:640px){.sandbox-toolbar .sandbox-start{width:100%;margin-left:0}.sandbox-stage,.sandbox-terminal{min-height:280px;height:280px}}
 img{display:block;max-width:100%;height:auto;margin:16px 0;border-radius:8px;background:var(--term)}
 pre{overflow:auto;max-height:480px;background:var(--term);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
 code{font:13px/1.5 var(--mono)}
@@ -41,6 +55,24 @@ footer a{text-decoration:none;min-height:44px;display:inline-flex;align-items:ce
 <main>
  <h1>Quickstart</h1>
  <p class="lede">Six copy-paste templates. Each picture is one frame from running that example. The guide is <a href="https://github.com/moonbase2090/lunatui/blob/main/docs/getting-started.md">Getting started</a>.</p>
+<section class="card sandbox" data-sandbox aria-labelledby="sandbox-title">
+ <div class="sandbox-copy">
+  <h2 id="sandbox-title">Try it</h2>
+  <p>This terminal runs the real Rust quickstart in your browser. Pick a template, then use its keys.</p>
+ </div>
+ <div class="sandbox-toolbar" role="group" aria-label="Live quickstart controls">
+  <button type="button" data-sandbox-template="minimal" aria-pressed="true">Minimal</button>
+  <button type="button" data-sandbox-template="list" aria-pressed="false">List</button>
+  <button type="button" data-sandbox-template="form" aria-pressed="false">Form</button>
+  <button class="sandbox-start" type="button" data-sandbox-start>Run live</button>
+ </div>
+ <div class="sandbox-stage">
+  <img data-sandbox-fallback src="assets/media/quickstart-minimal.png" alt="Static preview of the minimal quickstart template" width="960">
+  <div class="sandbox-terminal" data-sandbox-terminal aria-label="Live Lunatui terminal" hidden></div>
+ </div>
+ <p class="sandbox-status" data-sandbox-status role="status">Static preview. The live demo loads when this panel enters the viewport.</p>
+ <noscript><p class="sandbox-status">Enable JavaScript to run the live terminal. The static frame above comes from the same template.</p></noscript>
+</section>
 <article class="card" id="minimal">
  <h2>Minimal</h2>
  <p class="run"><code>cargo run --example template_minimal</code></p>
@@ -51,19 +83,29 @@ footer a{text-decoration:none;min-height:44px;display:inline-flex;align-items:ce
 
 #![doc = include_str!(&quot;../README.md&quot;)]
 
+#[cfg(any(unix, windows))]
 use std::env;
+#[cfg(any(unix, windows))]
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
-use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_runtime::{App, ControlFlow, is_quit};
+#[cfg(any(unix, windows))]
+use lunatui_runtime::{RunOptions, render_once, run};
 use lunatui_term::Event;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{Block, Paragraph, RenderCx, Widget};
 
+#[cfg(any(unix, windows))]
 const WIDTH: u16 = 48;
+#[cfg(any(unix, windows))]
 const HEIGHT: u16 = 10;
 
 struct Hello;
+
+pub(crate) fn app() -&gt; impl App {
+    Hello
+}
 
 impl App for Hello {
     fn update(&amp;mut self, event: &amp;Event) -&gt; ControlFlow {
@@ -95,8 +137,14 @@ impl App for Hello {
     }
 }
 
-fn main() -&gt; io::Result&lt;()&gt; {
-    let mut app = Hello;
+#[cfg(any(unix, windows))]
+/// Runs the native quickstart example.
+///
+/// # Errors
+///
+/// Returns terminal setup, rendering, or output errors.
+pub fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = app();
     if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
         let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
         io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
@@ -116,21 +164,31 @@ fn main() -&gt; io::Result&lt;()&gt; {
 
 #![doc = include_str!(&quot;../README.md&quot;)]
 
+#[cfg(any(unix, windows))]
 use std::env;
+#[cfg(any(unix, windows))]
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
-use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_runtime::{App, ControlFlow, is_quit};
+#[cfg(any(unix, windows))]
+use lunatui_runtime::{RunOptions, render_once, run};
 use lunatui_term::{Event, KeyCode};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{Block, List, Paragraph, RenderCx, VecSource, Widget};
 
+#[cfg(any(unix, windows))]
 const WIDTH: u16 = 42;
+#[cfg(any(unix, windows))]
 const HEIGHT: u16 = 14;
 const ITEMS: [&amp;str; 5] = [&quot;Calendar&quot;, &quot;Gauge&quot;, &quot;Table&quot;, &quot;Sparkline&quot;, &quot;Form&quot;];
 
 struct Screen {
     selected: usize,
+}
+
+pub(crate) fn app() -&gt; impl App {
+    Screen::new()
 }
 
 impl Screen {
@@ -211,8 +269,14 @@ impl App for Screen {
     }
 }
 
-fn main() -&gt; io::Result&lt;()&gt; {
-    let mut app = Screen::new();
+#[cfg(any(unix, windows))]
+/// Runs the native quickstart example.
+///
+/// # Errors
+///
+/// Returns terminal setup, rendering, or output errors.
+pub fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = app();
     if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
         let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
         io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
@@ -232,22 +296,32 @@ fn main() -&gt; io::Result&lt;()&gt; {
 
 #![doc = include_str!(&quot;../README.md&quot;)]
 
+#[cfg(any(unix, windows))]
 use std::env;
+#[cfg(any(unix, windows))]
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
-use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_runtime::{App, ControlFlow, is_quit};
+#[cfg(any(unix, windows))]
+use lunatui_runtime::{RunOptions, render_once, run};
 use lunatui_term::{Event, KeyCode};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{Block, Form, FormField, RenderCx, TextInput, Widget};
 
+#[cfg(any(unix, windows))]
 const WIDTH: u16 = 56;
+#[cfg(any(unix, windows))]
 const HEIGHT: u16 = 12;
 
 struct Screen {
     name: String,
     role: String,
     focus: usize,
+}
+
+pub(crate) fn app() -&gt; impl App {
+    Screen::new()
 }
 
 impl Screen {
@@ -344,8 +418,14 @@ impl App for Screen {
     }
 }
 
-fn main() -&gt; io::Result&lt;()&gt; {
-    let mut app = Screen::new();
+#[cfg(any(unix, windows))]
+/// Runs the native quickstart example.
+///
+/// # Errors
+///
+/// Returns terminal setup, rendering, or output errors.
+pub fn main() -&gt; io::Result&lt;()&gt; {
+    let mut app = app();
     if env::args().any(|arg| arg == &quot;--snapshot&quot;) {
         let (grid, clusters) = render_once(&amp;mut app, WIDTH, HEIGHT);
         io::stdout().write_all(grid.display_text(&amp;clusters).as_bytes())?;
@@ -755,4 +835,5 @@ fn main() -&gt; io::Result&lt;()&gt; {
  <div>Rust terminal UI library · MIT License</div>
  <nav aria-label="Footer"><a href="index.html">Home</a><a href="https://github.com/moonbase2090/lunatui">Source</a></nav>
 </div></footer>
+<script type="module" src="assets/quickstart-sandbox.js"></script>
 </body></html>
