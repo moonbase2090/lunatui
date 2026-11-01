@@ -305,6 +305,13 @@ The `lunatui-button` crate in a deploy console. The run is scripted, not interac
 
 Screenshot: [docs/media/ui-button.png](docs/media/ui-button.png). Recorded from `cargo run --release -p lunatui-button --example ui_button` (120×36, 270 frames at 30 fps, truecolor, dark, about 8 seconds) with the pinned agg.
 
+### UI choice
+
+The `lunatui-choice` crate in a notification preferences screen. The run is scripted, not interactive: focus steps through the checkboxes, a radio group, two switches and the Save button, and flips them as it goes. The summary card follows, `[-]` follows how many events are on, and the badge reads unsaved until Save is pressed. Checked boxes and the on switch use the primary color, focus uses the ring color, `[-]` marks a group with only some choices on, and the text message switch is disabled and dim.
+
+<img src="docs/media/ui-choice.gif" alt="lunatui-choice: checkboxes, a mixed checkbox, a radio group and switches, with a disabled switch, in a notification preferences screen in the dark theme" width="1028">
+
+Screenshot: [docs/media/ui-choice.png](docs/media/ui-choice.png). Recorded from `cargo run --release -p lunatui-choice --example ui_choice` (120×36, 270 frames at 30 fps, truecolor, dark, about 10 seconds) with the pinned agg.
 ### UI field
 
 The `lunatui-field` crate in a profile settings form. The run is scripted, not interactive: the email is typed out, its error message ("Enter a full address") gives way to the help line once the address is complete, the toggle flips, and focus moves between fields. A required field marks its label with `*`, the focused label takes the ring color, and the Workspace ID field is disabled and dim. Each field wraps a real control: a text input or a toggle.
