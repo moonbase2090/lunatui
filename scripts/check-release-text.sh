@@ -326,7 +326,7 @@ for dir in "${ARTIFACT_DIRS[@]}"; do
       rm -f "$archive_hits"
       continue
     fi
-    if [[ -x "$artifact" ]] || file "$artifact" 2>/dev/null | grep -q 'executable'; then
+    if [[ -x "$artifact" || "$artifact" == *.wasm ]] || file "$artifact" 2>/dev/null | grep -q 'executable'; then
       record_hits < <(scan_strings_artifact "$artifact" "$artifact")
     fi
   done < <(find "$dir" -maxdepth 1 -type f -print0 2>/dev/null || true)
