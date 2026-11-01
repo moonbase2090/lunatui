@@ -201,6 +201,11 @@ path = "../examples/templates/list.rs"
 test = true
 
 [[example]]
+name = "release_console_app"
+path = "../examples/release_console_app.rs"
+test = true
+
+[[example]]
 name = "template_form"
 path = "../examples/templates/form.rs"
 test = true

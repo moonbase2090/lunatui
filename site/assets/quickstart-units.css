@@ -1,0 +1,69 @@
+/* Quickstart page: install tabs and template units. */
+main h2{font:600 clamp(30px,3.4vw,38px)/1.1 var(--serif);letter-spacing:-.01em;margin:0}
+.q-lede{color:var(--ink2);margin:8px 0 22px;max-width:60ch}
+.lede{margin-bottom:56px}
+
+/* neutralize the page's legacy global pre rule inside new components */
+.term,.code pre{border:0;border-radius:0;background:none}
+.term{max-height:none}
+.term{padding:0;overflow:visible}
+
+/* install: tabs in a code frame */
+.install-unit{margin-bottom:72px}
+.tabs-frame{border:1px solid var(--line-s);border-radius:14px;overflow:hidden;background:var(--code);max-width:720px}
+.tabs-head{display:flex;gap:4px;padding:8px 8px 0;background:var(--code-head);border-bottom:1px solid var(--line-s)}
+.tabs-head [role=tab]{min-height:40px;padding:0 14px;border:0;border-bottom:2px solid transparent;background:none;color:var(--ink2);font:500 13.5px var(--tmono);cursor:pointer}
+.tabs-head [role=tab][aria-selected=true]{color:var(--ink);border-bottom-color:var(--lav)}
+.tabs-head [role=tab]:focus-visible{outline:2px solid var(--lav);outline-offset:-2px;border-radius:6px}
+.tabs-frame .code{border-top:0}
+.tabs-frame .code .l::before{content:"$";counter-increment:none;width:2.2em;color:#4a5070}
+.tabs-frame #p-toml .code .l::before{content:counter(ln);counter-increment:ln}
+
+/* sandbox: CSS-only restyle; DOM, data-* hooks and quickstart-sandbox.js unchanged */
+.card.sandbox{background:var(--code);border:1px solid var(--line-s);border-radius:14px;box-shadow:none;margin-bottom:96px}
+.sandbox-copy{padding:24px 24px 0}
+.sandbox-copy h2{margin-bottom:6px}
+.sandbox-copy p{color:var(--ink2)}
+.sandbox-toolbar{padding:18px 24px;gap:6px}
+.sandbox-toolbar button{min-height:40px;border:1px solid var(--line-s);border-radius:8px;background:transparent;color:var(--ink2);font:500 13.5px var(--tmono)}
+.sandbox-toolbar button[aria-pressed="true"]{border-color:var(--line-a);background:#161b3d;color:var(--ink)}
+.sandbox-toolbar .sandbox-start{font-family:var(--sans);font-weight:600;background:var(--lav);border-color:var(--lav);color:#16123a}
+.sandbox-stage{background:var(--t-bg);border-color:rgba(205,214,244,.08)}
+.sandbox-status{color:var(--ink2);font-size:13.5px}
+
+/* templates: render beside its source in one frame */
+.tpls>h2{margin-top:0}
+.tpl{margin-top:56px;scroll-margin-top:24px}
+.tpl-h h3{font:600 19px/1.3 var(--sans);letter-spacing:-.01em}
+.tpl-h p{color:var(--ink2);font-size:15px;margin:4px 0 14px}
+.tpl-frame{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);grid-template-areas:"code render";border:1px solid var(--line-s);border-radius:14px;overflow:hidden;background:var(--code)}
+.tpl-render{grid-area:render;display:flex;flex-direction:column;background:var(--t-bg);border-left:1px solid rgba(205,214,244,.08);min-width:0}
+.tpl-run{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 16px;background:#191927;border-bottom:1px solid rgba(205,214,244,.07);color:var(--t-dim);font:12.5px/1.4 var(--tmono)}
+.tpl-run code{font:inherit;color:var(--t-fg)}
+.tpl-cells{container-type:inline-size;padding:24px 20px;position:sticky;top:0;overflow-x:auto}
+.tpl-cells .term{--pad:40px;--max:13px}
+.tpl-frame{min-height:380px}
+.tpl-code{grid-area:code;border-top:0;min-width:0;position:relative}
+.tpl-code pre{position:absolute;inset:0;max-height:none;font-size:12.5px}
+.tpl-code.open pre{position:static;max-height:min(640px,75vh);overflow:auto}
+.tpl-code .more{z-index:1}
+
+@media (max-width:860px){
+ .tpl-frame{grid-template-columns:1fr;grid-template-areas:"render" "code"}
+ .tpl-render{border-left:0;border-bottom:1px solid var(--line-s)}
+ .tpl-cells{position:static;padding:16px 12px}
+ .tpl-cells .term{--pad:24px}
+ .tpl-frame{min-height:0}
+ .tpl-code{--peek:8!important}
+ .tpl-code pre{position:static;max-height:calc(var(--peek) * 1.65em + 28px)}
+}
+@media (max-width:640px){
+ .lede{margin-bottom:40px}
+ .install-unit{margin-bottom:56px}
+ .card.sandbox{margin-bottom:72px}
+ .sandbox-copy{padding:18px 16px 0}
+ .sandbox-toolbar{padding:14px 16px}
+ .sandbox-toolbar button{min-height:44px}
+ .tpl-run{padding:9px 12px;font-size:11.5px}
+ .tabs-head [role=tab]{min-height:44px}
+}

@@ -85,72 +85,24 @@ h1{font:600 clamp(64px,10vw,124px)/1 var(--serif);letter-spacing:-.01em}
 .copy:hover{background:rgba(255,255,255,.06)}
 .install code{display:block;background:var(--term);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:15px var(--mono)}
 .install code b{color:var(--lav);font-weight:400}
-/* sections */
+/* sections (kept rules used by #speed) */
 section.block{padding:72px 0}
 .sec-h{text-align:center;margin-bottom:34px}
 .sec-h h2{font:600 clamp(32px,4vw,44px) var(--serif);display:flex;align-items:center;justify-content:center;gap:16px;text-wrap:balance}
-.sec-h h2::before,.sec-h h2::after{content:"☾";color:var(--lav);font-size:.7em}
+
 .sec-h p{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--peri);margin-top:6px;text-wrap:balance}
 .panel{background:linear-gradient(180deg,var(--card-top),var(--card) 62%);border:1px solid var(--edge);border-radius:14px;box-shadow:inset 0 1px 0 rgba(185,167,240,.22),0 22px 56px rgba(2,4,14,.6)}
-/* gallery */
-.gallery{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px}
-.gallery .tile{grid-column:span 2}
-.gallery .tile:nth-child(n+4){grid-column:span 3}
-.gallery .tile:nth-child(n+4):last-child:nth-child(even){grid-column:2/6}
-.tile{padding:14px;transition:border-color .2s,box-shadow .2s}
-.tile:hover{border-color:var(--edge-hi);box-shadow:inset 0 1px 0 rgba(185,167,240,.3),0 22px 56px rgba(2,4,14,.6),0 0 0 1px rgba(143,168,255,.18)}
-.tile-h{display:flex;align-items:center;gap:9px;font-weight:500;margin-bottom:10px}
-.tile-h::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--peri);box-shadow:0 0 8px rgba(143,168,255,.7)}
-.widget-demo{cursor:zoom-in}
-.zoom{border:0;padding:0;background:transparent;max-width:min(94vw,1280px);width:100%}
-.zoom::backdrop{background:rgba(5,8,22,.86)}
-.zoom figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
-.zoom{max-height:94vh;overflow:hidden;position:fixed;inset:0;margin:auto;height:fit-content}
-.zoom[open]{display:block}
-.zoom img{display:block;margin:0 auto;max-width:100%;width:auto;height:auto;max-height:calc(94vh - 100px);object-fit:contain;border-radius:8px;image-rendering:pixelated}
-.zoom figcaption{display:flex;justify-content:space-between;align-items:center;color:var(--ink);font-weight:500;margin-bottom:12px}
-.zoom-close{min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font-size:20px;cursor:pointer}
-
-
-
-
-
-
-
-
-
-
-.dots{display:none;flex-wrap:wrap;max-width:100%}
-/* speed */
 .speed{display:grid;grid-template-columns:1fr 240px;gap:24px;align-items:center;padding:28px 32px}
 .speed-cap{font:12px var(--mono);letter-spacing:.12em;color:var(--lav);text-transform:uppercase;margin-bottom:16px;text-wrap:balance}
 .row{display:grid;grid-template-columns:90px 1fr 120px;align-items:center;gap:14px;margin:12px 0}
 .row>span:first-child{white-space:nowrap;color:var(--ink);font-variant-numeric:tabular-nums}
 .track{height:22px;background:rgba(143,168,255,.09);border:1px solid rgba(143,168,255,.16);border-radius:5px}
 .fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#6f86f0,var(--lav));box-shadow:0 0 14px rgba(185,167,240,.35)}
-
 .val{font:14px var(--mono);color:var(--ink);white-space:nowrap}
-
 .badge{display:flex;align-items:center;gap:16px}
 .badge svg{width:64px;height:64px;flex:none}
 .badge strong{display:block;font:600 34px var(--serif);color:var(--moon)}
 .badge span{font-size:13px;color:var(--ink2);letter-spacing:.06em;text-transform:uppercase}
-/* tech */
-.tech{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.tech .panel{position:relative;overflow:hidden;padding:22px}
-.tech .panel::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,var(--peri),var(--lav) 55%,transparent)}
-.tech h3{font:600 24px var(--serif);margin-bottom:8px}
-.tech ul{padding-left:18px;color:var(--ink2);font-size:14.5px}
-.tech li::marker{color:var(--lav)}
-.tech li{margin:4px 0;text-wrap:pretty}
-
-
-/* docs */
-.docs{display:flex;align-items:center;gap:22px;padding:26px 30px;background:radial-gradient(120% 160% at 0% 0%,rgba(143,168,255,.16),transparent 55%),linear-gradient(180deg,var(--card-top),var(--card) 62%)}
-.docs svg{width:72px;height:72px;flex:none;padding:12px;border:1px solid var(--edge);border-radius:50%;background:rgba(185,167,240,.08)}
-.docs h2{font:600 32px var(--serif)}
-.docs p{color:var(--ink2);text-wrap:pretty}
-.btn-moon{margin-left:auto;display:inline-flex;align-items:center;gap:12px;min-height:52px;padding:0 30px;border-radius:14px 30px 18px 26px;background:var(--lav);color:#16123a;font:600 20px var(--serif);text-decoration:none;white-space:nowrap}
 /* footer */
 footer{position:relative;background:#070a1c;padding:32px 0 40px;color:var(--ink2);font-size:14px}
 footer::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--peri) 30%,var(--lav) 70%,transparent);opacity:.6}
@@ -254,12 +206,13 @@ footer nav a:hover{color:var(--lav)}
 .source{display:inline-flex;align-items:center;min-height:44px}
 .method a{padding:12px 0}
 </style>
+<link rel="stylesheet" href="assets/showcase.css">
 </head>
 <body id="top">
 <a class="skip-link" href="#main-content">Skip to content</a>
 <header class="nav"><div class="container">
  <a class="logo" href="#top"><svg viewBox="0 0 24 24"><path d="M15 3a9 9 0 1 0 6 15A8 8 0 0 1 15 3z" fill="#ece7da"/></svg>Lunatui</a>
- <div class="nav-actions"><nav aria-label="Main" id="main-links"><ul><li><a href="quickstart.html">Quickstart</a></li><li><a href="#docs">Docs</a></li><li><a href="#gallery">Gallery</a></li><li><a href="#speed">Benchmarks</a></li><li><a href="#tech">Technical</a></li></ul></nav>
+ <div class="nav-actions"><nav aria-label="Main" id="main-links"><ul><li><a href="quickstart.html">Quickstart</a></li><li><a href="#docs">Docs</a></li><li><a href="#widgets">Widgets</a></li><li><a href="#speed">Benchmarks</a></li><li><a href="#tech">Technical</a></li></ul></nav>
  <button class="motion-toggle" type="button" aria-pressed="false">Pause motion</button><button class="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="main-links"><span aria-hidden="true">☰</span></button></div>
 </div></header>
 <main id="main-content" tabindex="-1">
@@ -281,41 +234,190 @@ footer nav a:hover{color:var(--lav)}
  </div></div>
 </section>
 
-<section class="block" id="gallery"><div class="container">
- <div class="sec-h reveal"><h2>Widget Gallery</h2><p>Rich widgets. Beautiful&nbsp;terminal.</p></div>
- <div class="gallery" id="carousel">
-  <article class="tile panel"><div class="tile-h"><span>Calendar</span></div><img class="widget-demo" data-static="assets/media/calendar.png" data-gif="assets/media/calendar.webp" alt="Calendar widget rendering a monthly schedule" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>BigText</span></div><img class="widget-demo" data-static="assets/media/bigtext.png" data-gif="assets/media/bigtext.webp" alt="BigText widget rendering large block lettering" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Sparkline</span></div><img class="widget-demo" data-static="assets/media/sparkline.png" data-gif="assets/media/sparkline.webp" alt="Matching Cells and antialiased Pixels Sparkline service boards with ten lanes and a selected inspector in a real Kitty terminal" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Spinner</span></div><img class="widget-demo" data-static="assets/media/spinner.gif" data-gif="assets/media/spinner.gif" alt="Spinner widget cycling its frame patterns" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>TextInput</span></div><img class="widget-demo" data-static="assets/media/textinput.gif" data-gif="assets/media/textinput.gif" alt="TextInput widget with a block cursor and a bar cursor" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Toggle</span></div><img class="widget-demo" data-static="assets/media/toggle.png" data-gif="assets/media/toggle.webp" alt="Toggle: a settings screen with on/off switches flipping while a settings file view updates, in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>RadioGroup</span></div><img class="widget-demo" data-static="assets/media/radio-group.png" data-gif="assets/media/radio-group.webp" alt="RadioGroup: three radio groups stepping through their options with a preview pane following, in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Form</span></div><img class="widget-demo" data-static="assets/media/form.png" data-gif="assets/media/form.webp" alt="Form: an account form with required markers, hints, and validation messages around text, radio, and toggle inputs, in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Tooltip</span></div><img class="widget-demo" data-static="assets/media/tooltip.png" data-gif="assets/media/tooltip.webp" alt="Tooltip: hints appearing beside toolbar buttons, a gutter warning and status items in an editor screen, in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Slider</span></div><img class="widget-demo" data-static="assets/media/slider.png" data-gif="assets/media/slider.webp" alt="Slider: channel faders and equalizer range sliders with half-cell positions over a mixer screen in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>NumberInput</span></div><img class="widget-demo" data-static="assets/media/number-input.png" data-gif="assets/media/number-input.webp" alt="NumberInput: spin boxes stepping and one field being typed on an export settings screen in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Accordion</span></div><img class="widget-demo" data-static="assets/media/accordion.png" data-gif="assets/media/accordion.webp" alt="Accordion: sections opening and closing on a pipeline settings screen in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Popup and ScrollView</span></div><img class="widget-demo" data-static="assets/media/popup-scrollview.png" data-gif="assets/media/popup-scrollview.webp" alt="Popup and ScrollView: a release console in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>ProgressBar</span></div><img class="widget-demo" data-static="assets/media/progress-bar.png" data-gif="assets/media/progress-bar.webp" alt="ProgressBar: the complete release pipeline in matching Cells and Pixels panes, with all modes and states" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>SearchBox</span></div><img class="widget-demo" data-static="assets/media/search-box.png" data-gif="assets/media/search-box.webp" alt="SearchBox: a catalog filtered live with highlighted matches and a match count in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>HexViewer</span></div><img class="widget-demo" data-static="assets/media/hex-viewer.png" data-gif="assets/media/hex-viewer.webp" alt="HexViewer: a cursor and selection moving through a firmware image in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>LogView</span></div><img class="widget-demo" data-static="assets/media/logs.png" data-gif="assets/media/logs.webp" alt="LogView: a service console following new log lines, then filtering by level and text with a highlighted match in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Image</span></div><img class="widget-demo" data-static="assets/media/image-native.png" data-gif="assets/media/image-native.webp" alt="Image widget: NASA Blue Marble at full resolution in a real Kitty terminal, switching Contain and Cover. Credit: NASA, PIA18033." loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Chart</span></div><img class="widget-demo" data-static="assets/media/chart.png" data-gif="assets/media/chart.webp" alt="Matching Braille and antialiased pixel Charts for Requests, Saturation CPU/memory and latency scatter, followed by native hourly bars in a real Kitty terminal" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>BarChart</span></div><img class="widget-demo" data-static="assets/media/barchart.png" data-gif="assets/media/barchart.webp" alt="Matching Cells and antialiased Pixels BarChart scenes for grouped requests, regional latency, build runs and queue states in a real Kitty terminal" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Gauge</span></div><img class="widget-demo" data-static="assets/media/gauge.png" data-gif="assets/media/gauge.webp" alt="Matching Cells and antialiased Pixels Gauge fills across the complete deployment board in a real Kitty terminal" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>Canvas</span></div><img class="widget-demo" data-static="assets/media/canvas.png" data-gif="assets/media/canvas.webp" alt="Matching Braille and antialiased native pixel Canvas scenes for Scope, Globe, System, Clock and tree, Flock, and Pings in a real Kitty terminal" loading="lazy" decoding="async" width="240" height="170"></article>
-  <article class="tile panel"><div class="tile-h"><span>PieChart</span></div><img class="widget-demo" data-static="assets/media/pie-chart.png" data-gif="assets/media/pie-chart.webp" alt="PieChart: a braille pie of live request shares by region, with a regions table and a request trend, on a cluster overview screen in the dark theme" loading="lazy" decoding="async" width="240" height="170"></article>
- </div>
- <div class="dots" aria-label="Gallery slides"><button type="button" aria-current="true" aria-label="Show Calendar"></button><button type="button" aria-label="Show Spinner"></button><button type="button" aria-label="Show Form"></button><button type="button" aria-label="Show NumberInput"></button><button type="button" aria-label="Show SearchBox"></button><button type="button" aria-label="Show PieChart"></button></div>
-</div></section>
 
-<section class="block" id="speed"><div class="container">
- <div class="sec-h reveal"><h2>Speed Test</h2><p>Measured frame time. Lower is&nbsp;faster.</p></div>
+<section class="band" id="widgets"><div class="container">
+ <div class="band-h"><div><h2>Widgets</h2><p>Every preview on this page is terminal text in Lunatui's default dark theme, set in HTML at the size your terminal draws it. Open the code under any widget to see what draws it.</p></div>
+ <a class="band-link" href="https://docs.rs/lunatui-widgets">Browse all widgets on docs.rs</a></div>
+ <figure class="stage" style="margin:0">
+  <figcaption class="stage-bar"><span>cargo run --example release_console_app</span><span class="wide">112 × 30 cells</span><span class="narrow">46 × 27 cells</span></figcaption>
+  <div class="stage-body"><pre class="term wide" style="--cols:112;--rows:30" role="img" aria-label="A release console built from Lunatui widgets: tabs, a services table, capacity gauges, release progress, a requests sparkline and a log."><span class="sel"> </span><span class="o sel">●</span><span class="sel"> </span><span class="sel b">lunar-deploy</span><span class="sel">   </span><span class="d sel">production</span><span class="sel">                                                        </span><span class="d sel">release v0.4.2   14:02:06</span><span class="sel">   </span>
+ <span class="a sel b"> Overview </span> <span class="d"> Services </span> <span class="d"> Logs </span> <span class="d"> Settings </span>                                                                        
+                                                                                                                
+<span class="ln">╭</span><span class="a"> Services </span><span class="ln">─────────────────────────</span><span class="a"> 5 </span><span class="ln">╮</span>  <span class="ln">╭</span><span class="a"> Requests per minute </span><span class="ln">────────────────────────────────────</span><span class="a"> p50 12 ms </span><span class="ln">╮</span>
+<span class="ln">│</span> <span class="d">service      state    p50</span>            <span class="ln">│</span>  <span class="ln">│</span> <span class="a">                </span><span class="a eb e1"> </span><span class="a">                 </span><span class="a eb e2"> </span><span class="a eb e5"> </span><span class="a eb e3"> </span><span class="a">                            </span><span class="a eb e1"> </span> <span class="ln">│</span>
+<span class="ln">│</span><span class="a el e4 sel"> </span><span class="sel">api          </span><span class="o sel">●</span><span class="sel"> ok     12 ms          </span><span class="ln">│</span>  <span class="ln">│</span> <span class="a">              </span><span class="a eb e1"> </span><span class="a eb e5"> </span><span class="a bg"> </span><span class="a eb e7"> </span><span class="a eb e4"> </span><span class="a">    </span><span class="a eb e2"> </span><span class="a">       </span><span class="a eb e1"> </span><span class="a eb e3"> </span><span class="a eb e6"> </span><span class="a bg">    </span><span class="a eb e5"> </span><span class="a eb e3"> </span><span class="a eb e1"> </span><span class="a">    </span><span class="a eb e2"> </span><span class="a eb e4"> </span><span class="a eb e2"> </span><span class="a">  </span><span class="a eb e1"> </span><span class="a eb e4"> </span><span class="a eb e7"> </span><span class="a eb e6"> </span><span class="a eb e3"> </span><span class="a">       </span><span class="a eb e3"> </span><span class="a eb e5"> </span><span class="a eb e7"> </span><span class="a bg"> </span> <span class="ln">│</span>
+<span class="ln">│</span> worker       <span class="w">●</span> warn   40 ms          <span class="ln">│</span>  <span class="ln">│</span> <span class="a">   </span><span class="a eb e1"> </span><span class="a"> </span><span class="a eb e4"> </span><span class="a eb e3"> </span><span class="a eb e7"> </span><span class="a eb e6"> </span><span class="a eb e2"> </span><span class="a">  </span><span class="a eb e2"> </span><span class="a eb e5"> </span><span class="a bg">      </span><span class="a eb e6"> </span><span class="a eb e4"> </span><span class="a eb e7"> </span><span class="a bg">  </span><span class="a eb e5"> </span><span class="a eb e3"> </span><span class="a eb e1"> </span><span class="a eb e2"> </span><span class="a eb e4"> </span><span class="a eb e6"> </span><span class="a bg">          </span><span class="a eb e6"> </span><span class="a eb e4"> </span><span class="a eb e5"> </span><span class="a eb e7"> </span><span class="a bg">    </span><span class="a eb e7"> </span><span class="a bg">      </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a eb e3"> </span><span class="a eb e4"> </span><span class="a eb e6"> </span><span class="a bg">     </span> <span class="ln">│</span>
+<span class="ln">│</span> edge         <span class="o">●</span> ok     9 ms           <span class="ln">│</span>  <span class="ln">│</span> <span class="a eb e4"> </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a bg">        </span><span class="a eb e7"> </span><span class="a bg">                                                      </span> <span class="ln">│</span>
+<span class="ln">│</span> billing      <span class="o">●</span> ok     18 ms          <span class="ln">│</span>  <span class="ln">│</span> <span class="a bg">                                                                  </span> <span class="ln">│</span>
+<span class="ln">│</span> search       <span class="f">●</span> down   <span class="d">—</span>              <span class="ln">│</span>  <span class="ln">│</span> <span class="d">60 min ago</span>                                              <span class="b">now  2,418</span> <span class="ln">│</span>
+<span class="ln">╰──────────────────────────────────────╯</span>  <span class="ln">╰────────────────────────────────────────────────────────────────────╯</span>
+<span class="ln">╭</span><span class="a"> Capacity </span><span class="ln">────────────────────────────╮</span>  <span class="ln">╭</span><span class="a"> Log </span><span class="ln">────────────────────────────────────────────────────</span><span class="a"> following </span><span class="ln">╮</span>
+<span class="ln">│</span> <span class="d">cpu</span>   <span class="a">━━━━━━━━━━━━</span><span class="sel">────────────</span> 48%   <span class="ln">│</span>  <span class="ln">│</span>                                                                    <span class="ln">│</span>
+<span class="ln">│</span> <span class="d">mem</span>   <span class="w">━━━━━━━━━━━━━━━━━━━━</span><span class="sel">────</span> 81%   <span class="ln">│</span>  <span class="ln">│</span>                                                                    <span class="ln">│</span>
+<span class="ln">│</span> <span class="d">disk</span>  <span class="f">━━━━━━━━━━━━━━━━━━━━━━━━</span> 96%   <span class="ln">│</span>  <span class="ln">│</span>                                                                    <span class="ln">│</span>
+<span class="ln">╰──────────────────────────────────────╯</span>  <span class="ln">│</span>14:02:01 <span class="o"> INFO</span> deploy   pulled image lunar-api:0.4.2                <span class="ln">│</span>
+<span class="ln">╭</span><span class="a"> Release v0.4.2 </span><span class="ln">──────────────────────╮</span>  <span class="ln">│</span>14:02:02 <span class="o"> INFO</span> deploy   2 of 6 pods ready                           <span class="ln">│</span>
+<span class="ln">│</span> checkout                        <span class="d">done</span> <span class="ln">│</span>  <span class="ln">│</span>14:02:03 <span class="a">DEBUG</span> cache    warmed 1,284 keys in 210 ms                 <span class="ln">│</span>
+<span class="ln">│</span> <span class="o bg">                                    </span> <span class="ln">│</span>  <span class="ln">│</span>14:02:04 <span class="w b"> WARN</span> probe    /healthz answered in 412 ms (budget 250)    <span class="ln">│</span>
+<span class="ln">│</span> compile                          72% <span class="ln">│</span>  <span class="ln">│</span>14:02:05 <span class="o"> INFO</span> deploy   4 of 6 pods ready                           <span class="ln">│</span>
+<span class="ln">│</span> <span class="a bg">                         </span><span class="a el e7 sel"> </span><span class="sel">██████████</span> <span class="ln">│</span>  <span class="ln">│</span>14:02:05 <span class="f b">ERROR</span> search   connection refused on :9200                 <span class="ln">│</span>
+<span class="ln">│</span> test                        <span class="f">1 failed</span> <span class="ln">│</span>  <span class="ln">│</span>14:02:06 <span class="o"> INFO</span> search   restarting, attempt 2 of 5                  <span class="ln">│</span>
+<span class="ln">│</span> <span class="o bg">                             </span><span class="o el e1"> </span><span class="o bg">   </span><span class="o el e1 sel"> </span><span class="sel">██</span> <span class="ln">│</span>  <span class="ln">│</span>14:02:06 <span class="o"> INFO</span> deploy   6 of 6 pods ready                           <span class="ln">│</span>
+<span class="ln">│</span> upload                        <span class="d">queued</span> <span class="ln">│</span>  <span class="ln">│</span>14:02:06 <span class="o"> INFO</span> test     1,086 passed, 1 failed                      <span class="ln">│</span>
+<span class="ln">│</span> <span class="sel">████████████████████████████████████</span> <span class="ln">│</span>  <span class="ln">│</span>14:02:06 <span class="w b"> WARN</span> test     render::wide_cluster failed on windows      <span class="ln">│</span>
+<span class="ln">│</span>                                      <span class="ln">│</span>  <span class="ln">│</span>14:02:06 <span class="o"> INFO</span> upload   waiting for test stage                      <span class="ln">│</span>
+<span class="ln">│</span>                                      <span class="ln">│</span>  <span class="ln">│</span>14:02:06 <span class="a">DEBUG</span> edge     rotated 3 tls sessions                      <span class="ln">│</span>
+<span class="ln">│</span>                                      <span class="ln">│</span>  <span class="ln">│</span>14:02:06 <span class="o"> INFO</span> deploy   traffic shifted 25%                         <span class="ln">│</span>
+<span class="ln">╰──────────────────────────────────────╯</span>  <span class="ln">╰────────────────────────────────────────────────────────────────────╯</span>
+<span class="sel"> </span><span class="a sel">tab</span><span class="sel"> views   </span><span class="a sel">/</span><span class="sel"> filter   </span><span class="a sel">r</span><span class="sel"> rerun stage   </span><span class="a sel">q</span><span class="sel"> quit                                                     </span><span class="o sel">● connected</span><span class="sel">  </span></pre><pre class="term narrow" style="--cols:46;--rows:27" role="img" aria-label="The same release console reflowed to 46 columns for a narrow terminal."><span class="sel"> </span><span class="o sel">●</span><span class="sel"> </span><span class="sel b">lunar-deploy</span><span class="sel">                     </span><span class="d sel">14:02:06</span><span class="sel">  </span>
+ <span class="a sel b"> Overview </span> <span class="d"> Services </span> <span class="d"> Logs </span>                 
+                                              
+<span class="ln">╭</span><span class="a"> Services </span><span class="ln">───────────────────────────────</span><span class="a"> 5 </span><span class="ln">╮</span>
+<span class="ln">│</span> <span class="d">service      state    p50</span>                  <span class="ln">│</span>
+<span class="ln">│</span><span class="a el e4 sel"> </span><span class="sel">api          </span><span class="o sel">●</span><span class="sel"> ok     12 ms                </span><span class="ln">│</span>
+<span class="ln">│</span> worker       <span class="w">●</span> warn   40 ms                <span class="ln">│</span>
+<span class="ln">│</span> edge         <span class="o">●</span> ok     9 ms                 <span class="ln">│</span>
+<span class="ln">│</span> billing      <span class="o">●</span> ok     18 ms                <span class="ln">│</span>
+<span class="ln">│</span> search       <span class="f">●</span> down   <span class="d">—</span>                    <span class="ln">│</span>
+<span class="ln">╰────────────────────────────────────────────╯</span>
+<span class="ln">╭</span><span class="a"> Capacity </span><span class="ln">──────────────────────────────────╮</span>
+<span class="ln">│</span> <span class="d">cpu</span>   <span class="a">━━━━━━━━━━━━━━━</span><span class="sel">───────────────</span> 48%   <span class="ln">│</span>
+<span class="ln">│</span> <span class="d">mem</span>   <span class="w">━━━━━━━━━━━━━━━━━━━━━━━━━</span><span class="sel">─────</span> 81%   <span class="ln">│</span>
+<span class="ln">│</span> <span class="d">disk</span>  <span class="f">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span><span class="sel">─</span> 96%   <span class="ln">│</span>
+<span class="ln">╰────────────────────────────────────────────╯</span>
+<span class="ln">╭</span><span class="a"> Release v0.4.2 </span><span class="ln">────────────────────────────╮</span>
+<span class="ln">│</span> checkout                              <span class="d">done</span> <span class="ln">│</span>
+<span class="ln">│</span> <span class="o bg">                                          </span> <span class="ln">│</span>
+<span class="ln">│</span> compile                                72% <span class="ln">│</span>
+<span class="ln">│</span> <span class="a bg">                              </span><span class="a el e2 sel"> </span><span class="sel">███████████</span> <span class="ln">│</span>
+<span class="ln">│</span> test                              <span class="f">1 failed</span> <span class="ln">│</span>
+<span class="ln">│</span> <span class="o bg">                                     </span><span class="o el e3"> </span><span class="o el e5 sel"> </span><span class="sel">███</span> <span class="ln">│</span>
+<span class="ln">│</span> upload                              <span class="d">queued</span> <span class="ln">│</span>
+<span class="ln">│</span> <span class="sel">██████████████████████████████████████████</span> <span class="ln">│</span>
+<span class="ln">╰────────────────────────────────────────────╯</span>
+<span class="sel"> </span><span class="a sel">tab</span><span class="sel"> views  </span><span class="a sel">q</span><span class="sel"> quit               </span><span class="o sel">● connected</span><span class="sel">  </span></pre></div>
+ </figure>
+ <div class="built"><span>Built from</span><a href="https://docs.rs/lunatui-widgets">Tabs</a><a href="https://docs.rs/lunatui-widgets">Table</a><a href="https://docs.rs/lunatui-widgets">StatusDot</a><a href="https://docs.rs/lunatui-widgets">LineGauge</a><a href="#w-progress">ProgressBar</a><a href="#w-sparkline">Sparkline</a><a href="#w-logview">LogView</a><a href="https://docs.rs/lunatui-widgets">StatusBar</a></div>
+ <div class="units">
+<article class="unit w3" id="w-form"><h3>Form</h3><p>Labels, required markers, dim hints and fail-colored errors around your own inputs.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:11" role="img" aria-label="Form: Name and Email marked required, a hint under Name, an error under Email, a radio group and a toggle."><span class="a x b">Name</span><span class="f x"> *</span>                                        
+         <span class="x">As it appears on invoices</span>            
+                                              
+<span class="x">Email</span><span class="f x"> *</span>                                       
+         <span class="f x">✖ Enter a full email address</span>         
+                                              
+<span class="x">Plan</span>     <span class="x">○</span> <span class="x">Free</span>   <span class="x">○</span> <span class="x">Pro</span>   <span class="x">○</span> <span class="x">Team</span>              
+                                              
+                                              
+<span class="x">Updates</span>  <span class="a x">━━━</span><span class="o x">●</span> <span class="x">Product news</span>                    
+                                              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">let form = Form::new([
+    FormField::new(&quot;Name&quot;).required().hint(&quot;As it appears on invoices&quot;),
+    FormField::new(&quot;Email&quot;).required().error(&quot;Enter a full email address&quot;),
+    FormField::new(&quot;Plan&quot;),
+    FormField::new(&quot;Updates&quot;),
+])
+.focus(Some(0));
+form.render(area, &amp;mut cx);
+RadioGroup::new([&quot;Free&quot;, &quot;Pro&quot;, &quot;Team&quot;]).flow(RadioFlow::Horizontal).gap(3).render(plan, &amp;mut cx);
+Toggle::new(true).label(&quot;Product news&quot;).render(updates, &amp;mut cx);</code></pre></div></div></article>
+<article class="unit w3" id="w-progress"><h3>ProgressBar</h3><p>Segmented bars with eighth-block ends, so ok, warn and fail share one track.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:8" role="img" aria-label="ProgressBar: four pipeline stages, done, running, failed and queued.">checkout                                  <span class="d">done</span>
+<span class="o bg">                                              </span>
+compile                                    72%
+<span class="a bg">                                 </span><span class="a el e1 sel"> </span><span class="sel">████████████</span>
+test                                  <span class="f">1 failed</span>
+<span class="o bg">                                       </span><span class="o el e4"> </span><span class="o bg">  </span><span class="o el e6"> </span><span class="o bg"> </span><span class="o el e1 sel"> </span><span class="sel">█</span>
+upload                                  <span class="d">queued</span>
+<span class="sel">██████████████████████████████████████████████</span></pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">ProgressBar::new()
+    .segment(0.86, ProgressTone::Ok)
+    .segment(0.07, ProgressTone::Warn)
+    .segment(0.03, ProgressTone::Fail)
+    .render(area, &amp;mut cx);</code></pre></div></div></article>
+<article class="unit w4" id="w-logview"><h3>LogView</h3><p>A ring buffer of entries, drawn newest first with level colors. It follows new output until you scroll.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:48;--rows:10" role="img" aria-label="LogView: timestamped entries with level colors, newest at the bottom.">14:02:04 <span class="w b"> WARN</span> /healthz answered in 412 ms (budg
+14:02:05 <span class="o"> INFO</span> 4 of 6 pods ready                
+14:02:05 <span class="f b">ERROR</span> connection refused on :9200      
+14:02:06 <span class="o"> INFO</span> restarting, attempt 2 of 5       
+14:02:06 <span class="o"> INFO</span> 6 of 6 pods ready                
+14:02:06 <span class="o"> INFO</span> 1,086 passed, 1 failed           
+14:02:06 <span class="w b"> WARN</span> render::wide_cluster failed on wi
+14:02:06 <span class="o"> INFO</span> waiting for test stage           
+14:02:06 <span class="a">DEBUG</span> rotated 3 tls sessions           
+14:02:06 <span class="o"> INFO</span> traffic shifted 25%              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">let mut log = LogBuffer::new(500);
+log.push(LogEntry::new(LogLevel::Warn, &quot;probe&quot;, &quot;/healthz slow, 412 ms&quot;).stamp(&quot;14:02:04&quot;));
+log.push(LogEntry::new(LogLevel::Error, &quot;search&quot;, &quot;search refused :9200&quot;).stamp(&quot;14:02:05&quot;));
+
+LogView::new(&amp;log)
+    .target_width(0)
+    .follow(true)
+    .render(area, &amp;mut cx);</code></pre></div></div></article>
+<article class="unit w2" id="w-calendar"><h3>Monthly</h3><p>One month in a 21-column Sunday grid, with event days marked from theme tokens.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:25;--rows:8" role="img" aria-label="Monthly calendar for November 2026, Sunday first, with three event days marked."><span class="fc b">      November 2026      </span>
+ Su Mo Tu We Th Fr Sa    
+ <span class="fc b"> 1</span>  2 <span class="w"> 3</span>  4  5  6  7    
+  8  9 10 11 <span class="o">12</span> 13 14    
+ 15 16 17 18 19 20 21    
+ 22 23 <span class="a">24</span> 25 26 27 28    
+ 29 30  1  2  3  4  5    
+                         </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Monthly::new(date(2026, 11, 1), events.as_slice())
+    .state(WidgetState::Focused)
+    .render(area, &amp;mut cx);</code></pre></div></div></article>
+<article class="unit w3" id="w-sparkline"><h3>Sparkline</h3><p>One column per sample in eight block steps, one row or several.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:7" role="img" aria-label="Two sparklines: a three-row requests line and a one-row errors line."><span class="a">               </span><span class="a eb e1"> </span><span class="a eb e3"> </span><span class="a eb e2"> </span><span class="a">               </span><span class="a eb e2"> </span><span class="a eb e4"> </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a eb e3"> </span><span class="a eb e1"> </span><span class="a">     </span>  
+<span class="a">   </span><span class="a eb e2"> </span><span class="a eb e1"> </span><span class="a eb e4"> </span><span class="a eb e3"> </span><span class="a eb e5">  </span><span class="a eb e2"> </span><span class="a eb e1">  </span><span class="a eb e2"> </span><span class="a eb e4"> </span><span class="a eb e7"> </span><span class="a bg">    </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a eb e4"> </span><span class="a eb e5"> </span><span class="a eb e7"> </span><span class="a eb e6"> </span><span class="a eb e4"> </span><span class="a eb e3"> </span><span class="a eb e2">  </span><span class="a eb e4"> </span><span class="a eb e5"> </span><span class="a eb e7"> </span><span class="a bg">        </span><span class="a eb e7"> </span><span class="a eb e5"> </span><span class="a eb e4">  </span>  
+<span class="a eb e7"> </span><span class="a bg"> </span><span class="a eb e7"> </span><span class="a bg">                                         </span>  
+                                              
+                                              
+<span class="f eb e6"> </span><span class="f"> </span><span class="f bg"> </span><span class="f eb e4"> </span><span class="f eb e2"> </span><span class="f bg"> </span><span class="f eb e6"> </span><span class="f eb e2"> </span><span class="f eb e1"> </span><span class="f eb e5"> </span><span class="f eb e2"> </span><span class="f eb e1"> </span><span class="f eb e5"> </span><span class="f"> </span><span class="f eb e5"> </span><span class="f eb e1"> </span><span class="f eb e6"> </span><span class="f eb e4"> </span><span class="f"> </span><span class="f eb e4"> </span><span class="f eb e1"> </span><span class="f bg"> </span><span class="f eb e2"> </span><span class="f eb e6"> </span><span class="f eb e4"> </span><span class="f"> </span><span class="f eb e6"> </span><span class="f eb e4"> </span><span class="f eb e5"> </span><span class="f bg"> </span><span class="f eb e1"> </span><span class="f eb e5"> </span><span class="f bg"> </span><span class="f eb e2"> </span><span class="f bg"> </span><span class="f eb e2"> </span><span class="f"> </span><span class="f eb e5"> </span><span class="f eb e1"> </span><span class="f bg"> </span><span class="f eb e5"> </span><span class="f eb e1"> </span><span class="f bg"> </span><span class="f"> </span>  
+                                              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Sparkline::new(&amp;requests)
+    .max(24)
+    .render(Rect::new(x, y, 44, 3), &amp;mut cx);
+Sparkline::new(&amp;errors).render(Rect::new(x, y + 5, 44, 1), &amp;mut cx);</code></pre></div></div></article>
+<article class="unit w3" id="w-barchart"><h3>BarChart</h3><p>Vertical or horizontal bars with eighth-block tops, value labels and group gaps.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:10" role="img" aria-label="BarChart: seven vertical bars of builds per day with labels."><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
+<span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a eb e5">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
+<span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
+<span class="a">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a eb e4">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
+<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
+<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
+<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a eb e5">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
+<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a eb e6">    </span><span class="x">      </span>
+<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">      </span>
+<span class="x">Mon   Tue   Wed   Thu   Fri   Sat   Sun       </span></pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">let bars = [
+    Bar::new(34).label(&quot;Mon&quot;), Bar::new(41).label(&quot;Tue&quot;), Bar::new(38).label(&quot;Wed&quot;),
+    Bar::new(52).label(&quot;Thu&quot;), Bar::new(61).label(&quot;Fri&quot;), Bar::new(18).label(&quot;Sat&quot;),
+    Bar::new(12).label(&quot;Sun&quot;),
+];
+BarChart::from_bars(&amp;bars)
+    .bar_width(4)
+    .bar_gap(2)
+    .render(area, &amp;mut cx);</code></pre></div></div></article>
+<article class="unit w3" id="w-accordion"><h3>Accordion</h3><p>Collapsible sections with a caret, a title and a dim badge. Your content goes in each open body.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:7" role="img" aria-label="Accordion: Build and Publish open with their steps, Package and Notify closed."><span class="a x b">▾</span> <span class="a x b">Build</span>                                <span class="x">2 steps</span>
+                                              
+                                              
+<span class="x">▸</span> <span class="x">Package</span>                              <span class="x">2 steps</span>
+<span class="x">▾</span> <span class="x">Publish</span>                               <span class="x">1 step</span>
+                                              
+<span class="x">▸</span> <span class="x">Notify</span>                                   <span class="x">off</span></pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Accordion::new(vec![
+    AccordionSection::new(&quot;Build&quot;, 2).open(true).badge(&quot;2 steps&quot;),
+    AccordionSection::new(&quot;Package&quot;, 2).badge(&quot;2 steps&quot;),
+    AccordionSection::new(&quot;Publish&quot;, 1).open(true).badge(&quot;1 step&quot;),
+    AccordionSection::new(&quot;Notify&quot;, 0).badge(&quot;off&quot;),
+])
+.focus(Some(2))
+.render(area, &amp;mut cx);</code></pre></div></div></article>
+<article class="unit w3" id="w-bigtext"><h3>BigText</h3><p>Large letters from an 8 by 8 pixel face, in full, half-height, quadrant or finer blocks.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:8" role="img" aria-label="BigText: the time 14:02 drawn in large pixels."><span class="a">   </span><span class="a bg">  </span><span class="a">    </span><span class="a bg">  </span><span class="a">  </span><span class="a bg">  </span><span class="a">    </span><span class="a eb e4">  </span><span class="a">    </span><span class="a eb e4"> </span><span class="a bg">    </span><span class="a eb e4"> </span><span class="a">  </span><span class="a eb e4"> </span><span class="a bg">    </span><span class="a eb e4"> </span><span class="a"> </span>      
+<span class="a"> </span><span class="a bg">    </span><span class="a">    </span><span class="a bg">  </span><span class="a eb e4">  </span><span class="a bg">  </span><span class="a">    </span><span class="a ht">  </span><span class="a">    </span><span class="a bg">  </span><span class="a">  </span><span class="a bg">  </span><span class="a">    </span><span class="a eb e4">  </span><span class="a bg">  </span><span class="a"> </span>      
+<span class="a">   </span><span class="a bg">  </span><span class="a">    </span><span class="a ht">    </span><span class="a bg">  </span><span class="a">    </span><span class="a eb e4">  </span><span class="a">    </span><span class="a bg">  </span><span class="a">  </span><span class="a bg">  </span><span class="a">  </span><span class="a eb e4"> </span><span class="a bg"> </span><span class="a ht">   </span><span class="a">  </span>      
+<span class="a"> </span><span class="a bg">      </span><span class="a">      </span><span class="a bg">  </span><span class="a">    </span><span class="a ht">  </span><span class="a">    </span><span class="a ht"> </span><span class="a bg">    </span><span class="a ht"> </span><span class="a">  </span><span class="a bg">      </span><span class="a"> </span>      
+                                              
+                                              
+                                              
+                                              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">BigText::new(&quot;14:02&quot;)
+    .pixel_size(PixelSize::HalfHeight)
+    .alignment(Alignment::Center)
+    .render(area, &amp;mut cx);</code></pre></div></div></article>
+ </div>
+</div></section>
+<section class="band" id="speed"><div class="container">
+ <div class="band-h"><div><h2>Speed</h2><p>Median time to paint, diff and encode one frame. Lower is faster.</p></div></div>
  <div class="panel speed">
   <div>
-   <div class="speed-cap">Median time per frame&nbsp;· release&nbsp;build</div>
+   <div class="speed-cap">Median time per frame, release build</div>
    <div class="row"><span>80 × 24</span><div class="track" role="img" aria-label="60 microseconds median frame time"><div class="fill" style="width:24.1%"></div></div><span class="val">60 µs</span></div>
    <div class="row"><span>200 × 60</span><div class="track" role="img" aria-label="249 microseconds median frame time"><div class="fill" style="width:100%"></div></div><span class="val">249 µs</span></div>
    <p class="method">Each result is the median of five runs of 240 frames. Timing covers widget paint, diffing, ANSI encoding, and a counting sink write; terminal rendering and model updates are outside the&nbsp;measurement. <a href="https://github.com/moonbase2090/lunatui/blob/main/docs/performance.md">Method and full&nbsp;results</a></p>
@@ -324,22 +426,13 @@ footer nav a:hover{color:var(--lav)}
  </div>
 </div></section>
 
-<section class="block" id="tech"><div class="container">
- <div class="sec-h reveal"><h2>Technical details</h2><p>Rendering, input, widgets, performance, and build&nbsp;requirements</p></div>
- <div class="tech">
-  <article class="panel"><h3>Rendering</h3><ul><li>16-byte packed&nbsp;cells</li><li>Damage-tracked&nbsp;diffing</li><li>ANSI output encoder writes once per&nbsp;frame</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Source: project overview</a></article>
-  <article class="panel"><h3>Input &amp; runtime</h3><ul><li>Keyboard, mouse, and bracketed&#8209;paste&nbsp;input</li><li>Focus management and hit&nbsp;testing</li><li>Event-driven frame scheduling with&nbsp;animation</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Source: project overview</a></article>
-  <article class="panel"><h3>Widgets &amp; themes</h3><ul><li>Calendar, BigText, and Sparkline&nbsp;widgets</li><li>Theme tokens and terminal color&nbsp;capabilities</li><li>Unicode grapheme and width&nbsp;handling</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/tree/main/lunatui-widgets">Source: widget crate</a></article>
-  <article class="panel"><h3>Performance method</h3><ul><li>Apple M5 Max&nbsp;· macOS arm64&nbsp;· release&nbsp;build</li><li>240 frames per run; median of five&nbsp;runs</li><li>Headless counting sink; no terminal latency&nbsp;included</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/docs/performance.md">Source: full report</a></article>
-  <article class="panel"><h3>Build requirements</h3><ul><li>Rust 1.88&nbsp;minimum</li><li>MIT&nbsp;licensed</li><li>Install from crates.io with&nbsp;Cargo</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/Cargo.toml">Source: package manifest</a></article>
-   <article class="panel"><h3>Testing &amp; CI</h3><ul><li>Built and tested on Linux, macOS, and&nbsp;Windows</li><li>Allocation tests guard the render hot&nbsp;paths</li><li>Clippy runs with warnings treated as&nbsp;errors</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/.github/workflows/ci.yml">Source: CI workflow</a></article>
- </div>
+<section class="band" id="tech"><div class="container">
+ <div class="band-h"><div><h2>Technical details</h2><p>Rendering, input, widgets, performance and build requirements, each with its source.</p></div></div>
+ <div class="specs"><article><h3>Rendering</h3><ul><li>16-byte packed&nbsp;cells</li><li>Damage-tracked&nbsp;diffing</li><li>ANSI output encoder writes once per&nbsp;frame</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Source: project overview</a></article><article><h3>Input &amp; runtime</h3><ul><li>Keyboard, mouse, and bracketed&#8209;paste&nbsp;input</li><li>Focus management and hit&nbsp;testing</li><li>Event-driven frame scheduling with&nbsp;animation</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/README.md">Source: project overview</a></article><article><h3>Widgets &amp; themes</h3><ul><li>Calendar, BigText, and Sparkline&nbsp;widgets</li><li>Theme tokens and terminal color&nbsp;capabilities</li><li>Unicode grapheme and width&nbsp;handling</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/tree/main/lunatui-widgets">Source: widget crate</a></article><article><h3>Performance method</h3><ul><li>Apple M5 Max&nbsp;· macOS arm64&nbsp;· release&nbsp;build</li><li>240 frames per run; median of five&nbsp;runs</li><li>Headless counting sink; no terminal latency&nbsp;included</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/docs/performance.md">Source: full report</a></article><article><h3>Build requirements</h3><ul><li>Rust 1.88&nbsp;minimum</li><li>MIT&nbsp;licensed</li><li>Install from crates.io with&nbsp;Cargo</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/Cargo.toml">Source: package manifest</a></article><article><h3>Testing &amp; CI</h3><ul><li>Built and tested on Linux, macOS, and&nbsp;Windows</li><li>Allocation tests guard the render hot&nbsp;paths</li><li>Clippy runs with warnings treated as&nbsp;errors</li></ul><a class="source" href="https://github.com/moonbase2090/lunatui/blob/main/.github/workflows/ci.yml">Source: CI workflow</a></article></div>
 </div></section>
-
-<section class="block" id="docs"><div class="container">
- <div class="panel docs"><svg viewBox="0 0 56 56" fill="none" stroke="#b9a7f0" stroke-width="2.5"><path d="M6 12c8-3 15-2 22 3v32c-7-5-14-6-22-3zM50 12c-8-3-15-2-22 3v32c7-5 14-6 22-3z"/></svg>
-  <div><h2>Docs</h2><p>Get started, customize, and build beautiful&nbsp;TUIs.</p></div>
-  <a class="btn-moon" href="quickstart.html">Read the quickstart&nbsp;→</a></div>
+<section class="band" id="docs"><div class="container">
+ <div class="cta"><div><h2>Start with the quickstart</h2><p>Install, run a template in your browser, then copy it into your project.</p></div>
+ <a class="btn-lav" href="quickstart.html">Open the quickstart</a></div>
 </div></section>
 
 <section id="maker">
@@ -362,16 +455,8 @@ footer nav a:hover{color:var(--lav)}
 </main>
 <footer><div class="container">
  <div><span class="logo" style="font-size:24px">☾ Lunatui</span>Rust terminal UI library&nbsp;· ©&nbsp;Moonbase 2090&nbsp;LLC&nbsp;· MIT&nbsp;License</div>
- <nav aria-label="Footer"><a href="quickstart.html">Quickstart</a><a href="#docs">Docs</a><a href="#gallery">Gallery</a><a href="#speed">Benchmarks</a><a href="https://moonbase2090.com">Moonbase 2090</a></nav>
+ <nav aria-label="Footer"><a href="quickstart.html">Quickstart</a><a href="#docs">Docs</a><a href="#widgets">Widgets</a><a href="#speed">Benchmarks</a><a href="https://moonbase2090.com">Moonbase 2090</a></nav>
 </div></footer>
-<dialog class="zoom" aria-label="Widget preview"><figure><figcaption><span class="zoom-title"></span><button class="zoom-close" type="button" aria-label="Close preview">×</button></figcaption><img alt=""></figure></dialog>
 <script src="assets/site.js" defer></script>
-<script>
-(()=>{const d=document.querySelector('.zoom'),im=d.querySelector('img'),t=d.querySelector('.zoom-title');
-document.querySelectorAll('.widget-demo').forEach(el=>{el.tabIndex=0;el.setAttribute('role','button');
-const open=()=>{im.src=el.dataset.gif||el.src;im.alt=el.alt;t.textContent=el.closest('.tile').querySelector('.tile-h span').textContent;d.showModal()};
-el.addEventListener('click',open);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}})});
-d.querySelector('.zoom-close').addEventListener('click',()=>d.close());
-d.addEventListener('click',e=>{if(e.target===d)d.close()});})();
-</script>
+<script src="assets/showcase.js" defer></script>
 </body></html>
