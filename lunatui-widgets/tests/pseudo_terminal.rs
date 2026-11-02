@@ -189,6 +189,10 @@ fn drawing_copies_text_and_styles_and_rewrites_every_cell_in_its_area() -> Test 
     assert!(cell.style().attrs.bold());
     let theme = Theme::builtin(Variant::Dark);
     assert_eq!(
+        grid.get(8, 2).ok_or("missing blank")?.style().fg,
+        theme.resolve(Token::TextPrimary)
+    );
+    assert_eq!(
         grid.get(8, 2).ok_or("missing blank")?.style().bg,
         theme.resolve(Token::Surface0)
     );
@@ -296,5 +300,24 @@ fn history_and_child_resize_requests_cannot_expand_the_validated_screen() -> Tes
     assert_eq!(screen.scrollback(), 256);
     screen.feed(b"\x1b[8;65535;65535t");
     assert_eq!(screen.size(), PtySize::new(8, 2)?);
+    Ok(())
+}
+
+#[cfg(feature = "color-profiles")]
+#[test]
+fn a_prepared_profile_downsamples_child_sgr_colors_without_losing_attributes() -> Test {
+    let screen = screen(8, 1, b"\x1b[1;38;2;255;0;0;48;2;0;0;255mR")?;
+    let theme = Theme::builtin(Variant::Dark);
+    let palette = theme.prepare(lunatui_theme::Profile::Ansi16);
+    let mut grid = Grid::new(8, 1);
+    let mut clusters = ClusterTable::new();
+    PseudoTerminal::new(&screen).render(
+        Rect::new(0, 0, 8, 1),
+        &mut RenderCx::new(&mut grid, &mut clusters, &theme).palette(&palette),
+    );
+    let style = grid.get(0, 0).ok_or("missing profiled cell")?.style();
+    assert_eq!(style.fg, Color::Indexed(9));
+    assert_eq!(style.bg, Color::Indexed(4));
+    assert!(style.attrs.bold());
     Ok(())
 }

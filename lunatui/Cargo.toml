@@ -272,3 +272,9 @@ name = "graphite_pixels"
 path = "../examples/graphite_pixels.rs"
 required-features = ["image-presenter"]
 test = true
+
+[[example]]
+name = "embedded_terminal"
+path = "../examples/embedded_terminal.rs"
+test = false
+required-features = ["app", "color-profiles"]

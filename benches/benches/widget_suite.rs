@@ -54,17 +54,17 @@ fn lunatui_side(case: &'static Case, width: u16, height: u16) -> Side {
     let render = sample(|| render_run.render());
     let mut frame_run = LunatuiRun::new(case, width, height);
     let frame = sample(|| {
-        let _ = frame_run.frame();
+        checked_frame(frame_run.frame());
     });
     let mut counted = LunatuiRun::new(case, width, height);
     for _ in 0..WARMUP {
-        let _ = counted.frame();
+        checked_frame(counted.frame());
     }
     let counters = counted.counters();
     let (bytes0, writes0) = (counters.bytes(), counters.writes());
     let ((), stats) = ALLOC.measure(|| {
         for _ in 0..ALLOC_FRAMES {
-            let _ = counted.frame();
+            checked_frame(counted.frame());
         }
     });
     Side {
@@ -82,7 +82,7 @@ fn ratatui_side(case: &'static Case, width: u16, height: u16) -> std::io::Result
     let render = sample(|| render_run.render());
     let mut frame_run = RatatuiRun::new(case, width, height)?;
     let frame = sample(|| {
-        let _ = frame_run.frame();
+        checked_frame(frame_run.frame());
     });
     let mut counted = RatatuiRun::new(case, width, height)?;
     for _ in 0..WARMUP {
@@ -208,5 +208,12 @@ fn main() -> ExitCode {
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS
+    }
+}
+
+fn checked_frame(result: std::io::Result<()>) {
+    if let Err(error) = result {
+        eprintln!("widget benchmark frame failed: {error}");
+        std::process::exit(1);
     }
 }

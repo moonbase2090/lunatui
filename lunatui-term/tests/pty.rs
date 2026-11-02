@@ -112,7 +112,12 @@ fn dropping_a_pane_kills_and_reaps_its_direct_child() -> Test {
     let mut process = PtyProcess::spawn(command, PtySize::new(80, 24)?)?;
     until(&mut process, "READY")?;
     let pid = i32::try_from(process.id())?;
+    let started = Instant::now();
     drop(process);
+    assert!(
+        started.elapsed() < Duration::from_secs(2),
+        "closing a pane waited for the command to finish"
+    );
     let mut status = 0;
     // SAFETY: this only checks the exact child PID retained above, without sending a signal.
     let result = unsafe { libc::waitpid(pid, &raw mut status, libc::WNOHANG) };
@@ -131,5 +136,63 @@ fn a_missing_executable_returns_an_error() -> Test {
         PtySize::new(80, 24)?,
     );
     assert!(result.is_err());
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn the_master_descriptor_is_not_inherited_across_exec() -> Test {
+    let mut command = Command::new("/bin/sh");
+    command.args([
+        "-c",
+        "for fd in /proc/$$/fd/*; do readlink \"$fd\" || true; done; printf END",
+    ]);
+    let mut process = PtyProcess::spawn(command, PtySize::new(80, 24)?)?;
+    let output = until(&mut process, "END")?;
+    assert!(
+        !output.contains("ptmx"),
+        "child inherited its PTY master: {output}"
+    );
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn closing_a_pane_also_kills_ordinary_descendants_in_its_process_group() -> Test {
+    let mut command = Command::new("/bin/sh");
+    command.args([
+        "-c",
+        "sleep 30 & printf 'DESCENDANT:%s\\nREADY' \"$!\"; wait",
+    ]);
+    let mut process = PtyProcess::spawn(command, PtySize::new(80, 24)?)?;
+    let output = until(&mut process, "READY")?;
+    let pid = output
+        .split("DESCENDANT:")
+        .nth(1)
+        .and_then(|text| text.lines().next())
+        .ok_or("missing descendant PID")?
+        .trim()
+        .parse::<u32>()?;
+    drop(process);
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        match std::fs::read_to_string(format!("/proc/{pid}/status")) {
+            Err(error) if error.kind() == io::ErrorKind::NotFound => break,
+            Ok(status)
+                if status
+                    .lines()
+                    .any(|line| line.starts_with("State:") && line.contains('Z')) =>
+            {
+                break;
+            }
+            Err(error) => return Err(error.into()),
+            Ok(_) => {}
+        }
+        assert!(
+            Instant::now() < deadline,
+            "descendant survived closing its pane"
+        );
+        thread::sleep(Duration::from_millis(2));
+    }
     Ok(())
 }

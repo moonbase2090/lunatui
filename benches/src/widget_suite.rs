@@ -57,6 +57,7 @@ use tui_scrollview::{
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
 
 mod heatmap;
+mod terminal;
 mod timeline;
 
 const BG: (u8, u8, u8) = (0x1a, 0x1b, 0x26);
@@ -119,6 +120,13 @@ pub struct Case {
 
 /// Every widget case, in report order.
 pub static CASES: &[Case] = &[
+    Case {
+        name: "terminal",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: terminal::native,
+        ratatui: terminal::baseline,
+    },
     Case {
         name: "heatmap",
         gated: false,

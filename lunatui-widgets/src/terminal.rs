@@ -81,6 +81,11 @@ impl Widget for PseudoTerminal<'_> {
                 if style.bg == Color::Default {
                     style.bg = background;
                 }
+                #[cfg(feature = "color-profiles")]
+                if let Some(profile) = cx.color_profile() {
+                    style.fg = profile.downsample(style.fg);
+                    style.bg = profile.downsample(style.bg);
+                }
                 style.attrs = style.attrs.set_dim(style.attrs.dim() || disabled);
                 let cursor_here = cursor.1 == row
                     && (cursor.0 == column
