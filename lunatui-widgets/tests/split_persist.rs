@@ -32,6 +32,17 @@ fn nested(depth: usize) -> String {
     spec
 }
 
+/// Like `nested`, but each split nests in its first child.
+fn nested_first(depth: usize) -> String {
+    let mut spec = format!("split1;{};-;", depth + 2);
+    spec.push_str(&"h500:0:0(".repeat(depth));
+    spec.push('0');
+    for id in 1..=depth {
+        spec.push_str(&format!(",{id})"));
+    }
+    spec
+}
+
 #[test]
 fn a_single_pane_has_a_short_spec() {
     let (tree, _) = SplitTree::new();
@@ -156,6 +167,16 @@ fn a_sixty_four_deep_tree_is_accepted_and_a_sixty_five_deep_one_is_not() {
     assert_eq!(ok.map(|tree| tree.len()), Ok(65));
     assert_eq!(
         SplitTree::from_spec(&nested(65)),
+        Err(SplitSpecError::TooDeep)
+    );
+}
+
+#[test]
+fn nesting_in_the_first_child_counts_toward_the_depth_cap() {
+    let ok = SplitTree::from_spec(&nested_first(64));
+    assert_eq!(ok.map(|tree| tree.len()), Ok(65));
+    assert_eq!(
+        SplitTree::from_spec(&nested_first(65)),
         Err(SplitSpecError::TooDeep)
     );
 }
