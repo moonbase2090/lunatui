@@ -7,6 +7,11 @@ use core::num::NonZeroU16;
 
 use lunatui_core::Rect as CellRect;
 
+#[cfg(feature = "symbol-font-fallback")]
+mod fonts;
+#[cfg(feature = "symbol-font-fallback")]
+pub use fonts::{FontRun, HostFontMetrics, HostTextMetrics};
+
 /// Terminal cell dimensions in pixels.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CellSize {
