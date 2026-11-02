@@ -610,16 +610,6 @@ fn text_area_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
         .set_style(RatStyle::new().fg(rat_color(text)).bg(rat_color(cursor)));
 }
 
-#[cfg(feature = "text-area")]
-fn rat_color(color: Color) -> RatColor {
-    match color {
-        Color::Default => RatColor::Reset,
-        Color::Indexed(index) => RatColor::Indexed(index),
-        Color::Rgb(red, green, blue) => RatColor::Rgb(red, green, blue),
-        Color::Token(_) => RatColor::Reset,
-    }
-}
-
 fn rgb((red, green, blue): (u8, u8, u8)) -> Color {
     Color::Rgb(red, green, blue)
 }

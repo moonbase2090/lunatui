@@ -19,9 +19,9 @@ Method and limits: [docs/performance.md](docs/performance.md).
 
 TextArea supports multi-line editing, selection, search, Vim and Emacs keymaps, and cursor-following scroll. The screenshot shows the editor with line numbers and its focused cursor; the motion capture shows editing and search.
 
-![TextArea widget screenshot](captures/text-area.png)
+![TextArea widget screenshot](captures/text-area-120x36-truecolor-dark.png)
 
-[Watch the TextArea motion demo](captures/text-area.webp).
+[Watch the TextArea motion demo](captures/text-area-120x36-truecolor-dark.webp).
 
 ## Quick start
 

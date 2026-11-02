@@ -349,8 +349,7 @@ fn text_area_motion(
     area: Rect,
     tick: u32,
 ) {
-    let chrome = Block::bordered()
-        .border_type(BorderType::Rounded)
+    let chrome = Block::default()
         .title(" release-notes.md ")
         .style(
             Style::new()
@@ -391,7 +390,8 @@ fn text_area_motion(
     }
     let mut cx = RenderCx::new(grid, clusters, theme);
     let mut content_area = chrome.inner(area);
-    content_area.height = content_area.height.saturating_sub(1);
+    content_area.y = content_area.y.saturating_add(1);
+    content_area.height = content_area.height.saturating_sub(2);
     editor.render(content_area, &mut cx);
     if area.height > 2 {
         let status_y = area.y + area.height - 2;
@@ -447,16 +447,16 @@ fn text_area_actions() -> Vec<(u32, Event)> {
 
 #[cfg(feature = "text-area")]
 fn text_area_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, _tick: u32) {
-    let block = ratatui::widgets::Block::bordered()
-        .border_type(ratatui::widgets::BorderType::Rounded)
+    let block = ratatui::widgets::Block::default()
         .title(" release-notes.md ")
         .style(
             ratatui::style::Style::new()
                 .fg(rat_color(theme.resolve(Token::TextPrimary)))
                 .bg(rat_color(theme.resolve(Token::Surface0))),
-        )
-        .border_style(ratatui::style::Style::new().fg(rat_color(theme.resolve(Token::Border))));
-    let inner = block.inner(area);
+        );
+    let mut inner = block.inner(area);
+    inner.y = inner.y.saturating_add(1);
+    inner.height = inner.height.saturating_sub(2);
     block.render(area, buffer);
     ratatui::widgets::Paragraph::new(TEXTAREA_DOC)
         .style(

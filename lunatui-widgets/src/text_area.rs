@@ -938,7 +938,7 @@ impl TextArea {
             area.width - xoff,
             area.height,
         );
-        cx.fill(area, ' ', Style::new().fg(fg).bg(surface));
+        cx.fill(area, Style::new().fg(fg).bg(surface), ' ');
         let cur = self.position(self.cursor);
         let mut first = self.scroll_y.min(self.line_starts.len().saturating_sub(1));
         if cur.line < first {
