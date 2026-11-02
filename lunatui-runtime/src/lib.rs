@@ -16,6 +16,8 @@ mod input;
 /// Command registry for keyboard shortcuts. The shortcut overlay and command palette render from it.
 #[cfg(feature = "keymap")]
 pub mod keymap;
+#[cfg(feature = "app")]
+mod layer;
 #[cfg(all(feature = "app", any(unix, windows)))]
 mod options;
 #[cfg(all(feature = "app", any(unix, windows)))]
@@ -36,6 +38,8 @@ pub use frame::RenderFrame;
 #[cfg(feature = "app")]
 pub use hit::{HitId, HitMap};
 pub use input::Input;
+#[cfg(feature = "app")]
+pub use layer::{Layer, LayerId, LayerStack, PressRoute};
 #[cfg(all(feature = "app", any(unix, windows)))]
 pub use options::RunOptions;
 #[cfg(all(feature = "app", any(unix, windows)))]
