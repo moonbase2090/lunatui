@@ -1,6 +1,6 @@
-# Getting started (v0.1.18 preview)
+# Getting started (v0.1.19 preview)
 
-lunatui **v0.1.18** is the current preview: a packed cell grid, an input and session layer, theme tokens, and the widget set. APIs can still change before 1.0. The crates are not on crates.io yet. Run the first app from a checkout of this repository.
+lunatui **v0.1.19** is the current preview: a packed cell grid, an input and session layer, theme tokens, and the widget set. APIs can still change before 1.0. The crates are not on crates.io yet. Run the first app from a checkout of this repository.
 
 ## Crates
 

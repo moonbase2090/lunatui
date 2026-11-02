@@ -11,15 +11,15 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-core = { version = "0.1.18", path = "../lunatui-core" }
-lunatui-ui-tokens = { version = "0.1.18", path = "../lunatui-ui-tokens" }
-lunatui-widgets = { version = "0.1.18", path = "../lunatui-widgets", features = ["button"] }
+lunatui-core = { version = "0.1.19", path = "../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.19", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.19", path = "../lunatui-widgets", features = ["button"] }
 
 [dev-dependencies]
-lunatui-badge = { version = "0.1.18", path = "../lunatui-badge" }
-lunatui-card = { version = "0.1.18", path = "../lunatui-card" }
-lunatui-term = { version = "0.1.18", path = "../lunatui-term" }
-lunatui-theme = { version = "0.1.18", path = "../lunatui-theme" }
+lunatui-badge = { version = "0.1.19", path = "../lunatui-badge" }
+lunatui-card = { version = "0.1.19", path = "../lunatui-card" }
+lunatui-term = { version = "0.1.19", path = "../lunatui-term" }
+lunatui-theme = { version = "0.1.19", path = "../lunatui-theme" }
 
 [[example]]
 name = "ui_button"

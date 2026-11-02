@@ -20,7 +20,7 @@ image-decode = ["lunatui-widgets/image-decode"]
 keymap = ["app", "lunatui-runtime/keymap"]
 
 [dependencies]
-lunatui-runtime = { version = "0.1.18", path = "../lunatui-runtime", optional = true }
+lunatui-runtime = { version = "0.1.19", path = "../lunatui-runtime", optional = true }
 
 [dev-dependencies]
 lunatui-bench = { path = "../benches" }
@@ -32,9 +32,9 @@ lunatui-text = { path = "../lunatui-text", features = ["markdown"] }
 lunatui-theme = { path = "../lunatui-theme" }
 lunatui-runtime = { path = "../lunatui-runtime", features = ["app"] }
 lunatui-test = { path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.18", path = "../lunatui-widgets", features = ["all-widgets", "image"] }
+lunatui-widgets = { version = "0.1.19", path = "../lunatui-widgets", features = ["all-widgets", "image"] }
 lunatui-ratatui = { path = "../lunatui-ratatui" }
-lunatui-prismattyc = { version = "0.1.18", path = "../lunatui-prismattyc" }
+lunatui-prismattyc = { version = "0.1.19", path = "../lunatui-prismattyc" }
 ratatui = "=0.30.2"
 tui-menu = "=0.3.1"
 time = { version = "=0.3.55", default-features = false }
