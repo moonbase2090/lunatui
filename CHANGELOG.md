@@ -8,7 +8,19 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.20] - 2026-11-02
+
+### Added
+
+- `release_console_app` example: a release console built from `Form`, `ProgressBar`, `LogView`, `Monthly`, `Sparkline`, `BarChart`, `Accordion` and `BigText`. `--snapshot` prints a frame, `--snapshot-styled` prints it as runs of text with a color class, and `--scene` and `--width` pick one widget scene or the narrow console. The site's widget scenes are generated from it by `scripts/site/scenes.py`. The site below the hero is redrawn as a widget showcase and a quickstart with a template beside each frame, in the Moonstone palette; the gallery, its dots and the zoom dialog are gone.
+
+### Changed
+
+- The site below the hero shows a widget showcase and a quickstart in the Moonstone palette: a release console that opens the Widgets section, eight widget units with their code beside each preview, install tabs, and six templates whose frames come from running the template programs. `scripts/site/scenes.py` and `scripts/site/quickstart_frames.py` generate the page scenes from the example and the templates; the old gallery, its dots and zoom dialog, and the unused gallery styles are gone.
+
 ### Fixed
+
+- Widget links on the site point at the GitHub source instead of docs.rs.
 
 - `PixelPieChart` draws antialiased native legend swatches when supported, preserving its native pie with the original cell legend if the optional swatch image is declined. Its comparison shows the complete original cluster, including the regions table, selected-region details and embedded trend, with held ticks and native/cells/hide controls.
 
@@ -18,7 +30,6 @@ Every PR adds its entry under **Unreleased**.
 
 - `lunatui-choice` adds `Checkbox` (`[x]`, `[ ]` and the mixed `[-]` through `CheckState`), `Switch` (a three-cell track with the knob at the on or off end) and `Radio` (`◉` and `○` options in a column or a row, with `step` and `option_areas` for keys and clicks). Checked and on use the primary color, focus the ring color with a bold label, and disabled choices dim; each takes `on` to sit on a surface. The `ui_choice` example is a notification preferences screen.
 
-- `release_console_app` example: a release console built from `Form`, `ProgressBar`, `LogView`, `Monthly`, `Sparkline`, `BarChart`, `Accordion` and `BigText`. `--snapshot` prints a frame, `--snapshot-styled` prints it as runs of text with a color class, and `--scene` and `--width` pick one widget scene or the narrow console. The site's widget scenes are generated from it by `scripts/site/scenes.py`. The site below the hero is redrawn as a widget showcase and a quickstart with a template beside each frame, in the Moonstone palette; the gallery, its dots and the zoom dialog are gone.
 - `lunatui-field` adds `Field`: a bold label above any control widget with a muted help line under it. An error message replaces the help line in the destructive color, `required` marks the label with `*`, `focused` draws the label in the ring color, and `disabled` dims it. It measures as the label, the control and the message, and keeps the label, then the control, then the message when it is short of rows. The `ui_field` example is a profile settings screen.
 
 - `graphite_pixels` example and a `graphite-pixels` test feature in the bench crate (off by default) that prove a Graphite pixel-buffer frame survives the Kitty `PixelLayer` byte for byte and matches the half-block cell fallback.
