@@ -8,6 +8,9 @@ for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/quickstart.html');
     await page.evaluate(() => document.fonts.ready);
+    expect(await page.evaluate(() => [...document.fonts].some(
+      (face) => face.family.replaceAll('"', '') === 'JetBrainsMono NFM' && face.status === 'loaded',
+    ))).toBe(true);
 
     for (const id of ['minimal', 'list', 'form', 'dashboard', 'popover', 'layout']) {
       const measurements = await page.locator(`#${id} .term`).evaluate((pre) => {
@@ -44,7 +47,8 @@ for (const width of [390, 1280]) {
         }
         return { maxDrift, worstCell };
       });
-      expect(measurements.maxDrift, `${id}: ${JSON.stringify(measurements)}`).toBeLessThan(0.2);
+      // WebKit rounds individual Range coordinates to whole CSS pixels.
+      expect(measurements.maxDrift, `${id}: ${JSON.stringify(measurements)}`).toBeLessThan(1.05);
     }
 
     await testInfo.attach(`dashboard-${width}`, {
