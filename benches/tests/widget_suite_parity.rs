@@ -135,6 +135,20 @@ fn heatmap_matches_its_independent_buffer_reference() -> Result<(), String> {
 }
 
 #[test]
+fn timeline_matches_its_independent_buffer_reference() -> Result<(), String> {
+    let case = CASES
+        .iter()
+        .find(|case| case.name == "timeline")
+        .ok_or("missing timeline case")?;
+    for (width, height) in SIZES {
+        for tick in [0, 1, 20, 47, 100, 149, 150, 299] {
+            check(case, width, height, tick)?;
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn every_case_has_a_unique_name() {
     let mut names: Vec<_> = CASES.iter().map(|case| case.name).collect();
     names.sort_unstable();
