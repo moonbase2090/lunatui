@@ -321,3 +321,14 @@ fn a_prepared_profile_downsamples_child_sgr_colors_without_losing_attributes() -
     assert!(style.attrs.bold());
     Ok(())
 }
+
+#[test]
+fn rendered_cells_keep_child_italic_underline_and_inverse_attributes() -> Test {
+    let screen = screen(8, 2, b"\x1b[3;4;7mX")?;
+    let (grid, _) = draw(&screen, WidgetState::Normal, Rect::new(2, 2, 8, 2));
+    let style = grid.get(2, 2).ok_or("missing styled cell")?.style();
+    assert!(style.attrs.italic());
+    assert_eq!(style.attrs.underline(), UnderlineStyle::Single);
+    assert!(style.attrs.reverse());
+    Ok(())
+}
