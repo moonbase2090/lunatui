@@ -312,6 +312,14 @@ The `lunatui-choice` crate in a notification preferences screen. The run is scri
 <img src="docs/media/ui-choice.gif" alt="lunatui-choice: checkboxes, a mixed checkbox, a radio group and switches, with a disabled switch, in a notification preferences screen in the dark theme" width="1028">
 
 Screenshot: [docs/media/ui-choice.png](docs/media/ui-choice.png). Recorded from `cargo run --release -p lunatui-choice --example ui_choice` (120×36, 270 frames at 30 fps, truecolor, dark, about 10 seconds) with the pinned agg.
+### UI dialog
+
+The `lunatui-dialog` crate in a project list. The run is scripted, not interactive: a prompt renames a project as its name is typed, an alert dialog asks before deleting it with a danger-colored action, and an alert reports the result. The panel is centered over a dimmed screen with a rounded border; focus uses the ring color and Delete uses the destructive color.
+
+<img src="docs/media/ui-dialog.gif" alt="lunatui-dialog: a rename prompt, a delete confirmation with a destructive action and a deleted alert over a project list in the dark theme" width="1028">
+
+Screenshot: [docs/media/ui-dialog.png](docs/media/ui-dialog.png). Recorded from `cargo run --release -p lunatui-dialog --example ui_dialog` (120×36, 270 frames at 30 fps, truecolor, dark, about 11 seconds).
+
 ### UI field
 
 The `lunatui-field` crate in a profile settings form. The run is scripted, not interactive: the email is typed out, its error message ("Enter a full address") gives way to the help line once the address is complete, the toggle flips, and focus moves between fields. A required field marks its label with `*`, the focused label takes the ring color, and the Workspace ID field is disabled and dim. Each field wraps a real control: a text input or a toggle.

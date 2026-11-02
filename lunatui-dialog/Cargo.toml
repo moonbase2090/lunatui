@@ -1,0 +1,28 @@
+[package]
+name = "lunatui-dialog"
+description = "Dialog and Alert Dialog components for lunatui."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lunatui-core = { version = "0.1.20", path = "../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.20", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.20", path = "../lunatui-widgets", features = ["dialog"] }
+
+[dev-dependencies]
+lunatui-badge = { version = "0.1.20", path = "../lunatui-badge" }
+lunatui-button = { version = "0.1.20", path = "../lunatui-button" }
+lunatui-card = { version = "0.1.20", path = "../lunatui-card" }
+lunatui-term = { version = "0.1.20", path = "../lunatui-term" }
+lunatui-theme = { version = "0.1.20", path = "../lunatui-theme" }
+
+[[example]]
+name = "ui_dialog"
+path = "examples/ui_dialog.rs"
+test = true
