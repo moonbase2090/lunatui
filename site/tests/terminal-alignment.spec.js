@@ -14,11 +14,13 @@ for (const width of [390, 1280]) {
 
     for (const id of ['minimal', 'list', 'form', 'dashboard', 'popover', 'layout']) {
       const measurements = await page.locator(`#${id} .term`).evaluate((pre) => {
-        const style = getComputedStyle(pre);
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-        const cellWidth = context.measureText('M').width;
+        const columns = Number(pre.style.getPropertyValue('--cols'));
+        const reference = document.createElement('span');
+        reference.textContent = 'M'.repeat(columns);
+        reference.style.cssText = 'position:absolute;visibility:hidden;width:max-content';
+        pre.append(reference);
+        const cellWidth = reference.getBoundingClientRect().width / columns;
+        reference.remove();
         const origin = pre.getBoundingClientRect().left;
         const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
         let column = 0;
