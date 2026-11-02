@@ -401,3 +401,5 @@ A release console. The build log is a `ScrollView` wider and taller than its pan
 <img src="docs/media/popup-scrollview.webp" alt="Popup and ScrollView: a release console in the dark theme" width="1028">
 
 Screenshot: [docs/media/popup-scrollview.png](docs/media/popup-scrollview.png). Recorded with `scripts/record-showcase.sh` (`CASE=popup-scrollview`, 120×36 at 2× scale, 240 frames at 30 fps, dark, lossless animated WebP, about 10 seconds).
+
+API docs: [lunatui-widgets on docs.rs](https://docs.rs/lunatui-widgets)
