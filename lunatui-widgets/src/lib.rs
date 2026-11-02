@@ -58,6 +58,8 @@ mod list;
 mod log_view;
 #[cfg(feature = "markdown")]
 mod markdown_view;
+#[cfg(feature = "mermaid")]
+mod mermaid;
 #[cfg(feature = "nested-menu")]
 mod nested_menu;
 #[cfg(feature = "notification-center")]
@@ -175,6 +177,8 @@ pub use lunatui_layout::Constraint;
 pub use lunatui_text::{RowBuilder, RowSource, VecSource};
 #[cfg(feature = "markdown")]
 pub use markdown_view::MarkdownView;
+#[cfg(feature = "mermaid")]
+pub use mermaid::{MermaidDiagram, MermaidError, MermaidGlyphs, MermaidView};
 #[cfg(feature = "nested-menu")]
 pub use nested_menu::{Menu, MenuEvent, MenuItem, MenuState};
 #[cfg(feature = "notification-center")]

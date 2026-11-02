@@ -102,3 +102,6 @@ helper pc_trend # renders original rate samples through Chart and a text heading
 scope examples/timeline_showcase.rs # release-plan screen uses public Timeline, BigText, Gauge, LogView, Block and Paragraph widgets
 helper schedule # builds borrowed Timeline lanes and ticks and renders them
 scope examples/embedded_terminal_app.rs # the live workspace composes Block, Paragraph and PseudoTerminal widgets without direct cell writes
+scope examples/mermaid_showcase.rs # the documentation reader composes Block, Paragraph and MermaidView widgets
+helper mermaid_preview # renders the parsed diagram and scroll status through MermaidView and Paragraph
+helper document_panels # renders source, labels and preview border through Block and Paragraph widgets

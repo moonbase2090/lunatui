@@ -39,6 +39,7 @@ mod color_picker_showcase;
 use bar_scene::BarBoard;
 mod chart_scene;
 mod heatmap_showcase;
+mod mermaid_showcase;
 #[expect(
     dead_code,
     reason = "the cell preview does not attach native images or hide its graphs"
@@ -93,6 +94,11 @@ const PREVIEWS: &[Preview] = &[
         name: "terminal",
         native: terminal_native,
         baseline: terminal_baseline,
+    },
+    Preview {
+        name: "mermaid",
+        native: mermaid_showcase::render,
+        baseline: mermaid_baseline,
     },
     Preview {
         name: "heatmap",
@@ -7499,8 +7505,15 @@ fn terminal_native(
         (case.lunatui)(grid, clusters, theme, area, tick);
     }
 }
+
 fn terminal_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "terminal") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+fn mermaid_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "mermaid") {
         (case.ratatui)(buffer, area, tick);
     }
 }

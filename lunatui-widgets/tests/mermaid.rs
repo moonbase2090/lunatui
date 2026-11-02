@@ -3,6 +3,8 @@
 
 #![doc = include_str!("../README.md")]
 
+use std::fmt::Write as _;
+
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
@@ -789,6 +791,10 @@ fn rejects_malformed_flowcharts_with_a_line_number() {
         2,
         "expected the closing bracket after the quoted label",
     );
+}
+
+#[test]
+fn rejects_unsupported_node_shapes_and_links_with_a_line_number() {
     rejects(
         "flowchart TD\n  A[[sub]]",
         2,
@@ -937,6 +943,10 @@ fn rejects_sequence_diagrams_with_a_line_number() {
         2,
         "a message goes from one participant to another",
     );
+}
+
+#[test]
+fn rejects_invalid_notes_and_frames_with_a_line_number() {
     rejects(
         "sequenceDiagram\n  Note over A",
         2,
@@ -1027,13 +1037,13 @@ fn caps_the_size_of_the_source() {
 fn chain(count: usize) -> String {
     let mut source = String::from("flowchart LR\n");
     for index in 0..count {
-        source.push_str(&format!("  N{index} --> N{}\n", index + 1));
+        let _ = writeln!(source, "  N{index} --> N{}", index + 1);
     }
     source
 }
 
 #[test]
-fn caps_nodes_and_links_at_256() -> Test {
+fn caps_nodes_and_links_at_256() {
     assert!(MermaidDiagram::parse(&chain(255)).is_ok());
     rejects(&chain(256), 257, "too many nodes (at most 256)");
     let mut links = String::from("flowchart TD\n");
@@ -1045,19 +1055,18 @@ fn caps_nodes_and_links_at_256() -> Test {
     rejects(&links, 258, "too many links (at most 256)");
     let mut nodes = String::from("flowchart TD\n");
     for index in 0..256 {
-        nodes.push_str(&format!("  N{index}\n"));
+        let _ = writeln!(nodes, "  N{index}");
     }
     assert!(MermaidDiagram::parse(&nodes).is_ok());
     nodes.push_str("  Extra\n");
     rejects(&nodes, 258, "too many nodes (at most 256)");
-    Ok(())
 }
 
 #[test]
 fn caps_participants_messages_notes_and_frame_depth() {
     let mut people = String::from("sequenceDiagram\n");
     for index in 0..256 {
-        people.push_str(&format!("  participant P{index}\n"));
+        let _ = writeln!(people, "  participant P{index}");
     }
     assert!(MermaidDiagram::parse(&people).is_ok());
     people.push_str("  participant Extra\n");
@@ -1096,7 +1105,7 @@ fn refuses_a_diagram_that_would_draw_past_a_million_cells() {
     let label = "w".repeat(99);
     let mut source = String::from("sequenceDiagram\n");
     for index in 0..256 {
-        source.push_str(&format!("  participant P{index} as {label}\n"));
+        let _ = writeln!(source, "  participant P{index} as {label}");
     }
     for _ in 0..255 {
         source.push_str("  P0->>P1: x\n");
@@ -1165,10 +1174,7 @@ fn scrolling_stops_at_the_far_edges() -> Test {
     assert_eq!(rows(&grid, &clusters), ["  ▼", "┌───┐", "│ B │", "└───┘"]);
     let view = MermaidView::new(&diagram).scroll(99, 0);
     let (grid, clusters) = paint(&view, Rect::new(0, 0, 3, 2), 3, 2);
-    assert_eq!(
-        rows(&grid, &clusters),
-        ["──┐", "A │"].map(|row| row.replace("A ", "A "))
-    );
+    assert_eq!(rows(&grid, &clusters), ["──┐", "A │"]);
     assert_eq!(view.max_scroll(Rect::new(0, 0, 3, 2)), (2, 6));
     assert_eq!(view.max_scroll(Rect::new(0, 0, 5, 8)), (0, 0));
     assert_eq!(view.max_scroll(Rect::new(0, 0, 50, 80)), (0, 0));
@@ -1495,7 +1501,7 @@ fn check_parse(source: &str) {
                 error.line() >= 1 && error.line() <= lines,
                 "{source:?} {error}"
             );
-            assert!(!error.message().is_empty());
+            assert_ne!(error.message(), "");
         }
     }
 }
@@ -1568,14 +1574,15 @@ fn random_flowcharts_draw_every_label_in_every_direction() -> Test {
         let mut source = format!("flowchart {}\n", directions[round % directions.len()]);
         for node in 0..nodes {
             let (open, close) = shapes[random.next(shapes.len())];
-            source.push_str(&format!("  N{node}{open}Label{node}{close}\n"));
+            let _ = writeln!(source, "  N{node}{open}Label{node}{close}");
         }
         for _ in 0..random.next(14) {
             let (from, to) = (random.next(nodes), random.next(nodes));
-            source.push_str(&format!(
-                "  N{from} {} N{to}\n",
+            let _ = writeln!(
+                source,
+                "  N{from} {} N{to}",
                 links[random.next(links.len())]
-            ));
+            );
         }
         let drawn = drawn(&source)?.join("\n");
         for node in 0..nodes {
@@ -1616,5 +1623,65 @@ fn horizontal_scroll_never_draws_half_of_a_joined_emoji() -> Test {
     let view = MermaidView::new(&diagram).scroll(2, 1);
     let (grid, clusters) = paint(&view, Rect::new(0, 0, 1, 1), 1, 1);
     assert_eq!(grid.row_display(0, &clusters), " ");
+    Ok(())
+}
+
+#[test]
+fn the_source_byte_limit_accepts_its_exact_boundary() {
+    let prefix = "flowchart TD\nA\n%%";
+    let source = format!("{prefix}{}", "x".repeat(65536 - prefix.len()));
+    assert!(MermaidDiagram::parse(&source).is_ok());
+    rejects(&(source + "x"), 1, "the diagram is larger than 64 KiB");
+}
+
+#[test]
+fn unsupported_extra_arrowheads_are_not_participant_names() {
+    rejects(
+        "sequenceDiagram\n A->>>B: hi",
+        2,
+        "a message goes from one participant to another",
+    );
+    rejects(
+        "sequenceDiagram\n A<<->>B: hi",
+        2,
+        "a message goes from one participant to another",
+    );
+}
+
+#[test]
+fn a_bare_node_id_obeys_the_display_label_width_limit() {
+    rejects(
+        &format!("flowchart TD\n {}", "N".repeat(101)),
+        2,
+        "label is too wide",
+    );
+}
+
+#[test]
+fn a_note_cannot_hide_whitespace_in_its_second_participant() {
+    rejects(
+        "sequenceDiagram\n Note over A,B\tC: hi",
+        2,
+        "a note names one or two participants",
+    );
+}
+
+#[test]
+fn background_attributes_survive_role_colors_and_disabled_dimming() -> Test {
+    let diagram = MermaidDiagram::parse("flowchart TD\n A[Hello]")?;
+    let style = Style::new().with_attrs(lunatui_core::Attrs::new().set_bold(true));
+    for state in [WidgetState::Normal, WidgetState::Disabled] {
+        let (grid, _) = paint(
+            &MermaidView::new(&diagram).background(style).state(state),
+            Rect::new(0, 0, 9, 3),
+            9,
+            3,
+        );
+        assert!(style_at(&grid, 2, 1).attrs.bold());
+        assert_eq!(
+            style_at(&grid, 2, 1).attrs.dim(),
+            state == WidgetState::Disabled
+        );
+    }
     Ok(())
 }

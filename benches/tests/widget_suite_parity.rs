@@ -183,3 +183,30 @@ fn terminal_parity_covers_the_colored_output_and_an_observable_frame_change() ->
     }
     Ok(())
 }
+
+#[test]
+fn mermaid_cells_match_the_independent_fixed_diagram_reference() -> Result<(), String> {
+    let case = CASES
+        .iter()
+        .find(|case| case.name == "mermaid")
+        .ok_or("missing Mermaid case")?;
+    for (width, height) in SIZES {
+        for tick in 0..2 {
+            check(case, width, height, tick)?;
+            let (grid, clusters, _) = render_both(case, width, height, tick);
+            assert_eq!(
+                grid.row_display(0, &clusters).trim_end(),
+                if tick == 0 {
+                    "┌───┐"
+                } else {
+                    "┌───┐  ┌───┐"
+                }
+            );
+            assert!(
+                grid.display_text(&clusters)
+                    .contains(if tick == 0 { "▼" } else { "▶" })
+            );
+        }
+    }
+    Ok(())
+}
