@@ -21,9 +21,14 @@ function escapeHtml(source) {
 
 for (const name of ['minimal', 'list', 'form', 'dashboard', 'popover', 'layout']) {
   const sourcePath = join(root, 'examples', 'templates', `${name}.rs`);
-  const source = readFileSync(sourcePath, 'utf8').replaceAll(/\r?\n/g, newline);
+  const lines = readFileSync(sourcePath, 'utf8').split(/\r?\n/);
+  // The page shows the code from line 6: the license header and the crate-docs line stay out.
+  if (!lines[0].startsWith('// Copyright') || !lines[3].startsWith('#![doc')) {
+    throw new Error(`unexpected header in ${sourcePath}`);
+  }
+  const source = lines.slice(5).join(newline);
   const escaped = escapeHtml(source);
-  const article = new RegExp(`(<article class="card" id="${name}">[\\s\\S]*?<pre><code>)[\\s\\S]*?(</code></pre>)`);
+  const article = new RegExp(`(<article class="tpl" id="${name}">[\\s\\S]*?<pre><code data-lang="rust" data-start="6">)[\\s\\S]*?(</code></pre>)`);
   if (!article.test(page)) throw new Error(`missing quickstart source block for ${name}`);
   page = page.replace(article, `$1${escaped}$2`);
 }

@@ -1,14 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! A release console built from Lunatui widgets.
-//!
-//! Run `cargo run --example release_console_app` for the live screen. The site draws its widget
-//! scenes from this program: `--snapshot` prints one plain-text frame, `--snapshot-styled` prints
-//! the same frame as runs of text with a class per color, and `--scene <name>` picks one widget
-//! scene (`form`, `progress`, `logview`, `calendar`, `sparkline`, `barchart`, `accordion`,
-//! `bigtext`). `--width <cells>` sets the console width (112 by default; 46 for a narrow
-//! terminal).
+#![doc = include_str!("README.md")]
 
 use std::env;
 use std::io::{self, Write};
@@ -20,16 +13,14 @@ use lunatui_term::Event;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Bar, BarChart, BigText, Block, BorderType, Date, Form,
-    FormField, LineGauge, LogBuffer, LogEntry, LogLevel, LogView, Monthly, PixelSize, ProgressBar,
-    ProgressTone, RadioFlow, RadioGroup, RenderCx, Sparkline, StatusBar, Table, Tabs, Toggle,
-    VecSource, Widget, WidgetState,
+    FormField, LineGauge, LogBuffer, LogEntry, LogLevel, LogView, Monthly, Paragraph, PixelSize,
+    ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx, Sparkline, StatusBar, Table, Tabs,
+    Toggle, VecSource, Widget, WidgetState,
 };
 
 const WIDE: u16 = 112;
 const HEIGHT: u16 = 30;
 
-/// Moonstone palette. Surfaces, text and the four tones are theme tokens; `DIM` and `LINE` are
-/// the two extra grays the console uses for hints and borders.
 const BG: Color = Color::Rgb(0x17, 0x1c, 0x34);
 const BAR: Color = Color::Rgb(0x26, 0x2c, 0x4c);
 const FG: Color = Color::Rgb(0xd6, 0xdc, 0xf5);
@@ -97,6 +88,13 @@ fn draw(grid: &mut Grid, clusters: &mut ClusterTable, scene: Option<&str>, width
         Some("bigtext") => bigtext(&mut cx, area),
         Some(_) => {}
     }
+}
+
+fn text_at(cx: &mut RenderCx<'_>, x: u16, y: u16, text: &str, style: Style) {
+    let width = u16::try_from(lunatui_core::width(text)).unwrap_or(u16::MAX);
+    Paragraph::new(text)
+        .style(style)
+        .render(Rect::new(x, y, width, 1), cx);
 }
 
 fn frame(title: &str, right: Option<(&str, Color)>) -> Block {
@@ -234,13 +232,13 @@ fn left_column(cx: &mut RenderCx<'_>, area: Rect) {
     .enumerate()
     {
         let y = inner.y + u16::try_from(index).unwrap_or(0);
-        cx.put_str(inner.x + 1, y, label, style(DIM, BG));
+        text_at(cx, inner.x + 1, y, label, style(DIM, BG));
         let gauge_w = inner.width.saturating_sub(14);
         LineGauge::new(*ratio)
             .filled_style(style(*tone, BG))
             .unfilled_style(style(BAR, BG))
             .render(Rect::new(inner.x + 7, y, gauge_w, 1), cx);
-        cx.put_str(inner.x + 7 + gauge_w, y, text, style(FG, BG));
+        text_at(cx, inner.x + 7 + gauge_w, y, text, style(FG, BG));
     }
 
     release_panel(
@@ -266,9 +264,10 @@ fn release_panel(cx: &mut RenderCx<'_>, release: Rect) {
     ];
     for (index, (name, status, tone)) in stages.iter().enumerate() {
         let y = inner.y + u16::try_from(index).unwrap_or(0) * 2;
-        cx.put_str(inner.x + 1, y, name, style(FG, BG));
+        text_at(cx, inner.x + 1, y, name, style(FG, BG));
         let status_w = u16::try_from(status.chars().count()).unwrap_or(0);
-        cx.put_str(
+        text_at(
+            cx,
             inner.x + inner.width.saturating_sub(status_w + 1),
             y,
             status,
@@ -310,10 +309,11 @@ fn right_column(cx: &mut RenderCx<'_>, area: Rect) {
             Rect::new(inner.x + 1, inner.y, inner.width.saturating_sub(2), 5),
             cx,
         );
-    cx.put_str(inner.x + 1, inner.y + 5, "60 min ago", style(DIM, BG));
+    text_at(cx, inner.x + 1, inner.y + 5, "60 min ago", style(DIM, BG));
     let now = "now  2,418";
     let now_w = u16::try_from(now.chars().count()).unwrap_or(0);
-    cx.put_str(
+    text_at(
+        cx,
         inner.x + inner.width.saturating_sub(now_w + 1),
         inner.y + 5,
         now,
@@ -433,9 +433,10 @@ fn progress(cx: &mut RenderCx<'_>, area: Rect) {
     ];
     for (index, (name, status, tone)) in stages.iter().enumerate() {
         let y = area.y + u16::try_from(index).unwrap_or(0) * 2;
-        cx.put_str(area.x, y, name, style(FG, BG));
+        text_at(cx, area.x, y, name, style(FG, BG));
         let status_w = u16::try_from(status.chars().count()).unwrap_or(0);
-        cx.put_str(
+        text_at(
+            cx,
             area.x + area.width.saturating_sub(status_w),
             y,
             status,
@@ -528,7 +529,6 @@ fn bigtext(cx: &mut RenderCx<'_>, area: Rect) {
         .render(Rect::new(area.x, area.y, area.width, 4), cx);
 }
 
-/// The class the site gives a cell color.
 fn class_of(color: Color) -> &'static str {
     match color {
         c if c == BG => "bg",
@@ -612,7 +612,7 @@ fn option(name: &str) -> Option<String> {
         .and_then(|index| args.get(index + 1).cloned())
 }
 
-/// Runs the release console.
+/// Runs the release console, or prints one frame for the site.
 ///
 /// # Errors
 ///

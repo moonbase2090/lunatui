@@ -201,7 +201,8 @@ pub fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}</code></pre></div>
+}
+</code></pre></div>
  </div>
 </article>
 <article class="tpl" id="list">
@@ -343,7 +344,8 @@ pub fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}</code></pre></div>
+}
+</code></pre></div>
  </div>
 </article>
 <article class="tpl" id="form">
@@ -352,11 +354,11 @@ pub fn main() -&gt; io::Result&lt;()&gt; {
   <div class="tpl-render">
    <div class="tpl-run"><code>cargo run --example template_form</code><span>56 × 12 cells</span></div>
    <div class="tpl-cells"><pre class="term " style="--cols:56;--rows:12" role="img" aria-label="Form template, 56 by 12 cells: a box titled account with a focused required Name field holding Ada and a Role field with the hint shown on the card."><span class="a">┌ account ─────────────────────────────────────────────┐</span>
-<span class="a">│</span><span class="a b fld">Name</span><span class="fld"> </span><span class="f fld">*</span>  Ada▏                                          <span class="a">│</span>
+<span class="a">│</span><span class="a b">Name</span><span class="f"> *</span>  Ada│                                          <span class="a">│</span>
 <span class="a">│</span>                                                      <span class="a">│</span>
 <span class="a">│</span>                                                      <span class="a">│</span>
-<span class="a">│</span><span class="fld">Role</span>                                                  <span class="a">│</span>
-<span class="a">│</span>        <span class="d fld">shown on the card</span>                             <span class="a">│</span>
+<span class="a">│</span>Role                                                  <span class="a">│</span>
+<span class="a">│</span>        shown on the card                             <span class="a">│</span>
 <span class="a">│</span>                                                      <span class="a">│</span>
 <span class="a">│</span>                                                      <span class="a">│</span>
 <span class="a">│</span>                                                      <span class="a">│</span>
@@ -500,7 +502,8 @@ pub fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}</code></pre></div>
+}
+</code></pre></div>
  </div>
 </article>
 <article class="tpl" id="dashboard">
@@ -509,10 +512,10 @@ pub fn main() -&gt; io::Result&lt;()&gt; {
   <div class="tpl-render">
    <div class="tpl-run"><code>cargo run --example template_dashboard</code><span>72 × 22 cells</span></div>
    <div class="tpl-cells"><pre class="term " style="--cols:72;--rows:22" role="img" aria-label="Dashboard template, 72 by 22 cells: a requests sparkline, a capacity gauge at about a quarter and a services table with api selected, worker and edge."><span class="a">┌ requests ────────────────────────────────────────────────────────────┐</span>
-<span class="a">│               </span><span class="a eb e7"> </span><span class="a eb e3"> </span><span class="a">               </span><span class="a eb e3"> </span><span class="a">               </span>                      <span class="a">│</span>
-<span class="a">│     </span><span class="a eb e1"> </span><span class="a eb e5"> </span><span class="a eb e2"> </span><span class="a">      </span><span class="a hb"> </span><span class="a bg">  </span><span class="a eb e1"> </span><span class="a">             </span><span class="a eb e5"> </span><span class="a bg"> </span><span class="a eb e7"> </span><span class="a">       </span><span class="a eb e2"> </span><span class="a eb e1"> </span><span class="a">     </span>                      <span class="a">│</span>
-<span class="a">│    </span><span class="a eb e2"> </span><span class="a bg">   </span><span class="a eb e3"> </span><span class="a">    </span><span class="a eb e2"> </span><span class="a bg">    </span><span class="a hb"> </span><span class="a eb e2"> </span><span class="a">  </span><span class="a eb e1"> </span><span class="a eb e3"> </span><span class="a eb e6"> </span><span class="a hb"> </span><span class="a eb e1"> </span><span class="a">   </span><span class="a hb"> </span><span class="a bg">    </span><span class="a hb"> </span><span class="a eb e2"> </span><span class="a">  </span><span class="a eb e1"> </span><span class="a eb e5"> </span><span class="a bg">  </span><span class="a eb e6"> </span><span class="a hb"> </span><span class="a eb e2"> </span><span class="a">  </span>                      <span class="a">│</span>
-<span class="a">│</span><span class="a eb e1"> </span><span class="a eb e3"> </span><span class="a hb"> </span><span class="a eb e6"> </span><span class="a bg">     </span><span class="a eb e7"> </span><span class="a hb">  </span><span class="a eb e6"> </span><span class="a bg">        </span><span class="a eb e7"> </span><span class="a bg">     </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a eb e7"> </span><span class="a bg">        </span><span class="a eb e7"> </span><span class="a bg">        </span><span class="a eb e6"> </span>                      <span class="a">│</span>
+<span class="a">│             </span><span class="a bg"> </span><span class="a eb e4"> </span><span class="a">                </span><span class="a eb e1"> </span><span class="a">                </span>                      <span class="a">│</span>
+<span class="a">│     </span><span class="a eb e4"> </span><span class="a">      </span><span class="a eb e6"> </span><span class="a bg">  </span><span class="a eb e2"> </span><span class="a">              </span><span class="a eb e1"> </span><span class="a bg"> </span><span class="a eb e5"> </span><span class="a">       </span><span class="a eb e2"> </span><span class="a">       </span>                      <span class="a">│</span>
+<span class="a">│    </span><span class="a eb e5"> </span><span class="a bg">  </span><span class="a eb e1"> </span><span class="a">   </span><span class="a eb e4"> </span><span class="a bg">    </span><span class="a eb e5"> </span><span class="a eb e1"> </span><span class="a">    </span><span class="a eb e2"> </span><span class="a eb e6"> </span><span class="a eb e4"> </span><span class="a eb e1"> </span><span class="a">   </span><span class="a eb e1"> </span><span class="a bg">   </span><span class="a eb e6"> </span><span class="a eb e2"> </span><span class="a">    </span><span class="a eb e5"> </span><span class="a bg">  </span><span class="a eb e4"> </span><span class="a eb e1"> </span><span class="a">    </span>                      <span class="a">│</span>
+<span class="a">│</span><span class="a eb e2"> </span><span class="a eb e4"> </span><span class="a eb e5"> </span><span class="a bg">     </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a bg">         </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a bg">     </span><span class="a eb e6"> </span><span class="a eb e4"> </span><span class="a eb e5"> </span><span class="a bg">       </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a bg">      </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a eb e4"> </span><span class="a eb e2"> </span>                      <span class="a">│</span>
 <span class="a">│</span><span class="a bg">                                                </span>                      <span class="a">│</span>
 <span class="a">│</span><span class="a bg">                                                </span>                      <span class="a">│</span>
 <span class="a">└──────────────────────────────────────────────────────────────────────┘</span>
@@ -691,7 +694,8 @@ fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}</code></pre></div>
+}
+</code></pre></div>
  </div>
 </article>
 <article class="tpl" id="popover">
@@ -799,7 +803,8 @@ fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}</code></pre></div>
+}
+</code></pre></div>
  </div>
 </article>
 <article class="tpl" id="layout">
@@ -810,24 +815,24 @@ fn main() -&gt; io::Result&lt;()&gt; {
    <div class="tpl-cells"><pre class="term " style="--cols:72;--rows:22" role="img" aria-label="Layout template, 72 by 22 cells: a header box reading Quickstart, a sidebar with Templates selected, Gallery and Docs, a body box, and a status bar reading templates, ready."><span class="a">┌ header ──────────────────────────────────────────────────────────────┐</span>
 <span class="a">│</span>Quickstart                                                            <span class="a">│</span>
 <span class="a">└──────────────────────────────────────────────────────────────────────┘</span>
-<span class="a">┌ sidebar ───────────┐</span><span class="a">┌ body ──────────────────────────────────────────┐</span>
-<span class="a">│</span><span class="sel">Templates           </span><span class="a">│</span><span class="a">│</span>The body fills the space beside the sidebar.    <span class="a">│</span>
-<span class="a">│</span>Gallery             <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>Docs                <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">│</span>                    <span class="a">│</span><span class="a">│</span>                                                <span class="a">│</span>
-<span class="a">└────────────────────┘</span><span class="a">└────────────────────────────────────────────────┘</span>
+<span class="a">┌ sidebar ───────────┐┌ body ──────────────────────────────────────────┐</span>
+<span class="a">│</span><span class="sel">Templates           </span><span class="a">││</span>The body fills the space beside the sidebar.    <span class="a">│</span>
+<span class="a">│</span>Gallery             <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>Docs                <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">│</span>                    <span class="a">││</span>                                                <span class="a">│</span>
+<span class="a">└────────────────────┘└────────────────────────────────────────────────┘</span>
 <span class="a">templates</span><span class="sel">  ready                                                        </span></pre></div>
   </div>
   <div class="code tpl-code" style="--peek:12"><pre><code data-lang="rust" data-start="6">use std::env;
@@ -943,7 +948,8 @@ fn main() -&gt; io::Result&lt;()&gt; {
         return Ok(());
     }
     run(app, RunOptions::new(WIDTH, HEIGHT))
-}</code></pre></div>
+}
+</code></pre></div>
  </div>
 </article>
 </section>
