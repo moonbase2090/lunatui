@@ -164,7 +164,7 @@ fn closing_a_pane_also_kills_ordinary_descendants_in_its_process_group() -> Test
     let mut command = Command::new("/bin/sh");
     command.args([
         "-c",
-        "sleep 30 & printf 'DESCENDANT:%s\\nREADY' \"$!\"; wait",
+        "trap '' HUP; sleep 30 & printf 'DESCENDANT:%s\\nREADY' \"$!\"; wait",
     ]);
     let mut process = PtyProcess::spawn(command, PtySize::new(80, 24)?)?;
     let output = until(&mut process, "READY")?;

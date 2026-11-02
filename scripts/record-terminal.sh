@@ -34,5 +34,5 @@ BYTES="$(wc -c < "$OUT/$NAME.webp" | awk '{print $1}')"
 if (( BYTES > 2000000 )); then echo "record-terminal: WebP exceeds 2 MB" >&2; exit 3; fi
 ffmpeg -loglevel error -y -i "$OUT/$NAME.gif" -frames:v 1 "$OUT/$NAME.png"
 ffmpeg -loglevel error -y -i "$OUT/$NAME.gif" \
-  -vf 'tpad=stop_mode=clone:stop_duration=1,fps=9/10,scale=600:-1,tile=3x3' -frames:v 1 "$OUT/$NAME-contact.png"
+  -vf 'tpad=stop_mode=clone:stop_duration=1,fps=9/10,scale=600:-1,tile=3x3' -fps_mode vfr -frames:v 1 "$OUT/$NAME-contact.png"
 echo "Recorded actual child PTY workspace: $OUT/$NAME.webp ($BYTES bytes)"

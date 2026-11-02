@@ -35,6 +35,16 @@ Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). C
 
 Still frames and short recordings of real widget output, in the dark theme. Native pixel demos use the real terminal recorder; cell demos use `scripts/record-showcase.sh`.
 
+### Embedded terminal
+
+A Rust workspace beside a real child shell. The terminal runs `cargo test` twice, pauses input while the editor has focus, then resumes and prints a result from the child. `PseudoTerminal` draws the parsed screen; `PtyProcess` separately owns the Unix process and controlling terminal. Enable the off-by-default `terminal` widget feature, or try `cargo run --release -p lunatui --features app,color-profiles --example embedded_terminal -- --workspace .`.
+
+<img src="docs/media/terminal.webp" alt="Real child shell running workspace tests beside Rust source, with terminal focus pausing and resuming" width="1028">
+
+Screenshots: [dark truecolor](docs/media/terminal.png), [dark ANSI 16](docs/media/terminal-ansi16.png), [light truecolor](docs/media/terminal-light.png). The [contact sheet](docs/media/terminal-contact.png) shows nine actual video frames. `scripts/record-terminal.sh` captures 300 frames at 120×36 and 30 fps in a clean Linux VM, then rasterizes the unchanged cast at 2x scale. Both captured `cargo test` commands execute the two real fixture tests. The fixture is prebuilt to keep compiler paths out of the recording. Input focus and final child output are asserted from the captured terminal region. The [source cast](examples/captures/terminal.cast) is committed. See [ownership, bounds and supported input](docs/embedded-terminal.md).
+
+The benchmark fixture compares identical VT bytes and screen allocation with an independent Ratatui buffer adapter. Side-by-side recordings: [80×24 truecolor](docs/media/terminal-80x24-truecolor.mp4), [200×60 truecolor](docs/media/terminal-200x60-truecolor.mp4), [80×24 ANSI 16](docs/media/terminal-80x24-ansi16.mp4), [200×60 ANSI 16](docs/media/terminal-200x60-ansi16.mp4). Reproduce with `CASE=terminal FRAMES=120 FPS=30 scripts/record-widget.sh`, setting `WIDTH`, `HEIGHT` and `PROFILE` as needed. These parity clips use a deterministic CLI byte stream; the workspace clip above runs the actual child process.
+
 ### Chart
 
 Requests, Saturation CPU/memory, and latency scatter keep matching Braille and antialiased pixel views. Hourly bars use native pixels. Both views share the same scene data and layout; the axes, labels, and legends stay as text, with native pixel legend swatches. Pixels are enabled by default when the image presenter supports them; `.pixels(false)` retains the original cell rendering.
