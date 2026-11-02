@@ -8,6 +8,8 @@ mod encode;
 mod input;
 #[cfg(feature = "pixel-layer")]
 mod pixel;
+#[cfg(feature = "pty")]
+mod pty;
 mod session;
 
 /// Windows console VT output and crossterm input (PR 27).
@@ -29,3 +31,8 @@ pub use input::{
 #[cfg(feature = "pixel-layer")]
 pub use pixel::{PixelImage, PixelLayer, PixelMode};
 pub use session::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
+
+#[cfg(all(feature = "pty", unix))]
+pub use pty::PtyProcess;
+#[cfg(feature = "pty")]
+pub use pty::PtySize;

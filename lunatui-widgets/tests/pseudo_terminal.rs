@@ -236,3 +236,65 @@ fn malformed_and_fragmented_bytes_do_not_change_the_view_bounds() -> Test {
     assert_eq!(grid.get(10, 2).ok_or("neighbour")?.style(), Style::new());
     Ok(())
 }
+
+#[test]
+fn exact_control_string_limit_and_cancelled_strings_recover_without_host_effects() -> Test {
+    let mut screen = screen(12, 2, b"")?;
+    let accepted = format!("\x1b]2;{}\x07", "x".repeat(4091));
+    assert_eq!(accepted.len(), 4096);
+    screen.feed(accepted.as_bytes());
+    assert_eq!(screen.title(), "x".repeat(256));
+    screen.feed(format!("\x1b]2;{}\x07", "y".repeat(4092)).as_bytes());
+    assert_eq!(screen.title(), "x".repeat(256));
+    screen.feed(b"\x1b]52;c;ignored\x18safe\x1b]2;local\x1b\\!");
+    assert_eq!(screen.title(), "local");
+    assert_eq!(screen.row_text(0), "safe!");
+    Ok(())
+}
+
+#[test]
+fn navigation_function_and_modified_keys_use_literal_xterm_sequences() -> Test {
+    let screen = screen(10, 2, b"")?;
+    let view = PseudoTerminal::new(&screen).state(WidgetState::Focused);
+    for (code, modifiers, expected) in [
+        (KeyCode::F(1), Modifiers::new(), "\x1bOP"),
+        (KeyCode::F(4), Modifiers::new(), "\x1bOS"),
+        (KeyCode::F(5), Modifiers::new(), "\x1b[15~"),
+        (KeyCode::F(12), Modifiers::new(), "\x1b[24~"),
+        (KeyCode::Delete, Modifiers::new().control(), "\x1b[3;5~"),
+        (KeyCode::Left, Modifiers::new().alt(), "\x1b[1;3D"),
+        (KeyCode::Home, Modifiers::new(), "\x1b[H"),
+        (KeyCode::Tab, Modifiers::new().shift(), "\x1b[Z"),
+        (KeyCode::Backspace, Modifiers::new(), "\x7f"),
+        (KeyCode::Char('['), Modifiers::new().control(), "\x1b"),
+        (KeyCode::Char(']'), Modifiers::new().control(), "\x1d"),
+        (KeyCode::Char('?'), Modifiers::new().control(), "\x7f"),
+        (KeyCode::Char(' '), Modifiers::new().control(), "\0"),
+    ] {
+        let event = Event::Key(KeyEvent::press(code).modifiers(modifiers));
+        assert_eq!(
+            view.input(&event),
+            Some(expected.as_bytes().to_vec()),
+            "{code:?}"
+        );
+    }
+    let event = Event::Key(KeyEvent::press(KeyCode::Char('x')).text("界"));
+    assert_eq!(view.input(&event), Some("界".as_bytes().to_vec()));
+    let event =
+        Event::Key(KeyEvent::press(KeyCode::Char('界')).modifiers(Modifiers::new().control()));
+    assert_eq!(view.input(&event), None);
+    Ok(())
+}
+
+#[test]
+fn history_and_child_resize_requests_cannot_expand_the_validated_screen() -> Test {
+    let mut screen = screen(8, 2, b"")?;
+    for _ in 0..1000 {
+        screen.feed(b"line\r\n");
+    }
+    screen.set_scrollback(usize::MAX);
+    assert_eq!(screen.scrollback(), 256);
+    screen.feed(b"\x1b[8;65535;65535t");
+    assert_eq!(screen.size(), PtySize::new(8, 2)?);
+    Ok(())
+}

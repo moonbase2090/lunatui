@@ -1288,6 +1288,7 @@ dependencies = [
  "tiny-skia",
  "tui-menu",
  "unicode-segmentation",
+ "vt100",
 ]
 
 [[package]]
