@@ -339,7 +339,7 @@ const PREVIEWS: &[Preview] = &[
 ];
 
 #[cfg(feature = "text-area")]
-const TEXTAREA_DOC: &str = "# lunatui v0.1.19\n\n## Highlights\n\n- Native multi-line editing with undo and redo\n- Search, directed selection, and bracketed paste\n- Emacs and Vim keymaps through the runtime registry\n\n## Theme\n\nGraphite tokens style the cursor, selection, search marks, and gutter.\nThe viewport follows the cursor and keeps its preferred display column.\n\n## Editing\n\nArrow keys move by grapheme; Shift extends a directed selection.\nPaste arrives as one undoable edit, even when split into chunks.\nUndo, redo, and search stay local to this editor.\n\n## Release checklist\n\n- [x] Grapheme-safe movement\n- [x] Bounded edit history\n- [ ] Final review and release notes";
+const TEXTAREA_DOC: &str = "# lunatui v0.1.20\n\n## Highlights\n\n- Native multi-line editing with undo and redo\n- Search, directed selection, and bracketed paste\n- Emacs and Vim keymaps through the runtime registry\n\n## Theme\n\nGraphite tokens style the cursor, selection, search marks, and gutter.\nThe viewport follows the cursor and keeps its preferred display column.\n\n## Editing\n\nArrow keys move by grapheme; Shift extends a directed selection.\nPaste arrives as one undoable edit, even when split into chunks.\nUndo, redo, and search stay local to this editor.\n\n## Release checklist\n\n- [x] Grapheme-safe movement\n- [x] Bounded edit history\n- [ ] Final review and release notes";
 
 #[cfg(feature = "text-area")]
 fn text_area_motion(
