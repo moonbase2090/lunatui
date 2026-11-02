@@ -35,7 +35,7 @@ fn plan(lane: usize, tick: u32) -> [(i64, i64, Option<u8>, TimelineStatus, bool)
     let progress = u8::try_from((index * 13 + i64::from(tick)) % 101).unwrap_or(0);
     let second = if lane % 2 == 1 {
         TimelineStatus::Done
-    } else if lane % 4 == 0 {
+    } else if lane.is_multiple_of(4) {
         TimelineStatus::Planned
     } else {
         TimelineStatus::AtRisk
