@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Keyboard resizing: `SplitTree::resize` and `SplitTree::divider_for`.
+#![doc = include_str!("../README.md")]
 
 use lunatui_core::Rect;
 use lunatui_widgets::{DividerId, PaneId, SplitAxis, SplitDrag, SplitLayout, SplitTree};
@@ -25,7 +25,6 @@ fn rects(layout: &SplitLayout) -> Vec<(u32, Rect)> {
         .collect()
 }
 
-/// Panes 0 | (1 over (2 | 3)): dividers 0 horizontal, 1 vertical, 2 horizontal.
 fn three_deep() -> SplitTree {
     let (mut tree, a, b) = pair(SplitAxis::Horizontal, 500);
     let c = tree.split(b, SplitAxis::Vertical, 500).unwrap_or(a);

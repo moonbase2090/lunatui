@@ -1,30 +1,11 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Text form of a [`SplitTree`], for saving and restoring a layout.
-//!
-//! ```text
-//! spec   = "split1;" next ";" zoom ";" node
-//! zoom   = "-" | number
-//! node   = number | axis number ":" number ":" number "(" node "," node ")"
-//! axis   = "h" | "v"
-//! number = "0" | digit-without-leading-zero { digit }
-//! ```
-//!
-//! A leaf is its pane id. A split is its axis (`h` for [`SplitAxis::Horizontal`], `v` for
-//! [`SplitAxis::Vertical`]), then the first pane's ratio in thousandths, the first and second
-//! minimums, and the two children in parentheses. `next` is the id the next new pane gets and
-//! `zoom` the zoomed pane or `-`. For example `split1;3;-;h500:0:0(0,v700:12:12(1,2))`.
-//!
-//! The form has exactly one spelling for each tree: no spaces, signs or leading zeros.
-
 use std::fmt::{self, Write};
 
 use super::{FULL, Node, PaneId, Split, SplitAxis, SplitTree};
 
-/// Longest spec [`SplitTree::from_spec`] reads, in bytes.
 const MAX_LEN: usize = 8192;
-/// Deepest nesting of splits [`SplitTree::from_spec`] reads.
 const MAX_DEPTH: usize = 64;
 const HEADER: &str = "split1;";
 
@@ -80,8 +61,21 @@ impl std::error::Error for SplitSpecError {}
 
 impl SplitTree {
     /// The tree as text: the axis, ratio and minimums of every split, the pane ids, the next-id
-    /// counter and the zoomed pane, in the form the `split` module's spec grammar describes
-    /// (for example `split1;3;-;h500:0:0(0,v700:12:12(1,2))`).
+    /// counter and the zoomed pane.
+    ///
+    /// ```text
+    /// spec   = "split1;" next ";" zoom ";" node
+    /// zoom   = "-" | number
+    /// node   = number | axis number ":" number ":" number "(" node "," node ")"
+    /// axis   = "h" | "v"
+    /// number = "0" | digit-without-leading-zero { digit }
+    /// ```
+    ///
+    /// A leaf is its pane id. A split is its axis (`h` for [`SplitAxis::Horizontal`], `v` for
+    /// [`SplitAxis::Vertical`]), then the first pane's ratio in thousandths, the first and second
+    /// minimums, and the two children in parentheses. `next` is the id the next new pane gets and
+    /// `zoom` the zoomed pane or `-`. For example `split1;3;-;h500:0:0(0,v700:12:12(1,2))`. The
+    /// form has exactly one spelling for each tree: no spaces, signs or leading zeros.
     ///
     /// [`SplitTree::from_spec`] reads it back to an equal tree. A tree with splits nested more
     /// than 64 deep, or a spec past 8192 bytes, is written but cannot be read back.

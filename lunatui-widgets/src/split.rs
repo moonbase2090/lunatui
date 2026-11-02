@@ -409,8 +409,6 @@ fn first_size(ratio: u16, inner: u16, min: [u16; 2]) -> u16 {
     }
 }
 
-/// Clamps a wanted first-pane size to the minimums and the cells a split has, as dragging and
-/// keyboard resizing both do. A minimum the area cannot hold gives way to the first pane's.
 fn clamp_first(want: u16, inner: u16, min_first: u16, min_second: u16) -> u16 {
     want.max(min_first)
         .min(inner.saturating_sub(min_second).max(min_first))
@@ -555,8 +553,6 @@ fn split_ref<'a>(node: &'a Node, target: usize, counter: &mut usize) -> Option<&
         .or_else(|| split_ref(&split.children[1], target, counter))
 }
 
-/// Whether `pane` is under `node`. Walks the whole subtree so `counter` ends up past all of its
-/// splits; the first split found to match is the deepest one.
 #[cfg(feature = "split-keys")]
 fn enclosing_split(
     node: &Node,

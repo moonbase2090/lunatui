@@ -784,7 +784,6 @@ fn split_share(tick: u32) -> u16 {
     300 + 10 * split_phase(tick)
 }
 
-/// Cells the keyboard moves the left divider from its 30% start: one percent of the room per phase.
 fn split_keys(tick: u32, width: u16) -> i16 {
     let cells = u32::from(split_phase(tick)) * u32::from(width.saturating_sub(1)) / 100;
     i16::try_from(cells).unwrap_or(i16::MAX)

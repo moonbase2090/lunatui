@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Saving and restoring a split layout: `SplitTree::to_spec` and `SplitTree::from_spec`.
+#![doc = include_str!("../README.md")]
 
 use std::fmt::Write;
 
@@ -10,8 +10,6 @@ use lunatui_widgets::{DividerId, PaneId, SplitAxis, SplitSpecError, SplitTree};
 
 const D1: DividerId = DividerId(1);
 
-/// Panes 0 | (1 over (2 | 3)) with a 700 and a 250 ratio, minimums on the middle split and
-/// pane 2 zoomed.
 fn busy() -> SplitTree {
     let (mut tree, a) = SplitTree::new();
     let b = tree.split(a, SplitAxis::Horizontal, 500).unwrap_or(a);
@@ -34,7 +32,6 @@ fn nested(depth: usize) -> String {
     spec
 }
 
-/// Like `nested`, but each split nests in its first child.
 fn nested_first(depth: usize) -> String {
     let mut spec = format!("split1;{};-;", depth + 2);
     spec.push_str(&"h500:0:0(".repeat(depth));

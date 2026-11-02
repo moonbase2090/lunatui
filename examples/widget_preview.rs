@@ -2320,7 +2320,6 @@ const SPLIT_SAVE: u32 = 216;
 const SPLIT_RESTORE: u32 = 233;
 const SPLIT_NOTE_HOLD: u32 = 4;
 
-/// What the keyboard did last in the split scene: the divider to highlight and the status text.
 struct SplitKeyed {
     divider: Option<DividerId>,
     note: Option<String>,
