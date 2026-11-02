@@ -6474,9 +6474,8 @@ fn sel_state(tick: u32) -> (usize, bool, Option<usize>) {
     match tick {
         0..=29 => (1, false, None),
         30..=59 => (1, true, Some(1)),
-        60..=89 => (1, true, Some(2)),
+        60..=89 | 110..=139 => (1, true, Some(2)),
         90..=109 => (1, true, Some(3)),
-        110..=139 => (1, true, Some(2)),
         _ => (2, false, None),
     }
 }
