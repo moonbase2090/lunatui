@@ -35,6 +35,8 @@ fn plan(lane: usize, tick: u32) -> [(i64, i64, Option<u8>, TimelineStatus, bool)
     let progress = u8::try_from((index * 13 + i64::from(tick)) % 101).unwrap_or(0);
     let second = if lane % 2 == 1 {
         TimelineStatus::Done
+    } else if lane % 4 == 0 {
+        TimelineStatus::Planned
     } else {
         TimelineStatus::AtRisk
     };
@@ -176,7 +178,13 @@ pub(super) fn baseline(buffer: &mut Buffer, area: RatRect, tick: u32) {
             }
             let first = floor(at);
             let last = ceil(end).max(first + 1);
-            let split = progress.map_or(last, |percent| {
+            // A planned span without progress has not started and is all track.
+            let unstarted = if status == TimelineStatus::Planned {
+                first
+            } else {
+                last
+            };
+            let split = progress.map_or(unstarted, |percent| {
                 first + (last - first) * i128::from(percent) / 100
             });
             for x in first.max(0)..last.min(width) {

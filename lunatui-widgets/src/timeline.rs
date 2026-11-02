@@ -10,7 +10,8 @@ use crate::{RenderCx, Widget, WidgetState};
 /// The schedule state of a span or milestone, drawn with a semantic theme token.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum TimelineStatus {
-    /// Scheduled work, drawn with the accent token.
+    /// Scheduled work. Its progress uses the accent token; without progress it has not
+    /// started and draws as track only, so future work recedes behind finished and active work.
     #[default]
     Planned,
     /// Finished work, drawn with the ok token.
@@ -83,7 +84,8 @@ impl<'a> TimelineItem<'a> {
     }
 
     /// Fills the first `percent` of a span with its status color and the rest with the
-    /// track color. Values above 100 become 100. Milestones ignore progress.
+    /// track color. Values above 100 become 100. Without it, a planned span is all track and
+    /// any other span is solid. Milestones ignore progress.
     #[must_use]
     pub const fn progress(mut self, percent: u8) -> Self {
         self.progress = Some(if percent > 100 { 100 } else { percent });
@@ -278,9 +280,9 @@ impl TimelineView {
 /// selection; the widget draws them and answers geometry queries with the same layout it
 /// renders. Times are plain `i64` values in whatever unit the application uses.
 ///
-/// Spans fill their columns with the status color and show their label inside. A span with
-/// progress keeps the status color for the finished share and uses the track color for the
-/// rest. Milestones draw `◆` with the label to the right. Items draw in slice order, so a later
+/// Spans show their label inside. A span with progress keeps the status color for the finished
+/// share and uses the track color for the rest. Without progress, a planned span has not
+/// started and is all track; done, at-risk, and blocked spans are solid. Milestones draw `◆` with the label to the right. Items draw in slice order, so a later
 /// item covers an earlier one where they overlap. Spans clip at the view's edges.
 ///
 /// With ticks, a two-row header shows each label at its time and an axis rule with `┬` marks.
@@ -716,12 +718,16 @@ impl Layout {
     }
 
     /// The column where a span's finished share ends, relative to the lane area and clamped
-    /// to it. `None` without progress.
+    /// to it. `None` for a solid span: one without progress that is not planned.
     fn progress_column(&self, item: &TimelineItem<'_>) -> Option<u16> {
         let Kind::Span { start, end } = item.kind else {
             return None;
         };
-        let percent = i128::from(item.progress?);
+        let percent = match (item.progress, item.status) {
+            (Some(percent), _) => i128::from(percent),
+            (None, TimelineStatus::Planned) => 0,
+            (None, _) => return None,
+        };
         let first = self.floor_column(start);
         let last = self.ceil_column(end).max(first + 1);
         let split = first + (last - first) * percent / 100;

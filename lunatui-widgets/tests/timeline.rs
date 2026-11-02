@@ -55,7 +55,7 @@ fn spans_fill_their_columns_with_the_status_color_and_label() {
 #[test]
 fn each_status_uses_its_semantic_token() {
     let items = [
-        TimelineItem::span(0, 10),
+        TimelineItem::span(0, 10).progress(100),
         TimelineItem::span(10, 20).status(TimelineStatus::Done),
         TimelineItem::span(20, 30).status(TimelineStatus::AtRisk),
         TimelineItem::span(30, 40).status(TimelineStatus::Blocked),
@@ -95,6 +95,30 @@ fn progress_splits_a_span_into_finished_and_track_columns() {
 }
 
 #[test]
+fn planned_spans_without_progress_are_all_track_and_others_are_solid() {
+    let items = [
+        TimelineItem::span(0, 20).label("later"),
+        TimelineItem::span(20, 40).status(TimelineStatus::AtRisk),
+    ];
+    let lanes = [TimelineLane::new("", &items)];
+    let timeline = Timeline::new(&lanes).view(TimelineView::new(0, 40));
+    let (grid, clusters) = draw(&timeline, Rect::new(0, 0, 8, 1), 8, 1);
+    // The four-column span clips its label.
+    assert_eq!(grid.row_display(0, &clusters), "late    ");
+    for x in 0..4 {
+        assert_eq!(style(&grid, x, 0).bg, color(Token::Surface1), "column {x}");
+        assert_eq!(
+            style(&grid, x, 0).fg,
+            color(Token::TextPrimary),
+            "column {x}"
+        );
+    }
+    for x in 4..8 {
+        assert_eq!(style(&grid, x, 0).bg, color(Token::Warn), "column {x}");
+    }
+}
+
+#[test]
 fn progress_over_one_hundred_finishes_the_span() {
     let items = [TimelineItem::span(0, 50).progress(250)];
     let lanes = [TimelineLane::new("", &items)];
@@ -106,7 +130,10 @@ fn progress_over_one_hundred_finishes_the_span() {
 #[test]
 fn short_spans_keep_one_cell_and_partial_columns_round_outward() {
     // 7..8 is inside column 1 (5..10); 12..21 touches columns 2, 3 and 4.
-    let items = [TimelineItem::span(7, 8), TimelineItem::span(12, 21)];
+    let items = [
+        TimelineItem::span(7, 8).progress(100),
+        TimelineItem::span(12, 21).progress(100),
+    ];
     let lanes = [TimelineLane::new("", &items)];
     let timeline = Timeline::new(&lanes).view(TimelineView::new(0, 100));
     let (grid, _) = draw(&timeline, Rect::new(0, 0, 20, 1), 20, 1);
@@ -141,7 +168,7 @@ fn milestone_labels_clip_at_the_right_edge() {
 
 #[test]
 fn lane_labels_take_a_gutter_and_clip_inside_it() {
-    let first = [TimelineItem::span(0, 100)];
+    let first = [TimelineItem::span(0, 100).progress(100)];
     let lanes = [
         TimelineLane::new("api", &first),
         TimelineLane::new("db", &[]),
@@ -158,7 +185,7 @@ fn lane_labels_take_a_gutter_and_clip_inside_it() {
 
 #[test]
 fn ticks_draw_labels_at_their_time_and_marks_on_the_rule() {
-    let items = [TimelineItem::span(0, 10)];
+    let items = [TimelineItem::span(0, 10).progress(100)];
     let lanes = [TimelineLane::new("", &items)];
     let ticks = [
         TimelineTick::new(0, "Mon"),
@@ -178,7 +205,7 @@ fn ticks_draw_labels_at_their_time_and_marks_on_the_rule() {
 
 #[test]
 fn now_marks_the_rule_and_empty_lane_cells_but_not_spans() {
-    let busy = [TimelineItem::span(0, 100)];
+    let busy = [TimelineItem::span(0, 100).progress(100)];
     let lanes = [TimelineLane::new("", &[]), TimelineLane::new("", &busy)];
     let ticks = [TimelineTick::new(0, "0")];
     let timeline = Timeline::new(&lanes)
@@ -206,7 +233,7 @@ fn now_outside_the_view_draws_nothing() {
 #[test]
 fn panning_moves_items_and_clips_spans_at_the_view_edges() {
     let items = [
-        TimelineItem::span(0, 30).label("early"),
+        TimelineItem::span(0, 30).label("early").progress(100),
         TimelineItem::milestone(90),
     ];
     let lanes = [TimelineLane::new("", &items)];
@@ -430,7 +457,7 @@ fn view_arithmetic_saturates_at_the_time_range() {
     assert_eq!(all.zoom_out(), all);
     assert_eq!(TimelineView::new(i64::MAX, i64::MAX).len(), 1);
     // Extreme views still render without overflow.
-    let items = [TimelineItem::span(i64::MIN, i64::MAX)];
+    let items = [TimelineItem::span(i64::MIN, i64::MAX).progress(100)];
     let lanes = [TimelineLane::new("", &items)];
     let (grid, _) = draw(
         &Timeline::new(&lanes).view(all),

@@ -45,6 +45,7 @@ mod heatmap_showcase;
 mod pie_scene;
 mod progress_scene;
 mod spark_scene;
+mod timeline_showcase;
 use chart_scene::ChartBoard;
 #[path = "code_view_showcase.rs"]
 mod code_view_showcase;
@@ -91,6 +92,11 @@ const PREVIEWS: &[Preview] = &[
         name: "heatmap",
         native: heatmap_showcase::render,
         baseline: heatmap_baseline,
+    },
+    Preview {
+        name: "timeline",
+        native: timeline_showcase::render,
+        baseline: timeline_baseline,
     },
     Preview {
         name: "toast",
@@ -1814,6 +1820,12 @@ fn bigtext_native(
         return;
     }
     draw_cut_board(&mut cx, &scene);
+}
+
+fn timeline_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "timeline") {
+        (case.ratatui)(buffer, area, tick);
+    }
 }
 
 fn heatmap_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
