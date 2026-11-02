@@ -3,7 +3,7 @@
 
 use std::sync::OnceLock;
 
-use lunatui_core::{Rect, Size, Style, clip_display_prefix, cluster_display_width, width};
+use lunatui_core::{Color, Rect, Size, Style, clip_display_prefix, cluster_display_width, width};
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{Event, KeyCode, KeyKind, Modifiers, Paste};
 use lunatui_theme::Token;
@@ -85,6 +85,17 @@ enum PasteBuffer {
     Rejected,
 }
 
+#[derive(Clone, Copy)]
+struct RenderLayout {
+    body: Rect,
+    first_line: usize,
+    horizontal: usize,
+    gutter: usize,
+    gutter_x: u16,
+    foreground: Color,
+    surface: Color,
+}
+
 /// Editable multi-line UTF-8 text with cursor, selection, search and bounded undo.
 #[derive(Clone, Debug)]
 pub struct TextArea {
@@ -107,6 +118,121 @@ pub struct TextArea {
     search_origin: usize,
     search_match: Option<(usize, usize)>,
     paste: Option<PasteBuffer>,
+}
+
+const LEFT: &[KeyChord] = &[
+    KeyChord::new(KeyCode::Left, Modifiers::new()),
+    KeyChord::new(KeyCode::Left, Modifiers::new().shift()),
+];
+const RIGHT: &[KeyChord] = &[
+    KeyChord::new(KeyCode::Right, Modifiers::new()),
+    KeyChord::new(KeyCode::Right, Modifiers::new().shift()),
+];
+const UP: &[KeyChord] = &[KeyChord::new(KeyCode::Up, Modifiers::new())];
+const DOWN: &[KeyChord] = &[KeyChord::new(KeyCode::Down, Modifiers::new())];
+const SHIFT_UP: &[KeyChord] = &[KeyChord::new(KeyCode::Up, Modifiers::new().shift())];
+const SHIFT_DOWN: &[KeyChord] = &[KeyChord::new(KeyCode::Down, Modifiers::new().shift())];
+const UNDO: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('z'),
+    Modifiers::new().control(),
+)];
+const REDO: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('y'),
+    Modifiers::new().control(),
+)];
+const SEARCH_EMACS: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('s'),
+    Modifiers::new().control(),
+)];
+const COPY: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('c'),
+    Modifiers::new().control(),
+)];
+const CUT: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('x'),
+    Modifiers::new().control(),
+)];
+const PASTE: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('v'),
+    Modifiers::new().control(),
+)];
+const VIM_LEFT: &[KeyChord] = &[
+    KeyChord::new(KeyCode::Char('h'), Modifiers::new()),
+    KeyChord::new(KeyCode::Left, Modifiers::new()),
+];
+const VIM_DOWN: &[KeyChord] = &[
+    KeyChord::new(KeyCode::Char('j'), Modifiers::new()),
+    KeyChord::new(KeyCode::Down, Modifiers::new()),
+];
+const VIM_UP: &[KeyChord] = &[
+    KeyChord::new(KeyCode::Char('k'), Modifiers::new()),
+    KeyChord::new(KeyCode::Up, Modifiers::new()),
+];
+const VIM_RIGHT: &[KeyChord] = &[
+    KeyChord::new(KeyCode::Char('l'), Modifiers::new()),
+    KeyChord::new(KeyCode::Right, Modifiers::new()),
+];
+const ARROW_LEFT: &[KeyChord] = &[KeyChord::new(KeyCode::Left, Modifiers::new())];
+const ARROW_DOWN: &[KeyChord] = &[KeyChord::new(KeyCode::Down, Modifiers::new())];
+const ARROW_UP: &[KeyChord] = &[KeyChord::new(KeyCode::Up, Modifiers::new())];
+const ARROW_RIGHT: &[KeyChord] = &[KeyChord::new(KeyCode::Right, Modifiers::new())];
+const INSERT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('i'), Modifiers::new())];
+const APPEND: &[KeyChord] = &[KeyChord::new(KeyCode::Char('a'), Modifiers::new())];
+const NORMAL: &[KeyChord] = &[KeyChord::new(KeyCode::Esc, Modifiers::new())];
+const SEARCH: &[KeyChord] = &[KeyChord::new(KeyCode::Char('/'), Modifiers::new())];
+const VIM_UNDO: &[KeyChord] = &[KeyChord::new(KeyCode::Char('u'), Modifiers::new())];
+const FIND_NEXT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('n'), Modifiers::new())];
+const DELETE_CHAR: &[KeyChord] = &[KeyChord::new(KeyCode::Char('x'), Modifiers::new())];
+const VIM_REDO: &[KeyChord] = &[KeyChord::new(
+    KeyCode::Char('r'),
+    Modifiers::new().control(),
+)];
+
+fn emacs_keymap() -> Keymap {
+    let mut map = Keymap::new();
+    map.register(Command::new("move-left", "Move left", LEFT));
+    map.register(Command::new("move-right", "Move right", RIGHT));
+    map.register(Command::new("move-up", "Move up", UP));
+    map.register(Command::new("extend-up", "Extend selection up", SHIFT_UP));
+    map.register(Command::new("move-down", "Move down", DOWN));
+    map.register(Command::new(
+        "extend-down",
+        "Extend selection down",
+        SHIFT_DOWN,
+    ));
+    map.register(Command::new("undo", "Undo", UNDO));
+    map.register(Command::new("redo", "Redo", REDO));
+    map.register(Command::new("search", "Search", SEARCH_EMACS));
+    map.register(Command::new("copy", "Copy selection", COPY));
+    map.register(Command::new("cut", "Cut selection", CUT));
+    map.register(Command::new("paste", "Paste selection", PASTE));
+    map
+}
+
+fn vim_insert_keymap() -> Keymap {
+    let mut map = Keymap::new();
+    map.register(Command::new("move-left", "Move left", ARROW_LEFT));
+    map.register(Command::new("move-down", "Move down", ARROW_DOWN));
+    map.register(Command::new("move-up", "Move up", ARROW_UP));
+    map.register(Command::new("move-right", "Move right", ARROW_RIGHT));
+    map.register(Command::new("normal-mode", "Normal mode", NORMAL));
+    map
+}
+
+fn vim_normal_keymap() -> Keymap {
+    let mut map = Keymap::new();
+    map.register(Command::new("move-left", "Move left", VIM_LEFT));
+    map.register(Command::new("move-down", "Move down", VIM_DOWN));
+    map.register(Command::new("move-up", "Move up", VIM_UP));
+    map.register(Command::new("move-right", "Move right", VIM_RIGHT));
+    map.register(Command::new("insert-mode", "Insert mode", INSERT));
+    map.register(Command::new("append-mode", "Append mode", APPEND));
+    map.register(Command::new("search", "Search", SEARCH));
+    map.register(Command::new("undo", "Undo", VIM_UNDO));
+    map.register(Command::new("redo", "Redo", VIM_REDO));
+    map.register(Command::new("find-next", "Find next", FIND_NEXT));
+    map.register(Command::new("delete-char", "Delete character", DELETE_CHAR));
+    map
 }
 
 impl TextArea {
@@ -216,123 +342,13 @@ impl TextArea {
         static EMACS: OnceLock<Keymap> = OnceLock::new();
         static VIM_NORMAL: OnceLock<Keymap> = OnceLock::new();
         static VIM_INSERT: OnceLock<Keymap> = OnceLock::new();
-        const LEFT: &[KeyChord] = &[
-            KeyChord::new(KeyCode::Left, Modifiers::new()),
-            KeyChord::new(KeyCode::Left, Modifiers::new().shift()),
-        ];
-        const RIGHT: &[KeyChord] = &[
-            KeyChord::new(KeyCode::Right, Modifiers::new()),
-            KeyChord::new(KeyCode::Right, Modifiers::new().shift()),
-        ];
-        const UP: &[KeyChord] = &[KeyChord::new(KeyCode::Up, Modifiers::new())];
-        const DOWN: &[KeyChord] = &[KeyChord::new(KeyCode::Down, Modifiers::new())];
-        const SHIFT_UP: &[KeyChord] = &[KeyChord::new(KeyCode::Up, Modifiers::new().shift())];
-        const SHIFT_DOWN: &[KeyChord] = &[KeyChord::new(KeyCode::Down, Modifiers::new().shift())];
-        const UNDO: &[KeyChord] = &[KeyChord::new(
-            KeyCode::Char('z'),
-            Modifiers::new().control(),
-        )];
-        const REDO: &[KeyChord] = &[KeyChord::new(
-            KeyCode::Char('y'),
-            Modifiers::new().control(),
-        )];
-        const SEARCH_EMACS: &[KeyChord] = &[KeyChord::new(
-            KeyCode::Char('s'),
-            Modifiers::new().control(),
-        )];
-        const COPY: &[KeyChord] = &[KeyChord::new(
-            KeyCode::Char('c'),
-            Modifiers::new().control(),
-        )];
-        const CUT: &[KeyChord] = &[KeyChord::new(
-            KeyCode::Char('x'),
-            Modifiers::new().control(),
-        )];
-        const PASTE: &[KeyChord] = &[KeyChord::new(
-            KeyCode::Char('v'),
-            Modifiers::new().control(),
-        )];
-        const VIM_LEFT: &[KeyChord] = &[
-            KeyChord::new(KeyCode::Char('h'), Modifiers::new()),
-            KeyChord::new(KeyCode::Left, Modifiers::new()),
-        ];
-        const VIM_DOWN: &[KeyChord] = &[
-            KeyChord::new(KeyCode::Char('j'), Modifiers::new()),
-            KeyChord::new(KeyCode::Down, Modifiers::new()),
-        ];
-        const VIM_UP: &[KeyChord] = &[
-            KeyChord::new(KeyCode::Char('k'), Modifiers::new()),
-            KeyChord::new(KeyCode::Up, Modifiers::new()),
-        ];
-        const VIM_RIGHT: &[KeyChord] = &[
-            KeyChord::new(KeyCode::Char('l'), Modifiers::new()),
-            KeyChord::new(KeyCode::Right, Modifiers::new()),
-        ];
-        const ARROW_LEFT: &[KeyChord] = &[KeyChord::new(KeyCode::Left, Modifiers::new())];
-        const ARROW_DOWN: &[KeyChord] = &[KeyChord::new(KeyCode::Down, Modifiers::new())];
-        const ARROW_UP: &[KeyChord] = &[KeyChord::new(KeyCode::Up, Modifiers::new())];
-        const ARROW_RIGHT: &[KeyChord] = &[KeyChord::new(KeyCode::Right, Modifiers::new())];
-        const INSERT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('i'), Modifiers::new())];
-        const APPEND: &[KeyChord] = &[KeyChord::new(KeyCode::Char('a'), Modifiers::new())];
-        const NORMAL: &[KeyChord] = &[KeyChord::new(KeyCode::Esc, Modifiers::new())];
-        const SEARCH: &[KeyChord] = &[KeyChord::new(KeyCode::Char('/'), Modifiers::new())];
-        const VIM_UNDO: &[KeyChord] = &[KeyChord::new(KeyCode::Char('u'), Modifiers::new())];
-        const FIND_NEXT: &[KeyChord] = &[KeyChord::new(KeyCode::Char('n'), Modifiers::new())];
-        const DELETE_CHAR: &[KeyChord] = &[KeyChord::new(KeyCode::Char('x'), Modifiers::new())];
-        const VIM_REDO: &[KeyChord] = &[KeyChord::new(
-            KeyCode::Char('r'),
-            Modifiers::new().control(),
-        )];
-        let cell = if self.keymap_mode == KeymapMode::Emacs {
-            &EMACS
-        } else if self.vim_mode == VimMode::Insert {
-            &VIM_INSERT
-        } else {
-            &VIM_NORMAL
-        };
-        cell.get_or_init(|| {
-            let mut map = Keymap::new();
-            if self.keymap_mode == KeymapMode::Vim {
-                if self.vim_mode == VimMode::Insert {
-                    map.register(Command::new("move-left", "Move left", ARROW_LEFT));
-                    map.register(Command::new("move-down", "Move down", ARROW_DOWN));
-                    map.register(Command::new("move-up", "Move up", ARROW_UP));
-                    map.register(Command::new("move-right", "Move right", ARROW_RIGHT));
-                    map.register(Command::new("normal-mode", "Normal mode", NORMAL));
-                    return map;
-                }
-                map.register(Command::new("move-left", "Move left", VIM_LEFT));
-                map.register(Command::new("move-down", "Move down", VIM_DOWN));
-                map.register(Command::new("move-up", "Move up", VIM_UP));
-                map.register(Command::new("move-right", "Move right", VIM_RIGHT));
-                map.register(Command::new("insert-mode", "Insert mode", INSERT));
-                map.register(Command::new("append-mode", "Append mode", APPEND));
-                map.register(Command::new("normal-mode", "Normal mode", NORMAL));
-                map.register(Command::new("search", "Search", SEARCH));
-                map.register(Command::new("undo", "Undo", VIM_UNDO));
-                map.register(Command::new("redo", "Redo", VIM_REDO));
-                map.register(Command::new("find-next", "Find next", FIND_NEXT));
-                map.register(Command::new("delete-char", "Delete character", DELETE_CHAR));
-                return map;
-            }
-            map.register(Command::new("move-left", "Move left", LEFT));
-            map.register(Command::new("move-right", "Move right", RIGHT));
-            map.register(Command::new("move-up", "Move up", UP));
-            map.register(Command::new("extend-up", "Extend selection up", SHIFT_UP));
-            map.register(Command::new("move-down", "Move down", DOWN));
-            map.register(Command::new(
-                "extend-down",
-                "Extend selection down",
-                SHIFT_DOWN,
-            ));
-            map.register(Command::new("undo", "Undo", UNDO));
-            map.register(Command::new("redo", "Redo", REDO));
-            map.register(Command::new("search", "Search", SEARCH_EMACS));
-            map.register(Command::new("copy", "Copy selection", COPY));
-            map.register(Command::new("cut", "Cut selection", CUT));
-            map.register(Command::new("paste", "Paste selection", PASTE));
-            map
-        })
+        let (cell, build): (&OnceLock<Keymap>, fn() -> Keymap) =
+            match (self.keymap_mode, self.vim_mode) {
+                (KeymapMode::Emacs, _) => (&EMACS, emacs_keymap),
+                (KeymapMode::Vim, VimMode::Insert) => (&VIM_INSERT, vim_insert_keymap),
+                (KeymapMode::Vim, VimMode::Normal) => (&VIM_NORMAL, vim_normal_keymap),
+            };
+        cell.get_or_init(build)
     }
 
     /// Sets the widget's visual interaction state.
@@ -500,7 +516,6 @@ impl TextArea {
                 KeyCode::Char('x') => self.delete_forward(),
                 KeyCode::Char('u') => self.undo(),
                 KeyCode::Char('n') => self.find_next(),
-                KeyCode::Esc => EditResult::Ignored,
                 _ => EditResult::Ignored,
             };
         }
@@ -524,7 +539,6 @@ impl TextArea {
                     }
                 }
                 KeyCode::Char('v') if !self.yank.is_empty() => self.insert_text(&self.yank.clone()),
-                KeyCode::Char('v') => EditResult::Ignored,
                 KeyCode::Char('f') => self.find_next(),
                 _ => EditResult::Ignored,
             };
@@ -581,7 +595,6 @@ impl TextArea {
                 }
             }
             "paste" if !self.yank.is_empty() => self.insert_text(&self.yank.clone()),
-            "paste" => EditResult::Ignored,
             "insert-mode" if self.keymap_mode == KeymapMode::Vim => {
                 self.vim_mode = VimMode::Insert;
                 EditResult::StateChanged
@@ -915,47 +928,21 @@ impl TextArea {
                 .map_or(line_text.len(), |(i, _)| i)
     }
 
-    fn render_inner(&self, area: Rect, cx: &mut RenderCx<'_>) {
-        if area.width == 0 || area.height == 0 {
-            return;
-        }
-        let focused = self.widget_state == WidgetState::Focused;
-        let surface = cx.token(Token::Surface0);
-        let fg = cx.token(if self.widget_state == WidgetState::Disabled {
-            Token::TextMuted
-        } else {
-            Token::TextPrimary
-        });
-        let gutter = if self.line_numbers {
-            decimal_digits(self.line_starts.len()) + 1
-        } else {
-            0
-        };
-        let xoff = u16::try_from(gutter).unwrap_or(u16::MAX).min(area.width);
-        let body = Rect::new(
-            area.x.saturating_add(xoff),
-            area.y,
-            area.width - xoff,
-            area.height,
-        );
-        cx.fill(area, Style::new().fg(fg).bg(surface), ' ');
-        let cur = self.position(self.cursor);
-        let mut first = self.scroll_y.min(self.line_starts.len().saturating_sub(1));
-        if cur.line < first {
-            first = cur.line;
-        } else if body.height > 0 && cur.line >= first.saturating_add(usize::from(body.height)) {
-            first = cur.line.saturating_sub(usize::from(body.height) - 1);
-        }
-        let cursor_line_start = self.line_starts[cur.line];
-        let cursor_column = width(&self.text[cursor_line_start..self.cursor]);
-        let mut horizontal = self.scroll_x;
-        if cursor_column < horizontal {
-            horizontal = cursor_column;
-        } else if body.width > 0
-            && cursor_column >= horizontal.saturating_add(usize::from(body.width))
-        {
-            horizontal = cursor_column.saturating_sub(usize::from(body.width) - 1);
-        }
+    fn render_visible_lines(
+        &self,
+        layout: RenderLayout,
+        cursor: TextPosition,
+        cx: &mut RenderCx<'_>,
+    ) -> Option<(u16, u16)> {
+        let RenderLayout {
+            body,
+            first_line: first,
+            horizontal,
+            gutter,
+            gutter_x,
+            foreground,
+            surface,
+        } = layout;
         let mut cursor_screen = None;
         for row in 0..usize::from(body.height) {
             let line = first + row;
@@ -973,42 +960,45 @@ impl TextArea {
             if self.line_numbers {
                 let (label, len) = line_number_label(line + 1, gutter);
                 cx.put_str(
-                    area.x,
+                    gutter_x,
                     y,
                     std::str::from_utf8(&label[..len]).unwrap_or(""),
                     Style::new().fg(cx.token(Token::TextMuted)).bg(surface),
                 );
             }
-            let mut col = 0usize;
-            let mut grapheme_index = 0usize;
-            for (i, grapheme) in value.grapheme_indices(true) {
-                grapheme_index += 1;
-                let gw = cluster_display_width(grapheme);
-                if col + gw <= horizontal {
-                    col += gw;
+            let mut column = 0usize;
+            for (index, grapheme) in value.grapheme_indices(true).enumerate() {
+                let (byte_offset, grapheme_text) = grapheme;
+                let grapheme_index = index + 1;
+                let grapheme_width = cluster_display_width(grapheme_text);
+                if column + grapheme_width <= horizontal {
+                    column += grapheme_width;
                     continue;
                 }
-                // Skip wide glyphs that would be cut at the left edge of the viewport.
-                if col < horizontal {
-                    col += gw;
+                if column < horizontal {
+                    column += grapheme_width;
                     continue;
                 }
-                let visual = col.saturating_sub(horizontal);
-                if line == cur.line
-                    && grapheme_index - 1 == cur.grapheme
+                let visual = column.saturating_sub(horizontal);
+                if line == cursor.line
+                    && grapheme_index - 1 == cursor.grapheme
                     && visual < usize::from(body.width)
                 {
                     cursor_screen = Some((body.x + u16::try_from(visual).unwrap_or(u16::MAX), y));
                 }
-                if visual + gw > usize::from(body.width) {
+                if visual + grapheme_width > usize::from(body.width) {
                     break;
                 }
-                let selected = self
-                    .selection_bytes()
-                    .is_some_and(|(a, b)| start + i < b && start + i + grapheme.len() > a);
-                let search_hit = self
-                    .search_match
-                    .is_some_and(|(a, b)| start + i < b && start + i + grapheme.len() > a);
+                let start_byte = start + byte_offset;
+                let end_byte = start_byte + grapheme_text.len();
+                let selected =
+                    self.selection_bytes()
+                        .is_some_and(|(selection_start, selection_end)| {
+                            start_byte < selection_end && end_byte > selection_start
+                        });
+                let search_hit = self.search_match.is_some_and(|(match_start, match_end)| {
+                    start_byte < match_end && end_byte > match_start
+                });
                 let style = if selected {
                     Style::new()
                         .fg(cx.token(Token::Surface0))
@@ -1018,49 +1008,118 @@ impl TextArea {
                         .fg(cx.token(Token::TextStrong))
                         .bg(cx.token(Token::Warn))
                 } else {
-                    Style::new().fg(fg).bg(surface)
+                    Style::new().fg(foreground).bg(surface)
                 };
                 cx.put_str(
                     body.x + u16::try_from(visual).unwrap_or(u16::MAX),
                     y,
-                    grapheme,
+                    grapheme_text,
                     style,
                 );
-                col += gw;
+                column += grapheme_width;
             }
-            if line == cur.line && cur.grapheme == value.graphemes(true).count() {
-                let visual = width(&value[..self.byte_at_position(cur).saturating_sub(start)])
+            if line == cursor.line && cursor.grapheme == value.graphemes(true).count() {
+                let visual = width(&value[..self.byte_at_position(cursor).saturating_sub(start)])
                     .saturating_sub(horizontal);
                 if visual < usize::from(body.width) {
                     cursor_screen = Some((body.x + u16::try_from(visual).unwrap_or(0), y));
                 }
             }
         }
-        if self.widget_state != WidgetState::Disabled {
-            if let Some((x, y)) = cursor_screen {
-                let token = if focused {
-                    Token::FocusFill
-                } else {
-                    Token::SurfaceRaised
-                };
-                cx.set_style(
-                    Rect::new(x, y, 1, 1),
-                    Style::new()
-                        .bg(cx.token(token))
-                        .fg(cx.token(Token::TextPrimary)),
-                );
-            }
+        cursor_screen
+    }
+
+    fn render_cursor(&self, cursor: Option<(u16, u16)>, focused: bool, cx: &mut RenderCx<'_>) {
+        if self.widget_state != WidgetState::Disabled
+            && let Some((x, y)) = cursor
+        {
+            let token = if focused {
+                Token::FocusFill
+            } else {
+                Token::SurfaceRaised
+            };
+            cx.set_style(
+                Rect::new(x, y, 1, 1),
+                Style::new()
+                    .bg(cx.token(token))
+                    .fg(cx.token(Token::TextPrimary)),
+            );
         }
-        if let Some(query) = self.search.as_deref() {
-            let y = area.y.saturating_add(area.height.saturating_sub(1));
-            let style = Style::new()
-                .fg(cx.token(Token::Accent))
-                .bg(cx.token(Token::SurfaceRaised));
-            if area.width > 0 {
-                cx.put_str(area.x, y, "/", style);
-                let visible = clip_display_prefix(query, area.width - 1);
-                cx.put_str(area.x.saturating_add(1), y, visible, style);
-            }
+    }
+
+    fn render_search(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        let Some(query) = self.search.as_deref() else {
+            return;
+        };
+        let y = area.y.saturating_add(area.height.saturating_sub(1));
+        let style = Style::new()
+            .fg(cx.token(Token::Accent))
+            .bg(cx.token(Token::SurfaceRaised));
+        cx.put_str(area.x, y, "/", style);
+        let visible = clip_display_prefix(query, area.width - 1);
+        cx.put_str(area.x.saturating_add(1), y, visible, style);
+    }
+
+    fn render_inner(&self, area: Rect, cx: &mut RenderCx<'_>) {
+        if area.width == 0 || area.height == 0 {
+            return;
+        }
+        let focused = self.widget_state == WidgetState::Focused;
+        let surface = cx.token(Token::Surface0);
+        let foreground = cx.token(if self.widget_state == WidgetState::Disabled {
+            Token::TextMuted
+        } else {
+            Token::TextPrimary
+        });
+        let gutter = if self.line_numbers {
+            decimal_digits(self.line_starts.len()) + 1
+        } else {
+            0
+        };
+        let x_offset = u16::try_from(gutter).unwrap_or(u16::MAX).min(area.width);
+        let body = Rect::new(
+            area.x.saturating_add(x_offset),
+            area.y,
+            area.width - x_offset,
+            area.height,
+        );
+        cx.fill(area, Style::new().fg(foreground).bg(surface), ' ');
+        let cursor = self.position(self.cursor);
+        let first = self
+            .scroll_y
+            .min(self.line_starts.len().saturating_sub(1))
+            .min(cursor.line);
+        let first = if cursor.line >= first.saturating_add(usize::from(body.height)) {
+            cursor
+                .line
+                .saturating_sub(usize::from(body.height).saturating_sub(1))
+        } else {
+            first
+        };
+        let cursor_line_start = self.line_starts[cursor.line];
+        let cursor_column = width(&self.text[cursor_line_start..self.cursor]);
+        let horizontal = if cursor_column < self.scroll_x {
+            cursor_column
+        } else if body.width > 0
+            && cursor_column >= self.scroll_x.saturating_add(usize::from(body.width))
+        {
+            cursor_column.saturating_sub(usize::from(body.width).saturating_sub(1))
+        } else {
+            self.scroll_x
+        };
+        let layout = RenderLayout {
+            body,
+            first_line: first,
+            horizontal,
+            gutter,
+            gutter_x: area.x,
+            foreground,
+            surface,
+        };
+        let cursor_screen = self.render_visible_lines(layout, cursor, cx);
+        self.render_cursor(cursor_screen, focused, cx);
+        if self.search.is_some() {
+            self.render_search(area, cx);
         }
     }
 }
@@ -1104,7 +1163,7 @@ fn line_number_label(value: usize, width: usize) -> ([u8; 21], usize) {
     let mut value = value;
     let mut count = 0;
     loop {
-        digits[count] = b'0' + (value % 10) as u8;
+        digits[count] = b'0' + u8::try_from(value % 10).unwrap_or(0);
         count += 1;
         value /= 10;
         if value == 0 || count == digits.len() {

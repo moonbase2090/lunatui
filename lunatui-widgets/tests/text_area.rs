@@ -1,4 +1,4 @@
-//! Behavioral tests for TextArea editing and input handling.
+//! Behavioral tests for `TextArea` editing and input handling.
 #![cfg(feature = "text-area")]
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
@@ -94,14 +94,30 @@ fn shift_movement_keeps_anchor_and_replaces_selected_range() {
     let mut editor = TextArea::new("abcd");
     editor.handle_event(&shifted(KeyCode::Right));
     editor.handle_event(&shifted(KeyCode::Right));
-    assert_eq!(editor.selection().unwrap().anchor.grapheme, 0);
-    assert_eq!(editor.selection().unwrap().head.grapheme, 2);
+    assert_eq!(
+        editor
+            .selection()
+            .map(|selection| selection.anchor.grapheme),
+        Some(0)
+    );
+    assert_eq!(
+        editor.selection().map(|selection| selection.head.grapheme),
+        Some(2)
+    );
     editor.handle_event(&typed('x'));
     assert_eq!(editor.text(), "xcd");
     editor.handle_event(&undo_key());
     assert_eq!(editor.text(), "abcd");
-    assert_eq!(editor.selection().unwrap().anchor.grapheme, 0);
-    assert_eq!(editor.selection().unwrap().head.grapheme, 2);
+    assert_eq!(
+        editor
+            .selection()
+            .map(|selection| selection.anchor.grapheme),
+        Some(0)
+    );
+    assert_eq!(
+        editor.selection().map(|selection| selection.head.grapheme),
+        Some(2)
+    );
     editor.redo();
     assert_eq!(editor.text(), "xcd");
 }
@@ -326,8 +342,8 @@ fn focused_and_disabled_states_use_theme_tokens() {
         &mut RenderCx::new(&mut grid, &mut clusters, &theme),
     );
     assert_eq!(
-        grid.get(0, 0).unwrap().style().bg,
-        theme.resolve(Token::FocusFill)
+        grid.get(0, 0).map(|cell| cell.style().bg),
+        Some(theme.resolve(Token::FocusFill))
     );
 
     grid.fill(Rect::new(0, 0, 2, 1), Style::new(), ' ', &mut clusters);
@@ -345,8 +361,8 @@ fn focused_and_disabled_states_use_theme_tokens() {
         &mut RenderCx::new(&mut grid, &mut clusters, &theme),
     );
     assert_eq!(
-        grid.get(0, 0).unwrap().style().fg,
-        theme.resolve(Token::TextMuted)
+        grid.get(0, 0).map(|cell| cell.style().fg),
+        Some(theme.resolve(Token::TextMuted))
     );
 }
 
@@ -368,8 +384,8 @@ fn render_follows_cursor_and_keeps_a_cursor_before_an_unfittable_wide_glyph() {
         &mut RenderCx::new(&mut grid, &mut clusters, &theme),
     );
     assert_eq!(
-        grid.get(0, 0).unwrap().style().bg,
-        theme.resolve(Token::SurfaceRaised)
+        grid.get(0, 0).map(|cell| cell.style().bg),
+        Some(theme.resolve(Token::SurfaceRaised))
     );
 
     let wide = TextArea::new("界");
@@ -379,7 +395,7 @@ fn render_follows_cursor_and_keeps_a_cursor_before_an_unfittable_wide_glyph() {
         &mut RenderCx::new(&mut narrow_grid, &mut clusters, &theme),
     );
     assert_eq!(
-        narrow_grid.get(0, 0).unwrap().style().bg,
-        theme.resolve(Token::SurfaceRaised)
+        narrow_grid.get(0, 0).map(|cell| cell.style().bg),
+        Some(theme.resolve(Token::SurfaceRaised))
     );
 }

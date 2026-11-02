@@ -560,8 +560,8 @@ fn text_area_lunatui(
     area: Rect,
     _tick: u32,
 ) {
-    let mut cx = RenderCx::new(grid, clusters, theme);
     static EDITOR: OnceLock<TextArea> = OnceLock::new();
+    let mut cx = RenderCx::new(grid, clusters, theme);
     EDITOR
         .get_or_init(|| TextArea::new(TEXTAREA_DOC).line_numbers(true))
         .render(area, &mut cx);
