@@ -38,7 +38,7 @@ pub(super) fn specification(frame: &ClusterFrame) -> PieChart {
             .map(|((label, _), rate)| PieSlice::new(*label, rate)),
     )
     .marker(Marker::Braille)
-    .cell_aspect(2.3)
+    .cell_aspect(2.0)
     .reveal(pc_ease(frame.tick, 4, 44))
     .highlight(frame.selected)
     .state(WidgetState::Focused)

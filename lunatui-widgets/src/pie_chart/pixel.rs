@@ -137,6 +137,11 @@ impl PixelPieChart {
         };
         let mut spec = self.chart.clone();
         spec.marker = Marker::Braille;
+        spec.aspect = (f64::from(size.height()) * f64::from(layout.pie.width))
+            / (f64::from(size.width()) * f64::from(layout.pie.height));
+        if !spec.aspect.is_finite() || spec.aspect <= 0.0 {
+            return false;
+        }
         let key = RasterKey {
             chart: spec,
             size,

@@ -172,7 +172,7 @@ For antialiased pixels, wrap the chart in `PixelPieChart` and attach the frame's
 
 <img src="docs/media/pixel-pie-chart.webp" alt="Complete cluster twins in a real Kitty terminal: Braille pie and trend on the left, antialiased pie, legend swatches and trend on the right" width="1028">
 
-Pixel comparison screenshot: [docs/media/pixel-pie-chart.png](docs/media/pixel-pie-chart.png). Captured from a real Kitty 0.32.2 window in a clean Linux VM, 248×44, font size 12, 30 fps and 10 seconds. Scripted keys switch native/cells, hide/restore, select a region and advance the held tick. `scripts/check-pie-recording.py` verifies all five distinct control states and that restored native frames match exactly. The frames come directly from the terminal window.
+Pixel comparison screenshot: [docs/media/pixel-pie-chart.png](docs/media/pixel-pie-chart.png). The animated WebP is a 10-second, 30 fps capture from a real Kitty 0.32.2 window in a clean Linux VM at 248×44 and font size 12. It shows seven seconds of live reveal and share redraws, then switches between native and Braille, hides and restores both charts. `scripts/check-pie-recording.py` checks decoded frames across the motion and control states. Both files come from the terminal capture; the still is a video frame.
 
 <img src="docs/media/pie-chart.webp" alt="PieChart: a braille pie of live request shares by region, with a regions table and a request trend, on a cluster overview screen in the dark theme" width="1028">
 

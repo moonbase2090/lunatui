@@ -96,6 +96,33 @@ fn circular_edge_is_blended_and_hole_preserves_the_panel() -> Result<(), Box<dyn
 }
 
 #[test]
+fn native_circle_uses_the_measured_terminal_cell_aspect() -> Result<(), Box<dyn std::error::Error>>
+{
+    let mut images = sink();
+    images.size = PixelSize::new(32, 16);
+    draw(&widget(chart())?, &mut images, Color::Rgb(0, 0, 0));
+    let source = &images.requests[0].0;
+    let mut bounds = [usize::MAX, usize::MAX, 0, 0];
+    for y in 0..16 {
+        for x in 0..32 {
+            if pixel(source, x, y)[0] > 0 {
+                bounds[0] = bounds[0].min(x);
+                bounds[1] = bounds[1].min(y);
+                bounds[2] = bounds[2].max(x);
+                bounds[3] = bounds[3].max(y);
+            }
+        }
+    }
+    let width = bounds[2] - bounds[0] + 1;
+    let height = bounds[3] - bounds[1] + 1;
+    assert!(
+        width.abs_diff(height) <= 1,
+        "native disc bounds: {bounds:?}"
+    );
+    Ok(())
+}
+
+#[test]
 fn raster_cache_tracks_values_colors_and_backdrop_without_caller_revisions()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut images = sink();
