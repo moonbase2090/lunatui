@@ -175,6 +175,9 @@ impl Parser {
             if cur.peek().is_none_or(|ch| ch == ';') {
                 return Ok(());
             }
+            if cur.peek() == Some('&') {
+                return Err(self.fail("'&' is not supported"));
+            }
             let link = self.link(cur)?;
             let next = self.node(cur)?;
             if self.flow.edges.len() >= LIMIT {
@@ -333,6 +336,11 @@ impl Parser {
     ) -> Result<(usize, Weight, bool, String), MermaidError> {
         let prefix = (chars.get(at), chars.get(at + 1), chars.get(at + 2));
         let start = at + 2;
+        let ends_here = chars.get(at + 3).is_none_or(|ch| ch.is_whitespace());
+        let dashes = prefix.0 == Some(&'-') && prefix.1 == Some(&'-');
+        if dashes && ends_here && matches!(prefix.2, Some('o' | 'x')) {
+            return Err(self.fail("circle and cross link ends are not supported"));
+        }
         let found = match prefix {
             (Some('-'), Some('-'), third) if third != Some(&'-') => {
                 Self::scan(chars, start, |index| complete(chars, index))

@@ -131,13 +131,13 @@ pub(super) fn layout(sequence: &Sequence) -> Result<Canvas, MermaidError> {
         match item {
             Item::Open { kind, text } => {
                 need_width =
-                    need_width.max(2 * depth + 8 + text_columns(&frame_label(kind.word(), text)));
+                    need_width.max(2 * depth + 6 + text_columns(&frame_label(kind.word(), text)));
                 depth += 1;
                 deepest = deepest.max(depth);
             }
             Item::Else { text } => {
                 need_width =
-                    need_width.max(2 * (depth - 1) + 8 + text_columns(&frame_label("else", text)));
+                    need_width.max(2 * (depth - 1) + 6 + text_columns(&frame_label("else", text)));
             }
             Item::Close => depth -= 1,
             _ => {}
