@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect};
-use lunatui_term::Event;
+use lunatui_term::{Event, KeyCode, Modifiers};
 
 #[cfg(feature = "image-presenter")]
 use crate::frame::RenderFrame;
@@ -42,5 +42,27 @@ pub trait App {
     /// When set, [`run`](crate::run::run) resolves [`Color::Token`] through this palette at encode time.
     fn token_palette(&self) -> Option<&[Color]> {
         None
+    }
+}
+
+/// Returns true when `event` is a plain `q` press (quit).
+#[must_use]
+pub fn is_quit(event: &Event) -> bool {
+    matches!(
+        event,
+        Event::Key(key) if key.code == KeyCode::Char('q') && key.modifiers == Modifiers::new()
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use lunatui_term::{Event, KeyCode, KeyEvent};
+
+    use super::is_quit;
+
+    #[test]
+    fn is_quit_matches_plain_q() {
+        assert!(is_quit(&Event::Key(KeyEvent::press(KeyCode::Char('q')))));
+        assert!(!is_quit(&Event::Key(KeyEvent::press(KeyCode::Char('x')))));
     }
 }

@@ -8,9 +8,13 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
-## [0.1.19] - 2026-10-31
+## [0.1.19] - 2026-11-01
 
 ### Added
+
+- `lunatui-choice` adds `Checkbox` (`[x]`, `[ ]` and the mixed `[-]` through `CheckState`), `Switch` (a three-cell track with the knob at the on or off end) and `Radio` (`◉` and `○` options in a column or a row, with `step` and `option_areas` for keys and clicks). Checked and on use the primary color, focus the ring color with a bold label, and disabled choices dim; each takes `on` to sit on a surface. The `ui_choice` example is a notification preferences screen.
+
+- `lunatui-field` adds `Field`: a bold label above any control widget with a muted help line under it. An error message replaces the help line in the destructive color, `required` marks the label with `*`, `focused` draws the label in the ring color, and `disabled` dims it. It measures as the label, the control and the message, and keeps the label, then the control, then the message when it is short of rows. The `ui_field` example is a profile settings screen.
 
 - `graphite_pixels` example and a `graphite-pixels` test feature in the bench crate (off by default) that prove a Graphite pixel-buffer frame survives the Kitty `PixelLayer` byte for byte and matches the half-block cell fallback.
 
@@ -22,6 +26,8 @@ Every PR adds its entry under **Unreleased**.
 
 - `lunatui-badge` adds `Badge` (a one-line label on a neutral, primary, success, warning or danger tone, filled or subtle) and `Kbd` (a key or chord as raised chips), styled from `lunatui-ui-tokens`; the `ui_badge` example is a release board built from them.
 
+- A browser quickstart sandbox runs the minimal, list and form templates in the page, with keyboard input and resizing. It loads near the viewport and keeps static previews when JavaScript or the WebAssembly load is unavailable.
+
 ### Changed
 
 - `lunatui-button` keeps focus and press visible when a theme gives the focus ring and the variant fill the same colors: `Button` and `Toggle` add a single underline whenever their focused or pressed style would equal the resting one.
@@ -30,7 +36,11 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
+- Browser sandbox assets remap Cargo dependency paths for reproducible builds across cache locations. CI checks WebAssembly artifacts and exercises the release-text scanner.
+
 - Pixel recordings schedule scripted input from media timestamps and retain the requested frame count. Lossless PNG capture avoids startup stalls that could skip early scene holds.
+
+- The browser sandbox supports phone text input, composition and touch keys, fits narrow screens, and keeps iPhone controls above the software keyboard.
 
 ## [0.1.18] - 2026-10-31
 

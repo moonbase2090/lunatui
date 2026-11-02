@@ -6,10 +6,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs};
-use lunatui_term::{
-    ColorMode, Encoder, Event, KeyCode, Modifiers, MouseTracking, Session, SessionOptions,
-    SyncOutput,
-};
+use lunatui_term::{ColorMode, Encoder, MouseTracking, Session, SessionOptions, SyncOutput};
 
 #[cfg(feature = "image-presenter")]
 use lunatui_term::{PixelLayer, PixelMode};
@@ -216,15 +213,6 @@ fn render_present<A: App>(
     Ok(())
 }
 
-/// Returns true when `event` is a plain `q` press (quit).
-#[must_use]
-pub fn is_quit(event: &Event) -> bool {
-    matches!(
-        event,
-        Event::Key(key) if key.code == KeyCode::Char('q') && key.modifiers == Modifiers::new()
-    )
-}
-
 /// Renders `app` once into a fresh grid (for snapshots and benches).
 pub fn render_once<A: App>(app: &mut A, width: u16, height: u16) -> (Grid, ClusterTable) {
     let area = Rect::new(0, 0, width, height);
@@ -268,9 +256,9 @@ fn probe_pixel_layer() -> (PixelLayer, Vec<u8>) {
 #[cfg(test)]
 mod tests {
     use lunatui_core::GlyphSlot;
-    use lunatui_term::{Event, KeyCode, KeyEvent};
+    use lunatui_term::Event;
 
-    use super::{is_quit, render_once};
+    use super::render_once;
     use crate::app::{App, ControlFlow};
     use crate::options::RunOptions;
 
@@ -295,12 +283,6 @@ mod tests {
                 clusters,
             );
         }
-    }
-
-    #[test]
-    fn is_quit_matches_plain_q() {
-        assert!(is_quit(&Event::Key(KeyEvent::press(KeyCode::Char('q')))));
-        assert!(!is_quit(&Event::Key(KeyEvent::press(KeyCode::Char('x')))));
     }
 
     #[test]

@@ -1,0 +1,13 @@
+{
+  "name": "lunatui-site-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:sandbox": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/xterm": "5.5.0"
+  }
+}

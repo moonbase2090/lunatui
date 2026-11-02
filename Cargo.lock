@@ -1101,6 +1101,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "lunatui-choice"
+version = "0.1.19"
+dependencies = [
+ "lunatui-badge",
+ "lunatui-button",
+ "lunatui-card",
+ "lunatui-core",
+ "lunatui-term",
+ "lunatui-theme",
+ "lunatui-ui-tokens",
+ "lunatui-widgets",
+]
+
+[[package]]
 name = "lunatui-core"
 version = "0.1.19"
 dependencies = [
@@ -1109,6 +1123,20 @@ dependencies = [
  "proptest",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "lunatui-field"
+version = "0.1.19"
+dependencies = [
+ "lunatui-badge",
+ "lunatui-button",
+ "lunatui-card",
+ "lunatui-core",
+ "lunatui-term",
+ "lunatui-theme",
+ "lunatui-ui-tokens",
+ "lunatui-widgets",
 ]
 
 [[package]]
@@ -1214,6 +1242,18 @@ dependencies = [
  "lunatui-core",
  "lunatui-theme",
  "lunatui-widgets",
+]
+
+[[package]]
+name = "lunatui-web"
+version = "0.0.0"
+dependencies = [
+ "lunatui-core",
+ "lunatui-runtime",
+ "lunatui-term",
+ "lunatui-theme",
+ "lunatui-widgets",
+ "wasm-bindgen",
 ]
 
 [[package]]

@@ -3,21 +3,31 @@
 
 #![doc = include_str!("../README.md")]
 
+#[cfg(any(unix, windows))]
 use std::env;
+#[cfg(any(unix, windows))]
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
-use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
+use lunatui_runtime::{App, ControlFlow, is_quit};
+#[cfg(any(unix, windows))]
+use lunatui_runtime::{RunOptions, render_once, run};
 use lunatui_term::{Event, KeyCode};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{Block, List, Paragraph, RenderCx, VecSource, Widget};
 
+#[cfg(any(unix, windows))]
 const WIDTH: u16 = 42;
+#[cfg(any(unix, windows))]
 const HEIGHT: u16 = 14;
 const ITEMS: [&str; 5] = ["Calendar", "Gauge", "Table", "Sparkline", "Form"];
 
 struct Screen {
     selected: usize,
+}
+
+pub(crate) fn app() -> impl App {
+    Screen::new()
 }
 
 impl Screen {
@@ -98,8 +108,14 @@ impl App for Screen {
     }
 }
 
-fn main() -> io::Result<()> {
-    let mut app = Screen::new();
+#[cfg(any(unix, windows))]
+/// Runs the native quickstart example.
+///
+/// # Errors
+///
+/// Returns terminal setup, rendering, or output errors.
+pub fn main() -> io::Result<()> {
+    let mut app = app();
     if env::args().any(|arg| arg == "--snapshot") {
         let (grid, clusters) = render_once(&mut app, WIDTH, HEIGHT);
         io::stdout().write_all(grid.display_text(&clusters).as_bytes())?;

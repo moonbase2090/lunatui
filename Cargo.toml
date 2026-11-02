@@ -14,11 +14,14 @@ members = [
     "lunatui-card",
     "lunatui-badge",
     "lunatui-button",
+    "lunatui-choice",
+    "lunatui-field",
     "lunatui-test",
     "lunatui-ratatui",
     "lunatui-prismattyc",
     "benches",
     "xtask",
+    "lunatui-web",
 ]
 
 [workspace.package]

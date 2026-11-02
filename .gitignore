@@ -1,4 +1,7 @@
 target/
+site/node_modules/
+site/playwright-report/
+site/test-results/
 
 # Local editor and tooling state
 .cursor/
