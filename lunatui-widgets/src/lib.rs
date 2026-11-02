@@ -29,6 +29,8 @@ mod code_view;
 mod color_picker;
 #[cfg(feature = "combo-box")]
 mod combo_box;
+#[cfg(feature = "command-palette")]
+mod command_palette;
 #[cfg(feature = "date-picker")]
 mod date_picker;
 #[cfg(feature = "dialog")]
@@ -133,6 +135,8 @@ pub use code_view::{CodeHighlight, CodeMark, CodeView, CodeViewState};
 pub use color_picker::{ColorPicker, ColorPickerFocus, ColorPickerState};
 #[cfg(feature = "combo-box")]
 pub use combo_box::ComboBox;
+#[cfg(feature = "command-palette")]
+pub use command_palette::{CommandPalette, PaletteEntry};
 #[cfg(feature = "date-picker")]
 pub use date_picker::DatePicker;
 #[cfg(feature = "dialog")]
