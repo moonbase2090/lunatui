@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Contract tests for host-provided font selection and pixel measurement.
+#![doc = include_str!("../README.md")]
 
 use lunatui_widgets::graphite::{Face, FontRun, HostFontMetrics, HostTextMetrics, TextMetrics};
 use unicode_segmentation::UnicodeSegmentation;

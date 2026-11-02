@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Prints selected font runs using deterministic host-supplied metrics.
-//! A drawing host supplies coverage and advances from its loaded fonts instead.
+#![doc = include_str!("../README.md")]
 
 use lunatui_widgets::graphite::{Face, HostFontMetrics, HostTextMetrics, TextMetrics};
 use unicode_segmentation::UnicodeSegmentation;
