@@ -19,16 +19,14 @@ fn widgets(c: &mut Criterion) {
                     checked_frame(lunatui.frame());
                 });
             });
-            if let Ok(mut ratatui) = RatatuiRun::new(case, width, height) {
-                group.bench_function("render/ratatui", |b| b.iter(|| ratatui.render()));
-            }
-            if let Ok(mut ratatui) = RatatuiRun::new(case, width, height) {
-                group.bench_function("frame/ratatui", |b| {
-                    b.iter(|| {
-                        checked_frame(ratatui.frame());
-                    });
+            let mut ratatui = checked_frame(RatatuiRun::new(case, width, height));
+            group.bench_function("render/ratatui", |b| b.iter(|| ratatui.render()));
+            let mut ratatui = checked_frame(RatatuiRun::new(case, width, height));
+            group.bench_function("frame/ratatui", |b| {
+                b.iter(|| {
+                    checked_frame(ratatui.frame());
                 });
-            }
+            });
             group.finish();
         }
     }
@@ -37,9 +35,12 @@ fn widgets(c: &mut Criterion) {
 criterion_group!(benches, widgets);
 criterion_main!(benches);
 
-fn checked_frame(result: std::io::Result<()>) {
-    if let Err(error) = result {
-        eprintln!("widget benchmark frame failed: {error}");
-        std::process::exit(1);
+fn checked_frame<T>(result: std::io::Result<T>) -> T {
+    match result {
+        Ok(value) => value,
+        Err(error) => {
+            eprintln!("widget benchmark frame failed: {error}");
+            std::process::exit(1);
+        }
     }
 }
