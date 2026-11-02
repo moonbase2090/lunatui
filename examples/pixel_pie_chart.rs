@@ -42,7 +42,7 @@ fn main() -> io::Result<()> {
         Screen {
             pie: PixelPieChart::new(
                 id,
-                pie_scene::specification(&pie_scene::ClusterFrame::at(0)),
+                pie_scene::specification(&pie_scene::ClusterFrame::at(0).with_cell_aspect(2.0)),
             ),
             started: Instant::now(),
             hold,
@@ -75,7 +75,7 @@ impl Screen {
             u32::try_from(self.started.elapsed().as_millis().saturating_mul(30) / 1000)
                 .unwrap_or(u32::MAX)
         });
-        let mut frame = pie_scene::ClusterFrame::at(tick);
+        let mut frame = pie_scene::ClusterFrame::at(tick).with_cell_aspect(2.0);
         if let Some(selected) = self.selected {
             frame.selected = Some(selected);
         }
@@ -218,7 +218,7 @@ mod tests {
         Ok(Screen {
             pie: PixelPieChart::new(
                 ImageId::new(41).ok_or("fixture identity")?,
-                pie_scene::specification(&pie_scene::ClusterFrame::at(96)),
+                pie_scene::specification(&pie_scene::ClusterFrame::at(96).with_cell_aspect(2.0)),
             ),
             started: Instant::now(),
             hold: Some(96),

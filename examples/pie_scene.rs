@@ -12,6 +12,7 @@ use lunatui_widgets::{
 pub(super) struct ClusterFrame {
     pub tick: u32,
     pub selected: Option<usize>,
+    cell_aspect: f64,
 }
 
 impl ClusterFrame {
@@ -19,7 +20,13 @@ impl ClusterFrame {
         Self {
             tick,
             selected: (tick >= 60).then(|| usize::try_from((tick - 60) / 36).unwrap_or(0) % 5),
+            cell_aspect: 2.3,
         }
+    }
+
+    pub(super) fn with_cell_aspect(mut self, aspect: f64) -> Self {
+        self.cell_aspect = aspect;
+        self
     }
 }
 
@@ -38,7 +45,7 @@ pub(super) fn specification(frame: &ClusterFrame) -> PieChart {
             .map(|((label, _), rate)| PieSlice::new(*label, rate)),
     )
     .marker(Marker::Braille)
-    .cell_aspect(2.0)
+    .cell_aspect(frame.cell_aspect)
     .reveal(pc_ease(frame.tick, 4, 44))
     .highlight(frame.selected)
     .state(WidgetState::Focused)
