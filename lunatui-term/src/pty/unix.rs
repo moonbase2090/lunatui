@@ -11,6 +11,10 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 use super::PtySize;
 
 const MAX_INPUT: usize = 65_536;
+#[cfg(target_vendor = "apple")]
+const CTTY_REQUEST: libc::c_ulong = libc::TIOCSCTTY as libc::c_ulong;
+#[cfg(not(target_vendor = "apple"))]
+const CTTY_REQUEST: libc::c_ulong = libc::TIOCSCTTY;
 
 /// One Unix child, its controlling PTY and a bounded, nonblocking input queue.
 ///
@@ -58,9 +62,7 @@ impl PtyProcess {
         // The standard streams are already the live slave descriptors prepared above.
         unsafe {
             command.pre_exec(|| {
-                if libc::setsid() == -1
-                    || libc::ioctl(libc::STDIN_FILENO, libc::TIOCSCTTY.into(), 0) == -1
-                {
+                if libc::setsid() == -1 || libc::ioctl(libc::STDIN_FILENO, CTTY_REQUEST, 0) == -1 {
                     return Err(io::Error::last_os_error());
                 }
                 Ok(())
