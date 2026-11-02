@@ -142,7 +142,7 @@ pub static CASES: &[Case] = &[
     },
     Case {
         name: "command-palette",
-        gated: false,
+        gated: true,
         parity: Parity::Exact,
         lunatui: command_palette::native,
         ratatui: command_palette::baseline,
