@@ -25,3 +25,9 @@ for tick,expected in [(0,"8 commands"),(40,"1 command"),(80,"Opened src/session.
     if tick==205: assert "tests/session_test.rs" in text
 print("Command palette: 300 actual frames verify fuzzy queries, command execution, split geometry and cancellation")
 PYCAST
+
+"${AGG:-agg}" --fps-cap 15 --font-size 14 --line-height 1.4 --last-frame-duration 0.033333 \
+  "$OUT/command-palette-120x36-truecolor-dark.cast" "$OUT/command-palette-review.gif"
+ffmpeg -loglevel error -y -i "$OUT/command-palette-review.gif" \
+  -vf 'tpad=stop_mode=clone:stop_duration=1,fps=9/10,scale=600:-1,tile=3x3' -frames:v 1 \
+  "$OUT/command-palette-contact.png"
