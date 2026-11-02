@@ -16,6 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - uses: moonbase2090/.github/actions/package-links@a28feceb0e683975c46c882a9914b9b6f3ae8eb6
+      - uses: moonbase2090/.github/actions/package-links@1b5c77bd336791dd685d1cda1fece11df663931d
         with:
           link-paths: "'./*.md' './docs/**/*.md' './lunatui*/README.md' './site/**/*.html' './site/**/*.md'"
