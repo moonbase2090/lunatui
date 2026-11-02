@@ -1,13 +1,17 @@
 #!/usr/bin/env python3 -I
 """Render the site's terminal scenes from the release console example.
 
-usage: python3 -I scripts/site/scenes.py <out.json>
+usage: python3 -I scripts/site/scenes.py <out.json> [page.html ...]
+
+With page paths, each scene's `<pre class="term">` (found by its aria-label) is rewritten in place,
+so the pages always show the example's current output.
 
 Runs `cargo run --example release_console_app -- --snapshot-styled` for the console, the narrow
 console and each widget scene, and turns each styled frame into exact-width HTML cells.
 """
 import html
 import json
+import re
 import subprocess
 import sys
 
@@ -82,6 +86,18 @@ def main():
         out[name] = {"cols": cols, "rows": len(rows), "label": label, "html": cells(rows)}
     with open(sys.argv[1], "w") as handle:
         json.dump(out, handle, indent=1, ensure_ascii=False)
+    for page in sys.argv[2:]:
+        with open(page, encoding="utf-8") as handle:
+            text = handle.read()
+        for scene in out.values():
+            pattern = re.compile(
+                r'(<pre class="term[^"]*" style="[^"]*" role="img" aria-label="'
+                + re.escape(html.escape(scene["label"], quote=True)) + r'">)(.*?)(</pre>)',
+                re.S,
+            )
+            text = pattern.sub(lambda m: m.group(1) + scene["html"] + m.group(3), text)
+        with open(page, "w", encoding="utf-8") as handle:
+            handle.write(text)
 
 
 if __name__ == "__main__":

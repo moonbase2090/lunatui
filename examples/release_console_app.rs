@@ -14,13 +14,15 @@ use std::env;
 use std::io::{self, Write};
 
 use lunatui_core::{Attrs, CellWidth, ClusterTable, Color, Grid, Rect, Style};
+use lunatui_layout::Constraint;
 use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
 use lunatui_term::Event;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, Bar, BarChart, BigText, Block, BorderType, Date, Form,
     FormField, LineGauge, LogBuffer, LogEntry, LogLevel, LogView, Monthly, PixelSize, ProgressBar,
-    ProgressTone, RadioFlow, RadioGroup, RenderCx, Sparkline, Toggle, Widget, WidgetState,
+    ProgressTone, RadioFlow, RadioGroup, RenderCx, Sparkline, StatusBar, Table, Tabs, Toggle,
+    VecSource, Widget, WidgetState,
 };
 
 const WIDE: u16 = 112;
@@ -112,54 +114,45 @@ fn frame(title: &str, right: Option<(&str, Color)>) -> Block {
 
 fn console(cx: &mut RenderCx<'_>, area: Rect, width: u16) {
     let w = width.min(area.width);
-    cx.fill(Rect::new(0, 0, w, 1), style(FG, BAR), ' ');
-    cx.put_str(1, 0, "\u{25cf}", style(OK, BAR));
-    cx.put_str(
-        3,
-        0,
-        "lunar-deploy",
-        style(FG, BAR).with_attrs(Attrs::new().set_bold(true)),
-    );
-    if w >= 70 {
-        cx.put_str(18, 0, "production", style(DIM, BAR));
-        cx.put_str(
-            w.saturating_sub(28),
-            0,
-            "release v0.4.2   14:02:06",
-            style(DIM, BAR),
-        );
+    let bold = Attrs::new().set_bold(true);
+    let bar = style(FG, BAR);
+    let wide = w >= 70;
+
+    let mut header_left = vec![
+        (" \u{25cf} ", style(OK, BAR)),
+        ("lunar-deploy", bar.with_attrs(bold)),
+    ];
+    let header_right = if wide {
+        header_left.push(("   production", style(DIM, BAR)));
+        vec![("release v0.4.2   14:02:06 ", style(DIM, BAR))]
     } else {
-        cx.put_str(w.saturating_sub(10), 0, "14:02:06", style(DIM, BAR));
-    }
-    let tabs: &[&str] = if w >= 70 {
+        vec![("14:02:06 ", style(DIM, BAR))]
+    };
+    StatusBar::new("")
+        .style(bar)
+        .left(header_left)
+        .right(header_right)
+        .render(Rect::new(0, 0, w, 1), cx);
+
+    let titles: &[&str] = if wide {
         &["Overview", "Services", "Logs", "Settings"]
     } else {
         &["Overview", "Services", "Logs"]
     };
-    let mut x = 1_u16;
-    for (index, tab) in tabs.iter().enumerate() {
-        let label = format!(" {tab} ");
-        let len = u16::try_from(label.chars().count()).unwrap_or(0);
-        let tab_style = if index == 0 {
-            style(ACCENT, BAR).with_attrs(Attrs::new().set_bold(true))
-        } else {
-            style(DIM, BG)
-        };
-        cx.put_str(x, 1, &label, tab_style);
-        x += len + 1;
-    }
+    Tabs::new(titles.iter().map(|title| format!(" {title} ")))
+        .indent(1)
+        .style(style(DIM, BG))
+        .highlight_style(style(ACCENT, BAR).with_attrs(bold))
+        .render(Rect::new(0, 1, w, 1), cx);
+
     let body_h = area.height.saturating_sub(4);
-    let left_w = if w >= 70 { 40 } else { w };
-    let left = Rect::new(0, 3, left_w, body_h);
-    left_column(cx, left);
-    if w >= 70 {
-        let right = Rect::new(left_w + 2, 3, w - left_w - 2, body_h);
-        right_column(cx, right);
+    let left_w = if wide { 40 } else { w };
+    left_column(cx, Rect::new(0, 3, left_w, body_h));
+    if wide {
+        right_column(cx, Rect::new(left_w + 2, 3, w - left_w - 2, body_h));
     }
-    let status = area.height.saturating_sub(1);
-    cx.fill(Rect::new(0, status, w, 1), style(FG, BAR), ' ');
-    let mut x = 1_u16;
-    let hints: &[(&str, &str)] = if w >= 70 {
+
+    let hints: &[(&str, &str)] = if wide {
         &[
             ("tab", " views   "),
             ("/", " filter   "),
@@ -169,18 +162,16 @@ fn console(cx: &mut RenderCx<'_>, area: Rect, width: u16) {
     } else {
         &[("tab", " views  "), ("q", " quit")]
     };
+    let mut left = vec![(" ", bar)];
     for (key, label) in hints {
-        cx.put_str(x, status, key, style(ACCENT, BAR));
-        x += u16::try_from(key.chars().count()).unwrap_or(0);
-        cx.put_str(x, status, label, style(FG, BAR));
-        x += u16::try_from(label.chars().count()).unwrap_or(0);
+        left.push((key, style(ACCENT, BAR)));
+        left.push((label, bar));
     }
-    cx.put_str(
-        w.saturating_sub(13),
-        status,
-        "\u{25cf} connected",
-        style(OK, BAR),
-    );
+    StatusBar::new("")
+        .style(bar)
+        .left(left)
+        .right([("\u{25cf} connected ", style(OK, BAR))])
+        .render(Rect::new(0, area.height.saturating_sub(1), w, 1), cx);
 }
 
 fn left_column(cx: &mut RenderCx<'_>, area: Rect) {
@@ -188,12 +179,6 @@ fn left_column(cx: &mut RenderCx<'_>, area: Rect) {
     let block = frame("Services", Some(("5", DIM)));
     block.render(services, cx);
     let inner = block.inner(services);
-    cx.put_str(
-        inner.x + 1,
-        inner.y,
-        "service      state    p50",
-        style(DIM, BG),
-    );
     let rows = [
         ("api", OK, "ok", "12 ms"),
         ("worker", WARN, "warn", "40 ms"),
@@ -201,24 +186,40 @@ fn left_column(cx: &mut RenderCx<'_>, area: Rect) {
         ("billing", OK, "ok", "18 ms"),
         ("search", FAIL, "down", "\u{2014}"),
     ];
-    for (index, (name, tone, state, p50)) in rows.iter().enumerate() {
-        let y = inner.y + 1 + u16::try_from(index).unwrap_or(0);
-        let selected = index == 0;
-        let bg = if selected { BAR } else { BG };
-        if selected {
-            cx.fill(Rect::new(inner.x, y, inner.width, 1), style(FG, BAR), ' ');
-            cx.put_str(inner.x, y, "\u{258c}", style(ACCENT, BAR));
-        }
-        cx.put_str(inner.x + 1, y, name, style(FG, bg));
-        cx.put_str(inner.x + 14, y, "\u{25cf}", style(*tone, bg));
-        cx.put_str(inner.x + 16, y, state, style(FG, bg));
-        cx.put_str(
-            inner.x + 23,
-            y,
-            p50,
-            style(if *p50 == "\u{2014}" { DIM } else { FG }, bg),
-        );
-    }
+    let cells: Vec<Vec<String>> = rows
+        .iter()
+        .map(|(name, _, state, p50)| {
+            vec![
+                (*name).to_owned(),
+                format!("\u{25cf} {state}"),
+                (*p50).to_owned(),
+            ]
+        })
+        .collect();
+    let tones: Vec<Color> = rows.iter().map(|row| row.1).collect();
+    Table::new(
+        VecSource::from_rows(cells),
+        vec![
+            Constraint::Length(13),
+            Constraint::Length(8),
+            Constraint::Fill(1),
+        ],
+    )
+    .style(style(FG, BG))
+    .header([
+        ("service", style(DIM, BG)),
+        ("state", style(DIM, BG)),
+        ("p50", style(DIM, BG)),
+    ])
+    .selected(Some(0))
+    .highlight_style(style(FG, BAR))
+    .highlight_symbol("\u{258c}", style(ACCENT, BAR))
+    .cell_styles(move |row: usize, column: usize| match column {
+        1 => Style::new().fg(tones[row]),
+        2 if row == 4 => Style::new().fg(DIM),
+        _ => Style::new(),
+    })
+    .render(inner, cx);
 
     let capacity = Rect::new(area.x, area.y + 8, area.width, 5);
     let block = frame("Capacity", None);
@@ -242,12 +243,18 @@ fn left_column(cx: &mut RenderCx<'_>, area: Rect) {
         cx.put_str(inner.x + 7 + gauge_w, y, text, style(FG, BG));
     }
 
-    let release = Rect::new(
-        area.x,
-        area.y + 13,
-        area.width,
-        area.height.saturating_sub(13),
+    release_panel(
+        cx,
+        Rect::new(
+            area.x,
+            area.y + 13,
+            area.width,
+            area.height.saturating_sub(13),
+        ),
     );
+}
+
+fn release_panel(cx: &mut RenderCx<'_>, release: Rect) {
     let block = frame("Release v0.4.2", None);
     block.render(release, cx);
     let inner = block.inner(release);
