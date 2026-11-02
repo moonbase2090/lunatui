@@ -29,7 +29,7 @@ def main():
     stream = receipt['streams'][0]
     for name, time in [('native_live_early', '0.5'), ('native_live_mid', '3.5'),
                        ('native_live_late', '6.5'), ('cells', '7.3'), ('hidden', '8.0'),
-                       ('restored', '8.6'), ('cells_again', '9.3')]:
+                       ('restored_cells', '8.6'), ('native_restored', '9.3')]:
         pixels = subprocess.check_output([
             'ffmpeg', '-nostdin', '-loglevel', 'error', '-ss', time, '-i', str(video),
             '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-',
