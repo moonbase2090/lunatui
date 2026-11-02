@@ -437,6 +437,23 @@ fn view_pans_zooms_and_reveals() {
 }
 
 #[test]
+fn view_reveals_a_milestone_at_the_exclusive_end() {
+    let view = TimelineView::new(20, 120);
+    let revealed = view.reveal(120, 120);
+    assert_eq!(revealed, TimelineView::new(21, 121));
+    assert_eq!(
+        Timeline::new(&[])
+            .view(revealed)
+            .x_at(Rect::new(0, 0, 20, 1), 120),
+        Some(19)
+    );
+    assert_eq!(view.reveal(20, 20), view);
+    assert_eq!(view.reveal(70, 70), view);
+    assert_eq!(view.reveal(19, 19), TimelineView::new(19, 119));
+    assert_eq!(view.reveal(121, 121), TimelineView::new(22, 122));
+}
+
+#[test]
 fn view_arithmetic_saturates_at_the_time_range() {
     let view = TimelineView::new(i64::MAX - 10, i64::MAX);
     assert_eq!(view.pan(100), view);
