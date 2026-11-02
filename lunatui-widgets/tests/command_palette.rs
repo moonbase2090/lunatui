@@ -88,11 +88,11 @@ fn the_selected_row_is_filled_with_the_accent() -> Result<(), &'static str> {
 
 #[test]
 fn matched_text_is_highlighted() -> Result<(), &'static str> {
-    let palette = CommandPalette::new("sav", 3, &ENTRIES);
+    let palette = CommandPalette::new("sa", 2, &ENTRIES);
     let (grid, clusters) = draw(&palette, 80, 20);
     let (x, y) = find(&grid, &clusters, "Save").ok_or("expected command row")?;
     assert_eq!(style_at(&grid, x, y).fg, token(Token::Accent));
-    assert_ne!(style_at(&grid, x + 3, y).fg, token(Token::Accent));
+    assert_ne!(style_at(&grid, x + 2, y).fg, token(Token::Accent));
     Ok(())
 }
 
