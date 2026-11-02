@@ -8,6 +8,16 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `SplitTree` keyboard resizing behind the new `split-keys` feature (off by default): `resize(divider, delta, area)` moves a divider by whole cells with the same clamping and cell-to-ratio conversion as `SplitDrag`, and `divider_for(pane, axis)` returns the nearest enclosing split of an axis for a pane. Both do nothing while a pane is zoomed.
+- `SplitTree` persistence behind the new `split-persist` feature (off by default): `to_spec` writes a compact text form (axis, ratio, minimums, pane ids, next-id counter, zoomed pane) and `from_spec` reads it back or returns a `SplitSpecError` for text that is too long or deep, repeats a pane id, has a ratio above 1000, zooms an unknown pane, overflows or has trailing text. No new dependencies.
+- The split showcase resizes panes from the keyboard, saves the layout and restores it, and the split parity case drives a keyboard resize on the lunatui side.
+
+### Fixed
+
+- `SplitTree::split` returns `None` instead of overflowing its pane counter at the top of the `u32` range.
+
 ## [0.1.20] - 2026-11-02
 
 ### Added
