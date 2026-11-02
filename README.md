@@ -379,6 +379,14 @@ A documentation reader shows Mermaid source next to its terminal preview. A depl
 
 Screenshot: [docs/media/mermaid.png](docs/media/mermaid.png). Recorded with `scripts/record-mermaid.sh` at 120×36, dark theme, 300 frames at 30 fps and 2× scale.
 
+### Command palette
+
+An editor opens a file and splits its workspace through the command palette. Short queries match characters with gaps, the selected command follows arrow keys, and Enter applies it to the editor. A final query finds no commands; Escape closes the panel and returns focus to the editor. Titles, detail text, shortcut hints and match highlights come from the real widget.
+
+<img src="docs/media/command-palette.webp" alt="Command palette filtering and running commands over a Rust editor in the dark theme" width="1028">
+
+Screenshot: [docs/media/command-palette.png](docs/media/command-palette.png). Recorded with `scripts/record-command-palette.sh` at 120×36, dark theme, 300 frames at 30 fps and 2× scale.
+
 ### Dialog
 
 A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.

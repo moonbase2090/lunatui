@@ -76,22 +76,24 @@ fn no_match_says_so() {
 }
 
 #[test]
-fn the_selected_row_is_filled_with_the_accent() {
+fn the_selected_row_is_filled_with_the_accent() -> Result<(), &'static str> {
     let palette = CommandPalette::new("", 0, &ENTRIES).selected(Some(2));
     let (grid, clusters) = draw(&palette, 80, 20);
-    let (x, y) = find(&grid, &clusters, "Close tab").expect("row drawn");
+    let (x, y) = find(&grid, &clusters, "Close tab").ok_or("expected command row")?;
     assert_eq!(style_at(&grid, x, y).bg, token(Token::Accent));
-    let (x, y) = find(&grid, &clusters, "Open file").expect("row drawn");
+    let (x, y) = find(&grid, &clusters, "Open file").ok_or("expected command row")?;
     assert_ne!(style_at(&grid, x, y).bg, token(Token::Accent));
+    Ok(())
 }
 
 #[test]
-fn matched_text_is_highlighted() {
+fn matched_text_is_highlighted() -> Result<(), &'static str> {
     let palette = CommandPalette::new("sav", 3, &ENTRIES);
     let (grid, clusters) = draw(&palette, 80, 20);
-    let (x, y) = find(&grid, &clusters, "Save").expect("row drawn");
+    let (x, y) = find(&grid, &clusters, "Save").ok_or("expected command row")?;
     assert_eq!(style_at(&grid, x, y).fg, token(Token::Accent));
     assert_ne!(style_at(&grid, x + 3, y).fg, token(Token::Accent));
+    Ok(())
 }
 
 #[test]
@@ -110,11 +112,11 @@ fn rows_scroll_to_keep_the_selection_visible() {
 }
 
 #[test]
-fn clicks_map_to_positions_among_the_matches() {
+fn clicks_map_to_positions_among_the_matches() -> Result<(), &'static str> {
     let area = Rect::new(0, 0, 80, 20);
     let palette = CommandPalette::new("file", 4, &ENTRIES);
     let (grid, clusters) = draw(&palette, 80, 20);
-    let (x, y) = find(&grid, &clusters, "Save file").expect("row drawn");
+    let (x, y) = find(&grid, &clusters, "Save file").ok_or("expected command row")?;
     assert_eq!(palette.entry_at(area, x, y), Some(1));
     assert_eq!(palette.entry_at(area, x, y + 1), None);
     assert_eq!(palette.entry_at(area, 0, 0), None);
@@ -122,8 +124,9 @@ fn clicks_map_to_positions_among_the_matches() {
         .max_rows(3)
         .selected(Some(4));
     let (grid, clusters) = draw(&scrolled, 80, 20);
-    let (x, y) = find(&grid, &clusters, "Toggle sidebar").expect("row drawn");
+    let (x, y) = find(&grid, &clusters, "Toggle sidebar").ok_or("expected command row")?;
     assert_eq!(scrolled.entry_at(area, x, y), Some(4));
+    Ok(())
 }
 
 #[test]
@@ -164,7 +167,7 @@ fn fuzzy_matching_finds_ordered_characters_and_their_byte_ranges() {
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].index, 3);
     assert_eq!(found[0].ranges, [0..1, 1..2, 4..5]);
-    assert!(CommandPalette::new("tps", 3, &ENTRIES).matches().is_empty());
+    assert_eq!(CommandPalette::new("tps", 3, &ENTRIES).matches(), []);
 }
 
 #[test]
@@ -178,16 +181,8 @@ fn matching_ignores_ascii_case_unless_query_contains_uppercase() {
 
 #[test]
 fn details_and_shortcuts_are_not_command_search_text() {
-    assert!(
-        CommandPalette::new("disk", 4, &ENTRIES)
-            .matches()
-            .is_empty()
-    );
-    assert!(
-        CommandPalette::new("Ctrl", 4, &ENTRIES)
-            .matches()
-            .is_empty()
-    );
+    assert_eq!(CommandPalette::new("disk", 4, &ENTRIES).matches(), []);
+    assert_eq!(CommandPalette::new("Ctrl", 4, &ENTRIES).matches(), []);
     assert_eq!(
         CommandPalette::new("s p t", 5, &ENTRIES).matches()[0].index,
         3
@@ -195,14 +190,15 @@ fn details_and_shortcuts_are_not_command_search_text() {
 }
 
 #[test]
-fn unicode_matches_highlight_whole_graphemes() {
+fn unicode_matches_highlight_whole_graphemes() -> Result<(), &'static str> {
     let entries = [PaletteEntry::new("Cafe\u{301} 界")];
     let hits = CommandPalette::new("e界", 4, &entries).matches();
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].ranges, [3..6, 7..10]);
     let (grid, clusters) = draw(&CommandPalette::new("e", 1, &entries), 80, 20);
-    let (x, y) = find(&grid, &clusters, "Cafe").unwrap();
+    let (x, y) = find(&grid, &clusters, "Cafe").ok_or("expected command row")?;
     assert_eq!(style_at(&grid, x + 3, y).fg, token(Token::Accent));
+    Ok(())
 }
 
 #[test]
@@ -220,14 +216,16 @@ fn the_query_scrolls_to_keep_its_caret_visible() {
 }
 
 #[test]
-fn caret_inside_an_emoji_or_combining_sequence_keeps_the_whole_grapheme() {
+fn caret_inside_an_emoji_or_combining_sequence_keeps_the_whole_grapheme() -> Result<(), &'static str>
+{
     for (query, caret, needle) in [("👩‍💻 run", 5, "👩‍💻"), ("e\u{301}cho", 1, "e\u{301}")]
     {
         let palette = CommandPalette::new(query, caret, &ENTRIES);
         let (grid, clusters) = draw(&palette, 80, 20);
-        let (x, y) = find(&grid, &clusters, needle).expect("whole grapheme drawn");
+        let (x, y) = find(&grid, &clusters, needle).ok_or("whole grapheme must be drawn")?;
         assert_eq!(style_at(&grid, x, y).bg, token(Token::FocusRing));
     }
+    Ok(())
 }
 
 #[test]
@@ -245,7 +243,7 @@ fn click_geometry_respects_nonzero_origins_and_panel_borders() {
 }
 
 #[test]
-fn out_of_range_selection_returns_to_the_top_without_highlighting() {
+fn out_of_range_selection_returns_to_the_top_without_highlighting() -> Result<(), &'static str> {
     let palette = CommandPalette::new("", 0, &ENTRIES)
         .max_rows(2)
         .selected(Some(usize::MAX));
@@ -253,8 +251,9 @@ fn out_of_range_selection_returns_to_the_top_without_highlighting() {
     assert!(out.contains("Open file") && out.contains("Save file"));
     assert!(!out.contains("Toggle sidebar"));
     let (grid, clusters) = draw(&palette, 80, 20);
-    let (x, y) = find(&grid, &clusters, "Open file").unwrap();
+    let (x, y) = find(&grid, &clusters, "Open file").ok_or("expected command row")?;
     assert_ne!(style_at(&grid, x, y).bg, token(Token::Accent));
+    Ok(())
 }
 
 #[test]

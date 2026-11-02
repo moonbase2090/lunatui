@@ -210,3 +210,28 @@ fn mermaid_cells_match_the_independent_fixed_diagram_reference() -> Result<(), S
     }
     Ok(())
 }
+
+#[test]
+fn command_palette_matches_an_independent_reference_in_empty_and_fuzzy_states() -> Result<(), String>
+{
+    let case = CASES
+        .iter()
+        .find(|case| case.name == "command-palette")
+        .ok_or("missing palette")?;
+    for (width, height) in SIZES {
+        for tick in 0..3 {
+            check(case, width, height, tick)?;
+            let (grid, clusters, _) = render_both(case, width, height, tick);
+            let text = grid.display_text(&clusters);
+            assert!(text.contains(match tick {
+                0 => "Close tab",
+                1 => "Open file",
+                _ => "Save file",
+            }));
+            if tick != 0 {
+                assert!(!text.contains("Close tab"));
+            }
+        }
+    }
+    Ok(())
+}

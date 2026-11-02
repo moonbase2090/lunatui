@@ -41,6 +41,7 @@ mod canvas_showcase;
 mod color_picker_showcase;
 use bar_scene::BarBoard;
 mod chart_scene;
+mod command_palette_showcase;
 mod heatmap_showcase;
 mod mermaid_showcase;
 #[expect(
@@ -102,6 +103,11 @@ const PREVIEWS: &[Preview] = &[
         name: "mermaid",
         native: mermaid_showcase::render,
         baseline: mermaid_baseline,
+    },
+    Preview {
+        name: "command-palette",
+        native: command_palette_showcase::render,
+        baseline: command_palette_baseline,
     },
     Preview {
         name: "heatmap",
@@ -7545,6 +7551,12 @@ fn terminal_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u
 
 fn mermaid_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "mermaid") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}
+
+fn command_palette_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "command-palette") {
         (case.ratatui)(buffer, area, tick);
     }
 }
