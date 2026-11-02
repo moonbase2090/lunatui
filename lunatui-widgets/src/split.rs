@@ -160,11 +160,12 @@ impl SplitTree {
     /// `ratio` is the first pane's share in thousandths (clamped to 0..=1000). Returns the new
     /// pane, or `None` when `pane` is not in the tree.
     pub fn split(&mut self, pane: PaneId, axis: SplitAxis, ratio: u16) -> Option<PaneId> {
+        let next = self.next.checked_add(1)?;
         let fresh = PaneId(self.next);
         if !split_leaf(&mut self.root, pane, axis, ratio.min(FULL), fresh) {
             return None;
         }
-        self.next += 1;
+        self.next = next;
         Some(fresh)
     }
 
@@ -272,6 +273,57 @@ impl SplitTree {
     }
 }
 
+#[cfg(feature = "split-keys")]
+impl SplitTree {
+    /// Moves `divider` by `delta` cells for keyboard resizing: positive grows the first pane, negative
+    /// the second. `area` is the area the tree fills, as passed to [`SplitTree::layout`].
+    ///
+    /// The result stops at the split's minimum sizes and keeps the one-cell divider, exactly as
+    /// [`SplitDrag`] does, and nested dividers move within their own split's area. A delta of zero
+    /// changes nothing, and one too large for the room moves the divider as far as it can go.
+    ///
+    /// Returns whether the divider exists. While a pane is zoomed no divider is on screen, so
+    /// nothing moves and the result is `false`; call [`SplitTree::zoom`] with `None` first.
+    pub fn resize(&mut self, divider: DividerId, delta: i16, area: Rect) -> bool {
+        if self.zoomed.is_some() || self.ratio(divider).is_none() {
+            return false;
+        }
+        let layout = self.layout(area);
+        let Some(line) = layout.dividers.iter().find(|line| line.id == divider) else {
+            return true;
+        };
+        if delta == 0 {
+            return true;
+        }
+        let (start, total) = match line.axis {
+            SplitAxis::Horizontal => (line.bounds.x, line.bounds.width),
+            SplitAxis::Vertical => (line.bounds.y, line.bounds.height),
+        };
+        let current = match line.axis {
+            SplitAxis::Horizontal => line.rect.x,
+            SplitAxis::Vertical => line.rect.y,
+        } - start;
+        let inner = total.saturating_sub(1);
+        let wanted = (i32::from(current) + i32::from(delta)).clamp(0, i32::from(inner));
+        let wanted = u16::try_from(wanted).unwrap_or(inner);
+        let first = clamp_first(wanted, inner, line.min_first, line.min_second);
+        self.set_ratio(divider, ratio_for(first, inner))
+    }
+
+    /// The divider to move to resize `pane` along `axis`: the nearest split of that axis around
+    /// the pane, as in tmux's resize-pane. `None` when the pane is not in the tree, when no split
+    /// around it runs along `axis`, and while a pane is zoomed (no divider is on screen then).
+    #[must_use]
+    pub fn divider_for(&self, pane: PaneId, axis: SplitAxis) -> Option<DividerId> {
+        if self.zoomed.is_some() {
+            return None;
+        }
+        let mut nearest = None;
+        enclosing_split(&self.root, pane, axis, &mut 0, &mut nearest);
+        nearest.map(DividerId)
+    }
+}
+
 impl Default for SplitTree {
     fn default() -> Self {
         Self::new().0
@@ -320,15 +372,12 @@ impl SplitDrag {
             SplitAxis::Vertical => (divider.bounds.y, row, divider.bounds.height),
         };
         let inner = total.saturating_sub(1);
-        let first = along
-            .saturating_sub(start)
-            .max(divider.min_first)
-            .min(
-                inner
-                    .saturating_sub(divider.min_second)
-                    .max(divider.min_first),
-            )
-            .min(inner);
+        let first = clamp_first(
+            along.saturating_sub(start),
+            inner,
+            divider.min_first,
+            divider.min_second,
+        );
         tree.set_ratio(divider.id, ratio_for(first, inner));
     }
 
@@ -358,6 +407,14 @@ fn first_size(ratio: u16, inner: u16, min: [u16; 2]) -> u16 {
     } else {
         raw.clamp(min[0], hi)
     }
+}
+
+/// Clamps a wanted first-pane size to the minimums and the cells a split has, as dragging and
+/// keyboard resizing both do. A minimum the area cannot hold gives way to the first pane's.
+fn clamp_first(want: u16, inner: u16, min_first: u16, min_second: u16) -> u16 {
+    want.max(min_first)
+        .min(inner.saturating_sub(min_second).max(min_first))
+        .min(inner)
 }
 
 fn ratio_for(first: u16, inner: u16) -> u16 {
@@ -497,3 +554,32 @@ fn split_ref<'a>(node: &'a Node, target: usize, counter: &mut usize) -> Option<&
     split_ref(&split.children[0], target, counter)
         .or_else(|| split_ref(&split.children[1], target, counter))
 }
+
+/// Whether `pane` is under `node`. Walks the whole subtree so `counter` ends up past all of its
+/// splits; the first split found to match is the deepest one.
+#[cfg(feature = "split-keys")]
+fn enclosing_split(
+    node: &Node,
+    pane: PaneId,
+    axis: SplitAxis,
+    counter: &mut usize,
+    nearest: &mut Option<usize>,
+) -> bool {
+    let Node::Split(split) = node else {
+        return matches!(node, Node::Leaf(id) if *id == pane);
+    };
+    let here = *counter;
+    *counter += 1;
+    let in_first = enclosing_split(&split.children[0], pane, axis, counter, nearest);
+    let in_second = enclosing_split(&split.children[1], pane, axis, counter, nearest);
+    let inside = in_first || in_second;
+    if inside && split.axis == axis && nearest.is_none() {
+        *nearest = Some(here);
+    }
+    inside
+}
+
+#[cfg(feature = "split-persist")]
+mod spec;
+#[cfg(feature = "split-persist")]
+pub use spec::SplitSpecError;

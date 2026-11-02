@@ -201,6 +201,8 @@ pub use sparkline::{
 };
 pub use spinner::{Spinner, SpinnerPattern};
 pub use spinner_preset::SpinnerPreset;
+#[cfg(feature = "split-persist")]
+pub use split::SplitSpecError;
 pub use split::{
     Divider, DividerId, PaneArea, PaneId, SplitAxis, SplitDrag, SplitLayout, SplitTree,
 };

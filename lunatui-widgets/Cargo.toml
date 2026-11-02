@@ -52,6 +52,8 @@ form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
 tooltip = []
+split-keys = []
+split-persist = []
 popover = ["popup"]
 dialog = ["popup"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
@@ -61,7 +63,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip"]
+all-widgets = ["heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "split-keys", "split-persist"]
 
 [dependencies]
 lunatui-core = { version = "0.1.20", path = "../lunatui-core" }
@@ -368,6 +370,16 @@ required-features = ["tag-input"]
 name = "pixel_gauge"
 path = "tests/pixel_gauge.rs"
 required-features = ["pixel-gauge"]
+
+[[test]]
+name = "split_keys"
+path = "tests/split_keys.rs"
+required-features = ["split-keys"]
+
+[[test]]
+name = "split_persist"
+path = "tests/split_persist.rs"
+required-features = ["split-persist"]
 
 [[test]]
 name = "pixel_progress"
