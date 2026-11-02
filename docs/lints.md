@@ -12,8 +12,8 @@ Changes to this file need MB2090 sign-off (`.github/CODEOWNERS`).
 
 | Rule | Enforced by | Mistake it prevents | Added in |
 |---|---|---|---|
-
-No rules yet.
+| Package links | `Links` workflow (`moonbase2090/.github/actions/package-links`, pinned by SHA) | A `docs.rs/<crate>` or `crates.io/crates/<crate>` link (in `site/`, Markdown, docs or rustdoc comments) to a crate that isn't published on crates.io; the registry is queried at CI time, and crates with `publish = false` fail without a query. Mark a deliberate line with `package-links: ignore` | Dead docs.rs links fixed in #277 |
+| Dead links | `Links` workflow (lychee, pinned) | External `http(s)` links in Markdown and `site/` that no longer resolve. Retries 4 times; 403/429 count as alive; loopback and private hosts are skipped | Dead docs.rs links fixed in #277 |
 
 ## Lint expectations (M16)
 
