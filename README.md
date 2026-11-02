@@ -318,7 +318,7 @@ The `lunatui-dialog` crate in a project list. The run is scripted, not interacti
 
 <img src="docs/media/ui-dialog.gif" alt="lunatui-dialog: a rename prompt, a delete confirmation with a destructive action and a deleted alert over a project list in the dark theme" width="1028">
 
-Screenshot: [docs/media/ui-dialog.png](docs/media/ui-dialog.png). Recorded from `cargo run --release -p lunatui-dialog --example ui_dialog` (120×36, 270 frames at 30 fps, truecolor, dark, about 11 seconds) with the pinned agg.
+Screenshot: [docs/media/ui-dialog.png](docs/media/ui-dialog.png). Recorded from `cargo run --release -p lunatui-dialog --example ui_dialog` (120×36, 270 frames at 30 fps, truecolor, dark, about 11 seconds).
 
 ### UI field
 
