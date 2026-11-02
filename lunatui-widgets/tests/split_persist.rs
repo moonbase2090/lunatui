@@ -3,6 +3,8 @@
 
 //! Saving and restoring a split layout: `SplitTree::to_spec` and `SplitTree::from_spec`.
 
+use std::fmt::Write;
+
 use lunatui_core::Rect;
 use lunatui_widgets::{DividerId, PaneId, SplitAxis, SplitSpecError, SplitTree};
 
@@ -25,7 +27,7 @@ const BUSY: &str = "split1;4;2;h500:0:0(0,v700:12:9(1,h250:0:0(2,3)))";
 fn nested(depth: usize) -> String {
     let mut spec = format!("split1;{};-;", depth + 2);
     for id in 0..depth {
-        spec.push_str(&format!("h500:0:0({id},"));
+        let _ = write!(spec, "h500:0:0({id},");
     }
     spec.push_str(&depth.to_string());
     spec.push_str(&")".repeat(depth));
@@ -38,7 +40,7 @@ fn nested_first(depth: usize) -> String {
     spec.push_str(&"h500:0:0(".repeat(depth));
     spec.push('0');
     for id in 1..=depth {
-        spec.push_str(&format!(",{id})"));
+        let _ = write!(spec, ",{id})");
     }
     spec
 }
