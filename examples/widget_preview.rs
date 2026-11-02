@@ -18,15 +18,14 @@ use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
-    Accordion, AccordionSection, Alignment, Axis, BigText, Block, BorderType, Breadcrumbs, Chart,
-    ComboBox, Constraint, Dataset, Date, DatePicker, DateStyle, Diff, DiffLayout, DiffView,
-    DividerId, FieldArea, Form, FormField, Gauge, GraphType, HexViewer, HexViewerState, KeyHintBar,
-    List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem, MenuState,
-    Monthly, NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph,
-    PieChart, PieSlice, PixelSize, RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox,
-    SearchMatch, Slider, Sparkline, SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table,
-    Tabs, TabsDrag, TagInput, TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource,
-    Widget, WidgetState,
+    Accordion, AccordionSection, Alignment, BigText, Block, BorderType, Breadcrumbs, ComboBox,
+    Constraint, Date, DatePicker, DateStyle, Diff, DiffLayout, DiffView, DividerId, FieldArea,
+    Form, FormField, Gauge, HexViewer, HexViewerState, KeyHintBar, List, LogBuffer, LogEntry,
+    LogLevel, LogView, MarkdownView, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
+    NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize, RadioFlow,
+    RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis,
+    SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput, TextInput,
+    ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 mod bar_scene;
@@ -39,6 +38,11 @@ mod color_picker_showcase;
 use bar_scene::BarBoard;
 mod chart_scene;
 mod heatmap_showcase;
+#[expect(
+    dead_code,
+    reason = "the cell preview does not attach native images or hide its graphs"
+)]
+mod pie_scene;
 mod progress_scene;
 mod spark_scene;
 use chart_scene::ChartBoard;
@@ -5870,195 +5874,15 @@ fn logs_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u3
 
 static PROFILE: OnceLock<Profile> = OnceLock::new();
 
-const PC_REGIONS: [(&str, f64); 5] = [
-    ("us-east", 3420.0),
-    ("eu-west", 2610.0),
-    ("ap-south", 1480.0),
-    ("us-west", 1190.0),
-    ("sa-east", 540.0),
-];
-
-fn pc_ease(tick: u32, from: u32, span: u32) -> f64 {
-    let t = f64::from(tick.saturating_sub(from).min(span)) / f64::from(span);
-    1.0 - (1.0 - t).powi(3)
-}
-
-fn pc_rates(tick: u32) -> [f64; 5] {
-    pc_rates_at(f64::from(tick))
-}
-
-fn pc_rates_at(time: f64) -> [f64; 5] {
-    let phase = time / 18.0;
-    let mut rates = [0.0; 5];
-    let mut offset = 0.0;
-    for (rate, (_, base)) in rates.iter_mut().zip(PC_REGIONS) {
-        *rate = base * (1.0 + 0.22 * (phase + offset).sin() + 0.08 * (phase * 2.3 + offset).cos());
-        offset += 1.3;
-    }
-    rates
-}
-
-fn pc_latency(rate: f64, total: f64) -> f64 {
-    38.0 + 140.0 * rate / total
-}
-
 fn pie_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
-    let surface = theme.resolve(Token::Surface0);
-    let raised = theme.resolve(Token::Surface1);
-    let text = theme.resolve(Token::TextPrimary);
-    let accent = theme.resolve(Token::Accent);
-    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
     let palette = theme.prepare(PROFILE.get().copied().unwrap_or(Profile::TrueColor));
     let mut cx = RenderCx::new(grid, clusters, theme).palette(&palette);
-    let fill = Style::new().fg(text).bg(surface);
-    let dim = fill.with_attrs(Attrs::new().set_dim(true));
-    let head = Style::new()
-        .fg(accent)
-        .bg(raised)
-        .with_attrs(Attrs::new().set_bold(true));
-    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
-    cx.put_str(
-        area.x + 1,
-        area.y,
-        "Cluster overview  ·  prod-eu-2  ·  live",
-        head,
-    );
-    let left = Rect::new(area.x + 2, area.y + 2, 70, 32);
-    let right = Rect::new(
-        left.x + left.width + 1,
-        left.y,
-        area.width.saturating_sub(left.width + 5),
-        32,
-    );
-    for (title, pane) in [(" Requests by region ", left), (" Regions ", right)] {
-        Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(title)
-            .style(fill)
-            .border_style(dim)
-            .title_style(Style::new().fg(accent).bg(surface))
-            .render(pane, &mut cx);
-    }
-    let picked = (tick >= 60).then(|| usize::try_from((tick - 60) / 36).unwrap_or(0) % 5);
-    let rates = pc_rates(tick);
-    PieChart::new(
-        PC_REGIONS
-            .iter()
-            .zip(rates)
-            .map(|((label, _), rate)| PieSlice::new(*label, rate)),
-    )
-    .marker(Marker::Braille)
-    .cell_aspect(2.3)
-    .reveal(pc_ease(tick, 4, 44))
-    .highlight(picked)
-    .state(WidgetState::Focused)
-    .render(
-        Rect::new(left.x + 3, left.y + 2, left.width - 6, 28),
+    pie_scene::draw(
+        area,
+        &pie_scene::ClusterFrame::at(tick),
+        pie_scene::Display::Cells,
         &mut cx,
     );
-    pc_table(&mut cx, right, &rates, picked, [fill, dim]);
-    pc_trend(&mut cx, right, tick, [fill, dim]);
-    StatusBar::new(" ←→ region  ●  r refresh  ●  q quit")
-        .style(Style::new().fg(text).bg(raised))
-        .render(
-            Rect::new(
-                area.x,
-                area.y + area.height.saturating_sub(1),
-                area.width,
-                1,
-            ),
-            &mut cx,
-        );
-}
-
-fn pc_table(
-    cx: &mut RenderCx<'_>,
-    pane: Rect,
-    rates: &[f64; 5],
-    picked: Option<usize>,
-    styles: [Style; 2],
-) {
-    let [fill, dim] = styles;
-    let x = pane.x + 3;
-    let top = pane.y + 2;
-    cx.put_str(x, top, "region       share   req/s    p95", dim);
-    let total: f64 = rates.iter().sum();
-    let lit = fill
-        .fg(cx.token(Token::FocusRing))
-        .with_attrs(Attrs::new().set_bold(true));
-    for (row, ((name, _), rate)) in (0_u16..).zip(PC_REGIONS.iter().zip(rates)) {
-        let share = 100.0 * rate / total;
-        let latency = pc_latency(*rate, total);
-        let style = if picked == Some(usize::from(row)) {
-            lit
-        } else {
-            fill
-        };
-        cx.put_str(
-            x,
-            top + 2 + row,
-            &format!("{name:<10} {share:>5.1}%  {rate:>6.0}  {latency:>4.0} ms"),
-            style,
-        );
-    }
-    cx.put_str(
-        x,
-        top + 8,
-        &format!("total              {total:>6.0} req/s"),
-        fill.with_attrs(Attrs::new().set_bold(true)),
-    );
-    let (name, rate) = picked.map_or(("All regions", total), |index| {
-        (PC_REGIONS[index].0, rates[index])
-    });
-    cx.put_str(
-        x,
-        top + 12,
-        name,
-        fill.fg(cx.token(Token::Accent))
-            .with_attrs(Attrs::new().set_bold(true)),
-    );
-    let detail = if picked.is_some() {
-        format!(
-            "{:.0}% of traffic  ·  p95 {:.0} ms",
-            100.0 * rate / total,
-            pc_latency(rate, total)
-        )
-    } else {
-        format!("{} regions  ·  {total:.0} req/s", PC_REGIONS.len())
-    };
-    cx.put_str(x, top + 13, &detail, dim);
-}
-
-fn pc_trend(cx: &mut RenderCx<'_>, pane: Rect, tick: u32, styles: [Style; 2]) {
-    const SECONDS: usize = 40;
-    let [fill, dim] = styles;
-    let mut points = [(0.0, 0.0); SECONDS];
-    for (at, point) in (0_u32..).zip(points.iter_mut()) {
-        let back = f64::from(u32::try_from(SECONDS).unwrap_or(0) - 1 - at);
-        let total: f64 = pc_rates_at(f64::from(tick) - back * 6.0).iter().sum();
-        *point = (f64::from(at), total);
-    }
-    let x = pane.x + 3;
-    let top = pane.y + 17;
-    cx.put_str(x, top, "total req/s", dim);
-    let sets = [Dataset::new(&points)
-        .name("total")
-        .graph_type(GraphType::Line)
-        .marker(Marker::Braille)];
-    Chart::new(&sets)
-        .background(fill)
-        .legend_position(None)
-        .x_axis(
-            Axis::new()
-                .bounds([0.0, 39.0])
-                .labels(&["-40s", "-20s", "now"]),
-        )
-        .y_axis(
-            Axis::new()
-                .bounds([8000.0, 11000.0])
-                .labels(&["8k", "9.5k", "11k"]),
-        )
-        .render(Rect::new(x, top + 1, pane.width.saturating_sub(6), 12), cx);
 }
 
 fn pie_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}

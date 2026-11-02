@@ -228,6 +228,7 @@ test = true
 [[example]]
 name = "pixel_pie_chart"
 path = "../examples/pixel_pie_chart.rs"
+test = true
 required-features = ["image-presenter"]
 
 [[example]]

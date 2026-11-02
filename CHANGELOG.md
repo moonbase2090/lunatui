@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Fixed
+
+- `PixelPieChart` draws antialiased native legend swatches when supported, preserving its native pie with the original cell legend if the optional swatch image is declined. Its comparison shows the complete original cluster, including the regions table, selected-region details and embedded trend, with held ticks and native/cells/hide controls.
+
 ## [0.1.19] - 2026-11-01
 
 ### Added

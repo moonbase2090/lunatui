@@ -92,3 +92,8 @@ helper inspector # composes selected-cell BigText, Gauge and labels
 scope lunatui-button/examples/ui_button.rs # the ui-button gallery demo
 scope lunatui-choice/examples/ui_choice.rs # the ui-choice gallery demo
 scope lunatui-field/examples/ui_field.rs # the ui-field gallery demo
+
+scope examples/pixel_pie_chart.rs # complete native PieChart and Chart twins use the runtime presenter
+scope examples/pie_scene.rs # original cluster composes PieChart, Table, Chart and text widgets
+helper pc_table # renders region rows through Table and public text widgets
+helper pc_trend # renders original rate samples through Chart and a text heading
