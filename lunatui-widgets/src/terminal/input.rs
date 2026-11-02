@@ -22,61 +22,11 @@ fn key_bytes(screen: &TerminalScreen, key: &KeyEvent) -> Option<Vec<u8>> {
         + u8::from(modifiers.is_shift())
         + 2 * u8::from(modifiers.is_alt())
         + 4 * u8::from(modifiers.is_control());
-    if let Some(tail) = match key.code {
-        KeyCode::Up => Some('A'),
-        KeyCode::Down => Some('B'),
-        KeyCode::Right => Some('C'),
-        KeyCode::Left => Some('D'),
-        KeyCode::Home => Some('H'),
-        KeyCode::End => Some('F'),
-        _ => None,
-    } {
-        return Some(
-            if value > 1 {
-                format!("\x1b[1;{value}{tail}")
-            } else if screen.application_cursor() {
-                format!("\x1bO{tail}")
-            } else {
-                format!("\x1b[{tail}")
-            }
-            .into_bytes(),
-        );
-    }
-    if let KeyCode::F(number @ 1..=4) = key.code {
-        let tail = char::from(b'P' + number - 1);
-        return Some(
-            if value == 1 {
-                format!("\x1bO{tail}")
-            } else {
-                format!("\x1b[1;{value}{tail}")
-            }
-            .into_bytes(),
-        );
-    }
-    let number = match key.code {
-        KeyCode::Insert => Some(2),
-        KeyCode::Delete => Some(3),
-        KeyCode::PageUp => Some(5),
-        KeyCode::PageDown => Some(6),
-        KeyCode::F(5) => Some(15),
-        KeyCode::F(6) => Some(17),
-        KeyCode::F(7) => Some(18),
-        KeyCode::F(8) => Some(19),
-        KeyCode::F(9) => Some(20),
-        KeyCode::F(10) => Some(21),
-        KeyCode::F(11) => Some(23),
-        KeyCode::F(12) => Some(24),
-        _ => None,
-    };
-    if let Some(number) = number {
-        return Some(
-            if value == 1 {
-                format!("\x1b[{number}~")
-            } else {
-                format!("\x1b[{number};{value}~")
-            }
-            .into_bytes(),
-        );
+    if let Some(sequence) = SEQUENCES
+        .iter()
+        .find_map(|(code, sequence)| (*code == key.code).then_some(sequence))
+    {
+        return Some(sequence_bytes(screen, sequence, value));
     }
     let mut bytes = match key.code {
         KeyCode::Char(ch) if modifiers.is_control() => vec![control(ch)?],
@@ -96,6 +46,63 @@ fn key_bytes(screen: &TerminalScreen, key: &KeyEvent) -> Option<Vec<u8>> {
         bytes.insert(0, 0x1b);
     }
     Some(bytes)
+}
+enum Sequence {
+    Cursor(char),
+    Function(char),
+    Tilde(u8),
+}
+const SEQUENCES: [(KeyCode, Sequence); 22] = [
+    (KeyCode::Up, Sequence::Cursor('A')),
+    (KeyCode::Down, Sequence::Cursor('B')),
+    (KeyCode::Right, Sequence::Cursor('C')),
+    (KeyCode::Left, Sequence::Cursor('D')),
+    (KeyCode::Home, Sequence::Cursor('H')),
+    (KeyCode::End, Sequence::Cursor('F')),
+    (KeyCode::F(1), Sequence::Function('P')),
+    (KeyCode::F(2), Sequence::Function('Q')),
+    (KeyCode::F(3), Sequence::Function('R')),
+    (KeyCode::F(4), Sequence::Function('S')),
+    (KeyCode::Insert, Sequence::Tilde(2)),
+    (KeyCode::Delete, Sequence::Tilde(3)),
+    (KeyCode::PageUp, Sequence::Tilde(5)),
+    (KeyCode::PageDown, Sequence::Tilde(6)),
+    (KeyCode::F(5), Sequence::Tilde(15)),
+    (KeyCode::F(6), Sequence::Tilde(17)),
+    (KeyCode::F(7), Sequence::Tilde(18)),
+    (KeyCode::F(8), Sequence::Tilde(19)),
+    (KeyCode::F(9), Sequence::Tilde(20)),
+    (KeyCode::F(10), Sequence::Tilde(21)),
+    (KeyCode::F(11), Sequence::Tilde(23)),
+    (KeyCode::F(12), Sequence::Tilde(24)),
+];
+fn sequence_bytes(screen: &TerminalScreen, sequence: &Sequence, value: u8) -> Vec<u8> {
+    match sequence {
+        Sequence::Cursor(tail) => {
+            if value > 1 {
+                format!("\x1b[1;{value}{tail}")
+            } else if screen.application_cursor() {
+                format!("\x1bO{tail}")
+            } else {
+                format!("\x1b[{tail}")
+            }
+        }
+        Sequence::Function(tail) => {
+            if value == 1 {
+                format!("\x1bO{tail}")
+            } else {
+                format!("\x1b[1;{value}{tail}")
+            }
+        }
+        Sequence::Tilde(number) => {
+            if value == 1 {
+                format!("\x1b[{number}~")
+            } else {
+                format!("\x1b[{number};{value}~")
+            }
+        }
+    }
+    .into_bytes()
 }
 fn control(ch: char) -> Option<u8> {
     match ch {

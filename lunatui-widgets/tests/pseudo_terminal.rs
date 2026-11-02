@@ -261,6 +261,22 @@ fn navigation_function_and_modified_keys_use_literal_xterm_sequences() -> Test {
     let screen = screen(10, 2, b"")?;
     let view = PseudoTerminal::new(&screen).state(WidgetState::Focused);
     for (code, modifiers, expected) in [
+        (KeyCode::Up, Modifiers::new(), "\x1b[A"),
+        (KeyCode::Down, Modifiers::new(), "\x1b[B"),
+        (KeyCode::Right, Modifiers::new(), "\x1b[C"),
+        (KeyCode::End, Modifiers::new(), "\x1b[F"),
+        (KeyCode::Insert, Modifiers::new(), "\x1b[2~"),
+        (KeyCode::PageUp, Modifiers::new(), "\x1b[5~"),
+        (KeyCode::PageDown, Modifiers::new(), "\x1b[6~"),
+        (KeyCode::F(2), Modifiers::new(), "\x1bOQ"),
+        (KeyCode::F(3), Modifiers::new(), "\x1bOR"),
+        (KeyCode::F(2), Modifiers::new().control(), "\x1b[1;5Q"),
+        (KeyCode::F(6), Modifiers::new(), "\x1b[17~"),
+        (KeyCode::F(7), Modifiers::new(), "\x1b[18~"),
+        (KeyCode::F(8), Modifiers::new(), "\x1b[19~"),
+        (KeyCode::F(9), Modifiers::new(), "\x1b[20~"),
+        (KeyCode::F(10), Modifiers::new(), "\x1b[21~"),
+        (KeyCode::F(11), Modifiers::new(), "\x1b[23~"),
         (KeyCode::F(1), Modifiers::new(), "\x1bOP"),
         (KeyCode::F(4), Modifiers::new(), "\x1bOS"),
         (KeyCode::F(5), Modifiers::new(), "\x1b[15~"),
