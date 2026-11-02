@@ -467,3 +467,69 @@ fn an_ordinary_submit_only_sink_keeps_its_native_pie_and_cell_legend()
     );
     Ok(())
 }
+
+#[test]
+fn a_three_cell_legend_below_the_disc_still_uses_native_swatches()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut images = LegendCapture::default();
+    let mut grid = Grid::new(3, 8);
+    let mut clusters = ClusterTable::new();
+    let theme = Theme::builtin(Variant::Dark);
+    grid.fill(
+        Rect::new(0, 0, 3, 8),
+        Style::new().bg(Color::Rgb(10, 20, 30)),
+        ' ',
+        &mut clusters,
+    );
+    widget(legend_spec())?.render(
+        Rect::new(0, 0, 3, 8),
+        &mut RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(&mut images),
+    );
+    assert_eq!(images.pies, [Rect::new(0, 0, 3, 1)]);
+    assert_eq!(images.strips[0].0, Rect::new(0, 2, 1, 2));
+    assert_eq!(pixel(&images.strips[0].1, 4, 8), [255, 0, 0, 255]);
+    assert_eq!(
+        glyph(&grid, 0, 2),
+        Some(lunatui_core::DecodedGlyph::Inline(' '))
+    );
+    assert_eq!(
+        glyph(&grid, 2, 2),
+        Some(lunatui_core::DecodedGlyph::Inline(' '))
+    );
+    Ok(())
+}
+
+#[test]
+fn zero_shares_and_focus_styles_remain_cell_text_beside_native_swatches()
+-> Result<(), Box<dyn std::error::Error>> {
+    let spec = PieChart::new([
+        PieSlice::new("red", 0.0).color(Color::Rgb(255, 0, 0)),
+        PieSlice::new("green", 0.0).color(Color::Rgb(0, 255, 0)),
+    ])
+    .cell_aspect(2.0)
+    .highlight(Some(0))
+    .state(lunatui_widgets::WidgetState::Focused);
+    let mut images = LegendCapture::default();
+    let grid = legend_draw(&widget(spec)?, &mut images, Color::Rgb(30, 40, 50));
+    assert_eq!(images.strips[0].0, Rect::new(22, 4, 1, 2));
+    assert_eq!(
+        glyph(&grid, 32, 4),
+        Some(lunatui_core::DecodedGlyph::Inline('0'))
+    );
+    assert_eq!(
+        glyph(&grid, 33, 4),
+        Some(lunatui_core::DecodedGlyph::Inline('%'))
+    );
+    let focused = grid.get(24, 4).ok_or("focused label")?.style();
+    assert!(focused.attrs.bold());
+    assert!(!focused.attrs.dim());
+    assert_eq!(
+        focused.fg,
+        Theme::builtin(Variant::Dark).resolve(lunatui_theme::Token::FocusRing)
+    );
+    let other = grid.get(31, 5).ok_or("unfocused percentage")?.style();
+    assert!(other.attrs.dim());
+    assert!(!other.attrs.bold());
+    assert_eq!(pixel(&images.strips[0].1, 4, 8), [255, 0, 0, 255]);
+    Ok(())
+}

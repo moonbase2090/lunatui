@@ -4,13 +4,12 @@
 use std::cell::RefCell;
 use std::f64::consts::{FRAC_PI_2, TAU};
 
-use lunatui_core::{Rect, Size};
+use lunatui_core::{Color, Rect, Size};
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSource, PixelSize};
 use tiny_skia::{FillRule, Mask, Path, PathBuilder, Transform};
 
 use super::{Disc, EXPLODE, LegendMarks, PieChart, Sectors, palette};
 use crate::{Marker, RenderCx, Widget};
-use lunatui_core::Color;
 
 /// An antialiased pie or donut, using the frame's image presenter when available.
 ///
@@ -182,22 +181,14 @@ impl PixelPieChart {
             return false;
         }
         self.chart.draw_center(cx, layout.pie);
-        let marks = self.draw_native_legend(cx, &chart_palette, layout.legend);
+        let marks = self
+            .submit_legend(cx, &chart_palette, layout.legend)
+            .map_or(LegendMarks::Cells, |()| LegendMarks::NativeAccepted);
         cx.keep_backgrounds(layout.legend, |cx| {
             self.chart
                 .draw_legend_with_marks(cx, &chart_palette, layout.legend, marks);
         });
         true
-    }
-
-    fn draw_native_legend(
-        &self,
-        cx: &mut RenderCx<'_>,
-        palette: &[Color],
-        legend: Rect,
-    ) -> LegendMarks {
-        self.submit_legend(cx, palette, legend)
-            .map_or(LegendMarks::Cells, |()| LegendMarks::NativeAccepted)
     }
 
     fn submit_legend(&self, cx: &mut RenderCx<'_>, palette: &[Color], legend: Rect) -> Option<()> {
