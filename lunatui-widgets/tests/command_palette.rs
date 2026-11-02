@@ -154,7 +154,7 @@ fn a_zero_sized_area_draws_nothing() {
     let mut clusters = ClusterTable::new();
     let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
     CommandPalette::new("", 0, &ENTRIES).render(Rect::new(0, 0, 0, 0), &mut cx);
-    assert_eq!(grid.display_text(&clusters), "    \n    \n    \n    ");
+    assert_eq!(grid.display_text(&clusters), "    \n    \n    \n    \n");
 }
 
 #[test]
