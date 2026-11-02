@@ -23,6 +23,7 @@ Every PR adds its entry under **Unreleased**.
 - Quickstart template borders use the bundled full monospace font, so box-drawing glyphs align with their text cells across browser engines.
 
 - `Timeline`, behind the opt-in `timeline` feature: labeled lanes of spans and milestones on a scrollable time axis, with progress, four semantic statuses, app-placed ticks, a now marker, selection, disabled swatches, a `TimelineView` for pan, zoom and reveal, and shared geometry for `x_at`, `time_at` and `item_at`. Revealing a milestone at the exclusive view end pans it into the visible range. The release-plan showcase follows now, zooms out to check a milestone, and moves the selection through the lanes.
+- `TextArea`, behind the opt-in `text-area` feature: a multi-line editor with grapheme-aware cursor and selection, bounded undo/redo, search, bracketed paste, line numbers, and Emacs or Vim keymaps through the runtime registry. Focus and disabled styles use semantic theme tokens, while enabling the widget preserves the application's base palette.
 
 ## [0.1.20] - 2026-11-02
 
@@ -218,7 +219,6 @@ Every PR adds its entry under **Unreleased**.
 - `BarChart` widget, behind the `barchart` feature, with `Bar`, `BarGroup`, and `BarDirection`. It draws vertical or horizontal bars with eighth-block ends, bar width, bar gap and group gap, labels, and value text on or beside the bar. Without a style, bars take theme tokens for the `WidgetState`.
 - `MarkdownView` widget, behind the `markdown` feature: it draws a parsed Markdown `Document` wrapped to the area's width, with headings and rules, lists and task items, block quotes, code blocks, boxed tables, and styled inline text, scrolls by rows, reports its `content_height` for a scrollbar, and follows `WidgetState` and an optional background style.
 - An `Image` widget, behind the opt-in `image` feature, with bounded PNG, JPEG, GIF, and WebP decoding under `image-decode`, a half-block fallback, and optional Kitty pixel presentation under `image-presenter`.
-- `TextArea`, behind the opt-in `text-area` feature: a multi-line editor with grapheme-aware cursor and selection, bounded undo/redo, search, bracketed paste, line numbers, and Emacs or Vim keymaps through the runtime registry. Focus and disabled styles use Graphite tokens.
 
 ### Changed
 

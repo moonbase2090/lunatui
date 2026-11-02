@@ -1,4 +1,7 @@
-//! Behavioral tests for `TextArea` editing and input handling.
+// Copyright (c) 2026 Moonbase 2090 LLC
+// SPDX-License-Identifier: MIT
+
+#![doc = include_str!("../README.md")]
 #![cfg(feature = "text-area")]
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};

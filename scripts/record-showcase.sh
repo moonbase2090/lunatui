@@ -48,9 +48,9 @@ NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
 python3 -I "$ROOT/scripts/check-box-joins.py" "$AGG" "$LINE_HEIGHT"
 FEATURES=(color-profiles)
-if [[ "$CASE" == "text-area" ]]; then FEATURES+=(text-area); fi
+if [[ "$CASE" == "text-area" ]]; then FEATURES+=(text-area lunatui-theme/graphite-tokens); fi
 cargo build -q --release -p lunatui --features "${FEATURES[*]}" --example widget_preview
-BIN="$ROOT/target/release/examples/widget_preview"
+BIN="target/release/examples/widget_preview"
 cast="$OUT/${NAME}.cast"
 asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "lunatui ${CASE}" \
   -c "$(printf '%q ' "$BIN" --side lunatui --case "$CASE" --width "$WIDTH" --height "$HEIGHT" --frames "$FRAMES" --fps "$FPS" --profile "$PROFILE" --theme "$THEME")" \

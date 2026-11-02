@@ -37,7 +37,7 @@ MAX_BYTES="${MAX_BYTES:-2000000}"
 NAME="${CASE}-${WIDTH}x${HEIGHT}-${PROFILE}-${THEME}"
 mkdir -p "$OUT"
 FEATURES=(color-profiles)
-if [[ "$CASE" == "text-area" ]]; then FEATURES+=(text-area); fi
+if [[ "$CASE" == "text-area" ]]; then FEATURES+=(text-area lunatui-theme/graphite-tokens); fi
 for value in "$WIDTH" "$HEIGHT" "$FRAMES" "$FPS"; do
   if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
     echo "record-widget: sizes, frames and fps must be positive integers" >&2
@@ -86,7 +86,7 @@ if [[ "$CASE" == "image" ]]; then
   exit 0
 fi
 cargo build -q --release -p lunatui --features "${FEATURES[*]}" --example widget_preview
-BIN="$ROOT/target/release/examples/widget_preview"
+BIN="target/release/examples/widget_preview"
 ARGS=(--case "$CASE" --width "$WIDTH" --height "$HEIGHT" --frames "$FRAMES" --fps "$FPS" --profile "$PROFILE" --theme "$THEME")
 for side in lunatui ratatui; do
   asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "${side} ${CASE}" \

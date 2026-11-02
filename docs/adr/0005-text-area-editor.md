@@ -26,7 +26,7 @@ Bracketed paste buffers its chunks and applies them as one undo edit at the clos
 
 The widget stores explicit vertical and horizontal scroll offsets. Rendering computes a temporary viewport from those offsets, the cursor, and the available rectangle. If the cursor falls outside the viewport, the rendered viewport follows it without mutating the widget. Vertical movement keeps the preferred display column across short lines. Horizontal clipping skips a wide grapheme that would be cut at either edge.
 
-The opt-in `text-area` feature enables `WidgetState`, `lunatui-theme/graphite-tokens`, and the runtime keymap and terminal event dependencies. The widget uses semantic theme tokens for text, borders, cursor, selection, search, gutter, and status. It does not store fixed colors.
+The opt-in `text-area` feature enables `WidgetState`, `lunatui-theme/graphite-extensions`, and the runtime keymap and terminal event dependencies. The widget uses semantic theme tokens for text, borders, cursor, selection, search, gutter, and status. It does not store fixed colors or change the application's base palette. The recording scripts explicitly enable `lunatui-theme/graphite-tokens` to select the full Graphite palette for the demo.
 
 ## Usage
 
