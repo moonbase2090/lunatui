@@ -86,3 +86,16 @@ WIDTH=100 HEIGHT=32 FONT_SIZE=16 FPS=30 SECONDS_TO_RECORD=4 scripts/record-pixel
 ```
 
 The terminal scales the picture to its cells, so compare colors inside the large flat areas (the status bar and the palette background), not edge pixels.
+
+## Full PieChart comparison
+
+Capture the complete 120×36 cluster twice in a 248×44 terminal at a held tick:
+
+```sh
+EXAMPLE=pixel_pie_chart FEATURES=image-presenter WIDTH=248 HEIGHT=44 FONT_SIZE=12 \
+  FPS=30 SECONDS_TO_RECORD=10 KEYS='1:b,2:b,3:space,4:space,5:Right,6:u' \
+  OUT=target/pie-capture bash scripts/record-pixels.sh --compare --hold 96
+python3 scripts/check-pie-recording.py target/pie-capture
+```
+
+The checker samples the native, cells, native again, hidden, restored, selected-region and advanced-tick holds from the actual video. There are five distinct states because the three native holds match exactly. To verify the original cell renderer after a scene change, run `python3 scripts/check-pie-cells.py --base <previous-commit> --head HEAD`. It compares four complete 240-frame streams across sizes, themes and color profiles.
