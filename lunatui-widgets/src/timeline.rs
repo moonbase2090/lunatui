@@ -602,8 +602,6 @@ impl<'a> Timeline<'a> {
         let label = clip_display_prefix(item.label, last - first);
         cx.put_str(x, y, label, label_style);
         if !disabled {
-            // The label was written in the finished style; its cells past the split go back
-            // to the track style so text color follows the background under it.
             let written = u16::try_from(width(label)).unwrap_or(0);
             let tail = first.saturating_add(written).min(last);
             if split < tail {
@@ -695,7 +693,6 @@ impl Layout {
         -(-self.scaled(at)).div_euclid(self.len)
     }
 
-    /// Visible columns `first..last` relative to the lane area, or `None` when off-screen.
     fn columns(&self, item: &TimelineItem<'_>) -> Option<(u16, u16)> {
         let width = self.width_limit();
         let (first, last) = match item.kind {
@@ -717,8 +714,6 @@ impl Layout {
         ))
     }
 
-    /// The column where a span's finished share ends, relative to the lane area and clamped
-    /// to it. `None` for a solid span: one without progress that is not planned.
     fn progress_column(&self, item: &TimelineItem<'_>) -> Option<u16> {
         let Kind::Span { start, end } = item.kind else {
             return None;

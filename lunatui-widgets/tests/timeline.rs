@@ -36,7 +36,6 @@ fn color(token: Token) -> Color {
 
 #[test]
 fn spans_fill_their_columns_with_the_status_color_and_label() {
-    // 0..100 over 20 columns is five units per column: 10..40 is columns 2..8.
     let items = [TimelineItem::span(10, 40)
         .label("build")
         .status(TimelineStatus::Done)];
@@ -76,7 +75,6 @@ fn each_status_uses_its_semantic_token() {
 
 #[test]
 fn progress_splits_a_span_into_finished_and_track_columns() {
-    // Columns 0..10, 40% finished: 0..4 keep the status color, 4..10 use the track.
     let items = [TimelineItem::span(0, 50).label("migrate").progress(40)];
     let lanes = [TimelineLane::new("", &items)];
     let timeline = Timeline::new(&lanes).view(TimelineView::new(0, 100));
@@ -89,7 +87,6 @@ fn progress_splits_a_span_into_finished_and_track_columns() {
     for x in 4..10 {
         assert_eq!(style(&grid, x, 0).bg, color(Token::Surface1), "column {x}");
     }
-    // Label text over the track switches to the readable track foreground.
     assert_eq!(style(&grid, 5, 0).fg, color(Token::TextPrimary));
     assert_eq!(style(&grid, 10, 0).bg, color(Token::Surface0));
 }
@@ -103,7 +100,6 @@ fn planned_spans_without_progress_are_all_track_and_others_are_solid() {
     let lanes = [TimelineLane::new("", &items)];
     let timeline = Timeline::new(&lanes).view(TimelineView::new(0, 40));
     let (grid, clusters) = draw(&timeline, Rect::new(0, 0, 8, 1), 8, 1);
-    // The four-column span clips its label.
     assert_eq!(grid.row_display(0, &clusters), "late    ");
     for x in 0..4 {
         assert_eq!(style(&grid, x, 0).bg, color(Token::Surface1), "column {x}");
@@ -129,7 +125,6 @@ fn progress_over_one_hundred_finishes_the_span() {
 
 #[test]
 fn short_spans_keep_one_cell_and_partial_columns_round_outward() {
-    // 7..8 is inside column 1 (5..10); 12..21 touches columns 2, 3 and 4.
     let items = [
         TimelineItem::span(7, 8).progress(100),
         TimelineItem::span(12, 21).progress(100),
@@ -197,7 +192,6 @@ fn ticks_draw_labels_at_their_time_and_marks_on_the_rule() {
         .view(TimelineView::new(0, 100))
         .ticks(&ticks);
     let (grid, clusters) = draw(&timeline, Rect::new(0, 0, 20, 3), 20, 3);
-    // Tuesday starts at column 5 and clips one cell before Wed at column 10.
     assert_eq!(grid.row_display(0, &clusters), "Mon  Tues Wed       ");
     assert_eq!(grid.row_display(1, &clusters), "┬────┬────┬─────────");
     assert_eq!(style(&grid, 0, 2).bg, color(Token::Accent));
@@ -240,7 +234,6 @@ fn panning_moves_items_and_clips_spans_at_the_view_edges() {
     let view = TimelineView::new(0, 100).pan(20);
     let timeline = Timeline::new(&lanes).view(view);
     let (grid, clusters) = draw(&timeline, Rect::new(0, 0, 20, 1), 20, 1);
-    // 20..120: the span keeps columns 0..2, the milestone moves from 18 to 14.
     assert_eq!(grid.row_display(0, &clusters), "ea            ◆     ");
     assert_eq!(style(&grid, 1, 0).bg, color(Token::Accent));
     assert_eq!(style(&grid, 2, 0).bg, color(Token::Surface0));
@@ -354,9 +347,7 @@ fn x_at_and_time_at_share_the_render_geometry() {
     assert_eq!(timeline.time_at(area, 7), None);
     assert_eq!(timeline.time_at(area, 28), None);
 
-    // Zoomed in past one unit per column, several columns share a time.
     let zoomed = Timeline::new(&lanes).view(TimelineView::new(0, 4));
-    // Five columns per unit from column 8: 8..13 is time 0, 13..18 is time 1.
     assert_eq!(zoomed.time_at(area, 12), Some(0));
     assert_eq!(zoomed.time_at(area, 13), Some(1));
     assert_eq!(zoomed.time_at(area, 17), Some(1));
@@ -456,7 +447,6 @@ fn view_arithmetic_saturates_at_the_time_range() {
     let all = TimelineView::new(i64::MIN, i64::MAX);
     assert_eq!(all.zoom_out(), all);
     assert_eq!(TimelineView::new(i64::MAX, i64::MAX).len(), 1);
-    // Extreme views still render without overflow.
     let items = [TimelineItem::span(i64::MIN, i64::MAX).progress(100)];
     let lanes = [TimelineLane::new("", &items)];
     let (grid, _) = draw(

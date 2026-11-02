@@ -9,10 +9,8 @@ use lunatui_widgets::{
     TimelineTick, TimelineView, Widget, WidgetState,
 };
 
-/// Times are minutes from Monday, November 2, 00:00.
 const HOUR: i64 = 60;
 const DAY: i64 = 24 * HOUR;
-/// The close view spans eight days; the overview spans sixteen.
 const CLOSE: i64 = 8 * DAY;
 const OVERVIEW: i64 = 16 * DAY;
 
@@ -37,7 +35,6 @@ const DAYS: [&str; 17] = [
 ];
 const WEEKS: [&str; 3] = ["Nov 02", "Nov 09", "Nov 16"];
 
-/// The current time: Thursday 02:00, advancing 18 minutes a frame.
 fn now(tick: u32) -> i64 {
     3 * DAY + 2 * HOUR + i64::from(tick) * 18
 }
@@ -63,7 +60,6 @@ fn h(day: i64, hour: i64) -> i64 {
     day * DAY + hour * HOUR
 }
 
-/// One lane's items: (start, end, label, status, progress, milestone).
 type Plan = (i64, i64, &'static str, TimelineStatus, Option<u8>, bool);
 
 fn plan(lane: usize, tick: u32) -> Vec<Plan> {
@@ -138,7 +134,6 @@ fn item(&(start, end, label, status, progress, milestone): &Plan) -> TimelineIte
     }
 }
 
-/// The app-owned selection, moved the way arrow keys would move it.
 fn selected(tick: u32) -> TimelineItemId {
     let (lane, item) = match tick {
         0..90 => (2, 0),
@@ -218,7 +213,6 @@ pub fn render(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area:
         );
         return;
     }
-    // The schedule panel fits 12 lanes, the axis header, and the legend exactly.
     let body_height = 20;
     let schedule_area = Rect::new(area.x + 2, area.y + 4, area.width - 34, body_height);
     let inner = panel(&mut cx, schedule_area, " Schedule ", ground);

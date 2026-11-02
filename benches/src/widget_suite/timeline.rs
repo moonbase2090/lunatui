@@ -27,7 +27,6 @@ fn view_start(tick: u32) -> i64 {
     i64::from(tick % 150) * 2 - 40
 }
 
-/// The items for lane `lane`: a span with progress, a second span, and a milestone.
 fn plan(lane: usize, tick: u32) -> [(i64, i64, Option<u8>, TimelineStatus, bool); 3] {
     let index = i64::try_from(lane).unwrap_or(0);
     let start = index * 22;
@@ -101,8 +100,6 @@ pub(super) fn native(
         .render(area, &mut RenderCx::new(grid, clusters, theme));
 }
 
-/// Draws the same scene straight into a ratatui `Buffer` from the documented geometry:
-/// `floor` columns for starts, `ceil` for span ends, at least one cell per span.
 pub(super) fn baseline(buffer: &mut Buffer, area: RatRect, tick: u32) {
     let theme = Theme::builtin(Variant::Dark);
     let color = |token| rat_color(theme.resolve(token));
@@ -178,7 +175,6 @@ pub(super) fn baseline(buffer: &mut Buffer, area: RatRect, tick: u32) {
             }
             let first = floor(at);
             let last = ceil(end).max(first + 1);
-            // A planned span without progress has not started and is all track.
             let unstarted = if status == TimelineStatus::Planned {
                 first
             } else {
