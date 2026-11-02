@@ -5,7 +5,7 @@ use lunatui_core::Rect;
 
 use crate::HitId;
 
-/// Spacing between the `z` values of adjacent layers, so an app can slot its own regions between.
+// Spacing between the `z` values of adjacent layers, so an app can slot its own regions between.
 const Z_STEP: u16 = 100;
 
 /// Identifies one layer in a [`LayerStack`].
