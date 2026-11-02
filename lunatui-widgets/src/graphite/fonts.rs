@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Host-owned fonts for the Graphite text metrics bridge.
+#![doc = include_str!("../../README.md")]
 
 use unicode_segmentation::UnicodeSegmentation;
 
