@@ -16,7 +16,7 @@ if [[ "${RENDER_ONLY:-0}" != 1 ]]; then
   python3 scripts/terminal-fixture.py target/terminal-demo
   # Prebuild only. Both captured test runs still execute real tests in the child PTY.
   env -u CARGO_TARGET_DIR cargo test --quiet --manifest-path target/terminal-demo/Cargo.toml
-  cargo build --locked --release -p lunatui --features app,color-profiles --example embedded_terminal
+  CARGO_TARGET_DIR="$ROOT/target" cargo build --locked --release -p lunatui --features app,color-profiles --example embedded_terminal
   python3 scripts/capture-terminal.py "$OUT/$NAME.cast" "$WIDTH" "$HEIGHT" 300 30 "$PROFILE" "$THEME"
 fi
 python3 scripts/check-terminal-cast.py "$OUT/$NAME.cast"

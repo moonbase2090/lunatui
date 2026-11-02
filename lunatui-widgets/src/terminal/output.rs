@@ -13,7 +13,6 @@ enum Mode {
         discard: bool,
     },
 }
-/// Caps strings before the parser's dynamically sized OSC buffer can grow.
 #[derive(Default)]
 pub(super) struct OutputFilter {
     mode: Mode,

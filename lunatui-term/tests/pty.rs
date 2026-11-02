@@ -119,8 +119,10 @@ fn dropping_a_pane_kills_and_reaps_its_direct_child() -> Test {
         "closing a pane waited for the command to finish"
     );
     let mut status = 0;
-    // SAFETY: this only checks the exact child PID retained above, without sending a signal.
-    let result = unsafe { libc::waitpid(pid, &raw mut status, libc::WNOHANG) };
+    let result = {
+        // SAFETY: checks the retained child PID without sending any signal.
+        unsafe { libc::waitpid(pid, &raw mut status, libc::WNOHANG) }
+    };
     assert_eq!(result, -1);
     assert_eq!(
         io::Error::last_os_error().raw_os_error(),

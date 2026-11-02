@@ -175,7 +175,6 @@ impl Workspace {
     fn poll(&mut self) -> io::Result<()> {
         self.process.flush_input()?;
         let mut bytes = [0_u8; 4096];
-        // Limit each frame's work even when the child continuously writes.
         for _ in 0..8 {
             match self.process.read(&mut bytes) {
                 Ok(0) => break,

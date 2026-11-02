@@ -101,15 +101,17 @@ impl PtyProcess {
             return Ok(());
         }
         let winsize = window_size(size);
-        // SAFETY: master is an owned PTY descriptor and winsize is a valid input structure.
-        if unsafe {
-            libc::ioctl(
-                self.master.as_raw_fd(),
-                libc::TIOCSWINSZ,
-                &raw const winsize,
-            )
-        } == -1
-        {
+        let result = {
+            // SAFETY: master owns a live PTY descriptor and winsize is initialized input.
+            unsafe {
+                libc::ioctl(
+                    self.master.as_raw_fd(),
+                    libc::TIOCSWINSZ,
+                    &raw const winsize,
+                )
+            }
+        };
+        if result == -1 {
             return Err(io::Error::last_os_error());
         }
         self.size = size;
@@ -194,9 +196,11 @@ impl PtyProcess {
             return Ok(status);
         }
         let pid = i32::try_from(self.child.id()).map_err(io::Error::other)?;
-        // SAFETY: setsid made this unreaped child its own process-group leader.
-        // Its PID cannot be reused before we reap it; no signal is sent after reaping.
-        if unsafe { libc::kill(-pid, libc::SIGKILL) } == -1 {
+        let result = {
+            // SAFETY: the unreaped child owns this group; its PID cannot yet be reused.
+            unsafe { libc::kill(-pid, libc::SIGKILL) }
+        };
+        if result == -1 {
             let error = io::Error::last_os_error();
             if error.raw_os_error() != Some(libc::ESRCH) {
                 return Err(error);
@@ -209,7 +213,6 @@ impl PtyProcess {
 }
 
 impl Read for PtyProcess {
-    /// Reads without blocking. `WouldBlock` means no child output is available yet.
     fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
         if buffer.is_empty() || self.eof {
             return Ok(0);
@@ -219,7 +222,6 @@ impl Read for PtyProcess {
                 self.eof = true;
                 Ok(0)
             }
-            // Linux reports EIO after all slave descriptors close.
             Err(error) if error.raw_os_error() == Some(libc::EIO) => {
                 self.eof = true;
                 Ok(0)
@@ -248,37 +250,49 @@ fn open(size: PtySize) -> io::Result<(File, File)> {
     let mut master = -1;
     let mut slave = -1;
     let mut winsize = window_size(size);
-    // SAFETY: output pointers and the initialized size are valid. No termios is supplied.
-    if unsafe {
-        libc::openpty(
-            &raw mut master,
-            &raw mut slave,
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-            &raw mut winsize,
-        )
-    } == -1
-    {
+    let opened = {
+        // SAFETY: output pointers and initialized winsize are valid; no termios is supplied.
+        unsafe {
+            libc::openpty(
+                &raw mut master,
+                &raw mut slave,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &raw mut winsize,
+            )
+        }
+    };
+    if opened == -1 {
         return Err(io::Error::last_os_error());
     }
-    // SAFETY: successful openpty returned two distinct owned descriptors.
-    let master = unsafe { File::from_raw_fd(master) };
-    // SAFETY: ownership of the second descriptor has not been transferred before this point.
-    let slave = unsafe { File::from_raw_fd(slave) };
+    let master = {
+        // SAFETY: successful openpty returned this distinct owned descriptor.
+        unsafe { File::from_raw_fd(master) }
+    };
+    let slave = {
+        // SAFETY: ownership of this second live descriptor has not been transferred yet.
+        unsafe { File::from_raw_fd(slave) }
+    };
     for file in [&master, &slave] {
-        // SAFETY: file owns this live descriptor; fcntl does not retain a pointer.
-        if unsafe { libc::fcntl(file.as_raw_fd(), libc::F_SETFD, libc::FD_CLOEXEC) } == -1 {
+        let result = {
+            // SAFETY: file owns the live descriptor; fcntl retains no pointer.
+            unsafe { libc::fcntl(file.as_raw_fd(), libc::F_SETFD, libc::FD_CLOEXEC) }
+        };
+        if result == -1 {
             return Err(io::Error::last_os_error());
         }
     }
-    // SAFETY: master is an owned descriptor and these commands take integer flags only.
-    let flags = unsafe { libc::fcntl(master.as_raw_fd(), libc::F_GETFL) };
+    let flags = {
+        // SAFETY: master owns the descriptor and this command reads integer flags.
+        unsafe { libc::fcntl(master.as_raw_fd(), libc::F_GETFL) }
+    };
     if flags == -1 {
         return Err(io::Error::last_os_error());
     }
-    // SAFETY: the owned descriptor receives its existing flags plus nonblocking mode.
-    let nonblocking =
-        unsafe { libc::fcntl(master.as_raw_fd(), libc::F_SETFL, flags | libc::O_NONBLOCK) };
+    let nonblocking = {
+        // SAFETY: the owned descriptor receives its flags plus nonblocking mode.
+        unsafe { libc::fcntl(master.as_raw_fd(), libc::F_SETFL, flags | libc::O_NONBLOCK) }
+    };
     if nonblocking == -1 {
         return Err(io::Error::last_os_error());
     }
