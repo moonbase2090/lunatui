@@ -8,7 +8,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 - [`RenderCx`](src/render_cx.rs): grid, cluster table, and theme for token-aware drawing. Optional `color-profiles` feature adds `profile` for ANSI16/256 downsampling in `token`.
 - `WidgetState` (normal, focused, disabled) sits behind `widget-state`, enabled by the default `pixel-pie-chart` feature. `barchart`, `bigtext`, `calendar`, `canvas`, `chart`, `combo-box`, `date-picker`, `notification-center`, `diff-view`, `markdown`, `nested-menu`, `popup`, `scroll-view`, `sparkline`, and `radio`, `form`, `accordion`, `hex-viewer`, `log-view`, `number-input`, `pie-chart`, `progress`, `search-box`, `slider`, `tag-input`, `toast`, and `toggle` forward it. `line-gauge` reserves the same feature. `all-widgets` turns on every widget in one go; new widget features are added to it, so test setups do not need to list each widget.
 - `KeyHintBar` is behind the `key-hints` feature. Construct it from the keymap active for the current screen or mode; it renders the first chord registered for each command.
-- [`Size`](https://docs.rs/lunatui-core/latest/lunatui_core/struct.Size.html) lives in `lunatui-core` and is re-exported here.
+- [`Size`](https://github.com/moonbase2090/lunatui/blob/main/lunatui-core/src/size.rs) lives in `lunatui-core` and is re-exported here.
 
 ## Widgets (v0.1.0)
 
