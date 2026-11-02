@@ -249,6 +249,14 @@ A deployment form with a region field: the drop-down opens, arrows move the high
 
 Screenshot: [docs/media/combo-box.png](docs/media/combo-box.png). Recorded with `scripts/record-showcase.sh` (`CASE=combo-box`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 9 seconds).
 
+### Select
+
+A release settings form with an environment field: the drop-down opens over the form with a check on the chosen environment, the highlighted row steps down through production and canary and back, and choosing production closes the list and updates the host in the form and the summary.
+
+<img src="docs/media/select.webp" alt="Select: a release settings form whose environment field opens a drop-down list with a check on the chosen environment, steps through the options, and settles on production in the dark theme" width="1028">
+
+Screenshot: [docs/media/select.png](docs/media/select.png). Recorded with `scripts/record-showcase.sh` (`CASE=select`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds).
+
 ### Diff view
 
 A code review: a unified diff of a grid change with hunk headers, two line-number columns, removed and added lines in their own colors, and the changed part of each paired line inverted. It scrolls through both hunks, then switches to the side-by-side layout, where each removed line sits across from the line that replaced it.
