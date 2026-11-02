@@ -4,156 +4,118 @@
 #![doc = include_str!("README.md")]
 
 use std::io;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use lunatui::{App, ControlFlow, RunOptions, is_quit, run};
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
-use lunatui_layout::Constraint;
+use lunatui_core::{ClusterTable, Grid, Rect, Style};
 use lunatui_runtime::RenderFrame;
 use lunatui_term::{Event, KeyCode};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{
-    Block, BorderType, ImageId, Marker, Paragraph, PieChart, PieSlice, PixelPieChart, RenderCx,
-    Sparkline, Table, VecSource, Widget,
-};
+use lunatui_widgets::{ImageId, Paragraph, PixelPieChart, RenderCx, Widget};
 
-const WIDTH: u16 = 100;
-const HEIGHT: u16 = 32;
-const REGIONS: [(&str, f64, Color); 5] = [
-    ("North America", 42.0, Color::Rgb(154, 140, 248)),
-    ("Europe", 27.0, Color::Rgb(111, 183, 247)),
-    ("Asia Pacific", 18.0, Color::Rgb(93, 210, 185)),
-    ("South America", 8.0, Color::Rgb(246, 192, 104)),
-    ("Africa", 5.0, Color::Rgb(244, 139, 162)),
-];
-
-fn specification(reveal: f64, selected: Option<usize>) -> PieChart {
-    PieChart::new(REGIONS.map(|(name, value, color)| PieSlice::new(name, value).color(color)))
-        .donut(0.53)
-        .legend(false)
-        .cell_aspect(2.0)
-        .reveal(reveal)
-        .highlight(selected)
-}
+mod pie_scene;
 
 fn main() -> io::Result<()> {
-    let args: Vec<_> = std::env::args().skip(1).collect();
-    let compare = match args.as_slice() {
-        [] => false,
-        [flag] if flag == "--compare" => true,
-        _ => return Err(io::Error::other("usage: pixel_pie_chart [--compare]")),
-    };
+    let mut compare = false;
+    let mut hold = None;
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--compare" => compare = true,
+            "--hold" => {
+                hold = Some(
+                    args.next()
+                        .ok_or_else(|| io::Error::other("--hold requires a tick"))?
+                        .parse::<u32>()
+                        .map_err(|_| io::Error::other("--hold requires an integer tick"))?,
+                );
+            }
+            _ => {
+                return Err(io::Error::other(
+                    "usage: pixel_pie_chart [--compare] [--hold TICK]",
+                ));
+            }
+        }
+    }
     let id = ImageId::new(41).ok_or_else(|| io::Error::other("invalid chart identity"))?;
     run(
         Screen {
-            pie: PixelPieChart::new(id, specification(0.0, None)),
+            pie: PixelPieChart::new(
+                id,
+                pie_scene::specification(&pie_scene::ClusterFrame::at(0)),
+            ),
             started: Instant::now(),
+            hold,
             selected: None,
             visible: true,
+            pixels: true,
             compare,
         },
-        RunOptions::new(WIDTH, HEIGHT),
+        if compare {
+            RunOptions::new(248, 44)
+        } else {
+            RunOptions::new(120, 36)
+        },
     )
 }
 
 struct Screen {
     pie: PixelPieChart,
     started: Instant,
+    hold: Option<u32>,
     selected: Option<usize>,
     visible: bool,
+    pixels: bool,
     compare: bool,
 }
 
 impl Screen {
     fn draw(&mut self, area: Rect, cx: &mut RenderCx<'_>) {
-        let text = Style::new()
-            .fg(cx.token(Token::TextPrimary))
-            .bg(cx.token(Token::Surface0));
-        let accent = Style::new()
-            .fg(cx.token(Token::Accent))
-            .bg(cx.token(Token::Surface0));
-        Block::default().style(text).render(area, cx);
-        Paragraph::new("EDGE NETWORK")
-            .style(accent)
-            .render(Rect::new(3, 1, 60, 1), cx);
-        Paragraph::new("Requests by region")
-            .style(text)
-            .render(Rect::new(3, 3, 60, 1), cx);
-        Paragraph::new("128,640 requests / second")
-            .style(accent)
-            .render(Rect::new(3, 5, 60, 1), cx);
-        if self.compare {
-            self.draw_comparison(cx, text, accent);
-            Paragraph::new(
-                "Same data and layout    ← → select region    Space hide / show    q quit",
-            )
-            .style(text)
-            .render(Rect::new(3, 30, 94, 1), cx);
+        let tick = self.hold.unwrap_or_else(|| {
+            u32::try_from(self.started.elapsed().as_millis().saturating_mul(30) / 1000)
+                .unwrap_or(u32::MAX)
+        });
+        let mut frame = pie_scene::ClusterFrame::at(tick);
+        if let Some(selected) = self.selected {
+            frame.selected = Some(selected);
+        }
+        if !self.compare {
+            let display = if !self.visible {
+                pie_scene::Display::Hidden
+            } else if self.pixels {
+                pie_scene::Display::Native(&mut self.pie)
+            } else {
+                pie_scene::Display::Cells
+            };
+            pie_scene::draw(area, &frame, display, cx);
             return;
         }
-        let left = Rect::new(2, 7, 57, 22);
-        let right = Rect::new(61, 7, 37, 22);
-        let panel = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .style(text)
-            .border_style(accent);
-        panel.clone().title(" Traffic share ").render(left, cx);
-        panel.clone().title(" Regions ").render(right, cx);
-        let elapsed = self.started.elapsed().as_secs_f64();
-        self.pie
-            .set_chart(specification((elapsed / 1.8).min(1.0), self.selected));
-        if self.visible {
-            self.pie
-                .render(Rect::new(left.x + 3, left.y + 1, 50, 20), cx);
+        let style = Style::new()
+            .fg(cx.token(Token::TextPrimary))
+            .bg(cx.token(Token::Surface0));
+        let accent = style.fg(cx.token(Token::Accent));
+        let blank = vec![" ".repeat(usize::from(area.width)); usize::from(area.height)].join("\n");
+        Paragraph::new(blank).style(style).render(area, cx);
+        Paragraph::new(format!("PIE CHART  /  Cluster overview  /  tick {tick}"))
+            .style(accent)
+            .render(Rect::new(area.x + 3, area.y + 1, 242, 1), cx);
+        for index in 0..2_u16 {
+            let left = area.x + 2 + index * 124;
+            let pixels = index == 1 && self.pixels;
+            Paragraph::new(if pixels { "Pixels" } else { "Cells" })
+                .style(accent)
+                .render(Rect::new(left + 1, area.y + 3, 118, 1), cx);
+            let display = if !self.visible {
+                pie_scene::Display::Hidden
+            } else if pixels {
+                pie_scene::Display::Native(&mut self.pie)
+            } else {
+                pie_scene::Display::Cells
+            };
+            pie_scene::draw(Rect::new(left, area.y + 5, 120, 36), &frame, display, cx);
         }
-        let mut rows = VecSource::new();
-        for (name, value, _) in REGIONS {
-            rows.push_row(vec![String::from(name), format!("{value:.0}%")]);
-        }
-        Table::new(rows, vec![Constraint::Fill(1), Constraint::Length(7)])
-            .header([("REGION", accent), ("SHARE", accent)])
-            .style(text)
-            .selected(self.selected)
-            .highlight_style(accent)
-            .render(Rect::new(right.x + 2, right.y + 2, 33, 8), cx);
-        Paragraph::new("GLOBAL TRAFFIC\n128.6k req/s\n\nP95 latency   42 ms\nAvailability  99.99%")
-            .style(text)
-            .render(Rect::new(right.x + 2, right.y + 11, 33, 6), cx);
-        Sparkline::new(&[
-            22, 24, 21, 30, 26, 33, 29, 31, 38, 35, 32, 41, 37, 44, 40, 46, 42, 48, 45, 52, 49, 55,
-            51, 58, 54, 60, 57, 63, 59, 66, 62, 68, 65,
-        ])
-        .render(Rect::new(right.x + 2, right.y + 18, 33, 2), cx);
-        Paragraph::new("← → select region    Space hide / show    q quit")
-            .style(text)
-            .render(Rect::new(3, 30, 94, 1), cx);
-    }
-}
-
-impl Screen {
-    fn draw_comparison(&mut self, cx: &mut RenderCx<'_>, text: Style, accent: Style) {
-        let spec = specification(
-            (self.started.elapsed().as_secs_f64() / 1.8).min(1.0),
-            self.selected,
-        );
-        self.pie.set_chart(spec.clone());
-        for (index, title) in [(0_u16, " Braille "), (1, " Pixels ")] {
-            let area = Rect::new(2 + index * 49, 7, 47, 22);
-            Block::bordered()
-                .border_type(BorderType::Rounded)
-                .title(title)
-                .style(text)
-                .border_style(accent)
-                .render(area, cx);
-            let pie_area = Rect::new(area.x + 3, area.y + 1, 40, 20);
-            if self.visible {
-                if index == 0 {
-                    spec.clone().marker(Marker::Braille).render(pie_area, cx);
-                } else {
-                    self.pie.render(pie_area, cx);
-                }
-            }
-        }
+        Paragraph::new("← → select region    u advance held tick    b toggle right pane    Space hide / show    r reset    q quit")
+            .style(style).render(Rect::new(area.x + 3, area.y + 42, 242, 1), cx);
     }
 }
 
@@ -165,23 +127,32 @@ impl App for Screen {
         if let Event::Key(key) = event {
             match key.code {
                 KeyCode::Right => {
-                    self.selected =
-                        Some(self.selected.map_or(0, |index| (index + 1) % REGIONS.len()));
+                    self.selected = Some(self.selected.map_or(0, |index| (index + 1) % 5));
                 }
                 KeyCode::Left => {
-                    self.selected = Some(self.selected.map_or(REGIONS.len() - 1, |index| {
-                        (index + REGIONS.len() - 1) % REGIONS.len()
-                    }));
+                    self.selected = Some(self.selected.map_or(4, |index| (index + 4) % 5));
                 }
                 KeyCode::Char(' ') => self.visible = !self.visible,
+                KeyCode::Char('b') => self.pixels = !self.pixels,
+                KeyCode::Char('u') => {
+                    if let Some(tick) = &mut self.hold {
+                        *tick = tick.wrapping_add(1);
+                    }
+                }
+                KeyCode::Char('r') => {
+                    self.selected = None;
+                    self.started = Instant::now();
+                }
                 _ => {}
             }
         }
         ControlFlow::Continue
     }
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
-        let theme = Theme::builtin(Variant::Dark);
-        self.draw(area, &mut RenderCx::new(grid, clusters, &theme));
+        self.draw(
+            area,
+            &mut RenderCx::new(grid, clusters, &Theme::builtin(Variant::Dark)),
+        );
     }
     fn render_frame(&mut self, frame: &mut RenderFrame<'_>, area: Rect) {
         let theme = Theme::builtin(Variant::Dark);
@@ -192,6 +163,169 @@ impl App for Screen {
         );
     }
     fn needs_animation_frames(&self) -> bool {
-        self.started.elapsed() < Duration::from_secs(2)
+        self.hold.is_none()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lunatui_image::{ImageRequest, ImageSink, ImageSource, PixelSize, PixelTarget};
+
+    #[derive(Default)]
+    struct Capture {
+        images: Vec<(ImageSource, Rect)>,
+        decline: bool,
+    }
+    impl ImageSink for Capture {
+        fn supports_pixels(&self) -> bool {
+            true
+        }
+        fn pixel_target(&self, area: Rect) -> Option<PixelTarget> {
+            PixelSize::new(u32::from(area.width) * 4, u32::from(area.height) * 8)
+                .map(|size| PixelTarget::new(size, true, Some([0, 0, 0])))
+        }
+        fn submit(&mut self, request: ImageRequest<'_>) -> bool {
+            if self.decline {
+                return false;
+            }
+            self.images.push((request.source().clone(), request.area()));
+            true
+        }
+        fn submit_raster(&mut self, source: &ImageSource, area: Rect, _: i32) -> bool {
+            if self.decline {
+                return false;
+            }
+            self.images.push((source.clone(), area));
+            true
+        }
+    }
+    fn screen() -> Result<Screen, Box<dyn std::error::Error>> {
+        Ok(Screen {
+            pie: PixelPieChart::new(
+                ImageId::new(41).ok_or("fixture identity")?,
+                pie_scene::specification(&pie_scene::ClusterFrame::at(96)),
+            ),
+            started: Instant::now(),
+            hold: Some(96),
+            selected: None,
+            visible: true,
+            pixels: true,
+            compare: true,
+        })
+    }
+    fn frame(
+        screen: &mut Screen,
+        grid: &mut Grid,
+        clusters: &mut ClusterTable,
+        decline: bool,
+    ) -> Capture {
+        let mut capture = Capture {
+            decline,
+            ..Capture::default()
+        };
+        screen.draw(
+            Rect::new(0, 0, 248, 44),
+            &mut RenderCx::new(grid, clusters, &Theme::builtin(Variant::Dark))
+                .image_sink(&mut capture),
+        );
+        capture
+    }
+    #[test]
+    fn full_cluster_twins_share_text_and_only_native_graphs_submit_images()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut screen = screen()?;
+        let mut grid = Grid::new(248, 44);
+        let mut clusters = ClusterTable::new();
+        let capture = frame(&mut screen, &mut grid, &mut clusters, false);
+        assert_eq!(
+            capture.images.len(),
+            3,
+            "pie, native legend and native trend"
+        );
+        for (_, area) in &capture.images {
+            assert!(area.x >= 126 && area.x + area.width <= 246);
+            assert!(area.y >= 5 && area.y + area.height <= 41);
+        }
+        for text in [
+            "Cluster overview",
+            "region       share",
+            "eu-west",
+            "total req/s",
+            "p95",
+        ] {
+            let all = (5..41)
+                .map(|row| grid.row_display(row, &clusters))
+                .collect::<Vec<_>>()
+                .join("\n");
+            assert_eq!(
+                all.matches(text).count(),
+                if text == "eu-west" {
+                    6
+                } else if text == "p95" {
+                    4
+                } else {
+                    2
+                },
+                "{text}"
+            );
+        }
+        for y in 5..41 {
+            for x in 0..120 {
+                let right_x = 126 + x;
+                let native = capture.images.iter().any(|(_, area)| {
+                    right_x >= area.x
+                        && right_x < area.x + area.width
+                        && y >= area.y
+                        && y < area.y + area.height
+                });
+                if !native {
+                    assert_eq!(grid.get(2 + x, y), grid.get(right_x, y), "{x},{y}");
+                }
+            }
+        }
+        Ok(())
+    }
+    #[test]
+    fn native_cells_hidden_and_restored_preserve_full_scene_and_image_sources()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut screen = screen()?;
+        let mut grid = Grid::new(248, 44);
+        let mut clusters = ClusterTable::new();
+        let before = frame(&mut screen, &mut grid, &mut clusters, false);
+        screen.pixels = false;
+        assert_eq!(
+            frame(&mut screen, &mut grid, &mut clusters, false).images,
+            Vec::new()
+        );
+        for y in 5..41 {
+            for x in 0..120 {
+                assert_eq!(grid.get(2 + x, y), grid.get(126 + x, y));
+            }
+        }
+        screen.visible = false;
+        screen.pixels = true;
+        assert_eq!(
+            frame(&mut screen, &mut grid, &mut clusters, false).images,
+            Vec::new()
+        );
+        assert_eq!(
+            grid.row_display(5, &clusters)
+                .matches("Cluster overview")
+                .count(),
+            2
+        );
+        screen.visible = true;
+        let after = frame(&mut screen, &mut grid, &mut clusters, false);
+        assert_eq!(after.images.len(), 3);
+        assert_eq!(after.images, before.images);
+        let rejected = frame(&mut screen, &mut grid, &mut clusters, true);
+        assert_eq!(rejected.images, Vec::new());
+        for y in 5..41 {
+            for x in 0..120 {
+                assert_eq!(grid.get(2 + x, y), grid.get(126 + x, y));
+            }
+        }
+        Ok(())
     }
 }

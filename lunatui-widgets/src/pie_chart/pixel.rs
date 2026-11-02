@@ -8,8 +8,9 @@ use lunatui_core::{Rect, Size};
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSource, PixelSize};
 use tiny_skia::{FillRule, Mask, Path, PathBuilder, Transform};
 
-use super::{Disc, EXPLODE, PieChart, Sectors, palette};
+use super::{Disc, EXPLODE, LegendMarks, PieChart, Sectors, palette};
 use crate::{Marker, RenderCx, Widget};
+use lunatui_core::Color;
 
 /// An antialiased pie or donut, using the frame's image presenter when available.
 ///
@@ -21,6 +22,9 @@ use crate::{Marker, RenderCx, Widget};
 /// Depth-zero images cover later overlapping widgets on those protocols; compose
 /// panels beside the chart rather than over it. Kitty supports text above the chart.
 ///
+/// Legend swatches also use native antialiased circles when the presenter accepts an
+/// optional swatch raster. Otherwise the accepted native pie keeps its cell legend.
+///
 /// Keep one instance per stable, unique image ID. Raster caching and revisions are
 /// internal; update the specification through [`set_chart`](Self::set_chart).
 #[derive(Debug)]
@@ -29,6 +33,20 @@ pub struct PixelPieChart {
     id: ImageId,
     pixels: bool,
     cache: RefCell<Option<RasterCache>>,
+    legend_cache: RefCell<Option<LegendCache>>,
+}
+
+#[derive(Debug, PartialEq)]
+struct LegendKey {
+    size: PixelSize,
+    colors: Vec<[u8; 3]>,
+    backdrop: Vec<[u8; 3]>,
+}
+
+#[derive(Debug)]
+struct LegendCache {
+    key: LegendKey,
+    source: ImageSource,
 }
 
 #[derive(Debug, PartialEq)]
@@ -56,6 +74,7 @@ impl PixelPieChart {
             id,
             pixels: true,
             cache: RefCell::new(None),
+            legend_cache: RefCell::new(None),
         }
     }
 
@@ -83,7 +102,9 @@ impl PixelPieChart {
             return false;
         };
         let size = target.size();
-        if size.width() > 4096
+        if !cx.pixel_area_in_grid(layout.pie)
+            || u32::from(layout.pie.width) * u32::from(layout.pie.height) > 1_048_576
+            || size.width() > 4096
             || size.height() > 4096
             || size
                 .width()
@@ -110,12 +131,7 @@ impl PixelPieChart {
         };
         let chart_palette = palette(cx);
         let colors: Option<Vec<_>> = (0..=self.chart.slices.len())
-            .map(|index| {
-                cx.pixel_rgb(
-                    self.chart.slice_color(cx, &chart_palette, index),
-                    target.background(),
-                )
-            })
+            .map(|index| cx.pixel_rgb(self.chart.slice_color(cx, &chart_palette, index), None))
             .collect();
         let Some(colors) = colors else {
             return false;
@@ -131,6 +147,7 @@ impl PixelPieChart {
         };
         let mut cache = self.cache.borrow_mut();
         if cache.as_ref().is_none_or(|cached| cached.key != key) {
+            self.legend_cache.borrow_mut().take();
             let Some(generation) = cache
                 .as_ref()
                 .map_or(Some(0), |old| old.generation.checked_add(1))
@@ -165,10 +182,59 @@ impl PixelPieChart {
             return false;
         }
         self.chart.draw_center(cx, layout.pie);
+        let marks = self.draw_native_legend(cx, &chart_palette, layout.legend);
         cx.keep_backgrounds(layout.legend, |cx| {
-            self.chart.draw_legend(cx, &chart_palette, layout.legend);
+            self.chart
+                .draw_legend_with_marks(cx, &chart_palette, layout.legend, marks);
         });
         true
+    }
+
+    fn draw_native_legend(
+        &self,
+        cx: &mut RenderCx<'_>,
+        palette: &[Color],
+        legend: Rect,
+    ) -> LegendMarks {
+        self.submit_legend(cx, palette, legend)
+            .map_or(LegendMarks::Cells, |()| LegendMarks::NativeAccepted)
+    }
+
+    fn submit_legend(&self, cx: &mut RenderCx<'_>, palette: &[Color], legend: Rect) -> Option<()> {
+        let rows = usize::from(legend.height).min(self.chart.slices.len());
+        if legend.width == 0 || rows == 0 {
+            return None;
+        }
+        let area = Rect::new(legend.x, legend.y, 1, u16::try_from(rows).ok()?);
+        if !cx.pixel_area_in_grid(area) {
+            return None;
+        }
+        let target = cx.pixel_target(area)?;
+        let size = target.size();
+        if size.width() > 4096
+            || size.height() > 4096
+            || size.width().checked_mul(size.height())? > 1_048_576
+            || rows > 4096
+        {
+            return None;
+        }
+        let colors = (0..rows)
+            .map(|index| cx.pixel_rgb(self.chart.slice_color(cx, palette, index), None))
+            .collect::<Option<Vec<_>>>()?;
+        let backdrop = cx.pixel_backdrop(area, target.background(), target.text_underlay())?;
+        let key = LegendKey {
+            size,
+            colors,
+            backdrop,
+        };
+        let mut cache = self.legend_cache.borrow_mut();
+        if cache.as_ref().is_none_or(|cached| cached.key != key) {
+            let source = rasterize_legend(&key)?;
+            *cache = Some(LegendCache { key, source });
+        }
+        let source = cache.as_ref()?.source.clone();
+        drop(cache);
+        cx.submit_raster(&source, area, 0).then_some(())
     }
 }
 
@@ -181,6 +247,54 @@ impl Widget for PixelPieChart {
     fn measure(&self, avail: Size) -> Size {
         self.chart.measure(avail)
     }
+}
+
+fn rasterize_legend(key: &LegendKey) -> Option<ImageSource> {
+    let width = key.size.width();
+    let height = key.size.height();
+    let rows = u32::try_from(key.colors.len()).ok()?;
+    let row_height = f64::from(height) / f64::from(rows);
+    let radius = f64::from(width).min(row_height) * 0.3;
+    let mut path = PathBuilder::new();
+    for row in 0..rows {
+        let disc = Disc {
+            cx: f64::from(width) / 2.0,
+            cy: (f64::from(row) + 0.5) * row_height,
+            radius,
+            hole: 0.0,
+        };
+        let (x, y) = point(disc, radius, 0.0);
+        path.move_to(x, y);
+        arc(&mut path, disc, radius, 0.0, TAU);
+        path.close();
+    }
+    let mut mask = Mask::new(width, height)?;
+    mask.fill_path(
+        &path.finish()?,
+        FillRule::Winding,
+        true,
+        Transform::identity(),
+    );
+    let count = usize::try_from(width.checked_mul(height)?).ok()?;
+    let mut pixels = Vec::with_capacity(count.checked_mul(4)?);
+    for y in 0..height {
+        let row = usize::try_from(u64::from(y) * u64::from(rows) / u64::from(height)).ok()?;
+        for x in 0..width {
+            let index = usize::try_from(y * width + x).ok()?;
+            let alpha = u32::from(mask.data()[index]);
+            for (ink, background) in key.colors[row].into_iter().zip(key.backdrop[row]) {
+                pixels.push(
+                    u8::try_from(
+                        (u32::from(ink) * alpha + u32::from(background) * (255 - alpha) + 127)
+                            / 255,
+                    )
+                    .ok()?,
+                );
+            }
+            pixels.push(255);
+        }
+    }
+    ImageSource::rgba8(width, height, pixels.into_boxed_slice()).ok()
 }
 
 fn rasterize(key: &RasterKey, pie: Rect) -> Option<ImageSource> {

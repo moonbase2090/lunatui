@@ -87,6 +87,7 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(
+        feature = "pixel-pie-chart",
         feature = "pixel-chart",
         feature = "pixel-canvas",
         feature = "pixel-barchart",
@@ -179,6 +180,7 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(
+        feature = "pixel-pie-chart",
         feature = "pixel-barchart",
         feature = "pixel-sparkline",
         feature = "pixel-gauge",

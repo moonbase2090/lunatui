@@ -34,6 +34,13 @@ const EXPLODE: f64 = 0.08;
 const SWATCH: &str = "●";
 const MAX_SUB: usize = 8;
 
+#[derive(Clone, Copy)]
+enum LegendMarks {
+    Cells,
+    #[cfg(feature = "pixel-pie-chart")]
+    NativeAccepted,
+}
+
 /// One slice of a [`PieChart`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct PieSlice {
@@ -517,9 +524,24 @@ impl PieChart {
     }
 
     fn draw_legend(&self, cx: &mut RenderCx<'_>, palette: &[Color], legend: Rect) {
+        self.draw_legend_with_marks(cx, palette, legend, LegendMarks::Cells);
+    }
+
+    fn draw_legend_with_marks(
+        &self,
+        cx: &mut RenderCx<'_>,
+        palette: &[Color],
+        legend: Rect,
+        marks: LegendMarks,
+    ) {
         if legend.width == 0 {
             return;
         }
+        let glyph = match marks {
+            LegendMarks::Cells => SWATCH,
+            #[cfg(feature = "pixel-pie-chart")]
+            LegendMarks::NativeAccepted => " ",
+        };
         let percents = self.percents();
         let text = cx.token(Token::TextPrimary);
         let disabled = self.state == WidgetState::Disabled;
@@ -535,7 +557,7 @@ impl PieChart {
                 .fg(label_color)
                 .with_attrs(Attrs::new().set_bold(lit).set_dim(disabled));
             let swatch = Style::new().fg(self.slice_color(cx, palette, index));
-            cx.put_str(legend.x, y, SWATCH, swatch);
+            cx.put_str(legend.x, y, glyph, swatch);
             let percent = format!("{:>3}%", percents[index]);
             let end = legend.x + legend.width;
             let room = legend.width.saturating_sub(7);
