@@ -15,6 +15,7 @@ default = ["pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 heatmap = ["widget-state"]
+timeline = ["widget-state"]
 nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
 markdown = ["widget-state", "lunatui-text/markdown"]
 line-gauge = ["widget-state"]
@@ -62,7 +63,7 @@ key-hints = ["dep:lunatui-runtime"]
 popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
-all-widgets = ["heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip"]
+all-widgets = ["heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline"]
 
 [dependencies]
 lunatui-core = { version = "0.1.20", path = "../lunatui-core" }
@@ -364,6 +365,10 @@ required-features = ["pixel-sparkline"]
 [[test]]
 name = "heatmap"
 required-features = ["heatmap"]
+
+[[test]]
+name = "timeline"
+required-features = ["timeline"]
 
 [[test]]
 name = "tag_input"
