@@ -14,6 +14,16 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'desktop-firefox',
+      testMatch: /terminal-alignment\.spec\.js/,
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'desktop-webkit',
+      testMatch: /terminal-alignment\.spec\.js/,
+      use: { ...devices['Desktop Safari'] },
+    },
+    {
       name: 'desktop-chromium',
       testIgnore: /mobile-sandbox\.spec\.js/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
