@@ -6,3 +6,5 @@ site/test-results/
 # Local editor and tooling state
 .cursor/
 .sc/
+__pycache__/
+*.pyc
