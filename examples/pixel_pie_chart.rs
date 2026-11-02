@@ -70,7 +70,7 @@ struct Screen {
 }
 
 impl Screen {
-    fn draw(&mut self, area: Rect, cx: &mut RenderCx<'_>) {
+    fn current_frame(&self) -> pie_scene::ClusterFrame {
         let tick = self.hold.unwrap_or_else(|| {
             u32::try_from(self.started.elapsed().as_millis().saturating_mul(30) / 1000)
                 .unwrap_or(u32::MAX)
@@ -79,6 +79,12 @@ impl Screen {
         if let Some(selected) = self.selected {
             frame.selected = Some(selected);
         }
+        frame
+    }
+
+    fn draw(&mut self, area: Rect, cx: &mut RenderCx<'_>) {
+        let frame = self.current_frame();
+        let tick = frame.tick;
         if !self.compare {
             let display = if !self.visible {
                 pie_scene::Display::Hidden
@@ -127,10 +133,18 @@ impl App for Screen {
         if let Event::Key(key) = event {
             match key.code {
                 KeyCode::Right => {
-                    self.selected = Some(self.selected.map_or(0, |index| (index + 1) % 5));
+                    self.selected = Some(
+                        self.current_frame()
+                            .selected
+                            .map_or(0, |index| (index + 1) % 5),
+                    );
                 }
                 KeyCode::Left => {
-                    self.selected = Some(self.selected.map_or(4, |index| (index + 4) % 5));
+                    self.selected = Some(
+                        self.current_frame()
+                            .selected
+                            .map_or(4, |index| (index + 4) % 5),
+                    );
                 }
                 KeyCode::Char(' ') => self.visible = !self.visible,
                 KeyCode::Char('b') => self.pixels = !self.pixels,
@@ -324,6 +338,78 @@ mod tests {
         for y in 5..41 {
             for x in 0..120 {
                 assert_eq!(grid.get(2 + x, y), grid.get(126 + x, y));
+            }
+        }
+        Ok(())
+    }
+    #[test]
+    fn real_presenter_caches_and_retires_all_three_native_images()
+    -> Result<(), Box<dyn std::error::Error>> {
+        use lunatui_term::{Caps, CellPixels, GraphicsProtocol, PixelLayer, Protocols};
+        let mut layer = PixelLayer::from_caps(&Caps {
+            protocols: Protocols {
+                graphics: GraphicsProtocol::Kitty,
+                ..Protocols::default()
+            },
+            cell_pixels: CellPixels::new(4, 8),
+            background_rgb: Some([0, 0, 0]),
+            ..Caps::default()
+        });
+        let mut screen = screen()?;
+        let mut grid = Grid::new(248, 44);
+        let mut clusters = ClusterTable::new();
+        let theme = Theme::builtin(Variant::Dark);
+        for phase in 0..6 {
+            screen.pixels = phase != 2;
+            screen.visible = phase != 4;
+            layer.begin_frame();
+            screen.draw(
+                Rect::new(0, 0, 248, 44),
+                &mut RenderCx::new(&mut grid, &mut clusters, &theme).image_sink(&mut layer),
+            );
+            let stream = std::str::from_utf8(layer.finish_frame())?;
+            let headers = stream
+                .split("\x1b_G")
+                .skip(1)
+                .map(|command| command.split(';').next().unwrap_or(""))
+                .collect::<Vec<_>>();
+            let count = |action: &str| {
+                headers
+                    .iter()
+                    .filter(|header| header.split(',').any(|field| field == action))
+                    .count()
+            };
+            if phase == 1 {
+                assert_eq!(
+                    stream, "",
+                    "unchanged native frame must reuse all raster bytes and placements"
+                );
+            } else if phase == 2 || phase == 4 {
+                assert_eq!(
+                    count("a=d"),
+                    3,
+                    "phase {phase} must retire pie, swatches and trend"
+                );
+                assert_eq!(count("a=p"), 0);
+            } else {
+                assert_eq!(
+                    count("a=t"),
+                    3,
+                    "phase {phase} must upload every live image"
+                );
+                assert_eq!(count("a=p"), 3);
+                let ids = headers
+                    .iter()
+                    .filter(|header| header.split(',').any(|field| field == "a=p"))
+                    .filter_map(|header| {
+                        header.split(',').find_map(|field| field.strip_prefix("i="))
+                    })
+                    .collect::<std::collections::BTreeSet<_>>();
+                assert_eq!(
+                    ids.len(),
+                    3,
+                    "caller pie and presenter legend/trend need distinct wire identities"
+                );
             }
         }
         Ok(())
