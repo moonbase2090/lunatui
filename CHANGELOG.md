@@ -19,6 +19,8 @@ Every PR adds its entry under **Unreleased**.
 
 - Quickstart template borders use the bundled full monospace font, so box-drawing glyphs align with their text cells across browser engines.
 
+- `Timeline`, behind the opt-in `timeline` feature: labeled lanes of spans and milestones on a scrollable time axis, with progress, four semantic statuses, app-placed ticks, a now marker, selection, disabled swatches, a `TimelineView` for pan, zoom and reveal, and shared geometry for `x_at`, `time_at` and `item_at`. The release-plan showcase follows now, zooms out to check a milestone, and moves the selection through the lanes.
+
 ## [0.1.20] - 2026-11-02
 
 ### Added
