@@ -244,9 +244,10 @@ impl LayerStack {
         entries
     }
 
-    /// Decides what a pointer press at `(column, row)` does. Only the topmost layer is
-    /// asked: a press outside it dismisses it, and a modal layer stops that press from reaching
-    /// anything below.
+    /// Decides what a pointer press at `(column, row)` does. A press inside the topmost layer is
+    /// delivered. Outside it, a dismissable topmost layer is dismissed. While any modal layer is
+    /// open nothing below the top is reachable: the press is delivered only when it falls inside
+    /// the topmost modal, and otherwise it is consumed or blocked.
     #[must_use]
     pub fn route_press(&self, column: u16, row: u16) -> PressRoute {
         let Some(top) = self.layers.last() else {
@@ -255,16 +256,22 @@ impl LayerStack {
         if contains(top.layer.area, column, row) {
             return PressRoute::Deliver;
         }
+        let in_modal = self
+            .layers
+            .iter()
+            .rfind(|entry| entry.layer.modal)
+            .map(|entry| contains(entry.layer.area, column, row));
+        let reachable = in_modal.unwrap_or(true);
         if top.layer.dismissable {
             return PressRoute::Dismiss {
                 layer: top.id,
-                deliver: !top.layer.modal,
+                deliver: reachable,
             };
         }
-        if top.layer.modal {
-            PressRoute::Block
-        } else {
+        if reachable {
             PressRoute::Deliver
+        } else {
+            PressRoute::Block
         }
     }
 
@@ -418,6 +425,36 @@ mod tests {
         layers.push(Layer::modal(AREA).dismissable(false));
         assert_eq!(layers.route_press(0, 0), PressRoute::Block);
         assert_eq!(layers.escape(), None);
+    }
+
+    #[test]
+    fn undismissable_popover_over_a_modal_blocks_presses_outside_the_modal() {
+        let mut layers = LayerStack::new();
+        layers.push(Layer::modal(AREA));
+        layers.push(Layer::popover(Rect::new(12, 6, 4, 2)).dismissable(false));
+        assert_eq!(layers.route_press(0, 0), PressRoute::Block);
+        assert_eq!(layers.route_press(25, 11), PressRoute::Deliver);
+    }
+
+    #[test]
+    fn dismissable_popover_over_a_modal_closes_without_leaking_the_press() {
+        let mut layers = LayerStack::new();
+        layers.push(Layer::modal(AREA));
+        let menu = layers.push(Layer::popover(Rect::new(12, 6, 4, 2)));
+        assert_eq!(
+            layers.route_press(0, 0),
+            PressRoute::Dismiss {
+                layer: menu,
+                deliver: false
+            }
+        );
+        assert_eq!(
+            layers.route_press(25, 11),
+            PressRoute::Dismiss {
+                layer: menu,
+                deliver: true
+            }
+        );
     }
 
     #[test]
