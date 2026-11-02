@@ -22,6 +22,7 @@ MUTANTS = [
     ("topmost hit", "            .rev()\n            .find(", "            .find("),
     ("view pan", "Self::place(i128::from(self.start) + i128::from(delta), self.len_i128())",
      "Self::place(i128::from(self.start) - i128::from(delta), self.len_i128())"),
+    ("milestone reveal", "let end = end.max(start + 1);", "let end = end.max(start);"),
 ]
 
 

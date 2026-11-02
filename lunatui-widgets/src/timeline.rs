@@ -238,12 +238,14 @@ impl TimelineView {
     }
 
     /// Pans the least distance that brings `start..end` into view. A range longer than the
-    /// window aligns its start with the window's start.
+    /// window aligns its start with the window's start. An empty range is treated as a
+    /// one-unit milestone range. The view stays within the signed time bounds.
     #[must_use]
     pub fn reveal(self, start: i64, end: i64) -> Self {
         let (start, end) = (start.min(end), start.max(end));
         let len = self.len_i128();
         let (start, end) = (i128::from(start), i128::from(end));
+        let end = end.max(start + 1);
         if end - start >= len || start < i128::from(self.start) {
             Self::place(start, len)
         } else if end > i128::from(self.end) {

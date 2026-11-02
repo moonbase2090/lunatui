@@ -457,6 +457,7 @@ fn view_reveals_a_milestone_at_the_exclusive_end() {
 fn view_arithmetic_saturates_at_the_time_range() {
     let view = TimelineView::new(i64::MAX - 10, i64::MAX);
     assert_eq!(view.pan(100), view);
+    assert_eq!(view.reveal(i64::MAX, i64::MAX), view);
     assert_eq!(
         TimelineView::new(i64::MIN, i64::MIN + 10).pan(-5),
         TimelineView::new(i64::MIN, i64::MIN + 10)
