@@ -25,7 +25,8 @@ use lunatui_widgets::{
     NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize,
     RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Select, Slider, Sparkline,
     SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput,
-    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    TextInput, ToastKind, ToastScope, ToastStack, Toggle, Tree, TreeItem, TreeState, VecSource,
+    Widget, WidgetState,
 };
 
 mod bar_scene;
@@ -197,6 +198,11 @@ const PREVIEWS: &[Preview] = &[
         name: "accordion",
         native: accordion_native,
         baseline: accordion_baseline,
+    },
+    Preview {
+        name: "tree",
+        native: tree_native,
+        baseline: tree_baseline,
     },
     Preview {
         name: "hex-viewer",
@@ -5223,6 +5229,174 @@ fn ac_summary(cx: &mut RenderCx<'_>, right: Rect, tick: u32, theme: &Theme, styl
 }
 
 fn accordion_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+fn tr_tree(tick: u32) -> TreeState {
+    let mut state = TreeState::new(vec![
+        TreeItem::node(
+            "lunatui",
+            vec![
+                TreeItem::node(
+                    "lunatui-core",
+                    vec![
+                        TreeItem::leaf("grid.rs").badge("41k"),
+                        TreeItem::leaf("style.rs").badge("6k"),
+                        TreeItem::leaf("text.rs").badge("9k"),
+                    ],
+                )
+                .badge("3 files"),
+                TreeItem::node(
+                    "lunatui-widgets",
+                    vec![
+                        TreeItem::leaf("tree.rs").badge("new"),
+                        TreeItem::leaf("list.rs"),
+                        TreeItem::leaf("table.rs"),
+                        TreeItem::leaf("nested_menu.rs"),
+                    ],
+                )
+                .badge("4 files"),
+                TreeItem::node(
+                    "examples",
+                    vec![
+                        TreeItem::leaf("widget_preview.rs"),
+                        TreeItem::leaf("dashboard.rs"),
+                    ],
+                ),
+                TreeItem::node(
+                    "docs",
+                    vec![
+                        TreeItem::leaf("architecture.md"),
+                        TreeItem::leaf("conventions.md"),
+                    ],
+                ),
+            ],
+        )
+        .badge("4 dirs"),
+        TreeItem::leaf("Cargo.toml"),
+        TreeItem::leaf("README.md").badge("42k"),
+    ]);
+    for step in 0..=(tick / 15) {
+        match step {
+            0 => state.select_first(),
+            1 | 3 | 12 => state.move_right(),
+            2 | 4 | 5 | 7 | 8 | 11 => state.move_down(),
+            6 | 14.. => state.reveal(&[0, 1, 0]),
+            9 => state.reveal(&[0, 2, 1]),
+            10 => state.move_left(),
+            13 => {
+                state.expand_all();
+                true
+            }
+        };
+    }
+    state
+}
+
+fn tree_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Files  ·  lunatui workspace", head);
+    let left = Rect::new(area.x + 2, area.y + 2, 60, 30);
+    let right = Rect::new(
+        left.x + left.width + 1,
+        left.y,
+        area.width.saturating_sub(left.width + 5),
+        30,
+    );
+    for (title, pane) in [(" Tree ", left), (" Selected ", right)] {
+        Block::bordered()
+            .border_type(BorderType::Rounded)
+            .title(title)
+            .style(fill)
+            .border_style(dim)
+            .title_style(Style::new().fg(accent).bg(surface))
+            .render(pane, &mut cx);
+    }
+    let state = tr_tree(tick);
+    let inner = Rect::new(left.x + 2, left.y + 2, left.width - 4, left.height - 3);
+    Tree::new(&state).style(fill).render(inner, &mut cx);
+    tr_selected(&mut cx, right, &state, theme, [fill, dim]);
+    StatusBar::new(" ↑↓ move  ●  → open  ●  ← close or parent  ●  q quit")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn tr_selected(
+    cx: &mut RenderCx<'_>,
+    right: Rect,
+    state: &TreeState,
+    theme: &Theme,
+    styles: [Style; 2],
+) {
+    let [fill, dim] = styles;
+    let surface = theme.resolve(Token::Surface0);
+    let accent = theme.resolve(Token::Accent);
+    let bold_accent = Style::new()
+        .fg(accent)
+        .bg(surface)
+        .with_attrs(Attrs::new().set_bold(true));
+    let Some(item) = state.selected() else {
+        cx.put_str(right.x + 2, right.y + 2, "Nothing selected", dim);
+        return;
+    };
+    let path = state.selected_path().unwrap_or(&[]);
+    cx.put_str(right.x + 2, right.y + 2, item.label(), bold_accent);
+    let joined = path
+        .iter()
+        .map(usize::to_string)
+        .collect::<Vec<_>>()
+        .join(" / ");
+    let kind = if item.has_children() {
+        if state.is_open(path) {
+            "folder, open"
+        } else {
+            "folder, closed"
+        }
+    } else {
+        "file"
+    };
+    let lines = [
+        format!("Path      {joined}"),
+        format!("Kind      {kind}"),
+        format!("Depth     {}", path.len().saturating_sub(1)),
+        format!("Children  {}", item.children().len()),
+        format!("Visible   {} rows", state.visible().len()),
+    ];
+    for (row, line) in (0_u16..).zip(&lines) {
+        cx.put_str(right.x + 2, right.y + 4 + row, line, fill);
+    }
+    cx.put_str(right.x + 2, right.y + 11, "Keys", bold_accent);
+    let keys = [
+        "↑ / ↓   previous or next row",
+        "→       open, then step in",
+        "←       close, or go to parent",
+        "Home    first row",
+        "End     last row",
+    ];
+    for (row, line) in (0_u16..).zip(keys) {
+        cx.put_str(right.x + 2, right.y + 13 + row, line, dim);
+    }
+}
+
+fn tree_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 fn progress_native(
     grid: &mut Grid,
