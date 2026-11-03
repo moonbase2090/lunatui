@@ -267,6 +267,14 @@ A release settings form with an environment field: the drop-down opens over the 
 
 Screenshot: [docs/media/select.png](docs/media/select.png). Recorded with `scripts/record-showcase.sh` (`CASE=select`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds).
 
+### File picker
+
+An open-files screen: the picker lists a project folder with a path bar, a filter line, size and modified columns and a count, narrows to names containing "re" as the filter is typed, steps down the rows while the list scrolls with a thumb, marks Cargo.toml, README.md and release.tar.gz with checks, and a selection panel and a details panel follow the marks and the active row in the dark theme.
+
+<img src="docs/media/file-picker.webp" alt="File picker: an open-files screen whose list narrows to names containing re, then steps through a project folder with a scroll thumb, marks three files with checks, and updates a selection panel and a details panel in the dark theme" width="1028">
+
+Screenshot: [docs/media/file-picker.png](docs/media/file-picker.png). Recorded with `scripts/record-showcase.sh` (`CASE=file-picker`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 8 seconds).
+
 ### Diff view
 
 A code review: a unified diff of a grid change with hunk headers, two line-number columns, removed and added lines in their own colors, and the changed part of each paired line inverted. It scrolls through both hunks, then switches to the side-by-side layout, where each removed line sits across from the line that replaced it.
