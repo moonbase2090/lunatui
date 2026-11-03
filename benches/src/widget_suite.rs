@@ -19,13 +19,13 @@ use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Button, ButtonVariant, Canvas, Chart, CodeMark, CodeView, CodeViewState, ColorPicker,
     ColorPickerFocus, ColorPickerState, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus,
-    DialogKind, DialogState, Diff, DiffView, Form, FormField, Gauge, GraphType, HexViewer,
-    KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
-    MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart,
-    PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView,
-    ScrollbarVisibility, SearchBox, Select, Slider, SortDirection, Sparkline, SplitAxis, SplitTree,
-    Table, TableState, Tabs, TagInput, TextWrap, ToastKind, ToastScope, ToastStack, Toggle,
-    Tooltip, Widget, WidgetState,
+    DialogKind, DialogState, Diff, DiffView, FileEntry, FilePicker, Form, FormField, Gauge,
+    GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView,
+    Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput,
+    Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx,
+    ScrollView, ScrollbarVisibility, SearchBox, Select, Slider, SortDirection, Sparkline,
+    SplitAxis, SplitTree, Table, TableState, Tabs, TagInput, TextWrap, ToastKind, ToastScope,
+    ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -387,6 +387,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: select_lunatui,
         ratatui: select_ratatui,
+    },
+    Case {
+        name: "file-picker",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no file browser with a path bar, filter line, size and modified columns, marks, or active-row scrolling; its side draws the same rows by hand as styled lines",
+        ),
+        lunatui: file_picker_lunatui,
+        ratatui: file_picker_ratatui,
     },
     Case {
         name: "date-picker",
@@ -3482,6 +3491,78 @@ fn select_lunatui(
         .open(true)
         .active(Some(active))
         .render(Rect::new(area.x, area.y, area.width.min(30), 7), &mut cx);
+}
+
+const PICKER_FILES: [FileEntry<'static>; 6] = [
+    FileEntry::directory("docs").modified("Oct 30 09:12"),
+    FileEntry::directory("src").modified("Nov 02 17:40"),
+    FileEntry::file("Cargo.toml", 1_432).modified("Nov 01 08:03"),
+    FileEntry::file("README.md", 18_204).modified("Oct 31 14:02"),
+    FileEntry::file("lib.rs", 9_870).modified("Nov 02 22:11"),
+    FileEntry::file("release.tar.gz", 5_242_880).modified("Nov 02 22:11"),
+];
+const PICKER_SIZES: [&str; 6] = ["", "", "1.4 KB", "18 KB", "9.6 KB", "5.0 MB"];
+
+fn file_picker_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let active = usize::try_from(tick / 25).unwrap_or(0) % PICKER_FILES.len();
+    let marked = [2, 3];
+    FilePicker::new("/home/dev/lunatui", &PICKER_FILES)
+        .active(Some(active))
+        .marked(&marked)
+        .render(Rect::new(area.x, area.y, area.width.min(56), 10), &mut cx);
+}
+
+fn file_picker_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let bar = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let body = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface0));
+    let active_style = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Surface0))
+        .bg(color(lunatui_theme::Token::Accent));
+    let width = area.width.min(56);
+    let active = usize::try_from(tick / 25).unwrap_or(0) % PICKER_FILES.len();
+    let mut lines = vec![
+        Line::from(Span::styled(" \u{25b8} /home/dev/lunatui", bar)),
+        Line::from(Span::styled(" Filter type to narrow the list", body)),
+        Line::from(Span::styled("    Name", body)),
+    ];
+    for (row, entry) in PICKER_FILES.iter().enumerate() {
+        let style = if row == active { active_style } else { body };
+        let mark = if row == 2 || row == 3 {
+            "\u{2713}"
+        } else {
+            " "
+        };
+        let slash = if PICKER_SIZES[row].is_empty() {
+            "/"
+        } else {
+            ""
+        };
+        lines.push(Line::from(Span::styled(
+            format!(" {mark} {}{slash} {}", entry.name(), PICKER_SIZES[row]),
+            style,
+        )));
+    }
+    lines.push(Line::from(Span::styled(
+        " 6 items  \u{b7}  2 selected",
+        bar,
+    )));
+    let rows = u16::try_from(lines.len()).unwrap_or(0);
+    RatParagraph::new(lines)
+        .style(body)
+        .render(RatRect::new(area.x, area.y, width, rows), buf);
 }
 
 fn select_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {

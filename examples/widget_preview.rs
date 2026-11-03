@@ -20,12 +20,12 @@ use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, BigText, Block, BorderType, Breadcrumbs, ComboBox,
     Constraint, Date, DatePicker, DateStyle, Diff, DiffLayout, DiffView, DividerId, FieldArea,
-    Form, FormField, Gauge, HexViewer, HexViewerState, KeyHintBar, List, LogBuffer, LogEntry,
-    LogLevel, LogView, MarkdownView, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
-    NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize, RadioFlow,
-    RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Select, Slider, Sparkline, SplitAxis,
-    SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput, TextInput,
-    ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    FileEntry, FileKind, FilePicker, Form, FormField, Gauge, HexViewer, HexViewerState, KeyHintBar,
+    List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Menu, MenuItem, MenuState, Monthly,
+    NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize,
+    RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Select, Slider, Sparkline,
+    SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput,
+    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 mod bar_scene;
@@ -247,6 +247,11 @@ const PREVIEWS: &[Preview] = &[
         name: "select",
         native: select_native,
         baseline: select_baseline,
+    },
+    Preview {
+        name: "file-picker",
+        native: file_picker_native,
+        baseline: file_picker_baseline,
     },
     Preview {
         name: "logs",
@@ -6577,6 +6582,261 @@ fn select_native(
 }
 
 fn select_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const FP_ROOT: [FileEntry<'static>; 17] = [
+    FileEntry::directory(".github").modified("Oct 12 11:20"),
+    FileEntry::directory("docs").modified("Oct 30 09:12"),
+    FileEntry::directory("examples").modified("Nov 02 17:40"),
+    FileEntry::directory("src").modified("Nov 02 17:41"),
+    FileEntry::file(".editorconfig", 214).modified("Sep 18 10:00"),
+    FileEntry::file(".gitignore", 96).modified("Sep 18 10:00"),
+    FileEntry::file("CHANGELOG.md", 24_310).modified("Nov 02 22:11"),
+    FileEntry::file("Cargo.lock", 88_452).modified("Nov 02 22:09"),
+    FileEntry::file("Cargo.toml", 1_432).modified("Nov 01 08:03"),
+    FileEntry::file("LICENSE", 1_068).modified("Sep 18 10:00"),
+    FileEntry::file("README.md", 18_204).modified("Oct 31 14:02"),
+    FileEntry::file("SECURITY.md", 2_210).modified("Oct 02 16:45"),
+    FileEntry::file("deny.toml", 3_904).modified("Oct 28 13:30"),
+    FileEntry::file("justfile", 740).modified("Oct 19 09:15"),
+    FileEntry::file("release.tar.gz", 5_242_880).modified("Nov 02 22:11"),
+    FileEntry::file("rust-toolchain.toml", 64).modified("Sep 18 10:00"),
+    FileEntry::file("rustfmt.toml", 120).modified("Sep 18 10:00"),
+];
+
+const FP_FILTERED: [FileEntry<'static>; 2] = [
+    FileEntry::file("README.md", 18_204).modified("Oct 31 14:02"),
+    FileEntry::file("release.tar.gz", 5_242_880).modified("Nov 02 22:11"),
+];
+
+const FP_PICKS: [(u32, usize); 3] = [(130, 8), (155, 10), (205, 14)];
+
+fn fp_filtering(tick: u32) -> bool {
+    (10..45).contains(&tick)
+}
+
+fn fp_active(tick: u32) -> usize {
+    match tick {
+        0..=24 | 45..=54 => 0,
+        25..=44 | 55..=64 => 1,
+        65..=74 => 2,
+        75..=84 => 3,
+        85..=94 => 4,
+        95..=104 => 5,
+        105..=114 => 6,
+        115..=124 => 7,
+        125..=139 => 8,
+        140..=149 => 9,
+        150..=169 => 10,
+        170..=179 => 11,
+        180..=189 => 12,
+        190..=199 => 13,
+        200..=209 => 14,
+        210..=219 => 15,
+        _ => 16,
+    }
+}
+
+fn fp_size_text(bytes: u64) -> String {
+    let mut tenths = bytes * 10;
+    let mut unit = 0;
+    while tenths >= 10_240 && unit < 3 {
+        tenths = (tenths + 512) / 1024;
+        unit += 1;
+    }
+    let name = ["B", "KB", "MB", "GB"][unit];
+    if unit == 0 || tenths >= 100 {
+        let whole = if unit == 0 { bytes } else { (tenths + 5) / 10 };
+        format!("{whole} {name}")
+    } else {
+        format!("{}.{} {name}", tenths / 10, tenths % 10)
+    }
+}
+
+fn fp_clear(area: Rect, fill: Style, cx: &mut RenderCx<'_>) {
+    if area.width <= 2 || area.height <= 2 {
+        return;
+    }
+    let blanks = " ".repeat(usize::from(area.width - 2));
+    for row in 1..area.height - 1 {
+        Paragraph::new(&blanks)
+            .style(fill)
+            .render(Rect::new(area.x + 1, area.y + row, area.width - 2, 1), cx);
+    }
+}
+
+fn fp_panel(
+    area: Rect,
+    title: &str,
+    fill: Style,
+    dim: Style,
+    accent: Color,
+    cx: &mut RenderCx<'_>,
+) {
+    fp_clear(area, fill, cx);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(title)
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(area, cx);
+}
+
+fn fp_text(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, text: &str, style: Style) {
+    Paragraph::new(text)
+        .style(style)
+        .render(Rect::new(x, y, width, 1), cx);
+}
+
+fn fp_selection(
+    side: Rect,
+    picked: &[usize],
+    (fill, dim, accent, surface): (Style, Style, Color, Color),
+    cx: &mut RenderCx<'_>,
+) {
+    let line = side.width - 6;
+    fp_panel(side, " Selection ", fill, dim, accent, cx);
+    if picked.is_empty() {
+        fp_text(cx, side.x + 3, side.y + 2, line, "Nothing chosen yet", dim);
+    }
+    let mut total = 0;
+    for (row, index) in picked.iter().enumerate() {
+        let entry = FP_ROOT[*index];
+        let y = side.y + 2 + u16::try_from(row).unwrap_or(0) * 2;
+        fp_text(
+            cx,
+            side.x + 3,
+            y,
+            1,
+            "✓",
+            Style::new().fg(accent).bg(surface),
+        );
+        fp_text(cx, side.x + 5, y, line - 2, entry.name(), fill);
+        let bytes = FP_ROOT_SIZES[*index];
+        total += bytes;
+        fp_text(cx, side.x + 5, y + 1, line - 2, &fp_size_text(bytes), dim);
+    }
+    if !picked.is_empty() {
+        let noun = if picked.len() == 1 { "file" } else { "files" };
+        let summary = format!("{} {noun}  ·  {}", picked.len(), fp_size_text(total));
+        fp_text(
+            cx,
+            side.x + 3,
+            side.y + side.height - 2,
+            line,
+            &summary,
+            dim,
+        );
+    }
+}
+
+fn fp_details(
+    details: Rect,
+    current: FileEntry,
+    (fill, dim, accent, _): (Style, Style, Color, Color),
+    cx: &mut RenderCx<'_>,
+) {
+    let line = details.width - 6;
+    fp_panel(details, " Details ", fill, dim, accent, cx);
+    let kind = if current.kind() == FileKind::Directory {
+        "Folder"
+    } else {
+        "File"
+    };
+    fp_text(cx, details.x + 3, details.y + 2, line, current.name(), fill);
+    fp_text(cx, details.x + 3, details.y + 4, line, kind, dim);
+    fp_text(
+        cx,
+        details.x + 3,
+        details.y + 5,
+        line,
+        current.modified_text(),
+        dim,
+    );
+}
+
+fn file_picker_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    Block::new().style(fill).render(area, &mut cx);
+    Block::new()
+        .style(head)
+        .render(Rect::new(area.x, area.y, area.width, 1), &mut cx);
+    fp_text(
+        &mut cx,
+        area.x + 1,
+        area.y,
+        area.width.saturating_sub(1),
+        "Open files  ·  lunatui",
+        head,
+    );
+    let panel = Rect::new(area.x + 2, area.y + 2, 72, 22);
+    fp_panel(panel, " Open files ", fill, dim, accent, &mut cx);
+    let filtering = fp_filtering(tick);
+    let picked: Vec<usize> = FP_PICKS
+        .iter()
+        .filter(|(at, _)| tick >= *at)
+        .map(|(_, index)| *index)
+        .collect();
+    let inner = Rect::new(panel.x + 2, panel.y + 1, panel.width - 4, panel.height - 2);
+    let active = fp_active(tick);
+    let current = if filtering {
+        FP_FILTERED[active]
+    } else {
+        FP_ROOT[active]
+    };
+    if filtering {
+        FilePicker::new("/home/dev/lunatui", &FP_FILTERED)
+            .active(Some(active))
+            .filter("re")
+            .state(WidgetState::Focused)
+            .render(inner, &mut cx);
+    } else {
+        FilePicker::new("/home/dev/lunatui", &FP_ROOT)
+            .active(Some(active))
+            .marked(&picked)
+            .state(WidgetState::Focused)
+            .render(inner, &mut cx);
+    }
+    let side = Rect::new(panel.x + panel.width + 2, panel.y, 38, 13);
+    let colors = (fill, dim, accent, surface);
+    fp_selection(side, &picked, colors, &mut cx);
+    let details = Rect::new(side.x, side.y + side.height + 1, side.width, 8);
+    fp_details(details, current, colors, &mut cx);
+    StatusBar::new(" up/down move  ●  space mark  ●  type to filter  ●  enter open  ●  esc cancel")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+const FP_ROOT_SIZES: [u64; 17] = [
+    0, 0, 0, 0, 214, 96, 24_310, 88_452, 1_432, 1_068, 18_204, 2_210, 3_904, 740, 5_242_880, 64,
+    120,
+];
+
+fn file_picker_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 fn dp_day(year: i32, month: u8, day: u8) -> Date {
     Date::from_ymd(year, month, day).unwrap_or(Date::UNIX_EPOCH)

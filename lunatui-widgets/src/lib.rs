@@ -35,6 +35,8 @@ mod date_picker;
 mod dialog;
 #[cfg(feature = "diff-view")]
 mod diff_view;
+#[cfg(feature = "file-picker")]
+mod file_picker;
 #[cfg(feature = "form")]
 mod form;
 mod gauge;
@@ -145,6 +147,8 @@ pub use date_picker::DatePicker;
 pub use dialog::{Dialog, DialogClosed, DialogFocus, DialogKind, DialogOutcome, DialogState};
 #[cfg(feature = "diff-view")]
 pub use diff_view::{Diff, DiffHunk, DiffKind, DiffLayout, DiffLine, DiffView};
+#[cfg(feature = "file-picker")]
+pub use file_picker::{FileEntry, FileKind, FilePicker};
 #[cfg(feature = "form")]
 pub use form::{FieldArea, Form, FormField};
 pub use gauge::Gauge;
