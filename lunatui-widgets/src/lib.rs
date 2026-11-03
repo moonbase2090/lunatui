@@ -114,6 +114,8 @@ mod toast;
 mod toggle;
 #[cfg(feature = "tooltip")]
 mod tooltip;
+#[cfg(feature = "tree")]
+mod tree;
 mod widget;
 
 #[cfg(feature = "accordion")]
@@ -237,6 +239,8 @@ pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStac
 pub use toggle::Toggle;
 #[cfg(feature = "tooltip")]
 pub use tooltip::{Tooltip, TooltipState};
+#[cfg(feature = "tree")]
+pub use tree::{Tree, TreeItem, TreeRow, TreeState};
 pub use widget::Widget;
 
 #[cfg(feature = "terminal")]

@@ -211,6 +211,15 @@ A pipeline settings screen: sections with a caret, a title, and a badge open and
 <img src="docs/media/accordion.webp" alt="Accordion: sections opening and closing on a pipeline settings screen in the dark theme" width="1028">
 
 Screenshot: [docs/media/accordion.png](docs/media/accordion.png). Recorded with `scripts/record-showcase.sh` (`CASE=accordion`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 12 seconds).
+
+### Tree
+
+A file browser over the workspace: folders open with a caret turn, guide lines run down through the open ones, and the selection walks the visible rows, stepping into a folder and back out to its parent. The app keeps a `TreeState` across frames — which nodes are open, which one is selected, and where the view starts — and the detail pane follows the selected node.
+
+<img src="docs/media/tree.webp" alt="Tree: a file browser opening folders and moving the selection through the rows in the dark theme" width="1028">
+
+Screenshot: [docs/media/tree.png](docs/media/tree.png). Recorded with `scripts/record-showcase.sh` (`CASE=tree`, 120×36 at 2x scale, `FRAMES=240`, dark, lossless animated WebP, about 10 seconds).
+
 ### Number input
 
 A render queue's export settings: each field is a spin box with minus and plus buttons, a step, a range, and decimals, and the screen nudges them one after another while the estimate beside them follows. One field is typed by hand: the empty text shows in the fail color with a caret, digits arrive one at a time, and the committed value snaps to the field's decimals. The widget draws the field and gives back the rules (`nudge`, `parse`, `accepts`, `format`) and the button cells for the app's own key and mouse handling.
