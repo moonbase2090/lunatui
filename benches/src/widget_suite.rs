@@ -23,9 +23,9 @@ use lunatui_widgets::{
     KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker, Menu, MenuItem,
     MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput, Paragraph, PieChart,
     PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx, ScrollView,
-    ScrollbarVisibility, SearchBox, Slider, SortDirection, Sparkline, SplitAxis, SplitTree, Table,
-    TableState, Tabs, TagInput, TextWrap, ToastKind, ToastScope, ToastStack, Toggle, Tooltip,
-    Widget, WidgetState,
+    ScrollbarVisibility, SearchBox, Select, Slider, SortDirection, Sparkline, SplitAxis, SplitTree,
+    Table, TableState, Tabs, TagInput, TextWrap, ToastKind, ToastScope, ToastStack, Toggle,
+    Tooltip, Widget, WidgetState,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;
@@ -360,6 +360,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: combo_box_lunatui,
         ratatui: combo_box_ratatui,
+    },
+    Case {
+        name: "select",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no select field with a drop-down list, a check on the chosen option, type-ahead, or active-row scrolling; its side draws the field and the first rows of the list by hand as styled lines",
+        ),
+        lunatui: select_lunatui,
+        ratatui: select_ratatui,
     },
     Case {
         name: "date-picker",
@@ -3433,6 +3442,55 @@ fn combo_box_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
         .map(|(row, fruit)| {
             let style = if row == pick { active } else { list };
             Line::from(Span::styled(format!(" {fruit}"), style))
+        })
+        .collect();
+    let rows = u16::try_from(lines.len()).unwrap_or(0);
+    RatParagraph::new(lines)
+        .style(list)
+        .render(RatRect::new(area.x, area.y + 1, width, rows), buf);
+}
+
+fn select_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let active = usize::try_from(tick / 25).unwrap_or(0) % COMBO_FRUIT.len();
+    Select::new(&COMBO_FRUIT, Some(2))
+        .placeholder("Pick a fruit")
+        .open(true)
+        .active(Some(active))
+        .render(Rect::new(area.x, area.y, area.width.min(30), 7), &mut cx);
+}
+
+fn select_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let color = |token| rat_color(theme.resolve(token));
+    let field = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface1));
+    let list = RatStyle::new()
+        .fg(color(lunatui_theme::Token::TextPrimary))
+        .bg(color(lunatui_theme::Token::Surface0));
+    let active_style = RatStyle::new()
+        .fg(color(lunatui_theme::Token::Surface0))
+        .bg(color(lunatui_theme::Token::Accent));
+    let width = area.width.min(30);
+    RatParagraph::new(Line::from(Span::styled(" banana", field)))
+        .style(field)
+        .render(RatRect::new(area.x, area.y, width, 1), buf);
+    let active = usize::try_from(tick / 25).unwrap_or(0) % COMBO_FRUIT.len();
+    let lines: Vec<Line<'_>> = COMBO_FRUIT
+        .iter()
+        .take(6)
+        .enumerate()
+        .map(|(row, fruit)| {
+            let style = if row == active { active_style } else { list };
+            let check = if row == 2 { "\u{2713}" } else { " " };
+            Line::from(Span::styled(format!(" {check} {fruit}"), style))
         })
         .collect();
     let rows = u16::try_from(lines.len()).unwrap_or(0);

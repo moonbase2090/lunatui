@@ -23,7 +23,7 @@ use lunatui_widgets::{
     Form, FormField, Gauge, HexViewer, HexViewerState, KeyHintBar, List, LogBuffer, LogEntry,
     LogLevel, LogView, MarkdownView, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
     NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize, RadioFlow,
-    RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Slider, Sparkline, SplitAxis,
+    RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Select, Slider, Sparkline, SplitAxis,
     SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput, TextInput,
     ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
@@ -231,6 +231,11 @@ const PREVIEWS: &[Preview] = &[
         name: "combo-box",
         native: combo_native,
         baseline: combo_baseline,
+    },
+    Preview {
+        name: "select",
+        native: select_native,
+        baseline: select_baseline,
     },
     Preview {
         name: "logs",
@@ -6454,6 +6459,107 @@ fn combo_native(
 }
 
 fn combo_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const SEL_ENVS: [&str; 5] = ["development", "staging", "production", "canary", "sandbox"];
+
+const SEL_HOSTS: [&str; 5] = [
+    "dev.internal",
+    "staging.internal",
+    "api.example.com",
+    "canary.example.com",
+    "sandbox.internal",
+];
+
+fn sel_state(tick: u32) -> (usize, bool, Option<usize>) {
+    match tick {
+        0..=29 => (1, false, None),
+        30..=59 => (1, true, Some(1)),
+        60..=89 | 110..=139 => (1, true, Some(2)),
+        90..=109 => (1, true, Some(3)),
+        _ => (2, false, None),
+    }
+}
+
+fn select_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Settings  ·  lunatui", head);
+    let panel = Rect::new(area.x + 2, area.y + 2, 64, 24);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Release settings ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(panel, &mut cx);
+    let (selected, open, active) = sel_state(tick);
+    let value_x = panel.x + 16;
+    let rows = [
+        (2, "Service", "api-gateway"),
+        (4, "Environment", ""),
+        (12, "Host", SEL_HOSTS[selected]),
+        (14, "Replicas", "3"),
+        (16, "Strategy", "rolling, 25% at a time"),
+        (18, "Notify", "#releases"),
+    ];
+    for (dy, label, value) in rows {
+        cx.put_str(panel.x + 3, panel.y + dy, label, dim);
+        cx.put_str(value_x, panel.y + dy, value, fill);
+    }
+    Select::new(&SEL_ENVS, Some(selected))
+        .placeholder("Choose an environment")
+        .open(open)
+        .active(active)
+        .max_rows(5)
+        .state(if open {
+            WidgetState::Focused
+        } else {
+            WidgetState::Normal
+        })
+        .render(Rect::new(value_x, panel.y + 4, 32, 7), &mut cx);
+    let side = Rect::new(panel.x + panel.width + 2, panel.y, 40, 10);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Summary ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(side, &mut cx);
+    cx.put_str(side.x + 3, side.y + 2, "Environment", dim);
+    cx.put_str(side.x + 3, side.y + 3, SEL_ENVS[selected], fill);
+    cx.put_str(side.x + 3, side.y + 5, "Host", dim);
+    cx.put_str(side.x + 3, side.y + 6, SEL_HOSTS[selected], fill);
+    StatusBar::new(" up/down choose  ●  type a letter to jump  ●  enter select  ●  esc close")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+fn select_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 fn dp_day(year: i32, month: u8, day: u8) -> Date {
     Date::from_ymd(year, month, day).unwrap_or(Date::UNIX_EPOCH)
