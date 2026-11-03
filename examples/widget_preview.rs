@@ -6652,6 +6652,18 @@ fn fp_size_text(bytes: u64) -> String {
     }
 }
 
+fn fp_clear(area: Rect, fill: Style, cx: &mut RenderCx<'_>) {
+    if area.width <= 2 || area.height <= 2 {
+        return;
+    }
+    let blanks = " ".repeat(usize::from(area.width - 2));
+    for row in 1..area.height - 1 {
+        Paragraph::new(&blanks)
+            .style(fill)
+            .render(Rect::new(area.x + 1, area.y + row, area.width - 2, 1), cx);
+    }
+}
+
 fn fp_panel(
     area: Rect,
     title: &str,
@@ -6660,6 +6672,7 @@ fn fp_panel(
     accent: Color,
     cx: &mut RenderCx<'_>,
 ) {
+    fp_clear(area, fill, cx);
     Block::bordered()
         .border_type(BorderType::Rounded)
         .title(title)
