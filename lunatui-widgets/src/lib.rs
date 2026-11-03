@@ -102,6 +102,8 @@ mod tabs;
 #[cfg(feature = "tag-input")]
 mod tag_input;
 mod text_input;
+#[cfg(feature = "timeline")]
+mod timeline;
 #[cfg(feature = "toast")]
 mod toast;
 #[cfg(feature = "toggle")]
@@ -218,6 +220,11 @@ pub use tabs::{TabMove, Tabs, TabsDrag};
 #[cfg(feature = "tag-input")]
 pub use tag_input::TagInput;
 pub use text_input::TextInput;
+#[cfg(feature = "timeline")]
+pub use timeline::{
+    Timeline, TimelineItem, TimelineItemId, TimelineLane, TimelineStatus, TimelineTick,
+    TimelineView,
+};
 #[cfg(feature = "toast")]
 pub use toast::{Toast, ToastId, ToastKind, ToastPlacement, ToastScope, ToastStack};
 #[cfg(feature = "toggle")]

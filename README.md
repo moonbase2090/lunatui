@@ -360,6 +360,14 @@ A live capacity board for eight services across twelve availability zones. The s
 
 Screenshot: [docs/media/heatmap.png](docs/media/heatmap.png). Recorded with `scripts/record-heatmap.sh` at 120×36, 2x scale, 300 frames at 30 fps, dark truecolor, about 10 seconds. The script checks the incident and recovery states against the actual terminal output.
 
+### Timeline
+
+A release plan for twelve workstreams over a scrollable time axis. The view follows the now marker, zooms out to sixteen days with weekly ticks to check the release date, then returns. The selection moves from a span in progress to a blocked one and on to a milestone, and the inspector and event log follow it.
+
+<img src="docs/media/timeline.webp" alt="Timeline release plan with labeled workstream lanes, colored spans with progress, milestones, a now marker, a selected-item inspector, and a plan event log" width="1028">
+
+Screenshot: [docs/media/timeline.png](docs/media/timeline.png). Recorded with `scripts/record-timeline.sh` at 120×36, 2x scale, 300 frames at 30 fps, dark truecolor, about 10 seconds. The script checks the follow, overview and handoff states against the actual terminal output.
+
 ### Color picker
 
 A theme editor for an accent color. Dragging in the square sets saturation and value, Tab moves to the hue bar and the arrow keys turn it, and Tab again reaches the hex entry, where typed digits fill in and Enter applies the color. The preview beside it, the buttons, gauges and link, repaints in the picked color as it changes.

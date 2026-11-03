@@ -87,7 +87,7 @@ helper saved_colors # renders swatches and names through Paragraph
 scope examples/heatmap_showcase.rs # capacity screen uses public Heatmap, BigText, Gauge, LogView, Block and Paragraph widgets
 helper label # renders a Paragraph without writing cells
 helper matrix # constructs borrowed Heatmap rows and renders them
-helper legend # renders the five Heatmap scale bands
+helper legend # renders the five Heatmap scale bands or the Timeline status samples through the widgets
 helper inspector # composes selected-cell BigText, Gauge and labels
 scope lunatui-button/examples/ui_button.rs # the ui-button gallery demo
 scope lunatui-choice/examples/ui_choice.rs # the ui-choice gallery demo
@@ -98,3 +98,6 @@ scope examples/pixel_pie_chart.rs # complete native PieChart and Chart twins use
 scope examples/pie_scene.rs # original cluster composes PieChart, Table, Chart and text widgets
 helper pc_table # renders region rows through Table and public text widgets
 helper pc_trend # renders original rate samples through Chart and a text heading
+
+scope examples/timeline_showcase.rs # release-plan screen uses public Timeline, BigText, Gauge, LogView, Block and Paragraph widgets
+helper schedule # builds borrowed Timeline lanes and ticks and renders them

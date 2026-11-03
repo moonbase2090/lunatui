@@ -57,6 +57,7 @@ use tui_scrollview::{
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
 
 mod heatmap;
+mod timeline;
 
 const BG: (u8, u8, u8) = (0x1a, 0x1b, 0x26);
 const TEXT: (u8, u8, u8) = (0xc0, 0xca, 0xf5);
@@ -126,6 +127,15 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: heatmap::native,
         ratatui: heatmap::baseline,
+    },
+    Case {
+        name: "timeline",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no timeline widget; the reference draws the same lanes, ticks and now marker directly into its Buffer",
+        ),
+        lunatui: timeline::native,
+        ratatui: timeline::baseline,
     },
     Case {
         name: "block",
