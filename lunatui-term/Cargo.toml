@@ -12,6 +12,7 @@ workspace = true
 
 [features]
 default = []
+pty = []
 pixel-layer = ["dep:lunatui-image", "dep:png"]
 
 [[test]]
@@ -60,3 +61,7 @@ test = false
 name = "pixel_capture"
 path = "tests/pixel_capture.rs"
 required-features = ["pixel-layer"]
+
+[[test]]
+name = "pty"
+required-features = ["pty"]

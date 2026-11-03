@@ -89,6 +89,11 @@ struct Preview {
 
 const PREVIEWS: &[Preview] = &[
     Preview {
+        name: "terminal",
+        native: terminal_native,
+        baseline: terminal_baseline,
+    },
+    Preview {
         name: "heatmap",
         native: heatmap_showcase::render,
         baseline: heatmap_baseline,
@@ -7001,3 +7006,20 @@ fn tags_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area
 }
 
 fn tags_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+fn terminal_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "terminal") {
+        (case.lunatui)(grid, clusters, theme, area, tick);
+    }
+}
+fn terminal_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
+    if let Some(case) = CASES.iter().find(|case| case.name == "terminal") {
+        (case.ratatui)(buffer, area, tick);
+    }
+}

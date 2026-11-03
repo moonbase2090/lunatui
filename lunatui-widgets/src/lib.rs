@@ -101,6 +101,8 @@ mod table_state;
 mod tabs;
 #[cfg(feature = "tag-input")]
 mod tag_input;
+#[cfg(feature = "terminal")]
+mod terminal;
 mod text_input;
 #[cfg(feature = "timeline")]
 mod timeline;
@@ -232,3 +234,6 @@ pub use toggle::Toggle;
 #[cfg(feature = "tooltip")]
 pub use tooltip::{Tooltip, TooltipState};
 pub use widget::Widget;
+
+#[cfg(feature = "terminal")]
+pub use terminal::{PseudoTerminal, TerminalCell, TerminalScreen};

@@ -30,3 +30,5 @@ The bench targets live in `benches/` and the tests in `tests/`. Run everything w
 
 Run it with `cargo bench -p lunatui-bench --bench widget_suite` (add `-- --gate` to enforce, `--max-ratio N` to change the limit) and, for statistics per widget, `cargo bench -p lunatui-bench --bench criterion_widgets`.
 
+
+The `terminal` case includes identical VT parsing and screen allocation on both sides, followed by the native terminal widget or an independent Ratatui buffer adapter. Both use the same changing colored CLI bytes and sizes. It is an exact, gated case and participates in `criterion_widgets`. Both timing entrypoints abort with a nonzero exit code if any frame write fails. `scripts/check-terminal-mutants.py` injects a counting-sink failure to verify that the Criterion run rejects it.

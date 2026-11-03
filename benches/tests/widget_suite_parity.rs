@@ -156,3 +156,30 @@ fn every_case_has_a_unique_name() {
     names.dedup();
     assert_eq!(before, names.len());
 }
+
+#[test]
+fn terminal_parity_covers_the_colored_output_and_an_observable_frame_change() -> Result<(), String>
+{
+    let case = CASES
+        .iter()
+        .find(|case| case.name == "terminal")
+        .ok_or("missing terminal case")?;
+    for (width, height) in SIZES {
+        for tick in [0, 1, 49, 99] {
+            check(case, width, height, tick)?;
+        }
+        let (grid, clusters, _) = render_both(case, width, height, 49);
+        assert_eq!(
+            grid.row_display(0, &clusters).trim_end(),
+            "orbit % cargo test"
+        );
+        assert_eq!(
+            grid.row_display(7, &clusters).trim_end(),
+            "finished in 0.49s"
+        );
+        let cell = grid.get(0, 1).ok_or("missing compile label")?;
+        assert_eq!(cell.style().fg, Color::Indexed(4));
+        assert!(cell.style().attrs.bold());
+    }
+    Ok(())
+}
