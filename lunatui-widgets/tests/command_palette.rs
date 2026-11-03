@@ -288,3 +288,90 @@ fn title_border_placeholder_and_width_are_configurable() {
     assert!(!out.contains("Save file"));
     assert_eq!(palette.area(Rect::new(0, 0, 80, 20)).width, 50);
 }
+
+#[test]
+fn whitespace_is_ignored_even_when_the_title_has_no_spaces() {
+    let entries = [PaletteEntry::new("Open"), PaletteEntry::new("Save")];
+    let hits = CommandPalette::new("o p", 3, &entries).matches();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].index, 0);
+    assert_eq!(hits[0].ranges, [0..1, 1..2]);
+    let blank = CommandPalette::new(" \t\n", 3, &entries).matches();
+    assert_eq!(blank.len(), 2);
+    assert_eq!(blank[0].index, 0);
+    assert_eq!(blank[1].index, 1);
+    assert_eq!(blank[0].ranges, []);
+    assert_eq!(blank[1].ranges, []);
+}
+
+#[test]
+fn details_have_two_columns_after_the_title_and_clip_before_shortcuts() -> Result<(), &'static str>
+{
+    let entries = [PaletteEntry::new("Save")
+        .detail("write to disk")
+        .shortcut("Ctrl+S")];
+    let palette = CommandPalette::new("", 0, &entries).width(24);
+    let (grid, clusters) = draw(&palette, 40, 10);
+    let panel = palette.area(Rect::new(0, 0, 40, 10));
+    let (x, y) = find(&grid, &clusters, "Save").ok_or("title")?;
+    assert_eq!(find(&grid, &clusters, "write"), Some((x + 6, y)));
+    assert_eq!(
+        find(&grid, &clusters, "Ctrl+S"),
+        Some((panel.x + panel.width - 8, y))
+    );
+    let start = usize::from(panel.x + 1);
+    let row = grid.row_display(y, &clusters);
+    assert_eq!(
+        row.chars().skip(start).take(22).collect::<String>(),
+        " Save  write t Ctrl+S "
+    );
+    Ok(())
+}
+
+#[test]
+fn the_shortcut_has_a_blank_cell_before_the_right_border() -> Result<(), &'static str> {
+    let entries = [PaletteEntry::new("Open").shortcut("Ctrl+O")];
+    let palette = CommandPalette::new("", 0, &entries);
+    let (grid, clusters) = draw(&palette, 80, 20);
+    let panel = palette.area(Rect::new(0, 0, 80, 20));
+    let (_, y) = find(&grid, &clusters, "Open").ok_or("title")?;
+    assert_eq!(
+        find(&grid, &clusters, "Ctrl+O"),
+        Some((panel.x + panel.width - 8, y))
+    );
+    let row = grid.row_display(y, &clusters);
+    let suffix = row
+        .chars()
+        .skip(usize::from(panel.x + panel.width - 2))
+        .take(2)
+        .collect::<String>();
+    assert_eq!(suffix, " │");
+    Ok(())
+}
+
+#[test]
+fn rightmost_list_cell_is_clickable_but_the_right_border_is_not() {
+    let palette = CommandPalette::new("", 0, &ENTRIES);
+    let area = Rect::new(8, 6, 80, 20);
+    let panel = palette.area(area);
+    assert_eq!(
+        palette.entry_at(area, panel.x + panel.width - 2, panel.y + 2),
+        Some(0)
+    );
+    assert_eq!(
+        palette.entry_at(area, panel.x + panel.width - 1, panel.y + 2),
+        None
+    );
+}
+
+#[test]
+fn query_and_match_count_have_a_blank_column_between_them() -> Result<(), &'static str> {
+    let palette = CommandPalette::new("", 0, &ENTRIES)
+        .placeholder("Find an action with a long name")
+        .width(28);
+    let (grid, clusters) = draw(&palette, 40, 10);
+    let (x, y) = find(&grid, &clusters, "5 commands").ok_or("count")?;
+    let row = grid.row_display(y, &clusters);
+    assert_eq!(row.chars().nth(usize::from(x - 1)), Some(' '));
+    Ok(())
+}

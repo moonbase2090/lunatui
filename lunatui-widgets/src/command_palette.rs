@@ -273,7 +273,8 @@ impl Body<'_> {
         let text = Rect::new(
             row.x.saturating_add(PROMPT_WIDTH.min(row.width)),
             row.y,
-            row.width.saturating_sub(PROMPT_WIDTH + right),
+            row.width
+                .saturating_sub(PROMPT_WIDTH + right + u16::from(right > 0)),
             1,
         );
         if right > 0 {

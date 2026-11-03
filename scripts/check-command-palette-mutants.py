@@ -9,6 +9,11 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 MUTANTS = [
+    ("query whitespace", ".filter(|ch| !ch.is_whitespace())", ".filter(|_| true)"),
+    ("detail column", "1 + title_width + 2", "1 + title_width + 1"),
+    ("shortcut border", ".saturating_sub(1 + hint_cells)", ".saturating_sub(hint_cells)"),
+    ("click right edge", "column - list.x >= list.width", "column - list.x > list.width"),
+    ("query count gap", "PROMPT_WIDTH + right + u16::from(right > 0)", "PROMPT_WIDTH + right"),
     ("ordered matching", "query.iter().copied().peekable()", "query.iter().rev().copied().peekable()"),
     ("complete query", "wanted.next().is_none()", "wanted.next().is_some()"),
     ("smart case", "self.query.chars().any(|ch| ch.is_ascii_uppercase())", "false"),
