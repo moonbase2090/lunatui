@@ -5291,12 +5291,47 @@ fn tr_tree(tick: u32) -> TreeState {
     state
 }
 
+fn tr_text(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, text: &str, style: Style) {
+    Paragraph::new(text)
+        .style(style)
+        .render(Rect::new(x, y, width, 1), cx);
+}
+
+fn tr_clear(area: Rect, fill: Style, cx: &mut RenderCx<'_>) {
+    if area.width <= 2 || area.height <= 2 {
+        return;
+    }
+    let blanks = " ".repeat(usize::from(area.width - 2));
+    for row in 1..area.height - 1 {
+        Paragraph::new(&blanks)
+            .style(fill)
+            .render(Rect::new(area.x + 1, area.y + row, area.width - 2, 1), cx);
+    }
+}
+
+fn tr_panel(
+    area: Rect,
+    title: &str,
+    fill: Style,
+    dim: Style,
+    accent: Color,
+    cx: &mut RenderCx<'_>,
+) {
+    tr_clear(area, fill, cx);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(title)
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(fill.bg))
+        .render(area, cx);
+}
+
 fn tree_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
     let surface = theme.resolve(Token::Surface0);
     let raised = theme.resolve(Token::Surface1);
     let text = theme.resolve(Token::TextPrimary);
     let accent = theme.resolve(Token::Accent);
-    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
     let mut cx = RenderCx::new(grid, clusters, theme);
     let fill = Style::new().fg(text).bg(surface);
     let dim = fill.with_attrs(Attrs::new().set_dim(true));
@@ -5304,8 +5339,18 @@ fn tree_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area
         .fg(accent)
         .bg(raised)
         .with_attrs(Attrs::new().set_bold(true));
-    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
-    cx.put_str(area.x + 1, area.y, "Files  ·  lunatui workspace", head);
+    Block::new().style(fill).render(area, &mut cx);
+    Block::new()
+        .style(head)
+        .render(Rect::new(area.x, area.y, area.width, 1), &mut cx);
+    tr_text(
+        &mut cx,
+        area.x + 1,
+        area.y,
+        area.width.saturating_sub(1),
+        "Files  ·  lunatui workspace",
+        head,
+    );
     let left = Rect::new(area.x + 2, area.y + 2, 60, 30);
     let right = Rect::new(
         left.x + left.width + 1,
@@ -5314,13 +5359,7 @@ fn tree_native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area
         30,
     );
     for (title, pane) in [(" Tree ", left), (" Selected ", right)] {
-        Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(title)
-            .style(fill)
-            .border_style(dim)
-            .title_style(Style::new().fg(accent).bg(surface))
-            .render(pane, &mut cx);
+        tr_panel(pane, title, fill, dim, accent, &mut cx);
     }
     let state = tr_tree(tick);
     let inner = Rect::new(left.x + 2, left.y + 2, left.width - 4, left.height - 3);
@@ -5353,12 +5392,20 @@ fn tr_selected(
         .fg(accent)
         .bg(surface)
         .with_attrs(Attrs::new().set_bold(true));
+    let line = right.width.saturating_sub(4);
     let Some(item) = state.selected() else {
-        cx.put_str(right.x + 2, right.y + 2, "Nothing selected", dim);
+        tr_text(cx, right.x + 2, right.y + 2, line, "Nothing selected", dim);
         return;
     };
     let path = state.selected_path().unwrap_or(&[]);
-    cx.put_str(right.x + 2, right.y + 2, item.label(), bold_accent);
+    tr_text(
+        cx,
+        right.x + 2,
+        right.y + 2,
+        line,
+        item.label(),
+        bold_accent,
+    );
     let joined = path
         .iter()
         .map(usize::to_string)
@@ -5380,10 +5427,10 @@ fn tr_selected(
         format!("Children  {}", item.children().len()),
         format!("Visible   {} rows", state.visible().len()),
     ];
-    for (row, line) in (0_u16..).zip(&lines) {
-        cx.put_str(right.x + 2, right.y + 4 + row, line, fill);
+    for (row, text) in (0_u16..).zip(&lines) {
+        tr_text(cx, right.x + 2, right.y + 4 + row, line, text, fill);
     }
-    cx.put_str(right.x + 2, right.y + 11, "Keys", bold_accent);
+    tr_text(cx, right.x + 2, right.y + 11, line, "Keys", bold_accent);
     let keys = [
         "↑ / ↓   previous or next row",
         "→       open, then step in",
@@ -5391,8 +5438,8 @@ fn tr_selected(
         "Home    first row",
         "End     last row",
     ];
-    for (row, line) in (0_u16..).zip(keys) {
-        cx.put_str(right.x + 2, right.y + 13 + row, line, dim);
+    for (row, text) in (0_u16..).zip(keys) {
+        tr_text(cx, right.x + 2, right.y + 13 + row, line, text, dim);
     }
 }
 
