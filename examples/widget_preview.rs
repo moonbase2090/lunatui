@@ -6608,37 +6608,47 @@ const FP_FILTERED: [FileEntry<'static>; 2] = [
     FileEntry::file("release.tar.gz", 5_242_880).modified("Nov 02 22:11"),
 ];
 
-const FP_PICKS: [(u32, usize); 3] = [(95, 8), (130, 10), (200, 14)];
-const FP_FILTER_AT: u32 = 215;
+const FP_PICKS: [(u32, usize); 3] = [(130, 8), (155, 10), (205, 14)];
+
+fn fp_filtering(tick: u32) -> bool {
+    (10..45).contains(&tick)
+}
 
 fn fp_active(tick: u32) -> usize {
     match tick {
-        0..=14 => 0,
-        25..=34 => 2,
-        35..=44 => 3,
-        45..=54 => 4,
-        55..=64 => 5,
-        65..=74 => 6,
-        75..=84 => 7,
-        85..=99 => 8,
-        100..=114 => 9,
-        115..=159 => 10,
-        160..=169 => 11,
-        170..=179 => 12,
-        180..=189 => 13,
-        190..=214 => 14,
-        _ => 1,
+        0..=24 | 45..=54 => 0,
+        25..=44 | 55..=64 => 1,
+        65..=74 => 2,
+        75..=84 => 3,
+        85..=94 => 4,
+        95..=104 => 5,
+        105..=114 => 6,
+        115..=124 => 7,
+        125..=139 => 8,
+        140..=149 => 9,
+        150..=169 => 10,
+        170..=179 => 11,
+        180..=189 => 12,
+        190..=199 => 13,
+        200..=209 => 14,
+        210..=219 => 15,
+        _ => 16,
     }
 }
 
 fn fp_size_text(bytes: u64) -> String {
-    match bytes {
-        0..=1023 => format!("{bytes} B"),
-        1024..=1_048_575 => format!("{} KB", (bytes + 512) / 1024),
-        _ => {
-            let tenths = (bytes * 10 + 524_288) / 1_048_576;
-            format!("{}.{} MB", tenths / 10, tenths % 10)
-        }
+    let mut tenths = bytes * 10;
+    let mut unit = 0;
+    while tenths >= 10_240 && unit < 3 {
+        tenths = (tenths + 512) / 1024;
+        unit += 1;
+    }
+    let name = ["B", "KB", "MB", "GB"][unit];
+    if unit == 0 || tenths >= 100 {
+        let whole = if unit == 0 { bytes } else { (tenths + 5) / 10 };
+        format!("{whole} {name}")
+    } else {
+        format!("{}.{} {name}", tenths / 10, tenths % 10)
     }
 }
 
@@ -6682,13 +6692,12 @@ fn file_picker_native(
     cx.put_str(area.x + 1, area.y, "Open files  ·  lunatui", head);
     let panel = Rect::new(area.x + 2, area.y + 2, 72, 22);
     fp_panel(panel, " Open files ", fill, dim, accent, &mut cx);
-    let filtering = tick >= FP_FILTER_AT;
+    let filtering = fp_filtering(tick);
     let picked: Vec<usize> = FP_PICKS
         .iter()
         .filter(|(at, _)| tick >= *at)
         .map(|(_, index)| *index)
         .collect();
-    let marked_filtered: Vec<usize> = if filtering { vec![0, 1] } else { Vec::new() };
     let inner = Rect::new(panel.x + 2, panel.y + 1, panel.width - 4, panel.height - 2);
     let active = fp_active(tick);
     let current = if filtering {
@@ -6699,7 +6708,6 @@ fn file_picker_native(
     if filtering {
         FilePicker::new("/home/dev/lunatui", &FP_FILTERED)
             .active(Some(active))
-            .marked(&marked_filtered)
             .filter("re")
             .state(WidgetState::Focused)
             .render(inner, &mut cx);
