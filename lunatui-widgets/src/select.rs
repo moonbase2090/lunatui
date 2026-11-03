@@ -230,7 +230,10 @@ impl<'a, S: AsRef<str>> Select<'a, S> {
                 continue;
             };
             let row_base = if self.active_index() == Some(position) {
-                Style::new().fg(surface).bg(accent)
+                Style::new()
+                    .fg(surface)
+                    .bg(accent)
+                    .with_attrs(Attrs::new().set_dim(disabled))
             } else {
                 base
             };

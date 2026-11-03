@@ -139,6 +139,18 @@ fn disabled_dims_the_field_and_the_list() {
 }
 
 #[test]
+fn disabled_dims_the_active_row_too() {
+    let select = Select::new(&FRUIT, Some(0))
+        .open(true)
+        .active(Some(0))
+        .state(WidgetState::Disabled);
+    let cells = grid(&select, 20, 3);
+    let style = style_at(&cells, 3, 1);
+    assert_eq!(style.bg, color(Token::Accent));
+    assert!(style.attrs.dim());
+}
+
+#[test]
 fn focused_draws_the_arrow_bold_in_the_accent_color() {
     let select = Select::new(&FRUIT, Some(0)).state(WidgetState::Focused);
     let cells = grid(&select, 20, 1);
