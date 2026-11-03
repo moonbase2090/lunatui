@@ -20,12 +20,12 @@ use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, BigText, Block, BorderType, Breadcrumbs, ComboBox,
     Constraint, Date, DatePicker, DateStyle, Diff, DiffLayout, DiffView, DividerId, FieldArea,
-    Form, FormField, Gauge, HexViewer, HexViewerState, KeyHintBar, List, LogBuffer, LogEntry,
-    LogLevel, LogView, MarkdownView, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
-    NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize, RadioFlow,
-    RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Select, Slider, Sparkline, SplitAxis,
-    SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput, TextInput,
-    ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
+    FileEntry, FilePicker, Form, FormField, Gauge, HexViewer, HexViewerState, KeyHintBar, List,
+    LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Menu, MenuItem, MenuState, Monthly,
+    NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize,
+    RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Select, Slider, Sparkline,
+    SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput,
+    TextInput, ToastKind, ToastScope, ToastStack, Toggle, VecSource, Widget, WidgetState,
 };
 
 mod bar_scene;
@@ -247,6 +247,11 @@ const PREVIEWS: &[Preview] = &[
         name: "select",
         native: select_native,
         baseline: select_baseline,
+    },
+    Preview {
+        name: "file-picker",
+        native: file_picker_native,
+        baseline: file_picker_baseline,
     },
     Preview {
         name: "logs",
@@ -6577,6 +6582,153 @@ fn select_native(
 }
 
 fn select_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
+
+const FP_ROOT: [FileEntry<'static>; 12] = [
+    FileEntry::directory(".github").modified("Oct 12 11:20"),
+    FileEntry::directory("docs").modified("Oct 30 09:12"),
+    FileEntry::directory("examples").modified("Nov 02 17:40"),
+    FileEntry::directory("src").modified("Nov 02 17:41"),
+    FileEntry::file("CHANGELOG.md", 24_310).modified("Nov 02 22:11"),
+    FileEntry::file("Cargo.lock", 88_452).modified("Nov 02 22:09"),
+    FileEntry::file("Cargo.toml", 1_432).modified("Nov 01 08:03"),
+    FileEntry::file("LICENSE", 1_068).modified("Sep 18 10:00"),
+    FileEntry::file("README.md", 18_204).modified("Oct 31 14:02"),
+    FileEntry::file("SECURITY.md", 2_210).modified("Oct 02 16:45"),
+    FileEntry::file("deny.toml", 3_904).modified("Oct 28 13:30"),
+    FileEntry::file("release.tar.gz", 5_242_880).modified("Nov 02 22:11"),
+];
+
+const FP_FILTERED: [FileEntry<'static>; 2] = [
+    FileEntry::file("README.md", 18_204).modified("Oct 31 14:02"),
+    FileEntry::file("release.tar.gz", 5_242_880).modified("Nov 02 22:11"),
+];
+
+const FP_PICKS: [(u32, usize); 3] = [(110, 6), (160, 8), (205, 11)];
+const FP_FILTER_AT: u32 = 215;
+
+fn fp_active(tick: u32) -> usize {
+    match tick {
+        0..=19 => 0,
+        35..=49 => 2,
+        50..=64 => 3,
+        65..=79 => 4,
+        80..=94 => 5,
+        95..=129 => 6,
+        130..=144 => 7,
+        145..=174 => 8,
+        175..=184 => 9,
+        185..=194 => 10,
+        195..=214 => 11,
+        _ => 1,
+    }
+}
+
+fn fp_size_text(bytes: u64) -> String {
+    match bytes {
+        0..=1023 => format!("{bytes} B"),
+        1024..=1_048_575 => format!("{} KB", (bytes + 512) / 1024),
+        _ => {
+            let tenths = (bytes * 10 + 524_288) / 1_048_576;
+            format!("{}.{} MB", tenths / 10, tenths % 10)
+        }
+    }
+}
+
+fn file_picker_native(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    tick: u32,
+) {
+    let surface = theme.resolve(Token::Surface0);
+    let raised = theme.resolve(Token::Surface1);
+    let text = theme.resolve(Token::TextPrimary);
+    let accent = theme.resolve(Token::Accent);
+    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    let fill = Style::new().fg(text).bg(surface);
+    let dim = fill.with_attrs(Attrs::new().set_dim(true));
+    let head = Style::new()
+        .fg(accent)
+        .bg(raised)
+        .with_attrs(Attrs::new().set_bold(true));
+    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
+    cx.put_str(area.x + 1, area.y, "Open files  ·  lunatui", head);
+    let panel = Rect::new(area.x + 2, area.y + 2, 72, 18);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Open files ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(panel, &mut cx);
+    let filtering = tick >= FP_FILTER_AT;
+    let picked: Vec<usize> = FP_PICKS
+        .iter()
+        .filter(|(at, _)| tick >= *at)
+        .map(|(_, index)| *index)
+        .collect();
+    let marked_filtered: Vec<usize> = if filtering { vec![0, 1] } else { Vec::new() };
+    let state = WidgetState::Focused;
+    let inner = Rect::new(panel.x + 2, panel.y + 1, panel.width - 4, panel.height - 2);
+    if filtering {
+        FilePicker::new("/home/dev/lunatui", &FP_FILTERED)
+            .active(Some(fp_active(tick)))
+            .marked(&marked_filtered)
+            .filter("re")
+            .state(state)
+            .render(inner, &mut cx);
+    } else {
+        FilePicker::new("/home/dev/lunatui", &FP_ROOT)
+            .active(Some(fp_active(tick)))
+            .marked(&picked)
+            .state(state)
+            .render(inner, &mut cx);
+    }
+    let side = Rect::new(panel.x + panel.width + 2, panel.y, 38, 12);
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" Selection ")
+        .style(fill)
+        .border_style(dim)
+        .title_style(Style::new().fg(accent).bg(surface))
+        .render(side, &mut cx);
+    if picked.is_empty() {
+        cx.put_str(side.x + 3, side.y + 2, "Nothing chosen yet", dim);
+    }
+    let mut total = 0;
+    for (row, index) in picked.iter().enumerate() {
+        let entry = FP_ROOT[*index];
+        let y = side.y + 2 + u16::try_from(row).unwrap_or(0) * 2;
+        cx.put_str(side.x + 3, y, "✓", Style::new().fg(accent).bg(surface));
+        cx.put_str(side.x + 5, y, entry.name(), fill);
+        let bytes = FP_ROOT_SIZES[*index];
+        total += bytes;
+        cx.put_str(side.x + 5, y + 1, &fp_size_text(bytes), dim);
+    }
+    if !picked.is_empty() {
+        let summary = format!("{} files  ·  {}", picked.len(), fp_size_text(total));
+        cx.put_str(side.x + 3, side.y + side.height - 2, &summary, dim);
+    }
+    StatusBar::new(" up/down move  ●  space mark  ●  type to filter  ●  enter open  ●  esc cancel")
+        .style(Style::new().fg(text).bg(raised))
+        .render(
+            Rect::new(
+                area.x,
+                area.y + area.height.saturating_sub(1),
+                area.width,
+                1,
+            ),
+            &mut cx,
+        );
+}
+
+const FP_ROOT_SIZES: [u64; 12] = [
+    0, 0, 0, 0, 24_310, 88_452, 1_432, 1_068, 18_204, 2_210, 3_904, 5_242_880,
+];
+
+fn file_picker_baseline(_buffer: &mut Buffer, _area: RatRect, _theme: &Theme, _tick: u32) {}
 
 fn dp_day(year: i32, month: u8, day: u8) -> Date {
     Date::from_ymd(year, month, day).unwrap_or(Date::UNIX_EPOCH)
