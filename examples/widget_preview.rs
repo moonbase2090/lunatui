@@ -6734,7 +6734,8 @@ fn file_picker_native(
         cx.put_str(side.x + 5, y + 1, &fp_size_text(bytes), dim);
     }
     if !picked.is_empty() {
-        let summary = format!("{} files  ·  {}", picked.len(), fp_size_text(total));
+        let noun = if picked.len() == 1 { "file" } else { "files" };
+        let summary = format!("{} {noun}  ·  {}", picked.len(), fp_size_text(total));
         cx.put_str(side.x + 3, side.y + side.height - 2, &summary, dim);
     }
     let details = Rect::new(side.x, side.y + side.height + 1, side.width, 8);
