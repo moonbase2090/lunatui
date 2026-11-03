@@ -6669,6 +6669,79 @@ fn fp_panel(
         .render(area, cx);
 }
 
+fn fp_text(cx: &mut RenderCx<'_>, x: u16, y: u16, width: u16, text: &str, style: Style) {
+    Paragraph::new(text)
+        .style(style)
+        .render(Rect::new(x, y, width, 1), cx);
+}
+
+fn fp_selection(
+    side: Rect,
+    picked: &[usize],
+    (fill, dim, accent, surface): (Style, Style, Color, Color),
+    cx: &mut RenderCx<'_>,
+) {
+    let line = side.width - 6;
+    fp_panel(side, " Selection ", fill, dim, accent, cx);
+    if picked.is_empty() {
+        fp_text(cx, side.x + 3, side.y + 2, line, "Nothing chosen yet", dim);
+    }
+    let mut total = 0;
+    for (row, index) in picked.iter().enumerate() {
+        let entry = FP_ROOT[*index];
+        let y = side.y + 2 + u16::try_from(row).unwrap_or(0) * 2;
+        fp_text(
+            cx,
+            side.x + 3,
+            y,
+            1,
+            "✓",
+            Style::new().fg(accent).bg(surface),
+        );
+        fp_text(cx, side.x + 5, y, line - 2, entry.name(), fill);
+        let bytes = FP_ROOT_SIZES[*index];
+        total += bytes;
+        fp_text(cx, side.x + 5, y + 1, line - 2, &fp_size_text(bytes), dim);
+    }
+    if !picked.is_empty() {
+        let noun = if picked.len() == 1 { "file" } else { "files" };
+        let summary = format!("{} {noun}  ·  {}", picked.len(), fp_size_text(total));
+        fp_text(
+            cx,
+            side.x + 3,
+            side.y + side.height - 2,
+            line,
+            &summary,
+            dim,
+        );
+    }
+}
+
+fn fp_details(
+    details: Rect,
+    current: FileEntry,
+    (fill, dim, accent, _): (Style, Style, Color, Color),
+    cx: &mut RenderCx<'_>,
+) {
+    let line = details.width - 6;
+    fp_panel(details, " Details ", fill, dim, accent, cx);
+    let kind = if current.kind() == FileKind::Directory {
+        "Folder"
+    } else {
+        "File"
+    };
+    fp_text(cx, details.x + 3, details.y + 2, line, current.name(), fill);
+    fp_text(cx, details.x + 3, details.y + 4, line, kind, dim);
+    fp_text(
+        cx,
+        details.x + 3,
+        details.y + 5,
+        line,
+        current.modified_text(),
+        dim,
+    );
+}
+
 fn file_picker_native(
     grid: &mut Grid,
     clusters: &mut ClusterTable,
@@ -6680,7 +6753,6 @@ fn file_picker_native(
     let raised = theme.resolve(Token::Surface1);
     let text = theme.resolve(Token::TextPrimary);
     let accent = theme.resolve(Token::Accent);
-    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
     let mut cx = RenderCx::new(grid, clusters, theme);
     let fill = Style::new().fg(text).bg(surface);
     let dim = fill.with_attrs(Attrs::new().set_dim(true));
@@ -6688,8 +6760,18 @@ fn file_picker_native(
         .fg(accent)
         .bg(raised)
         .with_attrs(Attrs::new().set_bold(true));
-    cx.put_str(area.x, area.y, &" ".repeat(usize::from(area.width)), head);
-    cx.put_str(area.x + 1, area.y, "Open files  ·  lunatui", head);
+    Block::new().style(fill).render(area, &mut cx);
+    Block::new()
+        .style(head)
+        .render(Rect::new(area.x, area.y, area.width, 1), &mut cx);
+    fp_text(
+        &mut cx,
+        area.x + 1,
+        area.y,
+        area.width.saturating_sub(1),
+        "Open files  ·  lunatui",
+        head,
+    );
     let panel = Rect::new(area.x + 2, area.y + 2, 72, 22);
     fp_panel(panel, " Open files ", fill, dim, accent, &mut cx);
     let filtering = fp_filtering(tick);
@@ -6719,35 +6801,10 @@ fn file_picker_native(
             .render(inner, &mut cx);
     }
     let side = Rect::new(panel.x + panel.width + 2, panel.y, 38, 13);
-    fp_panel(side, " Selection ", fill, dim, accent, &mut cx);
-    if picked.is_empty() {
-        cx.put_str(side.x + 3, side.y + 2, "Nothing chosen yet", dim);
-    }
-    let mut total = 0;
-    for (row, index) in picked.iter().enumerate() {
-        let entry = FP_ROOT[*index];
-        let y = side.y + 2 + u16::try_from(row).unwrap_or(0) * 2;
-        cx.put_str(side.x + 3, y, "✓", Style::new().fg(accent).bg(surface));
-        cx.put_str(side.x + 5, y, entry.name(), fill);
-        let bytes = FP_ROOT_SIZES[*index];
-        total += bytes;
-        cx.put_str(side.x + 5, y + 1, &fp_size_text(bytes), dim);
-    }
-    if !picked.is_empty() {
-        let noun = if picked.len() == 1 { "file" } else { "files" };
-        let summary = format!("{} {noun}  ·  {}", picked.len(), fp_size_text(total));
-        cx.put_str(side.x + 3, side.y + side.height - 2, &summary, dim);
-    }
+    let colors = (fill, dim, accent, surface);
+    fp_selection(side, &picked, colors, &mut cx);
     let details = Rect::new(side.x, side.y + side.height + 1, side.width, 8);
-    fp_panel(details, " Details ", fill, dim, accent, &mut cx);
-    let kind = if current.kind() == FileKind::Directory {
-        "Folder"
-    } else {
-        "File"
-    };
-    cx.put_str(details.x + 3, details.y + 2, current.name(), fill);
-    cx.put_str(details.x + 3, details.y + 4, kind, dim);
-    cx.put_str(details.x + 3, details.y + 5, current.modified_text(), dim);
+    fp_details(details, current, colors, &mut cx);
     StatusBar::new(" up/down move  ●  space mark  ●  type to filter  ●  enter open  ●  esc cancel")
         .style(Style::new().fg(text).bg(raised))
         .render(
