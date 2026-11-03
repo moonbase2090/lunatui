@@ -402,3 +402,111 @@ fn render_follows_cursor_and_keeps_a_cursor_before_an_unfittable_wide_glyph() {
         Some(theme.resolve(Token::SurfaceRaised))
     );
 }
+
+#[test]
+fn loaded_tabs_expand_to_four_column_stops_and_cursor_uses_the_same_columns() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut editor = TextArea::new("a\tb");
+    editor.move_to(
+        TextPosition {
+            line: 0,
+            grapheme: 2,
+        },
+        false,
+    );
+    editor.set_widget_state(WidgetState::Focused);
+    let mut grid = Grid::new(10, 1);
+    let mut clusters = ClusterTable::new();
+    editor.render(
+        Rect::new(0, 0, 10, 1),
+        &mut RenderCx::new(&mut grid, &mut clusters, &theme),
+    );
+    assert_eq!(grid.row_display(0, &clusters), "a   b     ");
+    assert_eq!(
+        grid.get(4, 0).map(|cell| cell.style().bg),
+        Some(theme.resolve(Token::FocusFill))
+    );
+    assert_ne!(
+        grid.get(1, 0).map(|cell| cell.style().bg),
+        Some(theme.resolve(Token::FocusFill))
+    );
+}
+
+#[test]
+fn tabs_after_wide_text_and_partial_tabs_at_the_viewport_edge_keep_their_columns() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut editor = TextArea::new("界\tX\tY");
+    editor.move_to(
+        TextPosition {
+            line: 0,
+            grapheme: 5,
+        },
+        false,
+    );
+    let mut grid = Grid::new(5, 1);
+    let mut clusters = ClusterTable::new();
+    editor.render(
+        Rect::new(0, 0, 5, 1),
+        &mut RenderCx::new(&mut grid, &mut clusters, &theme),
+    );
+    assert_eq!(grid.row_display(0, &clusters), "   Y ");
+    assert_eq!(
+        grid.get(4, 0).map(|cell| cell.style().bg),
+        Some(theme.resolve(Token::SurfaceRaised))
+    );
+}
+
+#[test]
+fn vertical_motion_preserves_the_expanded_tab_column() {
+    let mut editor = TextArea::new("a\tb\n123456\n\tz");
+    editor.move_to(
+        TextPosition {
+            line: 0,
+            grapheme: 2,
+        },
+        false,
+    );
+    editor.handle_event(&key(KeyCode::Down));
+    assert_eq!(
+        editor.cursor(),
+        TextPosition {
+            line: 1,
+            grapheme: 4
+        }
+    );
+    editor.handle_event(&key(KeyCode::Down));
+    assert_eq!(
+        editor.cursor(),
+        TextPosition {
+            line: 2,
+            grapheme: 1
+        }
+    );
+}
+
+#[test]
+fn typing_tab_preserves_a_literal_tab_and_undo_while_expanding_its_rendering() {
+    let theme = Theme::builtin(Variant::Dark);
+    let mut editor = TextArea::new("ab");
+    editor.move_to(
+        TextPosition {
+            line: 0,
+            grapheme: 1,
+        },
+        false,
+    );
+    assert_eq!(
+        editor.handle_event(&key(KeyCode::Tab)),
+        EditResult::DocumentChanged
+    );
+    assert_eq!(editor.text(), "a\tb");
+    let mut grid = Grid::new(6, 1);
+    let mut clusters = ClusterTable::new();
+    editor.render(
+        Rect::new(0, 0, 6, 1),
+        &mut RenderCx::new(&mut grid, &mut clusters, &theme),
+    );
+    assert_eq!(grid.row_display(0, &clusters), "a   b ");
+    editor.handle_event(&undo_key());
+    assert_eq!(editor.text(), "ab");
+}

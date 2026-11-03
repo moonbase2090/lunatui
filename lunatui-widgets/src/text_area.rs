@@ -3,7 +3,7 @@
 
 use std::sync::OnceLock;
 
-use lunatui_core::{Color, Rect, Size, Style, clip_display_prefix, cluster_display_width, width};
+use lunatui_core::{Color, Rect, Size, Style, clip_display_prefix, cluster_display_width};
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{Event, KeyCode, KeyKind, Modifiers, Paste};
 use lunatui_theme::Token;
@@ -810,7 +810,7 @@ impl TextArea {
         let current_start = self.line_starts[pos.line];
         let col = *self
             .preferred_col
-            .get_or_insert_with(|| width(&self.text[current_start..self.cursor]));
+            .get_or_insert_with(|| display_columns(&self.text[current_start..self.cursor]));
         let target_start = self.line_starts[line];
         let target_end = self
             .line_starts
@@ -821,7 +821,7 @@ impl TextArea {
         let mut display_col = 0;
         let mut target_byte = target_start + target_text.len();
         for (index, grapheme) in target_text.grapheme_indices(true) {
-            let next = display_col + cluster_display_width(grapheme);
+            let next = display_col + grapheme_columns(grapheme, display_col);
             if next > col {
                 target_byte = if col - display_col < next - col {
                     target_start + index
@@ -934,99 +934,117 @@ impl TextArea {
         cursor: TextPosition,
         cx: &mut RenderCx<'_>,
     ) -> Option<(u16, u16)> {
-        let RenderLayout {
-            body,
-            first_line: first,
-            horizontal,
-            gutter,
-            gutter_x,
-            foreground,
-            surface,
-        } = layout;
         let mut cursor_screen = None;
-        for row in 0..usize::from(body.height) {
-            let line = first + row;
+        for row in 0..layout.body.height {
+            let line = layout.first_line + usize::from(row);
             if line >= self.line_starts.len() {
                 break;
             }
-            let start = self.line_starts[line];
-            let end = self
-                .line_starts
-                .get(line + 1)
-                .copied()
-                .unwrap_or(self.text.len());
-            let value = self.text[start..end].trim_end_matches('\n');
-            let y = body.y + u16::try_from(row).unwrap_or(u16::MAX);
-            if self.line_numbers {
-                let (label, len) = line_number_label(line + 1, gutter);
-                cx.put_str(
-                    gutter_x,
-                    y,
-                    std::str::from_utf8(&label[..len]).unwrap_or(""),
-                    Style::new().fg(cx.token(Token::TextMuted)).bg(surface),
-                );
+            cursor_screen = self
+                .render_line(line, row, layout, cursor, cx)
+                .or(cursor_screen);
+        }
+        cursor_screen
+    }
+
+    fn render_line(
+        &self,
+        line: usize,
+        row: u16,
+        layout: RenderLayout,
+        cursor: TextPosition,
+        cx: &mut RenderCx<'_>,
+    ) -> Option<(u16, u16)> {
+        let RenderLayout {
+            body,
+            horizontal,
+            gutter,
+            gutter_x,
+            surface,
+            ..
+        } = layout;
+        let start = self.line_starts[line];
+        let end = self
+            .line_starts
+            .get(line + 1)
+            .copied()
+            .unwrap_or(self.text.len());
+        let value = self.text[start..end].trim_end_matches('\n');
+        let y = body.y + row;
+        if self.line_numbers {
+            let (label, len) = line_number_label(line + 1, gutter);
+            cx.put_str(
+                gutter_x,
+                y,
+                std::str::from_utf8(&label[..len]).unwrap_or(""),
+                Style::new().fg(cx.token(Token::TextMuted)).bg(surface),
+            );
+        }
+        let mut cursor_screen = None;
+        let mut column = 0;
+        for (index, (byte_offset, text)) in value.grapheme_indices(true).enumerate() {
+            let cells = grapheme_columns(text, column);
+            let next = column + cells;
+            if next <= horizontal || (column < horizontal && text != "\t") {
+                column = next;
+                continue;
             }
-            let mut column = 0usize;
-            for (index, grapheme) in value.grapheme_indices(true).enumerate() {
-                let (byte_offset, grapheme_text) = grapheme;
-                let grapheme_index = index + 1;
-                let grapheme_width = cluster_display_width(grapheme_text);
-                if column + grapheme_width <= horizontal {
-                    column += grapheme_width;
-                    continue;
-                }
-                if column < horizontal {
-                    column += grapheme_width;
-                    continue;
-                }
-                let visual = column.saturating_sub(horizontal);
-                if line == cursor.line
-                    && grapheme_index - 1 == cursor.grapheme
-                    && visual < usize::from(body.width)
-                {
-                    cursor_screen = Some((body.x + u16::try_from(visual).unwrap_or(u16::MAX), y));
-                }
-                if visual + grapheme_width > usize::from(body.width) {
-                    break;
-                }
-                let start_byte = start + byte_offset;
-                let end_byte = start_byte + grapheme_text.len();
-                let selected =
-                    self.selection_bytes()
-                        .is_some_and(|(selection_start, selection_end)| {
-                            start_byte < selection_end && end_byte > selection_start
-                        });
-                let search_hit = self.search_match.is_some_and(|(match_start, match_end)| {
-                    start_byte < match_end && end_byte > match_start
-                });
-                let style = if selected {
-                    Style::new()
-                        .fg(cx.token(Token::Surface0))
-                        .bg(cx.token(Token::FocusFill))
-                } else if search_hit {
-                    Style::new()
-                        .fg(cx.token(Token::TextStrong))
-                        .bg(cx.token(Token::Warn))
-                } else {
-                    Style::new().fg(foreground).bg(surface)
-                };
-                cx.put_str(
-                    body.x + u16::try_from(visual).unwrap_or(u16::MAX),
-                    y,
-                    grapheme_text,
+            let visual = column.saturating_sub(horizontal);
+            if line == cursor.line && index == cursor.grapheme && visual < usize::from(body.width) {
+                cursor_screen = Some((body.x + u16::try_from(visual).unwrap_or(u16::MAX), y));
+            }
+            if visual >= usize::from(body.width)
+                || (visual + cells > usize::from(body.width) && text != "\t")
+            {
+                break;
+            }
+            let x = body.x + u16::try_from(visual).unwrap_or(u16::MAX);
+            let style = self.grapheme_style(start + byte_offset, text.len(), layout, cx);
+            if text == "\t" {
+                let visible_end = next.saturating_sub(horizontal).min(usize::from(body.width));
+                cx.fill(
+                    Rect::new(x, y, u16::try_from(visible_end - visual).unwrap_or(0), 1),
                     style,
+                    ' ',
                 );
-                column += grapheme_width;
+            } else {
+                cx.put_str(x, y, text, style);
             }
-            if line == cursor.line && cursor.grapheme == value.graphemes(true).count() {
-                let visual = width(&value[..self.byte_at_position(cursor).saturating_sub(start)])
-                    .saturating_sub(horizontal);
-                if visual < usize::from(body.width) {
-                    cursor_screen = Some((body.x + u16::try_from(visual).unwrap_or(0), y));
-                }
+            column = next;
+        }
+        if line == cursor.line && cursor.grapheme == value.graphemes(true).count() {
+            let visual = display_columns(value).saturating_sub(horizontal);
+            if visual < usize::from(body.width) {
+                cursor_screen = Some((body.x + u16::try_from(visual).unwrap_or(0), y));
             }
         }
         cursor_screen
+    }
+
+    fn grapheme_style(
+        &self,
+        start: usize,
+        len: usize,
+        layout: RenderLayout,
+        cx: &RenderCx<'_>,
+    ) -> Style {
+        let selected = self
+            .selection_bytes()
+            .is_some_and(|(a, b)| start < b && start + len > a);
+        let search_hit = self
+            .search_match
+            .is_some_and(|(a, b)| start < b && start + len > a);
+        if selected {
+            Style::new()
+                .fg(cx.token(Token::Surface0))
+                .bg(cx.token(Token::FocusFill))
+        } else if search_hit {
+            Style::new()
+                .fg(cx.token(Token::TextStrong))
+                .bg(cx.token(Token::Warn))
+        } else {
+            Style::new().fg(layout.foreground).bg(layout.surface)
+        }
     }
 
     fn render_cursor(&self, cursor: Option<(u16, u16)>, focused: bool, cx: &mut RenderCx<'_>) {
@@ -1097,7 +1115,7 @@ impl TextArea {
             first
         };
         let cursor_line_start = self.line_starts[cursor.line];
-        let cursor_column = width(&self.text[cursor_line_start..self.cursor]);
+        let cursor_column = display_columns(&self.text[cursor_line_start..self.cursor]);
         let horizontal = if cursor_column < self.scroll_x {
             cursor_column
         } else if body.width > 0
@@ -1217,4 +1235,18 @@ fn next_grapheme(text: &str, at: usize) -> usize {
         .map(|(i, g)| i + g.len())
         .find(|end| *end > at)
         .unwrap_or(text.len())
+}
+
+fn grapheme_columns(text: &str, column: usize) -> usize {
+    if text == "\t" {
+        4 - column % 4
+    } else {
+        cluster_display_width(text)
+    }
+}
+
+fn display_columns(text: &str) -> usize {
+    text.graphemes(true).fold(0, |column, grapheme| {
+        column + grapheme_columns(grapheme, column)
+    })
 }
