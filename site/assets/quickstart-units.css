@@ -41,7 +41,7 @@ main h2{font:600 clamp(30px,3.4vw,38px)/1.1 var(--serif);letter-spacing:-.01em;m
 .tpl-run{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 16px;background:#191927;border-bottom:1px solid rgba(205,214,244,.07);color:var(--t-dim);font:12.5px/1.4 var(--tmono)}
 .tpl-run code{font:inherit;color:var(--t-fg)}
 .tpl-cells{container-type:inline-size;padding:24px 20px;position:sticky;top:0;overflow-x:auto}
-.tpl-cells .term{--pad:40px;--max:13px}
+.tpl-cells .term{font-family:"JetBrainsMono NFM",var(--tmono);--pad:40px;--max:13px}
 .tpl-frame{min-height:380px}
 .tpl-code{grid-area:code;border-top:0;min-width:0;position:relative}
 .tpl-code pre{position:absolute;inset:0;max-height:none;font-size:12.5px}

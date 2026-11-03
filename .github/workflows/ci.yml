@@ -132,5 +132,5 @@ jobs:
       - run: ./scripts/check-release-text-selftest.sh
       - run: ./scripts/check-release-text.sh --artifact-dir site/assets/sandbox
       - run: git diff --exit-code -- site/assets/sandbox
-      - run: npm exec --prefix site -- playwright install --with-deps chromium webkit
+      - run: npm exec --prefix site -- playwright install --with-deps chromium firefox webkit
       - run: npm run test:sandbox --prefix site

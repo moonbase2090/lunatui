@@ -15,6 +15,10 @@ Every PR adds its entry under **Unreleased**.
 - `lunatui-dialog` adds `Dialog` (alert, confirm and prompt panels with a rounded border) and `AlertDialog` (Cancel and a danger-colored action button), wrapping the core dialog with theme tokens. It re-exports `DialogState` and its focus and outcome types. The `ui_dialog` example is a project list with a rename prompt, a delete confirmation and a result alert.
 - `LayerStack`, `Layer`, `LayerId` and `PressRoute` in `lunatui-runtime`: a stack of open overlays with z order for `HitMap`, modal focus trapping through `FocusManager::sync`, outside-click and Esc dismissal routing, and focus restore when a layer closes. Modals, popovers, dropdowns and toasts can stack without each widget tracking the others.
 
+### Fixed
+
+- Quickstart template borders use the bundled full monospace font, so box-drawing glyphs align with their text cells across browser engines.
+
 ## [0.1.20] - 2026-11-02
 
 ### Added
