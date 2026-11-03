@@ -269,7 +269,7 @@ Screenshot: [docs/media/select.png](docs/media/select.png). Recorded with `scrip
 
 ### File picker
 
-An open-files screen: the picker lists a project folder with a path bar, a filter line, size and modified columns and a count, narrows to names containing "re" as the filter is typed, steps down the rows while the list scrolls with a thumb, marks Cargo.toml, README.md and release.tar.gz with checks, and a selection panel and a details panel follow the marks and the active row in the dark theme.
+An open-files screen: the picker lists a project folder with a path bar, a filter line, size and modified columns and a count, narrows to names containing "re" as the filter is typed, steps down the rows while the list scrolls with a thumb, marks Cargo.toml, README.md and release.tar.gz with checks, and a selection panel and a details panel follow the marks and the active row in the dark theme. The surrounding scene is built from `Block`, `Paragraph` and `StatusBar`.
 
 <img src="docs/media/file-picker.webp" alt="File picker: an open-files screen whose list narrows to names containing re, then steps through a project folder with a scroll thumb, marks three files with checks, and updates a selection panel and a details panel in the dark theme" width="1028">
 
