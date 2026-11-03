@@ -47,12 +47,12 @@ fn draws_the_path_filter_header_entries_and_count() {
         [
             " ▸ /home/dev/projects/lunatui",
             " Filter type to narrow the list",
-            "    Name                              Size Modified",
+            "    Name                             Size  Modified",
             "  ▸ docs/                                  Oct 30 09:12",
             "  ▸ src/                                   Nov 02 17:40",
-            "    Cargo.toml                      1.4 KB Nov 01 08:03",
-            "    README.md                        18 KB Oct 31 14:02",
-            "    release.tar.gz                  5.0 MB Nov 02 22:11",
+            "    Cargo.toml                     1.4 KB  Nov 01 08:03",
+            "    README.md                       18 KB  Oct 31 14:02",
+            "    release.tar.gz                 5.0 MB  Nov 02 22:11",
             " 5 items",
         ]
     );
@@ -149,7 +149,7 @@ fn the_filter_text_replaces_the_hint_and_focus_adds_a_cursor() {
     let focused = picker.clone().state(WidgetState::Focused);
     assert_eq!(rows(&focused, 40, 6)[1], " Filter re▏");
     let empty = FilePicker::new("/a", &FILES).state(WidgetState::Focused);
-    assert!(rows(&empty, 40, 6)[1].starts_with(" Filter ▏ype"));
+    assert!(rows(&empty, 40, 6)[1].starts_with(" Filter ▏type to narrow"));
 }
 
 #[test]

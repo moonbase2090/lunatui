@@ -16,7 +16,7 @@ const MODIFIED_WIDTH: u16 = 13;
 const MARK_WIDTH: u16 = 2;
 const ICON_WIDTH: u16 = 2;
 const SHOW_SIZE_AT: u16 = 30;
-const SHOW_MODIFIED_AT: u16 = 48;
+const SHOW_MODIFIED_AT: u16 = 50;
 const ELLIPSIS: &str = "…";
 const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
 
@@ -66,6 +66,12 @@ impl<'a> FileEntry<'a> {
     pub const fn modified(mut self, modified: &'a str) -> Self {
         self.modified = modified;
         self
+    }
+
+    /// The modified time text the app gave the entry, empty if none.
+    #[must_use]
+    pub const fn modified_text(&self) -> &'a str {
+        self.modified
     }
 
     /// The entry's name.
@@ -274,8 +280,9 @@ impl<'a> FilePicker<'a> {
         let text_x = area.x + 8.min(area.width);
         let room = area.width.saturating_sub(9);
         if self.filter.is_empty() {
-            let hint = clip_display_prefix("type to narrow the list", room);
-            cx.put_str(text_x, y, hint, dim);
+            let gap = u16::from(self.state == WidgetState::Focused);
+            let hint = clip_display_prefix("type to narrow the list", room.saturating_sub(gap));
+            cx.put_str(text_x + gap, y, hint, dim);
         } else {
             let shown = clip_display_prefix(self.filter, room);
             cx.put_str(text_x, y, shown, base);
@@ -303,6 +310,10 @@ impl<'a> FilePicker<'a> {
         (size, modified)
     }
 
+    const fn size_end(right: u16, modified: u16) -> u16 {
+        right - modified - if modified > 0 { 2 } else { 1 }
+    }
+
     fn render_header(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let y = area.y + 2;
         let style = Style::new()
@@ -320,7 +331,7 @@ impl<'a> FilePicker<'a> {
         let thumb = u16::from(self.overflows(self.list_area(area).height));
         let right = area.x + area.width - thumb;
         if size > 0 {
-            cx.put_str(right - modified - 1 - 4, y, "Size", style);
+            cx.put_str(Self::size_end(right, modified) - 4, y, "Size", style);
         }
         if modified > 0 {
             cx.put_str(right - modified, y, "Modified", style);
@@ -380,7 +391,12 @@ impl<'a> FilePicker<'a> {
         if let (true, Some(bytes)) = (size > 0, entry.size) {
             let mut text = Stack::<12>::new();
             let _ = write_size(&mut text, bytes);
-            cx.put_str(right - modified - 1 - text.width(), y, text.as_str(), base);
+            cx.put_str(
+                Self::size_end(right, modified) - text.width(),
+                y,
+                text.as_str(),
+                base,
+            );
         }
         if modified > 0 {
             let shown = clip_display_prefix(entry.modified, modified);
