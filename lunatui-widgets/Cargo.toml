@@ -58,6 +58,8 @@ form = ["widget-state"]
 radio = ["widget-state"]
 toggle = ["widget-state"]
 tooltip = []
+split-keys = []
+split-persist = []
 popover = ["popup"]
 dialog = ["popup"]
 command-palette = ["popup", "search-box"]
@@ -70,7 +72,7 @@ scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
 text-area = ["widget-state", "lunatui-theme/graphite-extensions", "dep:lunatui-runtime", "lunatui-runtime/keymap", "dep:lunatui-term"]
 symbol-font-fallback = ["graphite-render"]
-all-widgets = ["file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback"]
+all-widgets = ["file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback", "split-keys", "split-persist"]
 
 [dependencies]
 vt100 = { version = "=0.16.2", optional = true }
@@ -417,6 +419,16 @@ required-features = ["pixel-gauge"]
 name = "tree"
 path = "tests/tree.rs"
 required-features = ["tree"]
+
+[[test]]
+name = "split_keys"
+path = "tests/split_keys.rs"
+required-features = ["split-keys"]
+
+[[test]]
+name = "split_persist"
+path = "tests/split_persist.rs"
+required-features = ["split-persist"]
 
 [[test]]
 name = "pixel_progress"

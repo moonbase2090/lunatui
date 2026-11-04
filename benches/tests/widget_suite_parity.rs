@@ -149,6 +149,25 @@ fn timeline_matches_its_independent_buffer_reference() -> Result<(), String> {
 }
 
 #[test]
+fn split_keyboard_case_moves_the_divider_in_whole_cells() -> Result<(), String> {
+    let case = CASES
+        .iter()
+        .find(|case| case.name == "split")
+        .ok_or("missing split case")?;
+    for (width, height, columns) in [(80, 24, [33, 34, 35]), (200, 60, [84, 85, 86])] {
+        let (grid, _, _) = render_both(case, width, height, 13);
+        for (column, glyph) in columns.into_iter().zip(['╮', '│', '╭']) {
+            assert_eq!(
+                grid.get(column, 0).map(|cell| cell.glyph().decode()),
+                Some(DecodedGlyph::Inline(glyph)),
+                "{width}x{height} column {column}"
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn every_case_has_a_unique_name() {
     let mut names: Vec<_> = CASES.iter().map(|case| case.name).collect();
     names.sort_unstable();

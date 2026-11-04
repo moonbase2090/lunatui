@@ -21,11 +21,11 @@ use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Button, ButtonVariant, Canvas, Chart, CodeMark, CodeView, CodeViewState, ColorPicker,
     ColorPickerFocus, ColorPickerState, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus,
-    DialogKind, DialogState, Diff, DiffView, FileEntry, FilePicker, Form, FormField, Gauge,
-    GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView,
-    Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput,
-    Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx,
-    ScrollView, ScrollbarVisibility, SearchBox, Select, Slider, SortDirection, Sparkline,
+    DialogKind, DialogState, Diff, DiffView, DividerId, FileEntry, FilePicker, Form, FormField,
+    Gauge, GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView,
+    MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter, NotificationLog,
+    NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup,
+    RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Select, Slider, SortDirection, Sparkline,
     SplitAxis, SplitTree, Table, TableState, Tabs, TagInput, TextWrap, ToastKind, ToastScope,
     ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
@@ -197,7 +197,7 @@ pub static CASES: &[Case] = &[
         name: "split",
         gated: false,
         parity: Parity::Documented(
-            "ratatui has no split container; its side lays the same three panes out with Layout constraints and leaves out the divider lines and the one-cell gap lunatui reserves for them",
+            "ratatui has no split container; its side lays the same three panes out with Layout constraints and leaves out the divider lines and the one-cell gap lunatui reserves for them, and lunatui reaches the first pane's share with a keyboard resize in whole cells, so a first pane can differ by a cell",
         ),
         lunatui: split_lunatui,
         ratatui: split_ratatui,
@@ -900,9 +900,18 @@ fn list_ratatui(buf: &mut Buffer, area: RatRect, tick: u32) {
     RatWidget::render(RatList::new(items).style(rat_text()), area, buf);
 }
 
-fn split_share(tick: u32) -> u16 {
+fn split_phase(tick: u32) -> u16 {
     let phase = u16::try_from(tick % 40).unwrap_or(0);
-    300 + 10 * if phase <= 20 { phase } else { 40 - phase }
+    if phase <= 20 { phase } else { 40 - phase }
+}
+
+fn split_share(tick: u32) -> u16 {
+    300 + 10 * split_phase(tick)
+}
+
+fn split_keys(tick: u32, width: u16) -> i16 {
+    let cells = u32::from(split_phase(tick)) * u32::from(width.saturating_sub(1)) / 100;
+    i16::try_from(cells).unwrap_or(i16::MAX)
 }
 
 fn split_lunatui(
@@ -914,9 +923,10 @@ fn split_lunatui(
 ) {
     let mut cx = RenderCx::new(grid, clusters, theme);
     let (mut tree, left) = SplitTree::new();
-    if let Some(right) = tree.split(left, SplitAxis::Horizontal, split_share(tick)) {
+    if let Some(right) = tree.split(left, SplitAxis::Horizontal, 300) {
         tree.split(right, SplitAxis::Vertical, 500);
     }
+    tree.resize(DividerId(0), split_keys(tick, area.width), area);
     let layout = tree.layout(area);
     for pane in &layout.panes {
         Block::bordered()
