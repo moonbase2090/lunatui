@@ -15,16 +15,9 @@ Every PR adds its entry under **Unreleased**.
 - `PseudoTerminal`, behind the off-by-default `terminal` feature, renders a parsed VT screen with theme defaults, child SGR colors, focus, disabled styling and keyboard/paste encoding. The separate Unix `PtyProcess` helper owns a controlling terminal, bounded input, resizing and child cleanup. `embedded_terminal` runs a real shell beside a Rust workspace.
 - `MermaidDiagram` and `MermaidView` add opt-in terminal flowcharts and sequence diagrams with labeled edges, conditional frames, notes, scrolling, Unicode and ASCII lines, theme colors and bounded parsing with line-numbered errors.
 - `CommandPalette` adds an opt-in centered command picker with ordered fuzzy matching, smart ASCII case, highlighted graphemes, scrolling selection, shortcut hints and click geometry.
-
 - `lunatui-dialog` adds `Dialog` (alert, confirm and prompt panels with a rounded border) and `AlertDialog` (Cancel and a danger-colored action button), wrapping the core dialog with theme tokens. It re-exports `DialogState` and its focus and outcome types. The `ui_dialog` example is a project list with a rename prompt, a delete confirmation and a result alert.
 - `LayerStack`, `Layer`, `LayerId` and `PressRoute` in `lunatui-runtime`: a stack of open overlays with z order for `HitMap`, modal focus trapping through `FocusManager::sync`, outside-click and Esc dismissal routing, and focus restore when a layer closes. Modals, popovers, dropdowns and toasts can stack without each widget tracking the others.
-
 - Default-off `symbol-font-fallback` feature for host-provided font coverage and pixel metrics in the Graphite bridge. `HostTextMetrics` selects complete grapheme clusters from ordered symbol fonts and exposes the same font runs for measurement and drawing.
-
-### Fixed
-
-- Quickstart template borders use the bundled full monospace font, so box-drawing glyphs align with their text cells across browser engines.
-
 - `Timeline`, behind the opt-in `timeline` feature: labeled lanes of spans and milestones on a scrollable time axis, with progress, four semantic statuses, app-placed ticks, a now marker, selection, disabled swatches, a `TimelineView` for pan, zoom and reveal, and shared geometry for `x_at`, `time_at` and `item_at`. Revealing a milestone at the exclusive view end pans it into the visible range. The release-plan showcase follows now, zooms out to check a milestone, and moves the selection through the lanes.
 - `TextArea`, behind the opt-in `text-area` feature: a multi-line editor with grapheme-aware cursor and selection, bounded undo/redo, search, bracketed paste, line numbers, and Emacs or Vim keymaps through the runtime registry. Focus and disabled styles use semantic theme tokens, while enabling the widget preserves the application's base palette.
 - `SplitTree` keyboard resizing behind the new `split-keys` feature (off by default): `resize(divider, delta, area)` moves a divider by whole cells with the same clamping and cell-to-ratio conversion as `SplitDrag`, and `divider_for(pane, axis)` returns the nearest enclosing split of an axis for a pane. Both do nothing while a pane is zoomed.
@@ -33,6 +26,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
+- Quickstart template borders use the bundled full monospace font, so box-drawing glyphs align with their text cells across browser engines.
 - `SplitTree::split` returns `None` instead of overflowing its pane counter at the top of the `u32` range.
 
 ## [0.1.20] - 2026-11-02
