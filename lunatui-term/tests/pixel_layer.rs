@@ -12,6 +12,9 @@ use lunatui_term::{
 
 const PIXEL: [u8; 4] = [1, 2, 3, 4];
 
+#[global_allocator]
+static ALLOC: lunatui_bench::CountingAllocator = lunatui_bench::CountingAllocator::system();
+
 fn frame(layer: &mut PixelLayer, build: impl FnOnce(&mut PixelLayer)) -> Vec<u8> {
     layer.begin_frame();
     build(layer);
@@ -403,6 +406,158 @@ fn immediate_layer(protocol: GraphicsProtocol) -> PixelLayer {
     })
 }
 
+fn inline_pixels(output: &[u8]) -> Result<(u32, u32, Vec<u8>), Box<dyn std::error::Error>> {
+    let output = std::str::from_utf8(output)?;
+    let payload = output
+        .split_once(':')
+        .ok_or("payload")?
+        .1
+        .split_once('\x1b')
+        .ok_or("end")?
+        .0;
+    let file = decode(payload);
+    let mut reader = png::Decoder::new(std::io::Cursor::new(file)).read_info()?;
+    let mut pixels = vec![0; reader.output_buffer_size().ok_or("size")?];
+    let info = reader.next_frame(&mut pixels)?;
+    Ok((info.width, info.height, pixels))
+}
+
+#[test]
+fn immediate_cache_updates_generation_size_crop_and_opacity()
+-> Result<(), Box<dyn std::error::Error>> {
+    let red = ImageSource::rgba8(2, 2, [255, 0, 0, 255].repeat(4).into_boxed_slice())?;
+    let green = ImageSource::rgba8(2, 2, [0, 255, 0, 255].repeat(4).into_boxed_slice())?;
+    let wide = ImageSource::rgba8(
+        4,
+        2,
+        [
+            255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255,
+        ]
+        .repeat(2)
+        .into_boxed_slice(),
+    )?;
+    let mut layer = immediate_layer(GraphicsProtocol::Iterm2);
+    for (generation, source, width, fit, opacity, expected) in [
+        (0, &red, 2, Fit::Stretch, 255, [255, 0, 0, 255].repeat(4)),
+        (1, &green, 2, Fit::Stretch, 255, [0, 255, 0, 255].repeat(4)),
+        (1, &green, 1, Fit::Stretch, 255, [0, 255, 0, 255].repeat(2)),
+        (1, &wide, 1, Fit::Cover, 255, [0, 255, 0, 255].repeat(2)),
+        (1, &wide, 1, Fit::Stretch, 255, [255, 0, 0, 255].repeat(2)),
+        (1, &wide, 1, Fit::Stretch, 127, [255, 0, 0, 127].repeat(2)),
+    ] {
+        layer.begin_frame();
+        assert!(layer.submit(ImageRequest::new(
+            ImageId::new(7).ok_or("ID")?,
+            generation,
+            source,
+            Rect::new(3, 4, width, 1),
+            fit,
+            0,
+            opacity,
+        )));
+        let output = layer.finish_frame();
+        assert!(output.starts_with(b"\x1b7\x1b[5;4H"));
+        assert_eq!(inline_pixels(output)?, (u32::from(width), 2, expected));
+    }
+    Ok(())
+}
+
+#[test]
+fn immediate_cache_forgets_omitted_and_cleared_images() -> Result<(), Box<dyn std::error::Error>> {
+    let red = PixelImage::new(1, 1, &[255, 0, 0, 255]).ok_or("red")?;
+    let blue = PixelImage::new(1, 1, &[0, 0, 255, 255]).ok_or("blue")?;
+    let mut layer = immediate_layer(GraphicsProtocol::Iterm2);
+    let area = Rect::new(0, 0, 1, 1);
+    let first = frame(&mut layer, |layer| layer.image(7, 0, &red, area, 0));
+    assert_eq!(
+        inline_pixels(&first)?,
+        (1, 2, vec![255, 0, 0, 255, 255, 0, 0, 255])
+    );
+    assert_eq!(frame(&mut layer, |_| {}), b"");
+    let returned = frame(&mut layer, |layer| layer.image(7, 0, &blue, area, 0));
+    assert_eq!(
+        inline_pixels(&returned)?,
+        (1, 2, vec![0, 0, 255, 255, 0, 0, 255, 255])
+    );
+    assert_eq!(layer.clear(), b"\x1b[1;1H ");
+    let returned = frame(&mut layer, |layer| layer.image(7, 0, &red, area, 0));
+    assert_eq!(
+        inline_pixels(&returned)?,
+        (1, 2, vec![255, 0, 0, 255, 255, 0, 0, 255])
+    );
+    Ok(())
+}
+
+#[test]
+fn immediate_cache_separates_caller_ids_from_raster_slots() -> Result<(), Box<dyn std::error::Error>>
+{
+    let red = ImageSource::rgba8(1, 2, Box::new([255, 0, 0, 255, 255, 0, 0, 255]))?;
+    let blue = ImageSource::rgba8(1, 2, Box::new([0, 0, 255, 255, 0, 0, 255, 255]))?;
+    let image = PixelImage::new(1, 2, red.rgba8_pixels()).ok_or("image")?;
+    let mut layer = immediate_layer(GraphicsProtocol::Iterm2);
+    for x in [0, 3, 5] {
+        layer.begin_frame();
+        layer.image(1, 0, &image, Rect::new(x, 0, 1, 1), 0);
+        assert!(layer.submit_raster(&blue, Rect::new(x, 1, 1, 1), 0));
+        let output = text(layer.finish_frame());
+        let mut payloads = output.split("\x1b]1337;").skip(1);
+        assert_eq!(
+            inline_pixels(payloads.next().ok_or("red payload")?.as_bytes())?,
+            (1, 2, vec![255, 0, 0, 255, 255, 0, 0, 255])
+        );
+        assert_eq!(
+            inline_pixels(payloads.next().ok_or("blue payload")?.as_bytes())?,
+            (1, 2, vec![0, 0, 255, 255, 0, 0, 255, 255])
+        );
+        assert!(payloads.next().is_none());
+        assert!(output.starts_with(&format!("\x1b7\x1b[1;{}H", x + 1)));
+    }
+    Ok(())
+}
+
+#[test]
+fn immediate_protocols_retransmit_without_allocating_after_warmup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let source = ImageSource::rgba8(2, 2, [255, 0, 0, 255].repeat(4).into_boxed_slice())?;
+    let image = PixelImage::new(2, 2, source.rgba8_pixels()).ok_or("image")?;
+    for protocol in [GraphicsProtocol::Iterm2, GraphicsProtocol::Sixel] {
+        let mut layer = immediate_layer(protocol);
+        let mut draw = || {
+            layer.begin_frame();
+            layer.image(1, 0, &image, Rect::new(0, 0, 2, 1), 0);
+            assert!(layer.submit(ImageRequest::new(
+                ImageId::new(2).ok_or("ID")?,
+                0,
+                &source,
+                Rect::new(2, 0, 2, 1),
+                Fit::Stretch,
+                0,
+                255,
+            )));
+            assert!(layer.submit_raster(&source, Rect::new(4, 0, 2, 1), 0));
+            let output = layer.finish_frame();
+            assert!(output.starts_with(b"\x1b7\x1b[1;1H"));
+            assert!(output.ends_with(b"\x1b\\\x1b8"));
+            Ok::<(), Box<dyn std::error::Error>>(())
+        };
+        draw()?;
+        draw()?;
+        let (result, stats) = ALLOC.measure(|| {
+            for _ in 0..32 {
+                draw()?;
+            }
+            Ok::<(), Box<dyn std::error::Error>>(())
+        });
+        result?;
+        assert_eq!(
+            (stats.allocations, stats.reallocations),
+            (0, 0),
+            "{protocol:?}"
+        );
+    }
+    Ok(())
+}
+
 #[test]
 fn inline_payload_is_a_real_png_with_measured_dimensions_and_original_colors()
 -> Result<(), Box<dyn std::error::Error>> {
@@ -442,7 +597,7 @@ fn inline_payload_is_a_real_png_with_measured_dimensions_and_original_colors()
         layer.needs_cell_repaint(),
         "omission still needs cell erasure"
     );
-    assert_eq!(layer.finish_frame(), []);
+    assert_eq!(layer.finish_frame(), b"");
     assert!(!layer.needs_cell_repaint());
     Ok(())
 }
@@ -501,7 +656,7 @@ fn protocol_choice_and_rejection_keep_unsupported_paths_on_cells()
             -1,
             255
         )));
-        assert_eq!(layer.finish_frame(), []);
+        assert_eq!(layer.finish_frame(), b"");
         assert!(
             layer
                 .pixel_target(Rect::new(0, 0, u16::MAX, u16::MAX))
