@@ -178,17 +178,8 @@ fn closing_a_pane_also_kills_ordinary_descendants_in_its_process_group() -> Test
     drop(process);
     let deadline = Instant::now() + Duration::from_secs(2);
     loop {
-        match std::fs::read_to_string(format!("/proc/{pid}/status")) {
-            Err(error) if error.kind() == io::ErrorKind::NotFound => break,
-            Ok(status)
-                if status
-                    .lines()
-                    .any(|line| line.starts_with("State:") && line.contains('Z')) =>
-            {
-                break;
-            }
-            Err(error) => return Err(error.into()),
-            Ok(_) => {}
+        if descendant_has_exited(std::fs::read_to_string(format!("/proc/{pid}/status")))? {
+            break;
         }
         assert!(
             Instant::now() < deadline,
@@ -196,5 +187,37 @@ fn closing_a_pane_also_kills_ordinary_descendants_in_its_process_group() -> Test
         );
         thread::sleep(Duration::from_millis(2));
     }
+    Ok(())
+}
+
+fn descendant_has_exited(status: io::Result<String>) -> io::Result<bool> {
+    match status {
+        Err(error)
+            if error.kind() == io::ErrorKind::NotFound
+                || error.raw_os_error() == Some(libc::ESRCH) =>
+        {
+            Ok(true)
+        }
+        Ok(status) => Ok(status
+            .lines()
+            .any(|line| line.starts_with("State:") && line.contains('Z'))),
+        Err(error) => Err(error),
+    }
+}
+
+#[test]
+fn descendant_status_treats_disappearance_as_exit() -> Test {
+    assert!(descendant_has_exited(Err(io::Error::from_raw_os_error(
+        libc::ESRCH
+    )))?);
+    assert!(descendant_has_exited(Err(io::Error::from_raw_os_error(
+        libc::ENOENT
+    )))?);
+    assert!(descendant_has_exited(Ok("State:\tZ (zombie)\n".into()))?);
+    assert!(!descendant_has_exited(Ok("State:\tS (sleeping)\n".into()))?);
+    let error = descendant_has_exited(Err(io::Error::from_raw_os_error(libc::EACCES)))
+        .err()
+        .ok_or("permission errors must remain errors")?;
+    assert_eq!(error.raw_os_error(), Some(libc::EACCES));
     Ok(())
 }

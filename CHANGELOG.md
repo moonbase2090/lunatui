@@ -23,6 +23,7 @@ Every PR adds its entry under **Unreleased**.
 - Quickstart template borders use the bundled full monospace font, so box-drawing glyphs align with their text cells across browser engines.
 
 - `Timeline`, behind the opt-in `timeline` feature: labeled lanes of spans and milestones on a scrollable time axis, with progress, four semantic statuses, app-placed ticks, a now marker, selection, disabled swatches, a `TimelineView` for pan, zoom and reveal, and shared geometry for `x_at`, `time_at` and `item_at`. Revealing a milestone at the exclusive view end pans it into the visible range. The release-plan showcase follows now, zooms out to check a milestone, and moves the selection through the lanes.
+- `TextArea`, behind the opt-in `text-area` feature: a multi-line editor with grapheme-aware cursor and selection, bounded undo/redo, search, bracketed paste, line numbers, and Emacs or Vim keymaps through the runtime registry. Focus and disabled styles use semantic theme tokens, while enabling the widget preserves the application's base palette.
 
 ## [0.1.20] - 2026-11-02
 
@@ -234,7 +235,6 @@ Every PR adds its entry under **Unreleased**.
 ## [0.1.12] - 2026-10-27
 
 ### Added
-
 - `Layout::limits` and `aspect_fit` in `lunatui-layout`, behind the opt-in `size-limits` feature: each segment can have a floor and a cap (`Limit::at_least`, `at_most`, `between`) so panes keep a usable size on resize, and cells a capped segment cannot take go to the other growing segments. `aspect_fit` returns the largest rectangle of a given shape inside an area, centred.
 - `Layout::split_wrapped` in `lunatui-layout`, behind the opt-in `flex-wrap` feature: segments that do not fit move onto the next line (or column), each line is split with the layout's flex and spacing, and one `Constraint` sizes every line. `Layout::gap` sets the spacing between segments and between lines in one call.
 - Named spinner presets on the existing `Spinner`: dots, line, arc, bounce, pulse, moon, ring, bars, quadrant, and half-moon. Each preset has its own frames and interval. `Spinner::preset` selects one. The default spinner is unchanged, and the caller still supplies the frame index. The example is a production deploy board.

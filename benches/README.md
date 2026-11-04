@@ -28,7 +28,7 @@ The bench targets live in `benches/` and the tests in `tests/`. Run everything w
 - **Color policy.** Both entrypoints pin color output on (`pin_color_output`), so ratatui's crossterm backend writes colors whatever `NO_COLOR` says and both sides encode truecolor. Byte counts do not depend on the environment.
 - **Arguments.** `--max-ratio N` must be a finite number above zero; anything else (including `NaN`) is an error, not a disabled gate. `--gate-all` also gates the tracked cases, to see how far they are from the bar.
 
-Run it with `cargo bench -p lunatui-bench --bench widget_suite` (add `-- --gate` to enforce, `--max-ratio N` to change the limit) and, for statistics per widget, `cargo bench -p lunatui-bench --bench criterion_widgets`.
+Run it with `cargo bench -p lunatui-bench --features text-area --bench widget_suite` (add `-- --gate` to enforce, `--max-ratio N` to change the limit). For Criterion timings of the `TextArea` case at both sizes, run `cargo bench -p lunatui-bench --features text-area --bench criterion_widgets -- text-area`.
 
 
 The `terminal` case includes identical VT parsing and screen allocation on both sides, followed by the native terminal widget or an independent Ratatui buffer adapter. Both use the same changing colored CLI bytes and sizes. It is an exact, gated case and participates in `criterion_widgets`. Both timing entrypoints abort with a nonzero exit code if any frame write fails. `scripts/check-terminal-mutants.py` injects a counting-sink failure to verify that the Criterion run rejects it.

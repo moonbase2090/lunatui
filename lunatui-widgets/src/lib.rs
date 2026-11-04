@@ -107,6 +107,8 @@ mod tabs;
 mod tag_input;
 #[cfg(feature = "terminal")]
 mod terminal;
+#[cfg(feature = "text-area")]
+mod text_area;
 mod text_input;
 #[cfg(feature = "timeline")]
 mod timeline;
@@ -231,6 +233,8 @@ pub use table_state::{SortDirection, TableState, TableView};
 pub use tabs::{TabMove, Tabs, TabsDrag};
 #[cfg(feature = "tag-input")]
 pub use tag_input::TagInput;
+#[cfg(feature = "text-area")]
+pub use text_area::{EditResult, KeymapMode, TextArea, TextPosition, TextSelection, VimMode};
 pub use text_input::TextInput;
 #[cfg(feature = "timeline")]
 pub use timeline::{

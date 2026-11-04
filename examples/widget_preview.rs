@@ -29,6 +29,9 @@ use lunatui_widgets::{
     Widget, WidgetState,
 };
 
+#[cfg(feature = "text-area")]
+mod text_area_showcase;
+
 mod bar_scene;
 #[path = "button_showcase.rs"]
 mod button_showcase;
@@ -325,7 +328,35 @@ const PREVIEWS: &[Preview] = &[
         native: release_console::draw,
         baseline: release_console::baseline,
     },
+    #[cfg(feature = "text-area")]
+    Preview {
+        name: "text-area",
+        native: text_area_showcase::render,
+        baseline: text_area_baseline,
+    },
 ];
+
+#[cfg(feature = "text-area")]
+fn text_area_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, _tick: u32) {
+    let block = ratatui::widgets::Block::default()
+        .title(" release-notes.md ")
+        .style(
+            ratatui::style::Style::new()
+                .fg(rat_color(theme.resolve(Token::TextPrimary)))
+                .bg(rat_color(theme.resolve(Token::Surface0))),
+        );
+    let mut inner = block.inner(area);
+    inner.y = inner.y.saturating_add(1);
+    inner.height = inner.height.saturating_sub(2);
+    block.render(area, buffer);
+    ratatui::widgets::Paragraph::new(text_area_showcase::DOC)
+        .style(
+            ratatui::style::Style::new()
+                .fg(rat_color(theme.resolve(Token::TextPrimary)))
+                .bg(rat_color(theme.resolve(Token::Surface0))),
+        )
+        .render(inner, buffer);
+}
 
 fn preview(name: &str) -> Option<&'static Preview> {
     PREVIEWS.iter().find(|preview| preview.name == name)

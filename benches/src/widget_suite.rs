@@ -15,6 +15,8 @@ use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_text::SliceSource;
 use lunatui_theme::{Theme, Token, Variant};
+#[cfg(feature = "text-area")]
+use lunatui_widgets::TextArea;
 use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Button, ButtonVariant, Canvas, Chart, CodeMark, CodeView, CodeViewState, ColorPicker,
@@ -537,7 +539,76 @@ pub static CASES: &[Case] = &[
         lunatui: scrollview_lunatui,
         ratatui: scrollview_ratatui,
     },
+    #[cfg(feature = "text-area")]
+    Case {
+        name: "text-area",
+        gated: false,
+        parity: Parity::Exact,
+        lunatui: text_area_lunatui,
+        ratatui: text_area_ratatui,
+    },
 ];
+
+#[cfg(feature = "text-area")]
+const TEXTAREA_DOC: &str = "Release Notes\n\nThe editor keeps a UTF-8 document, a grapheme cursor, and an undo history.\nMove through the text with the arrow keys or use the Vim keymap.\nSelection, search, and bracketed paste share the same edit path.\n\nThe viewport follows the cursor while keeping the preferred display column.\nSemantic theme tokens control the cursor, selection, search, gutter, and text.";
+
+#[cfg(feature = "text-area")]
+fn text_area_lunatui(
+    grid: &mut Grid,
+    clusters: &mut ClusterTable,
+    theme: &Theme,
+    area: Rect,
+    _tick: u32,
+) {
+    static EDITOR: OnceLock<TextArea> = OnceLock::new();
+    let mut cx = RenderCx::new(grid, clusters, theme);
+    EDITOR
+        .get_or_init(|| TextArea::new(TEXTAREA_DOC).line_numbers(true))
+        .render(area, &mut cx);
+}
+
+#[cfg(feature = "text-area")]
+fn text_area_ratatui(buf: &mut Buffer, area: RatRect, _tick: u32) {
+    let theme = Theme::builtin(Variant::Dark);
+    let text = theme.resolve(Token::TextPrimary);
+    let surface = theme.resolve(Token::Surface0);
+    let cursor = theme.resolve(Token::SurfaceRaised);
+    let number_width = TEXTAREA_DOC.lines().count().to_string().len();
+    let gutter_width = number_width + 1;
+    let gutter_style = RatStyle::new()
+        .fg(rat_color(theme.resolve(Token::TextMuted)))
+        .bg(rat_color(surface));
+    let text_style = RatStyle::new().fg(rat_color(text)).bg(rat_color(surface));
+    buf.set_style(area, text_style);
+    for (line, value) in TEXTAREA_DOC
+        .lines()
+        .enumerate()
+        .take(usize::from(area.height))
+    {
+        let y = area
+            .y
+            .saturating_add(u16::try_from(line).unwrap_or(u16::MAX));
+        buf.set_string(
+            area.x,
+            y,
+            format!("{:>number_width$} ", line + 1),
+            gutter_style,
+        );
+        buf.set_string(
+            area.x
+                .saturating_add(u16::try_from(gutter_width).unwrap_or(u16::MAX)),
+            y,
+            value,
+            text_style,
+        );
+    }
+    buf[(
+        area.x
+            .saturating_add(u16::try_from(gutter_width).unwrap_or(u16::MAX)),
+        area.y,
+    )]
+        .set_style(RatStyle::new().fg(rat_color(text)).bg(rat_color(cursor)));
+}
 
 fn rgb((red, green, blue): (u8, u8, u8)) -> Color {
     Color::Rgb(red, green, blue)
