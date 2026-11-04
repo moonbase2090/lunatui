@@ -69,7 +69,8 @@ popup = ["widget-state"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
 text-area = ["widget-state", "lunatui-theme/graphite-extensions", "dep:lunatui-runtime", "lunatui-runtime/keymap", "dep:lunatui-term"]
-all-widgets = ["file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette"]
+symbol-font-fallback = ["graphite-render"]
+all-widgets = ["file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback"]
 
 [dependencies]
 vt100 = { version = "=0.16.2", optional = true }
@@ -92,9 +93,18 @@ tui-menu = "=0.3.1"
 proptest = "=1.9.0"
 time = { version = "=0.3.55", default-features = false }
 
+[[example]]
+name = "symbol_fonts"
+required-features = ["symbol-font-fallback"]
+
 [[test]]
 name = "block"
 path = "tests/block.rs"
+
+[[test]]
+name = "symbol_font_fallback"
+path = "tests/symbol_font_fallback.rs"
+required-features = ["symbol-font-fallback"]
 
 [[test]]
 name = "graphite_render"
