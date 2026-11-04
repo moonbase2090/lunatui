@@ -2319,7 +2319,7 @@ struct SplitMove {
     target: (i32, i32),
 }
 
-const SPLIT_MOVES: [SplitMove; 4] = [
+const SPLIT_MOVES: [SplitMove; 3] = [
     SplitMove {
         from: 10,
         to: 50,
@@ -2338,13 +2338,68 @@ const SPLIT_MOVES: [SplitMove; 4] = [
         divider: 2,
         target: (84, 0),
     },
-    SplitMove {
-        from: 205,
-        to: 235,
-        divider: 0,
-        target: (28, 0),
+];
+
+struct SplitKey {
+    at: u32,
+    pane: u32,
+    axis: SplitAxis,
+    delta: i16,
+    label: &'static str,
+}
+
+const SPLIT_KEYS: [SplitKey; 6] = [
+    SplitKey {
+        at: 195,
+        pane: 1,
+        axis: SplitAxis::Horizontal,
+        delta: 4,
+        label: "Editor +4",
+    },
+    SplitKey {
+        at: 211,
+        pane: 1,
+        axis: SplitAxis::Horizontal,
+        delta: 4,
+        label: "Editor +4",
+    },
+    SplitKey {
+        at: 227,
+        pane: 2,
+        axis: SplitAxis::Vertical,
+        delta: -2,
+        label: "Terminal -2",
+    },
+    SplitKey {
+        at: 255,
+        pane: 0,
+        axis: SplitAxis::Horizontal,
+        delta: 8,
+        label: "Files +8",
+    },
+    SplitKey {
+        at: 271,
+        pane: 1,
+        axis: SplitAxis::Horizontal,
+        delta: -6,
+        label: "Editor -6",
+    },
+    SplitKey {
+        at: 287,
+        pane: 2,
+        axis: SplitAxis::Vertical,
+        delta: 3,
+        label: "Terminal +3",
     },
 ];
+const SPLIT_SAVE: u32 = 243;
+const SPLIT_RESTORE: u32 = 303;
+const SPLIT_NOTE_HOLD: u32 = 20;
+
+struct SplitKeyed {
+    divider: Option<DividerId>,
+    note: Option<String>,
+}
 
 fn lerp(start: i32, end: i32, spent: u32, span: u32) -> i32 {
     let delta = i64::from(end) - i64::from(start);
@@ -2352,7 +2407,7 @@ fn lerp(start: i32, end: i32, spent: u32, span: u32) -> i32 {
     i32::try_from(i64::from(start) + step).unwrap_or(start)
 }
 
-fn split_scene(area: Rect, tick: u32) -> (SplitTree, SplitDrag) {
+fn split_scene(area: Rect, tick: u32) -> (SplitTree, SplitDrag, SplitKeyed) {
     let (mut tree, files) = SplitTree::new();
     let editor = tree
         .split(files, SplitAxis::Horizontal, 250)
@@ -2385,7 +2440,44 @@ fn split_scene(area: Rect, tick: u32) -> (SplitTree, SplitDrag) {
             }
         }
     }
-    (tree, drag)
+    let mut keyed = SplitKeyed {
+        divider: None,
+        note: None,
+    };
+    let mut saved = String::new();
+    let mut last = 0;
+    for now in 0..=tick {
+        let mut note = None;
+        for key in SPLIT_KEYS.iter().filter(|key| key.at == now) {
+            keyed.divider = tree.divider_for(PaneId(key.pane), key.axis);
+            if let Some(divider) = keyed.divider {
+                tree.resize(divider, key.delta, area);
+            }
+            note = Some(format!("resized {}", key.label));
+        }
+        if now == SPLIT_SAVE {
+            saved = tree.to_spec();
+            note = Some("saved the layout".to_string());
+        }
+        if now == SPLIT_RESTORE {
+            if let Ok(restored) = SplitTree::from_spec(&saved) {
+                tree = restored;
+            }
+            note = Some("restored the saved layout".to_string());
+        }
+        if note.is_some() {
+            if now == SPLIT_SAVE || now == SPLIT_RESTORE {
+                keyed.divider = None;
+            }
+            keyed.note = note;
+            last = now;
+        }
+    }
+    if tick >= last + SPLIT_NOTE_HOLD {
+        keyed.divider = None;
+        keyed.note = None;
+    }
+    (tree, drag, keyed)
 }
 
 fn split_native(
@@ -2399,12 +2491,13 @@ fn split_native(
     let raised = theme.resolve(Token::Surface1);
     let text = theme.resolve(Token::TextPrimary);
     let accent = theme.resolve(Token::Accent);
-    grid.fill(area, Style::new().fg(text).bg(surface), ' ', clusters);
     let mut cx = RenderCx::new(grid, clusters, theme);
     let fill = Style::new().fg(text).bg(surface);
+    let background = vec![" ".repeat(usize::from(area.width)); usize::from(area.height)].join("\n");
+    Paragraph::new(background).style(fill).render(area, &mut cx);
     let dim = fill.with_attrs(Attrs::new().set_dim(true));
     let body = Rect::new(area.x, area.y, area.width, area.height.saturating_sub(1));
-    let (mut tree, drag) = split_scene(body, tick);
+    let (mut tree, drag, keyed) = split_scene(body, tick);
     if (150..195).contains(&tick) {
         tree.zoom(Some(PaneId(1)));
     }
@@ -2453,21 +2546,23 @@ fn split_native(
             if row + 2 >= area.rect.height {
                 break;
             }
-            cx.put_str(
-                area.rect.x + 2,
-                area.rect.y + 1 + row,
-                clip_display_prefix(line, room),
-                fill,
+            Paragraph::new(*line).style(fill).render(
+                Rect::new(area.rect.x + 2, area.rect.y + 1 + row, room, 1),
+                &mut cx,
             );
         }
     }
     layout.render_dividers(
         dim,
-        drag.active(),
+        drag.active().or(keyed.divider),
         Style::new().fg(accent).bg(surface),
         &mut cx,
     );
-    StatusBar::new(" drag a divider to resize  ●  zoom with z")
+    let status = match &keyed.note {
+        Some(note) => format!(" {note}  ●  keys resize, s saves, r restores"),
+        None => " drag a divider to resize  ●  zoom with z".to_string(),
+    };
+    StatusBar::new(status)
         .style(Style::new().fg(text).bg(raised))
         .render(
             Rect::new(area.x, area.y + body.height, area.width, 1),
