@@ -172,3 +172,24 @@ Sequence diagrams support `participant`/`actor`, `as` aliases, `->>`/`-->>`/`->`
 Colors use the theme's surfaces, text, accent, border, warning and failure tokens. `.state(WidgetState::Disabled)` dims output, `.background(style)` sets the base style, and `.glyphs(MermaidGlyphs::Ascii)` switches line and arrow glyphs while preserving labels. Terminal diagrams use cell-based shapes; they do not reproduce browser SVG geometry or Mermaid CSS.
 
 Run `cargo run --release -p lunatui --features color-profiles --example widget_preview -- --side lunatui --case mermaid --width 120 --height 36 --frames 300 --fps 30 --theme dark` for the source/preview reader. `scripts/record-mermaid.sh` captures and checks its states. `python3 scripts/check-mermaid-mutants.py` verifies parser, layout and drawing regressions against twelve mutations. The benchmark reference paints two fixed diagrams using Ratatui's buffer; it has no general parser or layout, so the case is `Documented` and its timings are not performance parity claims.
+
+## Command palette
+
+The opt-in `command-palette` feature adds `CommandPalette` and `PaletteEntry`. The app owns the query, byte caret and selected match position, and handles keyboard input. `matches` matches query characters in order with gaps, ignores whitespace and uses smart ASCII case. Entries keep their original order, with no ranking. Only titles match; detail text and shortcuts are display hints. Matching ranges cover whole graphemes.
+
+```rust,ignore
+let entries = [
+    PaletteEntry::new("Open file").shortcut("Ctrl+O"),
+    PaletteEntry::new("Split pane right").detail("editor layout"),
+];
+let palette = CommandPalette::new(query, caret, &entries).selected(selected);
+let hits = palette.matches();
+// Up/Down: selected = SearchBox::step(selected, hits.len(), forward);
+// Enter: dispatch the command represented by entries[hits[selected?].index].
+// Mouse: palette.entry_at(screen, column, row) returns a match position.
+palette.render(screen, cx);
+```
+
+Map `lunatui_runtime::keymap::Command::title()` to entry titles and its first chord's `to_string()` to shortcut hints. On Enter use the returned entry index to dispatch that command's `id()`. A changed query should reset selection. The palette clips itself to its area, scrolls the query to keep the caret visible, clamps byte carets to grapheme boundaries and fits its selected row into `max_rows`. Escape/Enter and focus restoration belong to the app.
+
+`cargo run --release -p lunatui --features color-profiles --example widget_preview -- --side lunatui --case command-palette --width 120 --height 36 --frames 300 --fps 30 --theme dark` renders a scripted editor that executes Open file and Split pane right, then cancels a query with no matches. `scripts/record-command-palette.sh` captures and checks those states. `python3 scripts/check-command-palette-mutants.py` checks matching, scrolling, hit testing and Unicode behavior against mutations.

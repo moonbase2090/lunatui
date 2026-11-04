@@ -58,6 +58,7 @@ use tui_scrollview::{
 /// Terminal sizes every case runs at.
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
 
+mod command_palette;
 mod heatmap;
 mod mermaid;
 mod terminal;
@@ -138,6 +139,13 @@ pub static CASES: &[Case] = &[
         ),
         lunatui: mermaid::native,
         ratatui: mermaid::baseline,
+    },
+    Case {
+        name: "command-palette",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: command_palette::native,
+        ratatui: command_palette::baseline,
     },
     Case {
         name: "heatmap",
