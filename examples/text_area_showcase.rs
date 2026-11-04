@@ -41,7 +41,6 @@ Vim mode adds normal and insert keymaps.
 fn editor_at(tick: u32) -> TextArea {
     let mut editor = TextArea::new(DOC).line_numbers(true);
     editor.set_widget_state(WidgetState::Focused);
-    // Select the checklist passage through the same key event as Shift+End.
     editor.move_to(
         TextPosition {
             line: 27,
@@ -227,20 +226,20 @@ mod tests {
     fn recording_holds_selection_search_and_an_undoable_edit() {
         for tick in [0, 89] {
             let editor = editor_at(tick);
-            let selection = editor.selection().expect("selected checklist passage");
             assert_eq!(
-                selection.anchor,
-                TextPosition {
-                    line: 27,
-                    grapheme: 6
-                }
-            );
-            assert_eq!(
-                selection.head,
-                TextPosition {
-                    line: 27,
-                    grapheme: 36
-                }
+                editor
+                    .selection()
+                    .map(|selection| (selection.anchor, selection.head)),
+                Some((
+                    TextPosition {
+                        line: 27,
+                        grapheme: 6
+                    },
+                    TextPosition {
+                        line: 27,
+                        grapheme: 36
+                    }
+                ))
             );
             assert_eq!(editor.search_query(), None);
         }

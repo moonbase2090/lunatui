@@ -533,8 +533,13 @@ fn selection_keeps_readable_text_on_a_dark_focus_fill() {
     );
     assert_eq!(grid.row_display(0, &clusters), "one two ");
     for x in 0..3 {
-        let style = grid.get(x, 0).unwrap().style();
-        assert_eq!(style.fg, lunatui_core::Color::Rgb(205, 214, 244));
-        assert_eq!(style.bg, lunatui_core::Color::Rgb(28, 35, 48));
+        assert_eq!(
+            grid.get(x, 0).map(|cell| cell.style().fg),
+            Some(lunatui_core::Color::Rgb(205, 214, 244))
+        );
+        assert_eq!(
+            grid.get(x, 0).map(|cell| cell.style().bg),
+            Some(lunatui_core::Color::Rgb(28, 35, 48))
+        );
     }
 }
