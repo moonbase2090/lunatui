@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.21] - 2026-11-04
+
 ### Added
 
 - `FilePicker`, `FileEntry` and `FileKind` in `lunatui-widgets` (behind the `file-picker` feature, part of `all-widgets`): a file browser for a listing the app provides, with no filesystem access in the widget. It draws a path bar that keeps the end of a long path, a filter line with a cursor while focused, a header, one row per entry with a folder marker, a check for marked rows, a size and a modified time, a scroll thumb when the list overflows, and an item and selection count. The size column drops below 30 columns and the modified column below 50. `FilePicker::step`, `type_ahead`, `toggle`, `parent` and `matches` are pure helpers for the app's key handling, and `list_area` and `entry_at` are for hit testing.
@@ -15,18 +17,18 @@ Every PR adds its entry under **Unreleased**.
 - `PseudoTerminal`, behind the off-by-default `terminal` feature, renders a parsed VT screen with theme defaults, child SGR colors, focus, disabled styling and keyboard/paste encoding. The separate Unix `PtyProcess` helper owns a controlling terminal, bounded input, resizing and child cleanup. `embedded_terminal` runs a real shell beside a Rust workspace.
 - `MermaidDiagram` and `MermaidView` add opt-in terminal flowcharts and sequence diagrams with labeled edges, conditional frames, notes, scrolling, Unicode and ASCII lines, theme colors and bounded parsing with line-numbered errors.
 - `CommandPalette` adds an opt-in centered command picker with ordered fuzzy matching, smart ASCII case, highlighted graphemes, scrolling selection, shortcut hints and click geometry.
+- `Tree`, behind the off-by-default `tree` feature: expandable nodes with guide lines, a caret per parent, a dim badge on the right of each row, and the selected row accented. `TreeState` keeps the open nodes across frames and addresses nodes by path. Its moves skip disabled nodes, `reveal` opens the ancestors of a hidden node, and `row_areas` supports hit testing.
 
 - `lunatui-dialog` adds `Dialog` (alert, confirm and prompt panels with a rounded border) and `AlertDialog` (Cancel and a danger-colored action button), wrapping the core dialog with theme tokens. It re-exports `DialogState` and its focus and outcome types. The `ui_dialog` example is a project list with a rename prompt, a delete confirmation and a result alert.
 - `LayerStack`, `Layer`, `LayerId` and `PressRoute` in `lunatui-runtime`: a stack of open overlays with z order for `HitMap`, modal focus trapping through `FocusManager::sync`, outside-click and Esc dismissal routing, and focus restore when a layer closes. Modals, popovers, dropdowns and toasts can stack without each widget tracking the others.
+- `Timeline`, behind the opt-in `timeline` feature: labeled lanes of spans and milestones on a scrollable time axis, with progress, four semantic statuses, app-placed ticks, a now marker, selection, disabled swatches, a `TimelineView` for pan, zoom and reveal, and shared geometry for `x_at`, `time_at` and `item_at`. Revealing a milestone at the exclusive view end pans it into the visible range. The release-plan showcase follows now, zooms out to check a milestone, and moves the selection through the lanes.
+- `TextArea`, behind the opt-in `text-area` feature: a multi-line editor with grapheme-aware cursor and selection, bounded undo/redo, search, bracketed paste, line numbers, and Emacs or Vim keymaps through the runtime registry. Focus and disabled styles use semantic theme tokens, while enabling the widget preserves the application's base palette.
 
 - Default-off `symbol-font-fallback` feature for host-provided font coverage and pixel metrics in the Graphite bridge. `HostTextMetrics` selects complete grapheme clusters from ordered symbol fonts and exposes the same font runs for measurement and drawing.
 
 ### Fixed
 
 - Quickstart template borders use the bundled full monospace font, so box-drawing glyphs align with their text cells across browser engines.
-
-- `Timeline`, behind the opt-in `timeline` feature: labeled lanes of spans and milestones on a scrollable time axis, with progress, four semantic statuses, app-placed ticks, a now marker, selection, disabled swatches, a `TimelineView` for pan, zoom and reveal, and shared geometry for `x_at`, `time_at` and `item_at`. Revealing a milestone at the exclusive view end pans it into the visible range. The release-plan showcase follows now, zooms out to check a milestone, and moves the selection through the lanes.
-- `TextArea`, behind the opt-in `text-area` feature: a multi-line editor with grapheme-aware cursor and selection, bounded undo/redo, search, bracketed paste, line numbers, and Emacs or Vim keymaps through the runtime registry. Focus and disabled styles use semantic theme tokens, while enabling the widget preserves the application's base palette.
 
 ## [0.1.20] - 2026-11-02
 
