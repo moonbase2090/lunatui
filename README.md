@@ -15,14 +15,6 @@ Lunatui's own dashboard numbers on one machine (Apple M5 Max, release build), me
 
 Method and limits: [docs/performance.md](docs/performance.md).
 
-## Widget gallery
-
-TextArea supports multi-line editing, selection, search, Vim and Emacs keymaps, and cursor-following scroll. The screenshot shows the editor with line numbers and its focused cursor; the motion capture shows editing and search.
-
-![TextArea widget screenshot](captures/text-area-120x36-truecolor-dark.png)
-
-[Watch the TextArea motion demo](captures/text-area-120x36-truecolor-dark.webp).
-
 ## Quick start
 
 Draw a first screen and quit on `q`. The steps and a program under 30 lines are in [Getting started](docs/getting-started.md). The crates are not on crates.io yet, so the commands run from this repository.
@@ -42,6 +34,14 @@ Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). C
 ## Widget gallery
 
 Still frames and short recordings of real widget output, in the dark theme. Native pixel demos use the real terminal recorder; cell demos use `scripts/record-showcase.sh`.
+
+### TextArea
+
+A notes editor with line numbers, selection, incremental search and an undoable checklist edit. TextArea also supports Vim and Emacs keymaps and cursor-following scroll. Enable the off-by-default `text-area` feature.
+
+<img src="docs/media/text-area.webp" alt="TextArea in a project editor: select a checklist passage, find editor, then mark the review complete" width="1028">
+
+Screenshot: [notes editor](docs/media/text-area.png). Recorded with `CASE=text-area FRAMES=270 FPS=30 LAST_FRAME_DURATION=3 scripts/record-showcase.sh`: 120×36 cells at 2× scale, 30 fps, 9 seconds, lossless WebP 45,068 bytes. Selection, search and the edit each hold for 3 seconds. The [source cast](docs/media/text-area.cast) contains unchanged terminal output; `python3 scripts/check-text-area-capture.py` checks its replay and the animation timing.
 
 ### Embedded terminal
 

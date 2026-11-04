@@ -16,8 +16,6 @@ use lunatui_core::{
 };
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
 use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
-#[cfg(feature = "text-area")]
-use lunatui_term::{Event, KeyEvent};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, BigText, Block, BorderType, Breadcrumbs, ComboBox,
@@ -32,7 +30,7 @@ use lunatui_widgets::{
 };
 
 #[cfg(feature = "text-area")]
-use lunatui_widgets::{KeymapMode, TextArea, TextPosition, VimMode};
+mod text_area_showcase;
 
 mod bar_scene;
 #[path = "button_showcase.rs"]
@@ -333,117 +331,10 @@ const PREVIEWS: &[Preview] = &[
     #[cfg(feature = "text-area")]
     Preview {
         name: "text-area",
-        native: text_area_motion,
+        native: text_area_showcase::render,
         baseline: text_area_baseline,
     },
 ];
-
-#[cfg(feature = "text-area")]
-const TEXTAREA_DOC: &str = "# lunatui v0.1.20\n\n## Highlights\n\n- Native multi-line editing with undo and redo\n- Search, directed selection, and bracketed paste\n- Emacs and Vim keymaps through the runtime registry\n\n## Theme\n\nGraphite tokens style the cursor, selection, search marks, and gutter.\nThe viewport follows the cursor and keeps its preferred display column.\n\n## Editing\n\nArrow keys move by grapheme; Shift extends a directed selection.\nPaste arrives as one undoable edit, even when split into chunks.\nUndo, redo, and search stay local to this editor.\n\n## Release checklist\n\n- [x] Grapheme-safe movement\n- [x] Bounded edit history\n- [ ] Final review and release notes";
-
-#[cfg(feature = "text-area")]
-fn text_area_motion(
-    grid: &mut Grid,
-    clusters: &mut ClusterTable,
-    theme: &Theme,
-    area: Rect,
-    tick: u32,
-) {
-    let chrome = Block::default()
-        .title(" release-notes.md ")
-        .style(
-            Style::new()
-                .fg(theme.resolve(Token::TextPrimary))
-                .bg(theme.resolve(Token::Surface0)),
-        )
-        .title_style(
-            Style::new()
-                .fg(theme.resolve(Token::TextStrong))
-                .bg(theme.resolve(Token::Surface0)),
-        )
-        .border_style(Style::new().fg(theme.resolve(Token::Border)));
-    chrome.render(area, &mut RenderCx::new(grid, clusters, theme));
-    let mut editor = TextArea::new(TEXTAREA_DOC)
-        .keymap_mode(KeymapMode::Emacs)
-        .line_numbers(true);
-    editor.set_widget_state(WidgetState::Focused);
-    let release_line_index = TEXTAREA_DOC
-        .lines()
-        .position(|line| line.starts_with("- [ ] Final review"))
-        .unwrap_or(0);
-    let release_line = TEXTAREA_DOC
-        .lines()
-        .nth(release_line_index)
-        .unwrap_or_default();
-    editor.move_to(
-        TextPosition {
-            line: release_line_index,
-            grapheme: release_line.len().saturating_sub(5),
-        },
-        false,
-    );
-    for (frame, event) in text_area_actions() {
-        if frame > tick {
-            break;
-        }
-        editor.handle_event(&event);
-    }
-    let mut cx = RenderCx::new(grid, clusters, theme);
-    let mut content_area = chrome.inner(area);
-    content_area.y = content_area.y.saturating_add(1);
-    content_area.height = content_area.height.saturating_sub(2);
-    editor.render(content_area, &mut cx);
-    if area.height > 2 {
-        let status_y = area.y + area.height - 2;
-        let mode = match editor.active_keymap_mode() {
-            KeymapMode::Emacs => "EMACS",
-            KeymapMode::Vim if editor.vim_mode() == VimMode::Insert => "INSERT",
-            KeymapMode::Vim => "NORMAL",
-        };
-        let cursor = editor.cursor();
-        let status = format!(
-            "  {mode}  |  LINE {}  |  COL {}",
-            cursor.line + 1,
-            cursor.grapheme + 1
-        );
-        cx.put_str(
-            area.x + 1,
-            status_y,
-            &status,
-            Style::new()
-                .fg(theme.resolve(Token::TextMuted))
-                .bg(theme.resolve(Token::Surface0)),
-        );
-    }
-}
-
-#[cfg(feature = "text-area")]
-fn text_area_actions() -> Vec<(u32, Event)> {
-    let mut events = (0..5)
-        .map(|index| (18 + index * 2, Event::Key(KeyEvent::press(KeyCode::Right))))
-        .collect::<Vec<_>>();
-    events.extend((0..5).map(|index| {
-        (
-            32 + index * 2,
-            Event::Key(KeyEvent::press(KeyCode::Left).modifiers(Modifiers::new().shift())),
-        )
-    }));
-    events.push((
-        44,
-        Event::Key(KeyEvent::press(KeyCode::Char('p')).text("plans")),
-    ));
-    events.push((
-        50,
-        Event::Key(KeyEvent::press(KeyCode::Char('s')).modifiers(Modifiers::new().control())),
-    ));
-    for (index, c) in "Graphite".chars().enumerate() {
-        events.push((
-            55 + u32::try_from(index).unwrap_or(0) * 3,
-            Event::Key(KeyEvent::press(KeyCode::Char(c)).text(c.to_string())),
-        ));
-    }
-    events
-}
 
 #[cfg(feature = "text-area")]
 fn text_area_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, _tick: u32) {
@@ -458,7 +349,7 @@ fn text_area_baseline(buffer: &mut Buffer, area: RatRect, theme: &Theme, _tick: 
     inner.y = inner.y.saturating_add(1);
     inner.height = inner.height.saturating_sub(2);
     block.render(area, buffer);
-    ratatui::widgets::Paragraph::new(TEXTAREA_DOC)
+    ratatui::widgets::Paragraph::new(text_area_showcase::DOC)
         .style(
             ratatui::style::Style::new()
                 .fg(rat_color(theme.resolve(Token::TextPrimary)))

@@ -1036,7 +1036,7 @@ impl TextArea {
             .is_some_and(|(a, b)| start < b && start + len > a);
         if selected {
             Style::new()
-                .fg(cx.token(Token::Surface0))
+                .fg(cx.token(Token::TextPrimary))
                 .bg(cx.token(Token::FocusFill))
         } else if search_hit {
             Style::new()

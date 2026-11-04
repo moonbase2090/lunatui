@@ -510,3 +510,31 @@ fn typing_tab_preserves_a_literal_tab_and_undo_while_expanding_its_rendering() {
     editor.handle_event(&undo_key());
     assert_eq!(editor.text(), "ab");
 }
+
+#[test]
+fn selection_keeps_readable_text_on_a_dark_focus_fill() {
+    let mut theme = Theme::builtin(Variant::Dark);
+    theme.set_token(Token::Surface0, lunatui_core::Color::Rgb(16, 18, 22));
+    theme.set_token(Token::FocusFill, lunatui_core::Color::Rgb(28, 35, 48));
+    theme.set_token(Token::TextPrimary, lunatui_core::Color::Rgb(205, 214, 244));
+    let mut editor = TextArea::new("one two");
+    editor.move_to(
+        TextPosition {
+            line: 0,
+            grapheme: 3,
+        },
+        true,
+    );
+    let mut grid = Grid::new(8, 1);
+    let mut clusters = ClusterTable::new();
+    editor.render(
+        Rect::new(0, 0, 8, 1),
+        &mut RenderCx::new(&mut grid, &mut clusters, &theme),
+    );
+    assert_eq!(grid.row_display(0, &clusters), "one two ");
+    for x in 0..3 {
+        let style = grid.get(x, 0).unwrap().style();
+        assert_eq!(style.fg, lunatui_core::Color::Rgb(205, 214, 244));
+        assert_eq!(style.bg, lunatui_core::Color::Rgb(28, 35, 48));
+    }
+}

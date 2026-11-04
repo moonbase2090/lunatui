@@ -105,3 +105,4 @@ scope examples/embedded_terminal_app.rs # the live workspace composes Block, Par
 scope examples/mermaid_showcase.rs # the documentation reader composes Block, Paragraph and MermaidView widgets
 helper mermaid_preview # renders the parsed diagram and scroll status through MermaidView and Paragraph
 helper document_panels # renders source, labels and preview border through Block and Paragraph widgets
+scope examples/text_area_showcase.rs # the notes editor composes TextArea, Block and Paragraph through public APIs
