@@ -57,6 +57,7 @@ use tui_scrollview::{
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
 
 mod heatmap;
+mod mermaid;
 mod terminal;
 mod timeline;
 
@@ -126,6 +127,15 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: terminal::native,
         ratatui: terminal::baseline,
+    },
+    Case {
+        name: "mermaid",
+        gated: false,
+        parity: Parity::Documented(
+            "ratatui has no Mermaid parser or diagram widget; its reference paints two fixed diagrams without parsing or general layout",
+        ),
+        lunatui: mermaid::native,
+        ratatui: mermaid::baseline,
     },
     Case {
         name: "heatmap",

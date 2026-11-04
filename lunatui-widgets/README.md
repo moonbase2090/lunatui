@@ -154,3 +154,20 @@ Items take keyboard mnemonics with `MenuItem::mnemonic`. `Menu` underlines the f
 `Table` sorts, selects ranges and resizes columns through `TableState`. `sort` orders the rows by one column's text, comparing numbers by value and other text without regard to case, and keeps the cursor on the same source row; draw with `Table::new(state.view(&source), columns).state(&state)`, which shows the rows in that order and applies the cursor, the selected range (`selection_style`), a `▲` or `▼` marker after the sorted column's title, and column widths set with `set_column_width` or a divider drag (`start_resize`, `drag_resize`, `end_resize` with `Table::divider_at`). `Table::column_at` finds a clicked column, `Table::sync` or `data_rows` with `TableState::fit` keeps the cursor on screen, and a closure `Fn(row, column) -> Style` styles single cells. Over a source that answers `RowSource::cell`, as `VecSource` and `SliceSource` do, a built table draws without allocating.
 
 Snapshot tests use `lunatui_test::styled_snapshot`. See [Getting started](../docs/getting-started.md).
+
+## Mermaid diagrams
+
+The off-by-default `mermaid` feature adds `MermaidDiagram::parse`, `MermaidView`, `MermaidGlyphs` and a line-numbered `MermaidError`. Parsing builds the layout once. A view borrows that layout, clips to its area and clamps scrolling to the diagram edges. Text preserves whole graphemes, including combining marks and joined emoji.
+
+```rust,ignore
+let diagram = MermaidDiagram::parse("flowchart LR\n A[Build] --> B{Checks pass?}")?;
+MermaidView::new(&diagram).scroll(x, y).render(area, cx);
+```
+
+Supported flowchart syntax is `flowchart` or `graph`, `TD`/`TB`/`BT`/`LR`/`RL`, rectangle `[text]`, round `(text)`, stadium `([text])`, diamond `{text}` and circle `((text))` nodes. Edges include `-->`, `---`, `-.->` and `==>`, chains and `|label|` or `-- label -->` text. `%%` starts a comment outside quoted labels. `<br>` and `<br/>` break a label into lines. Styling, class, link-style and click lines are ignored; they do not execute actions. Subgraphs and other unsupported syntax return errors.
+
+Sequence diagrams support `participant`/`actor`, `as` aliases, `->>`/`-->>`/`->`/`-->`/`-x`/`--x`/`-)`/`--)`, `Note left of`/`right of`/`over`, `autonumber`, `loop`, `alt`/`else`, `opt` and `end`. Activation marks and other diagram types return errors. Source is limited to 64 KiB, 256 nodes/links or participants/messages, 512 notes/frame markers, eight nested frames, eight lines and 100 columns per label, and one million cells for the complete layout. Layout-size errors use line 1; syntax errors name the source line.
+
+Colors use the theme's surfaces, text, accent, border, warning and failure tokens. `.state(WidgetState::Disabled)` dims output, `.background(style)` sets the base style, and `.glyphs(MermaidGlyphs::Ascii)` switches line and arrow glyphs while preserving labels. Terminal diagrams use cell-based shapes; they do not reproduce browser SVG geometry or Mermaid CSS.
+
+Run `cargo run --release -p lunatui --features color-profiles --example widget_preview -- --side lunatui --case mermaid --width 120 --height 36 --frames 300 --fps 30 --theme dark` for the source/preview reader. `scripts/record-mermaid.sh` captures and checks its states. `python3 scripts/check-mermaid-mutants.py` verifies parser, layout and drawing regressions against twelve mutations. The benchmark reference paints two fixed diagrams using Ratatui's buffer; it has no general parser or layout, so the case is `Documented` and its timings are not performance parity claims.

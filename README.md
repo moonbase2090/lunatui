@@ -363,6 +363,14 @@ The `lunatui-field` crate in a profile settings form. The run is scripted, not i
 
 Screenshot: [docs/media/ui-field.png](docs/media/ui-field.png). Recorded from `cargo run --release -p lunatui-field --example ui_field` (120×36, 270 frames at 30 fps, truecolor, dark, about 7 seconds) with the pinned agg.
 
+### Mermaid diagrams
+
+A documentation reader shows Mermaid source next to its terminal preview. A deployment flow has a decision, labeled branches and a retry cycle. The preview switches to horizontal layout, then a release sequence with messages, replies, a failure branch and a note. The sequence scrolls to its result and switches to ASCII lines.
+
+<img src="docs/media/mermaid.webp" alt="Mermaid flowchart and sequence diagram previews beside their source in a documentation reader" width="1028">
+
+Screenshot: [docs/media/mermaid.png](docs/media/mermaid.png). Recorded with `scripts/record-mermaid.sh` at 120×36, dark theme, 300 frames at 30 fps and 2× scale.
+
 ### Dialog
 
 A branch manager with a live activity feed and CI checks that keep moving behind each dialog. Deleting `feature/login` asks for confirmation with focus on Cancel; Tab moves to the red Delete branch button and Enter deletes it, then focus goes back to the branch list. Renaming `feature/search` opens a prompt and the new name is typed into its field. Deleting the protected `main` branch shows an alert. Tab only cycles inside the open dialog.
