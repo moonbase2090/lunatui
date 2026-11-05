@@ -301,36 +301,89 @@ fn clip(area: Rect, grid: &Grid) -> Rect {
     Rect::new(area.x, area.y, width, height)
 }
 
+/// Remembers the last few style conversions of one render call. Neighbouring
+/// cells mostly share a style, so the color math runs once per distinct style.
+struct Memo {
+    entries: [(Style, u32, Style); 16],
+    filled: usize,
+    next: usize,
+}
+
+impl Memo {
+    fn new() -> Self {
+        Self {
+            entries: [(Style::new(), 0, Style::new()); 16],
+            filled: 0,
+            next: 0,
+        }
+    }
+
+    fn get(&mut self, style: Style, amount: f32, compute: impl FnOnce() -> Style) -> Style {
+        let key = amount.to_bits();
+        if let Some(&(_, _, found)) = self.entries[..self.filled]
+            .iter()
+            .find(|(from, bits, _)| *from == style && *bits == key)
+        {
+            return found;
+        }
+        let made = compute();
+        self.entries[self.next] = (style, key, made);
+        self.next = (self.next + 1) % self.entries.len();
+        self.filled = (self.filled + 1).min(self.entries.len());
+        made
+    }
+}
+
 fn restyle(grid: &mut Grid, area: Rect, kind: &Kind, strength: f32, palette: &Palette<'_>) {
+    let mut memo = Memo::new();
     for row in 0..area.height {
+        let y = area.y + row;
+        // Cells that end up with the same style are written as one run.
+        let mut run: Option<(u16, u16, Style)> = None;
         for column in 0..area.width {
-            let (x, y) = (area.x + column, area.y + row);
-            let Some(cell) = grid.get(x, y) else {
-                continue;
-            };
-            let style = cell.style();
-            let styled = match kind {
-                Kind::Fade(color) => fade(style, *color, strength, palette),
-                Kind::Dissolve(seed) => {
-                    let threshold = scatter(x, y, *seed);
-                    if threshold < strength {
-                        hide(style, 1.0, palette)
-                    } else {
-                        continue;
+            let x = area.x + column;
+            let styled = grid.get(x, y).and_then(|cell| {
+                let style = cell.style();
+                let styled = match kind {
+                    Kind::Fade(color) => {
+                        memo.get(style, strength, || fade(style, *color, strength, palette))
                     }
-                }
-                Kind::Sweep(direction, softness) => {
-                    let along = position(*direction, column, row, area);
-                    let hidden = sweep_cover(along, strength, *softness);
-                    if hidden <= 0.0 {
-                        continue;
+                    Kind::Dissolve(seed) => {
+                        if scatter(x, y, *seed) < strength {
+                            memo.get(style, 1.0, || hide(style, 1.0, palette))
+                        } else {
+                            return None;
+                        }
                     }
-                    hide(style, hidden, palette)
+                    Kind::Sweep(direction, softness) => {
+                        let along = position(*direction, column, row, area);
+                        let hidden = sweep_cover(along, strength, *softness);
+                        if hidden <= 0.0 {
+                            return None;
+                        }
+                        memo.get(style, hidden, || hide(style, hidden, palette))
+                    }
+                    Kind::HslShift(shift) => memo.get(style, strength, || {
+                        hsl_shift(style, *shift, strength, palette)
+                    }),
+                    Kind::Slide(_) | Kind::Group(_) => return None,
+                };
+                (styled != style).then_some(styled)
+            });
+            run = match (run, styled) {
+                (Some((start, len, held)), Some(next)) if held == next => {
+                    Some((start, len + 1, held))
                 }
-                Kind::HslShift(shift) => hsl_shift(style, *shift, strength, palette),
-                Kind::Slide(_) | Kind::Group(_) => continue,
+                (open, next) => {
+                    if let Some((start, len, held)) = open {
+                        grid.set_style(Rect::new(start, y, len, 1), held);
+                    }
+                    next.map(|style| (x, 1, style))
+                }
             };
-            grid.set_style(Rect::new(x, y, 1, 1), styled);
+        }
+        if let Some((start, len, held)) = run {
+            grid.set_style(Rect::new(start, y, len, 1), held);
         }
     }
 }

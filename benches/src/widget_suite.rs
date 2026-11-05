@@ -61,6 +61,7 @@ pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
 /// Shared checkbox fixture using native Checkbox and the pinned tui-checkbox baseline.
 pub mod checkbox;
 mod command_palette;
+mod effects;
 mod heatmap;
 mod mermaid;
 mod terminal;
@@ -155,6 +156,13 @@ pub static CASES: &[Case] = &[
         parity: Parity::Exact,
         lunatui: command_palette::native,
         ratatui: command_palette::baseline,
+    },
+    Case {
+        name: "effects",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: effects::native,
+        ratatui: effects::baseline,
     },
     Case {
         name: "heatmap",

@@ -32,7 +32,7 @@ lunatui-layout = { version = "0.1.22", path = "../lunatui-layout" }
 lunatui-text = { version = "0.1.22", path = "../lunatui-text", features = ["markdown"] }
 lunatui-theme = { version = "0.1.22", path = "../lunatui-theme" }
 lunatui-widgets = { version = "0.1.22", path = "../lunatui-widgets", features = ["all-widgets"] }
-lunatui-runtime = { version = "0.1.22", path = "../lunatui-runtime", features = ["keymap"] }
+lunatui-runtime = { version = "0.1.22", path = "../lunatui-runtime", features = ["keymap", "effects"] }
 lunatui-term = { version = "0.1.22", path = "../lunatui-term" }
 lunatui-prismattyc = { version = "0.1.22", path = "../lunatui-prismattyc" }
 num-bigint = "0.4"
