@@ -145,7 +145,9 @@ fn native_labels(cx: &mut RenderCx<'_>, theme: &Theme, area: Rect, tick: u32) {
     ] {
         let row = Rect::new(area.x + 3, area.y + y, area.width - 6, 1);
         Block::new().style(style).render(row, cx);
-        Paragraph::new(text).style(style).render(row, cx);
+        Paragraph::new(format!("{text:<width$}", width = usize::from(row.width)))
+            .style(style)
+            .render(row, cx);
     }
 }
 
@@ -216,7 +218,12 @@ pub fn baseline_themed(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: 
         (3, "Repository and checks feed the release package", page),
         (area.height - 3, FOOTERS[selected(tick)], page),
     ] {
-        RatParagraph::new(text).style(rat_style(style)).render(
+        RatParagraph::new(format!(
+            "{text:<width$}",
+            width = usize::from(area.width - 6)
+        ))
+        .style(rat_style(style))
+        .render(
             RatRect::new(area.x + 3, area.y + y, area.width - 6, 1),
             buffer,
         );

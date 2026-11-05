@@ -75,6 +75,12 @@ Raw rounds and median/range summaries go to `target/node-graph-bench` by default
 
 ## Captures
 
+The caption paragraphs pad each row to its full width, so shorter steps erase
+previous text in reused frame buffers. The parity suite tests those transitions
+without resetting the buffers. `scripts/check-node-graph-recordings.py` also
+checks decoded pixels after every caption for stale glyphs, alongside the graph
+labels, connections and queued-to-published transition.
+
 The [cell artifact manifest](media/node-graph-proof.json) and
 [native pixel manifest](media/node-graph-pixel-proof.json) identify the recorded
 commit and actual artifact hashes. Source hashes describe that commit; later

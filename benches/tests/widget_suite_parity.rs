@@ -437,3 +437,50 @@ fn node_graph_matches_tui_nodes_across_selection_themes_and_offsets() -> Result<
     }
     Ok(())
 }
+
+#[test]
+fn node_graph_captions_erase_previous_steps_in_reused_buffers() {
+    use lunatui_bench::widget_suite::node_graph;
+    use lunatui_core::Rect;
+    use lunatui_theme::{Theme, Variant};
+    use ratatui::layout::Rect as RatRect;
+
+    for variant in [Variant::Dark, Variant::Light] {
+        let theme = Theme::builtin(variant);
+        for (width, height) in [(80, 24), (200, 60)] {
+            let area = Rect::new(0, 0, width, height);
+            let rat_area = RatRect::new(0, 0, width, height);
+            let mut grid = Grid::new(width, height);
+            let mut clusters = ClusterTable::new();
+            let mut buffer = Buffer::empty(rat_area);
+            for (tick, expected) in [
+                (0, "01  Repository synced"),
+                (59, "01  Repository synced"),
+                (60, "02  Checks passed"),
+                (119, "02  Checks passed"),
+                (120, "03  Package prepared"),
+                (179, "03  Package prepared"),
+                (180, "04  Release published"),
+                (239, "04  Release published"),
+                (240, "01  Repository synced"),
+                (300, "02  Checks passed"),
+            ] {
+                node_graph::native(&mut grid, &mut clusters, &theme, area, tick);
+                node_graph::baseline_themed(&mut buffer, rat_area, &theme, tick);
+                assert_eq!(
+                    grid.row_display(height - 3, &clusters).trim(),
+                    expected,
+                    "native {variant:?} {width}x{height} tick {tick}"
+                );
+                let baseline: String = (0..width)
+                    .map(|x| buffer[(x, height - 3)].symbol())
+                    .collect();
+                assert_eq!(
+                    baseline.trim(),
+                    expected,
+                    "baseline {variant:?} {width}x{height} tick {tick}"
+                );
+            }
+        }
+    }
+}

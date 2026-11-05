@@ -13,7 +13,7 @@ def inspect(path):
     return data["streams"][0]
 
 
-def glyph_frames(path, cols, rows, column, row, cells=3):
+def cell_frames(path, cols, rows, column, row, cells=3, *, times=TIMES):
     meta = inspect(path)
     if not 7.5 <= float(meta["duration"]) <= 12:
         raise SystemExit(f"Recording missed its 30 fps timeline: {path.name}")
@@ -25,7 +25,7 @@ def glyph_frames(path, cols, rows, column, row, cells=3):
     width = round((1 + cells + column) * cell_w) - left
     height = round((1.5 + row) * cell_h) - top
     result = []
-    for time in TIMES:
+    for time in times:
         raw = subprocess.check_output([
             "ffmpeg", "-loglevel", "error", "-i", str(path),
             "-vf", f"fps=30,crop={width}:{height}:{left}:{top}", "-ss", str(time), "-frames:v", "1",
@@ -33,5 +33,10 @@ def glyph_frames(path, cols, rows, column, row, cells=3):
         ])
         if len(raw) != width * height * 3:
             raise SystemExit(f"Missing decoded glyph pixels: {path.name} at {time}")
-        result.append(hashlib.sha256(raw).hexdigest())
+        result.append(raw)
     return result
+
+
+def glyph_frames(path, cols, rows, column, row, cells=3):
+    return [hashlib.sha256(raw).hexdigest()
+            for raw in cell_frames(path, cols, rows, column, row, cells)]
