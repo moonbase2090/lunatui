@@ -36,7 +36,7 @@ A PR that changes a path in `.github/CODEOWNERS` also needs the `mb2090-signoff`
 
 ## 6. Feature gating
 
-New behavior in trunk code ships behind a Cargo feature or setting that is off by default, unless it is a pure fix. Turning it on by default is its own trunk PR.
+New behavior in trunk code ships on by default. A Cargo feature or setting that is off by default is used only when the owner explicitly asks for one for that feature. A pure fix never needs a flag. Turning on a feature the owner asked to gate is its own trunk PR.
 
 ## 7. Tests
 
