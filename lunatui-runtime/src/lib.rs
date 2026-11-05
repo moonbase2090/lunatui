@@ -6,6 +6,8 @@
 mod anim;
 #[cfg(feature = "app")]
 mod app;
+#[cfg(feature = "effects")]
+pub mod effect;
 #[cfg(feature = "app")]
 mod focus;
 #[cfg(feature = "image-presenter")]
