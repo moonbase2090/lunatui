@@ -8,6 +8,14 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- A Checkbox comparison in the widget parity, recording and benchmark suite, using the native `lunatui-choice::Checkbox` and pinned `tui-checkbox` with matching glyphs and theme styles. The case covers checked, unchecked, mixed, focused and disabled states, with light/dark themes and 80x24 and 200x60 terminal sizes.
+
+### Fixed
+
+- Widget previews reuse color-profile conversions across frames, so repeated palette searches no longer make wide ANSI256 recordings miss their scripted timeline.
+
 ## [0.1.22] - 2026-11-05
 
 ### Added

@@ -1058,6 +1058,7 @@ dependencies = [
  "graphite-core",
  "gungraun",
  "libc",
+ "lunatui-choice",
  "lunatui-core",
  "lunatui-layout",
  "lunatui-prismattyc",
@@ -1065,11 +1066,13 @@ dependencies = [
  "lunatui-term",
  "lunatui-text",
  "lunatui-theme",
+ "lunatui-ui-tokens",
  "lunatui-widgets",
  "num-bigint",
  "num-traits",
  "ratatui",
  "time",
+ "tui-checkbox",
  "tui-menu",
  "tui-popup",
  "tui-scrollview",
@@ -2473,6 +2476,15 @@ name = "toml_write"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
+
+[[package]]
+name = "tui-checkbox"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ea61730259f12c34790e8ade8b6e32eabb02076c673f5d11e271be076fdd1b4"
+dependencies = [
+ "ratatui",
+]
 
 [[package]]
 name = "tui-menu"

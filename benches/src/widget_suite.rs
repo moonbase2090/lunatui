@@ -58,6 +58,8 @@ use tui_scrollview::{
 /// Terminal sizes every case runs at.
 pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
 
+/// Shared checkbox fixture using native Checkbox and the pinned tui-checkbox baseline.
+pub mod checkbox;
 mod command_palette;
 mod heatmap;
 mod mermaid;
@@ -124,6 +126,13 @@ pub struct Case {
 
 /// Every widget case, in report order.
 pub static CASES: &[Case] = &[
+    Case {
+        name: "checkbox",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: checkbox::native,
+        ratatui: checkbox::baseline,
+    },
     Case {
         name: "terminal",
         gated: true,

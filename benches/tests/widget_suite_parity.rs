@@ -121,6 +121,69 @@ fn documented_cases_state_a_reason() {
 }
 
 #[test]
+fn checkbox_matches_tui_checkbox_across_all_scripted_states_and_themes() -> Result<(), String> {
+    use lunatui_bench::widget_suite::checkbox;
+    use lunatui_core::Rect;
+    use lunatui_theme::{Theme, Variant};
+    use ratatui::layout::Rect as RatRect;
+
+    for variant in [Variant::Dark, Variant::Light] {
+        let theme = Theme::builtin(variant);
+        for (width, height) in [(0, 0), (7, 3), (80, 24), (200, 60)] {
+            for tick in [0, 12, 24, 36, 48, 60, 108, 120, 168, 180, 228, 239] {
+                let mut grid = Grid::new(width, height);
+                let mut clusters = ClusterTable::new();
+                let mut buffer = Buffer::empty(RatRect::new(0, 0, width, height));
+                checkbox::native(
+                    &mut grid,
+                    &mut clusters,
+                    &theme,
+                    Rect::new(0, 0, width, height),
+                    tick,
+                );
+                checkbox::baseline_themed(
+                    &mut buffer,
+                    RatRect::new(0, 0, width, height),
+                    &theme,
+                    tick,
+                );
+                let diffs = differences(&grid, &clusters, &buffer, width, height);
+                if !diffs.is_empty() {
+                    return Err(format!(
+                        "checkbox {variant:?} {width}x{height} tick {tick}: {:?}",
+                        &diffs[..diffs.len().min(3)]
+                    ));
+                }
+                if (width, height) == (80, 24) {
+                    let expected = if tick < 60 {
+                        "[ ] Deploys"
+                    } else {
+                        "[x] Deploys"
+                    };
+                    assert!(
+                        grid.row_display(6, &clusters).contains(expected),
+                        "missing actual checkbox at tick {tick}"
+                    );
+                    let group = if tick < 60 {
+                        "[ ] All events"
+                    } else if tick < 180 {
+                        "[-] All events"
+                    } else {
+                        "[x] All events"
+                    };
+                    assert!(grid.row_display(16, &clusters).contains(group));
+                    assert!(
+                        grid.row_display(14, &clusters)
+                            .contains("[x] Weekly summary")
+                    );
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn heatmap_matches_its_independent_buffer_reference() -> Result<(), String> {
     let case = CASES
         .iter()

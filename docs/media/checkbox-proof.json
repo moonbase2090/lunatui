@@ -1,0 +1,201 @@
+{
+  "source_sha256": {
+    "benches/src/widget_suite/checkbox.rs": "4c85e27e694eb8b87f30705ecc4c593af7b183441b90f358f589a215cdd23989",
+    "examples/widget_preview.rs": "8d4f332972fb921bc0c221bfdaedb64e006496914599a2fdf7445a373ad32161",
+    "lunatui-choice/src/lib.rs": "b7d0f8ef57bce0cf60d46b6daa65a55ccd20a2eaa37eb51a91574c5952487031",
+    "lunatui-ui-tokens/src/lib.rs": "4d67deaa8ac3f4289d28f74ac122843fc7218630dc274aefd704f528bb294da1"
+  },
+  "baseline": "tui-checkbox 0.5.3, default features disabled",
+  "renderer": "agg 1.9.0+lunatui.2",
+  "scripted_frames": 240,
+  "fps": 30,
+  "screenshot_second": 6.5,
+  "pixel_check": "12 size/theme/color cases passed from actual decoded recordings",
+  "artifacts": [
+    {
+      "file": "checkbox-80x24-truecolor-dark-side-by-side.mp4",
+      "bytes": 46765,
+      "sha256": "cb2329e8aceac04b2f2e3a9aafb8ffd9f5cd37461c0f457aa11be0e753bdd5fd"
+    },
+    {
+      "file": "checkbox-80x24-truecolor-dark-lunatui.png",
+      "bytes": 12155,
+      "sha256": "81f908eb63c52f3c20c4cb2e81b2abf0656141c1221eb4cc4633a8a66b057f86"
+    },
+    {
+      "file": "checkbox-80x24-truecolor-dark-ratatui.png",
+      "bytes": 12155,
+      "sha256": "81f908eb63c52f3c20c4cb2e81b2abf0656141c1221eb4cc4633a8a66b057f86"
+    },
+    {
+      "file": "checkbox-80x24-ansi256-dark-side-by-side.mp4",
+      "bytes": 45900,
+      "sha256": "523226803976eec17b5bf39f9a77682dc5ab395a42f1f7672b9cad4f62ccf22f"
+    },
+    {
+      "file": "checkbox-80x24-ansi256-dark-lunatui.png",
+      "bytes": 11935,
+      "sha256": "bdcc0650f869cb475c168a2e400991241da038d9efaca7880f731e390cc738dc"
+    },
+    {
+      "file": "checkbox-80x24-ansi256-dark-ratatui.png",
+      "bytes": 11935,
+      "sha256": "bdcc0650f869cb475c168a2e400991241da038d9efaca7880f731e390cc738dc"
+    },
+    {
+      "file": "checkbox-80x24-ansi16-dark-side-by-side.mp4",
+      "bytes": 41158,
+      "sha256": "841f5136ac189fca6bcea329872fa265b6e68fbd9a101bb09a0c9799112e522b"
+    },
+    {
+      "file": "checkbox-80x24-ansi16-dark-lunatui.png",
+      "bytes": 12111,
+      "sha256": "d0c14fdd5cf8216cb091cf4263d877de28d5d5abdd9c04bf75c32c3d42699991"
+    },
+    {
+      "file": "checkbox-80x24-ansi16-dark-ratatui.png",
+      "bytes": 12111,
+      "sha256": "d0c14fdd5cf8216cb091cf4263d877de28d5d5abdd9c04bf75c32c3d42699991"
+    },
+    {
+      "file": "checkbox-80x24-truecolor-light-side-by-side.mp4",
+      "bytes": 46302,
+      "sha256": "adc1d485db37a47caeaa00b7c9d660c7a77ba80b0a45b90c3f302e60de2a86c2"
+    },
+    {
+      "file": "checkbox-80x24-truecolor-light-lunatui.png",
+      "bytes": 11495,
+      "sha256": "a4da8140cd9b0708705869ab77fc78cf93e2de0d52d1f1fd6386547c9d57011c"
+    },
+    {
+      "file": "checkbox-80x24-truecolor-light-ratatui.png",
+      "bytes": 11495,
+      "sha256": "a4da8140cd9b0708705869ab77fc78cf93e2de0d52d1f1fd6386547c9d57011c"
+    },
+    {
+      "file": "checkbox-80x24-ansi256-light-side-by-side.mp4",
+      "bytes": 39372,
+      "sha256": "037ed522b5be443ad53b3a565c012c3bf9b0c5e92e395202f2071cd1e1f44afd"
+    },
+    {
+      "file": "checkbox-80x24-ansi256-light-lunatui.png",
+      "bytes": 10977,
+      "sha256": "22221dd3498f9576969c09a4dc946ec5a5f3e3df202218877a38fc2945bf6af0"
+    },
+    {
+      "file": "checkbox-80x24-ansi256-light-ratatui.png",
+      "bytes": 10998,
+      "sha256": "b7c001279e7fc04aa2675fc1eb30fe0b5722036455aab3a5e61138c2cede144b"
+    },
+    {
+      "file": "checkbox-80x24-ansi16-light-side-by-side.mp4",
+      "bytes": 45175,
+      "sha256": "24907ac8b54360dd0afe771b53c69b4ab93f7002bc7c6b48bee401ed49e026c1"
+    },
+    {
+      "file": "checkbox-80x24-ansi16-light-lunatui.png",
+      "bytes": 11817,
+      "sha256": "11d96792e2b34e32b611bb3ab4d867403ea7411feb5f588f4e8388a2d911e547"
+    },
+    {
+      "file": "checkbox-80x24-ansi16-light-ratatui.png",
+      "bytes": 11808,
+      "sha256": "9fe9a8b66719d02292229ec37c8a67f1fe217f180e1e7331cac425e5cdfa4d89"
+    },
+    {
+      "file": "checkbox-200x60-truecolor-dark-side-by-side.mp4",
+      "bytes": 49245,
+      "sha256": "7e0a7abeb1f5cb0102f17cbabc340f946e819f03cb03dbb375950fc5df6758f5"
+    },
+    {
+      "file": "checkbox-200x60-truecolor-dark-lunatui.png",
+      "bytes": 21077,
+      "sha256": "529c03f859f90197dc31b9fe056b6adad167cef9c05fd32e7da1e5014cb2522b"
+    },
+    {
+      "file": "checkbox-200x60-truecolor-dark-ratatui.png",
+      "bytes": 21077,
+      "sha256": "529c03f859f90197dc31b9fe056b6adad167cef9c05fd32e7da1e5014cb2522b"
+    },
+    {
+      "file": "checkbox-200x60-ansi256-dark-side-by-side.mp4",
+      "bytes": 50399,
+      "sha256": "0fda7bb236cc2f4287fddd701b8c3564cf3a39f3afe551df4b34ef9ab6536aeb"
+    },
+    {
+      "file": "checkbox-200x60-ansi256-dark-lunatui.png",
+      "bytes": 20847,
+      "sha256": "22e951e38f4675dc61a9878f55a68d325043cebf79f3f9ca338f2520b8dacbf8"
+    },
+    {
+      "file": "checkbox-200x60-ansi256-dark-ratatui.png",
+      "bytes": 20847,
+      "sha256": "22e951e38f4675dc61a9878f55a68d325043cebf79f3f9ca338f2520b8dacbf8"
+    },
+    {
+      "file": "checkbox-200x60-ansi16-dark-side-by-side.mp4",
+      "bytes": 52632,
+      "sha256": "8f36084214dde0c34056bfa16b2a08325bb99b4f7a4ad38c91fe9425a131f8cb"
+    },
+    {
+      "file": "checkbox-200x60-ansi16-dark-lunatui.png",
+      "bytes": 21021,
+      "sha256": "4194d601d19594ad3e204071e6c73a5b89ef295f1834c03f7bf8415c81ebd1c0"
+    },
+    {
+      "file": "checkbox-200x60-ansi16-dark-ratatui.png",
+      "bytes": 21021,
+      "sha256": "4194d601d19594ad3e204071e6c73a5b89ef295f1834c03f7bf8415c81ebd1c0"
+    },
+    {
+      "file": "checkbox-200x60-truecolor-light-side-by-side.mp4",
+      "bytes": 51990,
+      "sha256": "f54148bbe9e288bf214a4f51673e74d8e9ac480516e406f07cc0f1b722111ef8"
+    },
+    {
+      "file": "checkbox-200x60-truecolor-light-lunatui.png",
+      "bytes": 20332,
+      "sha256": "ae908d036bd7712ba50c0753eacb71f26137c2c70aa1dbb535acfe07a0d75728"
+    },
+    {
+      "file": "checkbox-200x60-truecolor-light-ratatui.png",
+      "bytes": 20332,
+      "sha256": "ae908d036bd7712ba50c0753eacb71f26137c2c70aa1dbb535acfe07a0d75728"
+    },
+    {
+      "file": "checkbox-200x60-ansi256-light-side-by-side.mp4",
+      "bytes": 42097,
+      "sha256": "9c0917bc1406b1d04b7f9dca5002aae0508d44ba1df7541f46c29b3a24d962e4"
+    },
+    {
+      "file": "checkbox-200x60-ansi256-light-lunatui.png",
+      "bytes": 19767,
+      "sha256": "f71cda74ab7201a94413f536112dbba0980163ec1c412c171e196e29e8921c37"
+    },
+    {
+      "file": "checkbox-200x60-ansi256-light-ratatui.png",
+      "bytes": 19738,
+      "sha256": "54bb95b48d1d8c7b0a17e47b53dccb91a87ed76130fba4dd07c5b8740144ebca"
+    },
+    {
+      "file": "checkbox-200x60-ansi16-light-side-by-side.mp4",
+      "bytes": 45655,
+      "sha256": "54285267efadb7eb3ce5e267793422dd72d5cfba8beb3fb23d2475a1e76f624e"
+    },
+    {
+      "file": "checkbox-200x60-ansi16-light-lunatui.png",
+      "bytes": 20747,
+      "sha256": "099ed6d2038587cb494b3933608d4298f46a6dc3c0f3dc83f4168f18a4af2085"
+    },
+    {
+      "file": "checkbox-200x60-ansi16-light-ratatui.png",
+      "bytes": 20747,
+      "sha256": "099ed6d2038587cb494b3933608d4298f46a6dc3c0f3dc83f4168f18a4af2085"
+    },
+    {
+      "file": "checkbox-80x24-truecolor-dark.gif",
+      "bytes": 27504,
+      "sha256": "a939b44d7a40a017d9cdeb6e53decd2e125c6a51f44f45131a92885165c7bd0c"
+    }
+  ]
+}

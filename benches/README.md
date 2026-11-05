@@ -26,9 +26,23 @@ The bench targets live in `benches/` and the tests in `tests/`. Run everything w
 - **The gate.** A gated case fails `cargo xtask bench` when its frame ratio (lunatui over ratatui) is above 1.05 or it allocates more per frame than ratatui. The render-only scope is reported, not gated. Widgets that predate the gate are *tracked*: reported, not failing. A new widget is added with `gated: true`.
 
 - **Color policy.** Both entrypoints pin color output on (`pin_color_output`), so ratatui's crossterm backend writes colors whatever `NO_COLOR` says and both sides encode truecolor. Byte counts do not depend on the environment.
-- **Arguments.** `--max-ratio N` must be a finite number above zero; anything else (including `NaN`) is an error, not a disabled gate. `--gate-all` also gates the tracked cases, to see how far they are from the bar.
+- **Arguments.** `--max-ratio N` must be a finite number above zero; anything else (including `NaN`) is an error, not a disabled gate. `--gate-all` also gates the tracked cases, to see how far they are from the bar. `--case NAME` selects one registered case, and `--baseline-first` measures the Ratatui side first.
 
 Run it with `cargo bench -p lunatui-bench --features text-area --bench widget_suite` (add `-- --gate` to enforce, `--max-ratio N` to change the limit). For Criterion timings of the `TextArea` case at both sizes, run `cargo bench -p lunatui-bench --features text-area --bench criterion_widgets -- text-area`.
+
+The gated `checkbox` case renders six native `lunatui-choice::Checkbox` controls
+and the same scene with pinned `tui-checkbox` 0.5.3. Its documented custom-symbol
+and styling APIs match the native three-cell glyphs, mixed marker and semantic
+colors. Both sides use the same labels, geometry, focus schedule and checked
+states. The dark baseline theme is reused across frames. The baseline dependency
+is confined to this unpublished benchmark crate.
+
+Run `python3 scripts/bench-checkbox.py` for six paired rounds at both sizes with
+alternating measurement order. It retains raw logs, medians and ranges, validates
+the selected case and emitted bytes, and enforces the existing frame/allocation
+gate. These are complete scene render/frame measurements, including headings,
+backgrounds, diff and encoding. Terminal-emulator rendering is outside the scope.
+See [Checkbox recording](../docs/recording-checkbox.md) for the visual proof.
 
 
 The `terminal` case includes identical VT parsing and screen allocation on both sides, followed by the native terminal widget or an independent Ratatui buffer adapter. Both use the same changing colored CLI bytes and sizes. It is an exact, gated case and participates in `criterion_widgets`. Both timing entrypoints abort with a nonzero exit code if any frame write fails. `scripts/check-terminal-mutants.py` injects a counting-sink failure to verify that the Criterion run rejects it.

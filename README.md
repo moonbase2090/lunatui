@@ -355,6 +355,21 @@ The `lunatui-choice` crate in a notification preferences screen. The run is scri
 <img src="docs/media/ui-choice.gif" alt="lunatui-choice: checkboxes, a mixed checkbox, a radio group and switches, with a disabled switch, in a notification preferences screen in the dark theme" width="1028">
 
 Screenshot: [docs/media/ui-choice.png](docs/media/ui-choice.png). Recorded from `cargo run --release -p lunatui-choice --example ui_choice` (120×36, 270 frames at 30 fps, truecolor, dark, about 10 seconds) with the pinned agg.
+### Checkbox parity
+
+Native `lunatui-choice::Checkbox` on the left and `tui-checkbox` 0.5.3 on the right
+render the same preferences and state changes. The group moves through unchecked,
+mixed and checked, focus steps down the choices, and the disabled weekly summary
+stays fixed. The native preview below is real widget output.
+
+<img src="docs/media/checkbox-80x24-truecolor-dark.gif" alt="Checkbox preferences with moving focus, unchecked, mixed and checked states, and a fixed disabled choice" width="691">
+
+[Screenshot](docs/media/checkbox-80x24-truecolor-dark-lunatui.png),
+[80x24 side-by-side recording](docs/media/checkbox-80x24-truecolor-dark-side-by-side.mp4),
+[200x60 side-by-side recording](docs/media/checkbox-200x60-truecolor-dark-side-by-side.mp4).
+The [recording guide](docs/recording-checkbox.md) reproduces both sizes, light/dark
+themes and truecolor/256/16-color profiles with the pinned renderer.
+
 ### UI dialog
 
 The `lunatui-dialog` crate in a project list. The run is scripted, not interactive: a prompt renames a project as its name is typed, an alert dialog asks before deleting it with a danger-colored action, and an alert reports the result. The panel is centered over a dimmed screen with a rounded border; focus uses the ring color and Delete uses the destructive color.
