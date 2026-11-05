@@ -3,6 +3,11 @@
 
 use lunatui_core::Rect;
 
+#[cfg(feature = "accessibility")]
+mod accessibility;
+#[cfg(feature = "accessibility")]
+pub use accessibility::AccessibilityRole;
+
 /// Stable identifier for an interactive region (PRD §2.9).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct HitId(
@@ -25,6 +30,8 @@ struct HitRegion {
     id: HitId,
     area: Rect,
     z: u16,
+    #[cfg(feature = "accessibility")]
+    role: Option<AccessibilityRole>,
 }
 
 /// Flat hit map for a single frame. Later entries with the same `z` win ties.
@@ -47,7 +54,13 @@ impl HitMap {
 
     /// Records `id` at `area`. Higher `z` wins when regions overlap.
     pub fn push(&mut self, id: HitId, area: Rect, z: u16) {
-        self.regions.push(HitRegion { id, area, z });
+        self.regions.push(HitRegion {
+            id,
+            area,
+            z,
+            #[cfg(feature = "accessibility")]
+            role: None,
+        });
     }
 
     /// Records one region per `(index, area)` pair, with ids counting up from `first`: item

@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- The off-by-default experimental `accessibility` feature in `lunatui-runtime` adds `AccessibilityRole`, `HitMap::push_with_role` and `HitMap::write_accessibility_json`. It exports annotated hit regions as versioned JSON with IDs, roles, cell rectangles, depth and focus.
+
 ## [0.1.21] - 2026-11-04
 
 ### Added
