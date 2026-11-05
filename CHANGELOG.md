@@ -11,6 +11,8 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - A Checkbox comparison in the widget parity, recording and benchmark suite, using the native `lunatui-choice::Checkbox` and pinned `tui-checkbox` with matching glyphs and theme styles. The case covers checked, unchecked, mixed, focused and disabled states, with light/dark themes and 80x24 and 200x60 terminal sizes.
+- An effects comparison in the widget parity, recording and benchmark suite: the native `Effect` fade against a hand-written ratatui fade, with matching cells at both sizes across the whole timeline, a side-by-side recording matrix and a gated benchmark.
+- The `effects` feature in `lunatui-runtime` adds `effect::Effect`, `Palette` and `Direction`: composable cell effects (fade, dissolve, sweep, slide, HSL shift) with delay, duration and easing, `sequence` and `parallel` combinators, `reversed` and a reduced-motion `with_policy`. Effects are a pure function of elapsed time, blend colors in OKLab, and resolve theme tokens through a caller-supplied `Palette`.
 
 ### Fixed
 
@@ -20,7 +22,6 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
-- The `effects` feature in `lunatui-runtime` adds `effect::Effect`, `Palette` and `Direction`: composable cell effects (fade, dissolve, sweep, slide, HSL shift) with delay, duration and easing, `sequence` and `parallel` combinators, `reversed` and a reduced-motion `with_policy`. Effects are a pure function of elapsed time, blend colors in OKLab, and resolve theme tokens through a caller-supplied `Palette`.
 - The off-by-default experimental `accessibility` feature in `lunatui-runtime` adds `AccessibilityRole`, `HitMap::push_with_role` and `HitMap::write_accessibility_json`. It exports annotated hit regions as versioned JSON with IDs, roles, cell rectangles, depth and focus.
 - Inline image output in `lunatui-term` skips resending an image payload when the same image is drawn again at the same size, and drops the cached payload when the image is replaced.
 

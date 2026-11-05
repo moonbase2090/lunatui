@@ -1,21 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Composable cell effects: fade, dissolve, sweep, slide and HSL shift.
-//!
-//! An [`Effect`] is a pure function of elapsed time. Render the widgets into a
-//! [`Grid`] as usual, then call [`Effect::render`] with the time since the effect
-//! started. The same elapsed time always produces the same cells, so frames are
-//! reproducible and a golden diff is exact. Combinators run effects in
-//! [`Effect::sequence`] or [`Effect::parallel`].
-//!
-//! Every leaf has a strength that runs from 0 (the grid untouched) to 1 (fully
-//! applied) along its delay, duration and [`Ease`]. [`Effect::reversed`] flips the
-//! strength, which turns a fade-out into a fade-in. Colors blend in `OKLab`. A
-//! cell is rewritten only while the strength is above zero, so theme tokens and
-//! the focus and disabled colors a widget chose survive until an effect needs
-//! their RGB value.
-
 use std::time::Duration;
 
 use lunatui_core::{Attrs, Color, Grid, Rect, Style, oklab};
@@ -301,8 +286,6 @@ fn clip(area: Rect, grid: &Grid) -> Rect {
     Rect::new(area.x, area.y, width, height)
 }
 
-/// Remembers the last few style conversions of one render call. Neighbouring
-/// cells mostly share a style, so the color math runs once per distinct style.
 struct Memo {
     entries: [(Style, u32, Style); 16],
     filled: usize,
@@ -338,7 +321,6 @@ fn restyle(grid: &mut Grid, area: Rect, kind: &Kind, strength: f32, palette: &Pa
     let mut memo = Memo::new();
     for row in 0..area.height {
         let y = area.y + row;
-        // Cells that end up with the same style are written as one run.
         let mut run: Option<(u16, u16, Style)> = None;
         for column in 0..area.width {
             let x = area.x + column;
@@ -428,7 +410,6 @@ fn scatter(x: u16, y: u16, seed: u32) -> f32 {
     f32::from(u16::try_from(state >> 16).unwrap_or(u16::MAX)) / 65_536.0
 }
 
-/// Position of a cell along the sweep, 0 where the sweep starts and 1 where it ends.
 fn position(direction: Direction, column: u16, row: u16, area: Rect) -> f32 {
     let (index, span) = match direction {
         Direction::Left => (area.width - 1 - column, area.width),
@@ -443,7 +424,6 @@ fn position(direction: Direction, column: u16, row: u16, area: Rect) -> f32 {
     }
 }
 
-/// How hidden a cell at `along` is when the sweep front is at `strength`.
 fn sweep_cover(along: f32, strength: f32, softness: f32) -> f32 {
     if strength >= 1.0 {
         return 1.0;

@@ -101,6 +101,11 @@ const PREVIEWS: &[Preview] = &[
         baseline: lunatui_bench::widget_suite::checkbox::baseline_themed,
     },
     Preview {
+        name: "effects",
+        native: lunatui_bench::widget_suite::effects::native,
+        baseline: lunatui_bench::widget_suite::effects::baseline_themed,
+    },
+    Preview {
         name: "terminal",
         native: terminal_native,
         baseline: terminal_baseline,

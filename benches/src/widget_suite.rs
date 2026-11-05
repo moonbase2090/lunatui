@@ -61,7 +61,8 @@ pub const SIZES: [(u16, u16); 2] = [(80, 24), (200, 60)];
 /// Shared checkbox fixture using native Checkbox and the pinned tui-checkbox baseline.
 pub mod checkbox;
 mod command_palette;
-mod effects;
+/// Cell-effects fixture: native `Effect` fade against a hand-written ratatui fade.
+pub mod effects;
 mod heatmap;
 mod mermaid;
 mod terminal;

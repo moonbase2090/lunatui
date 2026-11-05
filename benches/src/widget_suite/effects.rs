@@ -16,10 +16,9 @@ use ratatui::{
 
 use super::rat_color;
 
-/// One tick is 10 ms; the scripted run is 240 ticks.
-const TICK: Duration = Duration::from_millis(10);
-const FADE: Duration = Duration::from_millis(600);
-const HOLD: Duration = Duration::from_millis(1200);
+const TICK: Duration = Duration::from_micros(33_333);
+const FADE: Duration = Duration::from_micros(33_333 * 60);
+const HOLD: Duration = Duration::from_micros(33_333 * 120);
 
 const ROWS: [(&str, Token); 6] = [
     ("build        passed in 41 s", Token::Ok),
@@ -30,8 +29,6 @@ const ROWS: [(&str, Token); 6] = [
     ("report       written to target/report", Token::TextMuted),
 ];
 
-/// Fade in for 600 ms, hold for 1.2 s, fade out for 600 ms. Each fade is a
-/// native `Effect` that blends toward the page color.
 fn timeline() -> &'static Effect {
     static EFFECT: OnceLock<Effect> = OnceLock::new();
     EFFECT.get_or_init(|| {
@@ -76,13 +73,9 @@ fn elapsed(tick: u32) -> Duration {
 }
 
 /// Draws the scene with the native widgets, then applies the native effect.
-pub(super) fn native(
-    grid: &mut Grid,
-    clusters: &mut ClusterTable,
-    theme: &Theme,
-    area: Rect,
-    tick: u32,
-) {
+///
+/// The scripted run is 240 ticks of one 30 fps frame: fade in, hold, fade out.
+pub fn native(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
     let page = style(theme, Token::TextPrimary, Token::Surface0);
     let card = style(theme, Token::TextPrimary, Token::Surface1);
     let border = style(theme, Token::Border, Token::Surface1);
@@ -125,8 +118,6 @@ pub(super) fn native(
     timeline().render(elapsed(tick), grid, area, &palette);
 }
 
-/// How far the page is faded at `tick`, computed with the same arithmetic as
-/// the native effect so both sides blend by an identical amount.
 fn strength(tick: u32) -> f32 {
     let now = elapsed(tick);
     let ratio = |since: Duration| now.saturating_sub(since).as_secs_f32() / FADE.as_secs_f32();
@@ -154,9 +145,7 @@ fn faded(
 /// Draws the same scene with ratatui's own widgets, then fades it with a small
 /// hand-written loop that blends each cell's foreground and background toward
 /// the page color. ratatui has no effect system and tachyonfx is not used.
-pub(super) fn baseline(buffer: &mut Buffer, area: RatRect, tick: u32) {
-    static THEME: OnceLock<Theme> = OnceLock::new();
-    let theme = THEME.get_or_init(|| Theme::builtin(Variant::Dark));
+pub fn baseline_themed(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: u32) {
     let page = style(theme, Token::TextPrimary, Token::Surface0);
     let card = style(theme, Token::TextPrimary, Token::Surface1);
     let border = style(theme, Token::Border, Token::Surface1);
@@ -201,4 +190,15 @@ pub(super) fn baseline(buffer: &mut Buffer, area: RatRect, tick: u32) {
             cell.bg = faded(cell.bg, target, target, amount);
         }
     }
+}
+
+/// The fair-suite baseline, drawn with a reused dark theme like the native runner.
+pub fn baseline(buffer: &mut Buffer, area: RatRect, tick: u32) {
+    static THEME: OnceLock<Theme> = OnceLock::new();
+    baseline_themed(
+        buffer,
+        area,
+        THEME.get_or_init(|| Theme::builtin(Variant::Dark)),
+        tick,
+    );
 }

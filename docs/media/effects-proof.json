@@ -1,0 +1,200 @@
+{
+  "source_sha256": {
+    "benches/src/widget_suite/effects.rs": "ba68deb90498fb49c035d6b2a29688db5b2509eb90236d2f69ceef7fc5d98759",
+    "lunatui-runtime/src/effect.rs": "1b18407df6e51315c644bf12cce1f577d6a119b884db2ef41e70f7e96a8c815d",
+    "examples/widget_preview.rs": "e39421598f50742d636f0a91ca47292a2b0fe59f576b549a9e2b3a4fa949a592"
+  },
+  "baseline": "ratatui 0.30.2 with a hand-written fade loop; tachyonfx not used",
+  "renderer": "agg 1.9.0+lunatui.2",
+  "scripted_frames": 240,
+  "fps": 30,
+  "screenshot_second": 4,
+  "pixel_check": "12 size/theme/color cases passed from decoded recordings",
+  "artifacts": [
+    {
+      "file": "effects-80x24-truecolor-dark-side-by-side.mp4",
+      "bytes": 57144,
+      "sha256": "42b9da6804aa91ba9f6a4478bc4bc1f9275bb38477960cb1f5f5aaf12cf87698"
+    },
+    {
+      "file": "effects-80x24-truecolor-dark-lunatui.png",
+      "bytes": 9981,
+      "sha256": "0117678952c61bbf0b33f1d3f0ad68f1485730be78297e52c6b49b2260505bb0"
+    },
+    {
+      "file": "effects-80x24-truecolor-dark-ratatui.png",
+      "bytes": 9981,
+      "sha256": "32d7942c5919f569c846c513aa7cbbb127a534669fd7fd37e59da6b3077fc0bb"
+    },
+    {
+      "file": "effects-80x24-ansi256-dark-side-by-side.mp4",
+      "bytes": 61755,
+      "sha256": "5a49b7cc2a645ad3aa15f57309b1fc6ac7b2e58639edcfa7d2cfb1bc88b6e8a3"
+    },
+    {
+      "file": "effects-80x24-ansi256-dark-lunatui.png",
+      "bytes": 8980,
+      "sha256": "2dff2edca51208289f6010fc6f7dfe0eaaed779b00fff16e2b40fe8c8894da6f"
+    },
+    {
+      "file": "effects-80x24-ansi256-dark-ratatui.png",
+      "bytes": 8987,
+      "sha256": "8d64a4130b1a4aad209129efae2ba35e36a845d9d5694e69ca916f98d08583e6"
+    },
+    {
+      "file": "effects-80x24-ansi16-dark-side-by-side.mp4",
+      "bytes": 28823,
+      "sha256": "a590e92344e4e40c668ec1a5e5688676ca4d4800e7878fe2a2221cb691061364"
+    },
+    {
+      "file": "effects-80x24-ansi16-dark-lunatui.png",
+      "bytes": 9273,
+      "sha256": "cad955f51704d85708d22581012d644ba7d5219d9a1ccfffa5fb26137d3acb41"
+    },
+    {
+      "file": "effects-80x24-ansi16-dark-ratatui.png",
+      "bytes": 9273,
+      "sha256": "cad955f51704d85708d22581012d644ba7d5219d9a1ccfffa5fb26137d3acb41"
+    },
+    {
+      "file": "effects-80x24-truecolor-light-side-by-side.mp4",
+      "bytes": 80538,
+      "sha256": "7b46d5bf5f792453d9851edaf858c6ee0a981ea1f2813bbd89e3ca1eed210b58"
+    },
+    {
+      "file": "effects-80x24-truecolor-light-lunatui.png",
+      "bytes": 23332,
+      "sha256": "cacdf35a7ee184e8176678033d33b5a858922dcf54d2ced1d402623dc1dacf14"
+    },
+    {
+      "file": "effects-80x24-truecolor-light-ratatui.png",
+      "bytes": 20513,
+      "sha256": "91699076b86643aea496b46280a93b10b96731d3f7b0bce0747d9f6df10b290c"
+    },
+    {
+      "file": "effects-80x24-ansi256-light-side-by-side.mp4",
+      "bytes": 66377,
+      "sha256": "9854d09e039b6f727ef3b0214a3a797bbddb7ebfc6a9d67cfd88785cb572296c"
+    },
+    {
+      "file": "effects-80x24-ansi256-light-lunatui.png",
+      "bytes": 8405,
+      "sha256": "ee43e7791d04326f98ff6e78b7bac72e310e1fb8102a00ce9dc60612bbec5b23"
+    },
+    {
+      "file": "effects-80x24-ansi256-light-ratatui.png",
+      "bytes": 8387,
+      "sha256": "c7d72de0e6a87d4c2ea8f1432e991f3b294a9a324296a73f0e82270391e63741"
+    },
+    {
+      "file": "effects-80x24-ansi16-light-side-by-side.mp4",
+      "bytes": 35279,
+      "sha256": "7bac9dd43bfdb8202cd3c7a4b14214b43cdc549b752ad21bd4c7dfa901dbee79"
+    },
+    {
+      "file": "effects-80x24-ansi16-light-lunatui.png",
+      "bytes": 8923,
+      "sha256": "e61a4509ad0c74a0af84d1d44c9a33565e3f961793c12a7e4e2c419d8ec0af80"
+    },
+    {
+      "file": "effects-80x24-ansi16-light-ratatui.png",
+      "bytes": 9080,
+      "sha256": "39b11b439520ee995cb231560997dc9b63d7528f44bbb7326acb42046121ec33"
+    },
+    {
+      "file": "effects-200x60-truecolor-dark-side-by-side.mp4",
+      "bytes": 68408,
+      "sha256": "7fcd707fa10a23998a562c3d237f41234c26117afb0f9699b35f999d16a93c4b"
+    },
+    {
+      "file": "effects-200x60-truecolor-dark-lunatui.png",
+      "bytes": 18736,
+      "sha256": "ad192febab8ed971aec599e5ae08f9c6bff7cf4f4a40d8d8efbc82606dcfa808"
+    },
+    {
+      "file": "effects-200x60-truecolor-dark-ratatui.png",
+      "bytes": 18477,
+      "sha256": "2f5b1438cda3080a5ac806cb5653c2d57cc78b61e54f9e2da8dde2410bcc6110"
+    },
+    {
+      "file": "effects-200x60-ansi256-dark-side-by-side.mp4",
+      "bytes": 70670,
+      "sha256": "0ce3e66d2088c1792ea6d42713a44e62a3830094371a90c83e14076c3c3a1b07"
+    },
+    {
+      "file": "effects-200x60-ansi256-dark-lunatui.png",
+      "bytes": 17734,
+      "sha256": "436c69c17853bb8738fca39dcf136db49d390e72bdfe58c3396c621ce4a11f09"
+    },
+    {
+      "file": "effects-200x60-ansi256-dark-ratatui.png",
+      "bytes": 17724,
+      "sha256": "f7d504a4472601d39209b961f97f7293499fc78ae9000899029fde05a622295b"
+    },
+    {
+      "file": "effects-200x60-ansi16-dark-side-by-side.mp4",
+      "bytes": 33313,
+      "sha256": "884cdb53b7811a5c476c3a5152b9519b741c74f71a378f2ab498ec198cd919c4"
+    },
+    {
+      "file": "effects-200x60-ansi16-dark-lunatui.png",
+      "bytes": 18021,
+      "sha256": "9c5d1963b6f3d1dc7fc9ea397d921dc7e8a9c325b87cae7daa38b8f7c62fa928"
+    },
+    {
+      "file": "effects-200x60-ansi16-dark-ratatui.png",
+      "bytes": 18040,
+      "sha256": "f8be6a1451a6ec3f8f7a8c79a31fa023413170cbe73b9af5766b3b59899e34b8"
+    },
+    {
+      "file": "effects-200x60-truecolor-light-side-by-side.mp4",
+      "bytes": 80042,
+      "sha256": "34d6b44cdee7458d68cef805e00aaabf30d4cf045f7c79c2757e75d2e8413e0e"
+    },
+    {
+      "file": "effects-200x60-truecolor-light-lunatui.png",
+      "bytes": 20988,
+      "sha256": "8cb4577e793e1e21c6b1d552f8d5f8a79cf059e469ef9bb4b4b6216fe0101e15"
+    },
+    {
+      "file": "effects-200x60-truecolor-light-ratatui.png",
+      "bytes": 24100,
+      "sha256": "688fe18bf4c11857cb3fa3d4a2168b1e5bb76b90df0b6740c5d09ae3f8a59f8c"
+    },
+    {
+      "file": "effects-200x60-ansi256-light-side-by-side.mp4",
+      "bytes": 73241,
+      "sha256": "eb69c6b5b6e77c8066c5b7b4528b1a1fb12add1f94f4734fabba319afd6f9d04"
+    },
+    {
+      "file": "effects-200x60-ansi256-light-lunatui.png",
+      "bytes": 17197,
+      "sha256": "88f73d83b0171a4fd15fe9f2cc0e00f5a52536c58c007ca9ab64890a8b00ab08"
+    },
+    {
+      "file": "effects-200x60-ansi256-light-ratatui.png",
+      "bytes": 17101,
+      "sha256": "9b98ae35ee60bf899186ee67d29b0d26b327eee12173484b908c63bf114daa27"
+    },
+    {
+      "file": "effects-200x60-ansi16-light-side-by-side.mp4",
+      "bytes": 40291,
+      "sha256": "f6ea6ced0edf97d1118d3a06008365a9c0201bd8f34453e11861cb9d47f258ae"
+    },
+    {
+      "file": "effects-200x60-ansi16-light-lunatui.png",
+      "bytes": 17786,
+      "sha256": "861861d83861d2cb4d6287208527b2e1c9cc3db05a28ec2612ea3a626c437e99"
+    },
+    {
+      "file": "effects-200x60-ansi16-light-ratatui.png",
+      "bytes": 17845,
+      "sha256": "7e1de653f48015120376b5fcb3ef6fb1514eac93a051f1446c76d2faa335f3d0"
+    },
+    {
+      "file": "effects-80x24-truecolor-dark.gif",
+      "bytes": 127419,
+      "sha256": "984bc4b8de0cb3c2155e72b1fa6376073d3ae64ab44727b57cd68f164a2cc49c"
+    }
+  ]
+}
