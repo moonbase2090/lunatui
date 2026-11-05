@@ -35,6 +35,8 @@ pub use app::{App, ControlFlow, is_quit};
 pub use focus::{FocusDirection, FocusManager};
 #[cfg(feature = "image-presenter")]
 pub use frame::RenderFrame;
+#[cfg(feature = "accessibility")]
+pub use hit::AccessibilityRole;
 #[cfg(feature = "app")]
 pub use hit::{HitId, HitMap};
 pub use input::Input;

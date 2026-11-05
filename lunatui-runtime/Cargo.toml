@@ -10,6 +10,7 @@ repository.workspace = true
 [features]
 default = ["image-presenter"]
 app = []
+accessibility = ["app"]
 keymap = []
 motion = []
 image-presenter = ["app", "dep:lunatui-image", "lunatui-term/pixel-layer"]
@@ -21,6 +22,15 @@ required-features = ["keymap"]
 [[test]]
 name = "motion"
 required-features = ["motion"]
+
+[[test]]
+name = "accessibility"
+required-features = ["accessibility"]
+
+[[example]]
+name = "accessibility_roles"
+path = "../examples/accessibility_roles.rs"
+required-features = ["accessibility"]
 
 [dependencies]
 lunatui-core = { version = "0.1.21", path = "../lunatui-core" }
