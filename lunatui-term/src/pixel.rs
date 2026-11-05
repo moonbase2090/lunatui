@@ -137,20 +137,29 @@ struct StoredImage {
     wire_id: u32,
 }
 
-/// Keeps images on screen with the least traffic: an image is transmitted when its content
-/// changes, placed again only when its cell rectangle or depth moves, and deleted when a frame
-/// stops listing it.
+#[derive(Clone, Debug)]
+struct ImmediateImage {
+    image: Uploaded,
+    size: (u16, u16),
+    encoded: Vec<u8>,
+}
+
+/// Presents true pixels using the selected terminal protocol. Kitty transmits content changes,
+/// updates moved placements, and deletes omitted images. iTerm2 and Sixel retransmit cached
+/// payloads every frame and rely on cell repaints to erase old placements.
 ///
 /// Use [`finish_frame_parts`](Self::finish_frame_parts) to upload images before changing
 /// cells, then present cells and image placements together. In [`PixelMode::Cells`] every
 /// call is a no-op and the caller draws a cell fallback. After the first frames, nothing
-/// here allocates.
+/// here allocates for a stable frame whose encoded images fit the 32 MiB cache.
+/// iTerm2 and Sixel retransmit their cached payloads every frame.
 #[derive(Clone, Debug)]
 pub struct PixelLayer {
     mode: PixelMode,
     cell_pixels: Option<CellPixels>,
     background: Option<[u8; 3]>,
     uploaded: Vec<StoredImage>,
+    immediate: Vec<ImmediateImage>,
     retired: Vec<u32>,
     placed: Vec<Placed>,
     frame: Vec<Placed>,
@@ -170,6 +179,7 @@ impl PixelLayer {
             cell_pixels: None,
             background: None,
             uploaded: Vec::new(),
+            immediate: Vec::new(),
             retired: Vec::new(),
             placed: Vec::new(),
             frame: Vec::new(),
@@ -215,7 +225,8 @@ impl PixelLayer {
     /// under text).
     ///
     /// `generation` identifies the content: send a new number whenever the pixels change and
-    /// keep it while they do not, so unchanged images are never transmitted again. `id` must be
+    /// keep it while they do not, so unchanged images reuse their encoded content. Kitty
+    /// transmits only changes; iTerm2 and Sixel retransmit cached content. `id` must be
     /// nonzero and is listed once per frame; a zero or repeated id is ignored.
     pub fn image(&mut self, id: u32, generation: u64, image: &PixelImage<'_>, at: Rect, z: i32) {
         if !self.mode.is_pixels()
@@ -237,6 +248,8 @@ impl PixelLayer {
     pub fn finish_frame(&mut self) -> &[u8] {
         self.raster_slots.truncate(self.raster_cursor);
         if self.mode != PixelMode::Kitty {
+            self.immediate
+                .retain(|cached| self.frame.iter().any(|placed| placed.id == cached.image.id));
             core::mem::swap(&mut self.placed, &mut self.frame);
             self.frame.clear();
             return &self.out;
@@ -298,6 +311,7 @@ impl PixelLayer {
         self.placed.clear();
         self.frame.clear();
         self.uploaded.clear();
+        self.immediate.clear();
         self.retired.clear();
         self.raster_slots.clear();
         self.raster_cursor = 0;
@@ -314,10 +328,7 @@ impl PixelLayer {
         area: Rect,
         depth: i32,
     ) -> bool {
-        if self.mode != PixelMode::Kitty {
-            return self.immediate_image(id, image, area, depth);
-        }
-        let (wire_id, fresh) = self.update_upload(Uploaded {
+        let current = Uploaded {
             id,
             generation,
             source_width: image.width,
@@ -327,7 +338,11 @@ impl PixelLayer {
             width: image.width,
             height: image.height,
             opacity: u8::MAX,
-        });
+        };
+        if self.mode != PixelMode::Kitty {
+            return self.immediate_image(current, image, area, depth);
+        }
+        let (wire_id, fresh) = self.update_upload(current);
         if fresh {
             write_transmit(&mut self.out, wire_id, image);
         }
@@ -425,11 +440,14 @@ impl PixelLayer {
             height: crop_height,
             opacity: request.opacity(),
         };
-        let (wire_id, fresh) = if self.mode == PixelMode::Kitty {
-            self.update_upload(current)
-        } else {
-            (request.id().get(), true)
-        };
+        if self.mode != PixelMode::Kitty {
+            let Some(image) = PixelImage::new(source_width, source.size().height(), source_bytes)
+            else {
+                return false;
+            };
+            return self.immediate_image(current, &image, destination, request.depth());
+        }
+        let (wire_id, fresh) = self.update_upload(current);
         if fresh {
             self.scratch.clear();
             self.scratch.reserve(crop_len);
@@ -458,18 +476,6 @@ impl PixelLayer {
             let Some(image) = PixelImage::new(crop_width, crop_height, &self.scratch) else {
                 return false;
             };
-            if self.mode != PixelMode::Kitty {
-                let pixels = self.scratch.clone();
-                let Some(image) = PixelImage::new(crop_width, crop_height, &pixels) else {
-                    return false;
-                };
-                return self.immediate_image(
-                    ImageKey::Caller(request.id().get()),
-                    &image,
-                    destination,
-                    request.depth(),
-                );
-            }
             write_transmit(&mut self.out, wire_id, &image);
         }
         self.frame_pixels += u64::from(crop_width) * u64::from(crop_height);

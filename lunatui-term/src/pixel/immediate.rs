@@ -2,17 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 use super::{
-    ImageKey, PixelImage, PixelLayer, PixelMode, Placed, push_base64, push_decimal, write_cup,
+    ImmediateImage, PixelImage, PixelLayer, PixelMode, Placed, Uploaded, push_base64, push_decimal,
+    write_cup,
 };
 use lunatui_core::Rect;
 
 const MAX_FRAME_BYTES: usize = 32 * 1024 * 1024;
 const MAX_PIXELS: u32 = 1_048_576;
+const MAX_PLACEMENT_BYTES: usize = 18;
 
 impl PixelLayer {
     pub(super) fn immediate_image(
         &mut self,
-        id: ImageKey,
+        current: Uploaded,
         image: &PixelImage<'_>,
         at: Rect,
         z: i32,
@@ -30,33 +32,62 @@ impl PixelLayer {
         {
             return false;
         }
-        let rgba = resize(
-            image,
-            width,
-            height,
-            self.background,
-            self.mode == PixelMode::Sixel,
-        );
-        let Some(rgba) = rgba else {
-            return false;
+        let size = (at.width, at.height);
+        let index = if let Some(index) = self
+            .immediate
+            .iter()
+            .position(|cached| cached.image == current && cached.size == size)
+        {
+            index
+        } else {
+            let Some(rgba) = resize(
+                image,
+                current,
+                width,
+                height,
+                self.background,
+                self.mode == PixelMode::Sixel,
+            ) else {
+                return false;
+            };
+            let mut encoded = Vec::new();
+            let accepted = match self.mode {
+                PixelMode::Iterm2 => inline_png(&mut encoded, width, height, &rgba, at),
+                PixelMode::Sixel => sixel(&mut encoded, width, height, &rgba),
+                _ => false,
+            };
+            if !accepted || encoded.len() > MAX_FRAME_BYTES - MAX_PLACEMENT_BYTES {
+                return false;
+            }
+            self.immediate
+                .retain(|cached| cached.image.id != current.id);
+            let mut bytes: usize = self
+                .immediate
+                .iter()
+                .map(|cached| cached.encoded.len())
+                .sum();
+            while bytes + encoded.len() > MAX_FRAME_BYTES {
+                bytes -= self.immediate.remove(0).encoded.len();
+            }
+            self.immediate.push(ImmediateImage {
+                image: current,
+                size,
+                encoded,
+            });
+            self.immediate.len() - 1
         };
-        let mut encoded = Vec::new();
-        encoded.extend_from_slice(b"\x1b7");
-        write_cup(&mut encoded, at.x, at.y);
-        let accepted = match self.mode {
-            PixelMode::Iterm2 => inline_png(&mut encoded, width, height, &rgba, at),
-            PixelMode::Sixel => sixel(&mut encoded, width, height, &rgba),
-            _ => false,
-        };
-        encoded.extend_from_slice(b"\x1b8");
-        if !accepted || self.out.len().saturating_add(encoded.len()) > MAX_FRAME_BYTES {
+        let encoded = &self.immediate[index].encoded;
+        if self.out.len() + encoded.len() + MAX_PLACEMENT_BYTES > MAX_FRAME_BYTES {
             return false;
         }
-        self.out.extend_from_slice(&encoded);
+        self.out.extend_from_slice(b"\x1b7");
+        write_cup(&mut self.out, at.x, at.y);
+        self.out.extend_from_slice(encoded);
+        self.out.extend_from_slice(b"\x1b8");
         self.frame_pixels += u64::from(width) * u64::from(height);
         self.frame.push(Placed {
-            id,
-            wire_id: id.wire_hint(),
+            id: current.id,
+            wire_id: current.id.wire_hint(),
             rect: at,
             z,
             fresh: true,
@@ -67,6 +98,7 @@ impl PixelLayer {
 
 fn resize(
     image: &PixelImage<'_>,
+    crop: Uploaded,
     width: u32,
     height: u32,
     background: Option<[u8; 3]>,
@@ -76,23 +108,26 @@ fn resize(
         Vec::with_capacity(usize::try_from(width.checked_mul(height)?.checked_mul(4)?).ok()?);
     for y in 0..height {
         for x in 0..width {
-            let offset = usize::try_from(
-                (y * image.height / height * image.width + x * image.width / width) * 4,
-            )
-            .ok()?;
+            let source_y =
+                u64::from(crop.crop_y) + u64::from(y) * u64::from(crop.height) / u64::from(height);
+            let source_x =
+                u64::from(crop.crop_x) + u64::from(x) * u64::from(crop.width) / u64::from(width);
+            let offset = usize::try_from(source_y * u64::from(image.width) + source_x)
+                .ok()?
+                .checked_mul(4)?;
             let source = image.rgba.get(offset..offset + 4)?;
-            if opaque && source[3] < 255 {
+            let alpha = u32::from(source[3]) * u32::from(crop.opacity) / 255;
+            if opaque && alpha < 255 {
                 let bg = background?;
                 for (value, base) in source[..3].iter().zip(bg) {
-                    let value = (u32::from(*value) * u32::from(source[3])
-                        + u32::from(base) * (255 - u32::from(source[3]))
-                        + 127)
-                        / 255;
+                    let value =
+                        (u32::from(*value) * alpha + u32::from(base) * (255 - alpha) + 127) / 255;
                     rgba.push(u8::try_from(value).ok()?);
                 }
                 rgba.push(255);
             } else {
-                rgba.extend_from_slice(source);
+                rgba.extend_from_slice(&source[..3]);
+                rgba.push(u8::try_from(alpha).ok()?);
             }
         }
     }
