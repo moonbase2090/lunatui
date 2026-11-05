@@ -115,18 +115,64 @@ fn micros(duration: Duration) -> f64 {
     duration.as_secs_f64() * 1_000_000.0
 }
 
+fn measure_pair(
+    case: &'static Case,
+    width: u16,
+    height: u16,
+    baseline_first: bool,
+) -> std::io::Result<(Side, Side)> {
+    if baseline_first {
+        let ratatui = ratatui_side(case, width, height)?;
+        Ok((lunatui_side(case, width, height), ratatui))
+    } else {
+        let lunatui = lunatui_side(case, width, height);
+        Ok((lunatui, ratatui_side(case, width, height)?))
+    }
+}
+
+struct Options {
+    gate: bool,
+    gate_all: bool,
+    baseline_first: bool,
+    only: Option<&'static str>,
+    limit: f64,
+}
+
+impl Options {
+    fn parse(args: &[String]) -> Result<Self, String> {
+        let only = if let Some(at) = args.iter().position(|arg| arg == "--case") {
+            let name = args
+                .get(at + 1)
+                .and_then(|name| CASES.iter().find(|case| case.name == name.as_str()))
+                .ok_or("--case needs a registered case name")?;
+            Some(name.name)
+        } else {
+            None
+        };
+        Ok(Self {
+            gate: args.iter().any(|arg| arg == "--gate"),
+            gate_all: args.iter().any(|arg| arg == "--gate-all"),
+            baseline_first: args.iter().any(|arg| arg == "--baseline-first"),
+            only,
+            limit: parse_max_ratio(args)?,
+        })
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let gate = args.iter().any(|arg| arg == "--gate");
-    let gate_all = args.iter().any(|arg| arg == "--gate-all");
-    let limit = match parse_max_ratio(&args) {
-        Ok(limit) => limit,
+    let options = match Options::parse(&args) {
+        Ok(options) => options,
         Err(message) => {
             eprintln!("widget_suite: {message}");
             return ExitCode::FAILURE;
         }
     };
     pin_color_output();
+    println!(
+        "measurement order: baseline_first={}",
+        options.baseline_first
+    );
     println!(
         "widget_suite: median of {SAMPLES} samples of {BATCH} iterations, release, per case and size"
     );
@@ -150,10 +196,13 @@ fn main() -> ExitCode {
     );
     let mut failures = Vec::new();
     for case in CASES {
+        if options.only.is_some_and(|name| name != case.name) {
+            continue;
+        }
         for (width, height) in SIZES {
-            let lunatui = lunatui_side(case, width, height);
-            let ratatui = match ratatui_side(case, width, height) {
-                Ok(side) => side,
+            let (lunatui, ratatui) = match measure_pair(case, width, height, options.baseline_first)
+            {
+                Ok(pair) => pair,
                 Err(error) => {
                     eprintln!("{} {width}x{height}: {error}", case.name);
                     return ExitCode::FAILURE;
@@ -162,7 +211,7 @@ fn main() -> ExitCode {
             let render_ratio = micros(lunatui.render) / micros(ratatui.render);
             let frame_ratio = micros(lunatui.frame) / micros(ratatui.frame);
             let exact = case.parity == Parity::Exact;
-            let gated = exact && (case.gated || gate_all);
+            let gated = exact && (case.gated || options.gate_all);
             println!(
                 "{:<10} {:>7} {:>6} {:>8.1}us {:>8.1}us {:>6.2} {:>8.1}us {:>8.1}us {:>6.2} {:>8.1} {:>8.1} {:>6} {:>6} {:>7} {:>7}",
                 case.name,
@@ -191,7 +240,7 @@ fn main() -> ExitCode {
                 failures.extend(gate_failures(
                     &format!("{} {width}x{height}", case.name),
                     frame_ratio,
-                    limit,
+                    options.limit,
                     lunatui.allocs_per_frame,
                     ratatui.allocs_per_frame,
                 ));
@@ -204,7 +253,7 @@ fn main() -> ExitCode {
     for failure in &failures {
         eprintln!("over the bar: {failure}");
     }
-    if gate {
+    if options.gate {
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS

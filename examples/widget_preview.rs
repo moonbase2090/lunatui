@@ -3,6 +3,7 @@
 
 #![doc = include_str!("README.md")]
 
+use std::collections::HashMap;
 use std::env;
 use std::io::{self, Write};
 use std::sync::OnceLock;
@@ -94,6 +95,11 @@ struct Preview {
 }
 
 const PREVIEWS: &[Preview] = &[
+    Preview {
+        name: "checkbox",
+        native: lunatui_bench::widget_suite::checkbox::native,
+        baseline: lunatui_bench::widget_suite::checkbox::baseline_themed,
+    },
     Preview {
         name: "terminal",
         native: terminal_native,
@@ -6549,6 +6555,7 @@ fn play_lunatui(
     let mut next = Grid::new(options.width, options.height);
     let mut clusters = ClusterTable::new();
     let mut encoder = Encoder::new();
+    let mut colors = PreviewColors::new(options.profile);
     let period = Duration::from_secs(1) / options.fps;
     let started = Instant::now();
     for tick in 0..options.frames {
@@ -6557,7 +6564,7 @@ fn play_lunatui(
             (None, Some(case)) => (case.lunatui)(&mut next, &mut clusters, &theme, area, tick),
             (None, None) => return Err(invalid(format!("unknown case: {}", options.case))),
         }
-        downsample_grid(&mut next, options.profile);
+        downsample_grid(&mut next, &mut colors);
         let mut frame = b"\x1b[?2026h".to_vec();
         frame.extend_from_slice(encoder.encode_diff(
             &previous,
@@ -6591,6 +6598,7 @@ fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()
     if preview(&options.case).is_none() && case.is_none() {
         return Err(invalid(format!("unknown case: {}", options.case)));
     }
+    let mut colors = PreviewColors::new(options.profile);
     let period = Duration::from_secs(1) / options.fps;
     let started = Instant::now();
     for tick in 0..options.frames {
@@ -6601,7 +6609,7 @@ fn play_ratatui(case: Option<&'static Case>, options: &Options) -> io::Result<()
                 (None, Some(case)) => (case.ratatui)(buffer, area, tick),
                 (None, None) => {}
             }
-            downsample_buffer(buffer, options.profile);
+            downsample_buffer(buffer, &mut colors);
         })?;
         pace(started, period, tick);
     }
@@ -6624,8 +6632,29 @@ fn from_rat(color: RatColor) -> Color {
     }
 }
 
-fn downsample_grid(grid: &mut Grid, profile: Profile) {
-    if profile == Profile::TrueColor {
+struct PreviewColors {
+    profile: Profile,
+    mapped: HashMap<Color, Color>,
+}
+
+impl PreviewColors {
+    fn new(profile: Profile) -> Self {
+        Self {
+            profile,
+            mapped: HashMap::new(),
+        }
+    }
+
+    fn map(&mut self, color: Color) -> Color {
+        *self
+            .mapped
+            .entry(color)
+            .or_insert_with(|| self.profile.downsample(color))
+    }
+}
+
+fn downsample_grid(grid: &mut Grid, colors: &mut PreviewColors) {
+    if colors.profile == Profile::TrueColor {
         return;
     }
     for y in 0..grid.height() {
@@ -6635,8 +6664,8 @@ fn downsample_grid(grid: &mut Grid, profile: Profile) {
             };
             let style = cell.style();
             let mapped = Style {
-                fg: profile.downsample(style.fg),
-                bg: profile.downsample(style.bg),
+                fg: colors.map(style.fg),
+                bg: colors.map(style.bg),
                 attrs: style.attrs,
             };
             if mapped != style {
@@ -6646,13 +6675,13 @@ fn downsample_grid(grid: &mut Grid, profile: Profile) {
     }
 }
 
-fn downsample_buffer(buffer: &mut Buffer, profile: Profile) {
-    if profile == Profile::TrueColor {
+fn downsample_buffer(buffer: &mut Buffer, colors: &mut PreviewColors) {
+    if colors.profile == Profile::TrueColor {
         return;
     }
     for cell in &mut buffer.content {
-        cell.fg = rat_color(profile.downsample(from_rat(cell.fg)));
-        cell.bg = rat_color(profile.downsample(from_rat(cell.bg)));
+        cell.fg = rat_color(colors.map(from_rat(cell.fg)));
+        cell.bg = rat_color(colors.map(from_rat(cell.bg)));
     }
 }
 
@@ -7653,5 +7682,27 @@ fn mermaid_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u3
 fn command_palette_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
     if let Some(case) = CASES.iter().find(|case| case.name == "command-palette") {
         (case.ratatui)(buffer, area, tick);
+    }
+}
+
+#[cfg(test)]
+mod preview_color_tests {
+    use super::*;
+
+    #[test]
+    fn repeated_frames_keep_profile_specific_colors() {
+        let mut ansi16 = PreviewColors::new(Profile::Ansi16);
+        let mut ansi256 = PreviewColors::new(Profile::Ansi256);
+        let mut truecolor = PreviewColors::new(Profile::TrueColor);
+        for _ in 0..2 {
+            assert_eq!(ansi16.map(Color::Rgb(255, 0, 0)), Color::Indexed(9));
+            assert_eq!(ansi256.map(Color::Rgb(95, 135, 175)), Color::Indexed(67));
+            assert_eq!(
+                truecolor.map(Color::Rgb(95, 135, 175)),
+                Color::Rgb(95, 135, 175)
+            );
+            assert_eq!(ansi16.map(Color::Default), Color::Default);
+            assert_eq!(ansi256.map(Color::Token(42)), Color::Token(42));
+        }
     }
 }

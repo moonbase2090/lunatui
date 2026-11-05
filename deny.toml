@@ -20,8 +20,8 @@ confidence-threshold = 0.9
 multiple-versions = "warn"
 wildcards = "deny"
 allow-wildcard-paths = true
-# tui-popup and tui-scrollview (with derive-getters and derive_setters) are
-# comparison baselines for the Popup and ScrollView bench cases only.
+# tui-checkbox, tui-popup and tui-scrollview (with derive-getters and
+# derive_setters) are widget comparison baselines in the benchmark crate only.
 # PRD M16: only these external crates may appear in the dependency graph,
 # including transitive and platform-specific ones. Adding one, and any
 # dependency bump (Cargo.lock), needs MB2090 sign-off (.github/CODEOWNERS).
@@ -207,6 +207,7 @@ allow = [
     "tinytemplate",
     "tiny-skia",
     "tiny-skia-path",
+    "tui-checkbox",
     "tui-menu",
     "tui-popup",
     "tui-scrollview",

@@ -86,7 +86,7 @@ if [[ "$CASE" == "image" ]]; then
   exit 0
 fi
 cargo build -q --release -p lunatui --features "${FEATURES[*]}" --example widget_preview
-BIN="target/release/examples/widget_preview"
+BIN="${CARGO_TARGET_DIR:-target}/release/examples/widget_preview"
 ARGS=(--case "$CASE" --width "$WIDTH" --height "$HEIGHT" --frames "$FRAMES" --fps "$FPS" --profile "$PROFILE" --theme "$THEME")
 for side in lunatui ratatui; do
   asciinema rec -q --overwrite --window-size "${WIDTH}x${HEIGHT}" -t "${side} ${CASE}" \
