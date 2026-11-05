@@ -1,8 +1,8 @@
 {
-  "source_commit": "0567f14a62ac666bbb61603eec4030dfe3e254ab",
+  "source_commit": "b627eff9d3f584753468aed67fcbbd60ce92c9d0",
   "source_sha256": {
-    "benches/src/widget_suite/node_graph.rs": "1e18acc8150fcc11435fd4454aad045bc32c49c9fbf423d099e3616b7a927661",
-    "examples/widget_preview.rs": "2b8ee00dffef8bcc29db229f989a9a3e4a7240ded4c343068b22128a6ccae2e6",
+    "benches/src/widget_suite/node_graph.rs": "56745a7d9493819f564b797d157f505ad2e7657e61de7277864db84b84f3b602",
+    "examples/widget_preview.rs": "68b3003b9dfbb31ea1bc6da59d3f62db2e850c3e38ede9227c54a9e7a5f44aac",
     "lunatui-widgets/src/node_graph.rs": "9209392514f74430155e727ed806ce95591830a8a22d9f4f62e011908bd831ca",
     "examples/node_graph.rs": "00012f54b5ae540e07b84224c3c270e0f1a5a5e75230ee073182e9ba2ada1daf",
     "lunatui-widgets/src/render_cx.rs": "e0534f23c654b2f59b173d37d0cc440805875bcef43bf7305e90a9cbc4d52de6",
@@ -20,38 +20,38 @@
   "artifacts": [
     {
       "file": "node-graph-80x24-truecolor-dark-side-by-side.mp4",
-      "bytes": 42026,
-      "sha256": "2c89ec7f9394df071d48ab4cedd01d87a9bf3d388cd22757329fd20ae181b99c"
+      "bytes": 41297,
+      "sha256": "a22179ede8bb6ec84ba001fda6db3b17e7d5f432cd719be9f81152ce68a19e56"
     },
     {
       "file": "node-graph-80x24-truecolor-dark-lunatui.png",
-      "bytes": 13103,
-      "sha256": "7117c494ac2cdf9acff32f347190ac5a6cb873ebd8d949cdeab0962c40c97c2d"
+      "bytes": 13054,
+      "sha256": "a0a2e5c7e87e5a9fcad44bb0d452853b19a3510e3f2b0df1773fc62700ca8566"
     },
     {
       "file": "node-graph-80x24-truecolor-dark-ratatui.png",
-      "bytes": 13075,
-      "sha256": "18fe11ed68f632fcaddefff619f0785c277980ce2846ce905cbc1ba1274ab026"
+      "bytes": 13057,
+      "sha256": "726b720ad4f5911f94a41ba2d360dde7228120a1cb55f695b4930b8be2a907d7"
     },
     {
       "file": "node-graph-80x24-ansi256-dark-side-by-side.mp4",
-      "bytes": 40753,
-      "sha256": "0370b8e847ec256b164e2e629450558e90b28f295e091925a5ae39159623da12"
+      "bytes": 37211,
+      "sha256": "240fe733c6c2d8f4ee9efe1b03a785bb1a5337a6f9c4cd33c278b09e7f5d5cef"
     },
     {
       "file": "node-graph-80x24-ansi256-dark-lunatui.png",
-      "bytes": 12868,
-      "sha256": "ac3c86336cedb87da2030bb2a56db5c2b395f786bdcbc349a0eb0f8872f68f25"
+      "bytes": 12856,
+      "sha256": "b3ae2b65f1e0acc2d9e452f184ef113261c2bf3979c05341d4ceccb2012823d1"
     },
     {
       "file": "node-graph-80x24-ansi256-dark-ratatui.png",
-      "bytes": 12860,
-      "sha256": "f958442b00c6fb782460e56612f7284e8d4d4303dfaa62135de35c171f99b26d"
+      "bytes": 12856,
+      "sha256": "b3ae2b65f1e0acc2d9e452f184ef113261c2bf3979c05341d4ceccb2012823d1"
     },
     {
       "file": "node-graph-80x24-ansi16-dark-side-by-side.mp4",
-      "bytes": 32786,
-      "sha256": "91b151c2e4ca05499104e7a5df07322bc3e1855a560c8fce3872c2c8d3e0e9fa"
+      "bytes": 33125,
+      "sha256": "3caac3ca22c3c5bc4ea233decaa0c5c5f953f37487ad9c32f3c3af81c262825f"
     },
     {
       "file": "node-graph-80x24-ansi16-dark-lunatui.png",
@@ -65,23 +65,23 @@
     },
     {
       "file": "node-graph-80x24-truecolor-light-side-by-side.mp4",
-      "bytes": 44435,
-      "sha256": "d6e7972175aafe04ad03cf5caa56206fa5debdbe82dd09cb622ad6774acdf57f"
+      "bytes": 42715,
+      "sha256": "ca09688ff871d86ae4bed40cca3f08c195bc17912f008581311bce28e4f0a213"
     },
     {
       "file": "node-graph-80x24-truecolor-light-lunatui.png",
-      "bytes": 12628,
-      "sha256": "c65824756128212f58f8facf380b37b2a7b721288ffc7ee4efa8b01df00359c9"
+      "bytes": 12596,
+      "sha256": "6407a6908d03060365dfa50fef7a3d055d7851db03d70a38adc9c4090dca427d"
     },
     {
       "file": "node-graph-80x24-truecolor-light-ratatui.png",
-      "bytes": 12647,
-      "sha256": "6acc0bd627a506f44104fe14dfe816728f40a4acfc4683776ee4d951370c450d"
+      "bytes": 12614,
+      "sha256": "0d4f6e12764c99cddbe6621ff47b9c384d0dc57febb27f83d462ef0b0e485dae"
     },
     {
       "file": "node-graph-80x24-ansi256-light-side-by-side.mp4",
-      "bytes": 40977,
-      "sha256": "0914c081a8462e3d478646801c219af0f0c6e21b9e179cdf07055a89bce4ea04"
+      "bytes": 38052,
+      "sha256": "a37c6bab6db0da9d5911db53f8ac6cc8e285f095f9394b702a6314282386ca51"
     },
     {
       "file": "node-graph-80x24-ansi256-light-lunatui.png",
@@ -95,8 +95,8 @@
     },
     {
       "file": "node-graph-80x24-ansi16-light-side-by-side.mp4",
-      "bytes": 35779,
-      "sha256": "f8b82487a1e816966b6d0187bdb475d50f1044e6bbb777b1b98d2a39890f5d3d"
+      "bytes": 34255,
+      "sha256": "8694316c25765a1d4cf823e6ea9fd229886b23bb01562ba1f2dba7e3bc674e3d"
     },
     {
       "file": "node-graph-80x24-ansi16-light-lunatui.png",
@@ -110,23 +110,23 @@
     },
     {
       "file": "node-graph-200x60-truecolor-dark-side-by-side.mp4",
-      "bytes": 51034,
-      "sha256": "3cfd054e30fb5e327690b56e6c5deac96d17a5b64e54ebcc15dd027d5985c78d"
+      "bytes": 51868,
+      "sha256": "d843f0ac457f6a2a01871a3adc5e935a1322e65abbb146f6809fa7baae9004ff"
     },
     {
       "file": "node-graph-200x60-truecolor-dark-lunatui.png",
-      "bytes": 21864,
-      "sha256": "91b6764d17f0632e48d98f0e639ca03fc54dbaab64886f93066cfefeeccdf699"
+      "bytes": 21860,
+      "sha256": "c7da7aded6ba4a0e16ae5119020f98b3c6441b139196c729674ba988e04d1b81"
     },
     {
       "file": "node-graph-200x60-truecolor-dark-ratatui.png",
-      "bytes": 21877,
-      "sha256": "dc49668208918c7831efd07a62e315bf2e9da1716b5fc8fb573e9e5c3a77b1d0"
+      "bytes": 21885,
+      "sha256": "6dfa415af1f15395ab788c24c590d22af7ad1d60d6e01238ab7d41a1bf0541fd"
     },
     {
       "file": "node-graph-200x60-ansi256-dark-side-by-side.mp4",
-      "bytes": 44731,
-      "sha256": "d342e97f3779c865ee9942830dd1b4e0bebd66cc00d52d28ed7768c5891397f7"
+      "bytes": 43414,
+      "sha256": "e5b41500fff0e7ee70db281823c2f9d7dd53113388fbfcf77e75b00892335223"
     },
     {
       "file": "node-graph-200x60-ansi256-dark-lunatui.png",
@@ -136,12 +136,12 @@
     {
       "file": "node-graph-200x60-ansi256-dark-ratatui.png",
       "bytes": 21633,
-      "sha256": "1a31d48b7e8c9619ae01508a93308809ffab57013a7d83a2220399b45c317f18"
+      "sha256": "25e34c874d603995b15a327c9c6d53f79ea039349f526d9a46db19057d722b11"
     },
     {
       "file": "node-graph-200x60-ansi16-dark-side-by-side.mp4",
-      "bytes": 43320,
-      "sha256": "fb3db7580134f0c4fb7829d281841bfc6df2a28fde668da9a22b45e37577402e"
+      "bytes": 38731,
+      "sha256": "4cc3fcb60f36081c30cc7b10de65f6d30f758ce0e5ecd40227225d63f6d94fd9"
     },
     {
       "file": "node-graph-200x60-ansi16-dark-lunatui.png",
@@ -155,23 +155,23 @@
     },
     {
       "file": "node-graph-200x60-truecolor-light-side-by-side.mp4",
-      "bytes": 50163,
-      "sha256": "ada319d8fbd7dff4538e9e64a89d9c5aa06e0dc338688fe1aecc60ea3159c147"
+      "bytes": 51747,
+      "sha256": "c6daaea70b402ea181465cc07df953cc8467c4886a905646ccabb91ac49e501d"
     },
     {
       "file": "node-graph-200x60-truecolor-light-lunatui.png",
-      "bytes": 21505,
-      "sha256": "0d0f01b802b8a5231eb21373c7d476eeca09e6611448c10a6b49a90bb8cf7164"
+      "bytes": 21482,
+      "sha256": "acaf0dcf88aa0e37d68a2d38a63ab4c55aaf892f4979f5208492434623ed58f2"
     },
     {
       "file": "node-graph-200x60-truecolor-light-ratatui.png",
-      "bytes": 21513,
-      "sha256": "924d98747123de66c12462d2d7eeb386085e81de2539705c98954af5f6c6f090"
+      "bytes": 21480,
+      "sha256": "957a4e090410a2f07300c7145a470dc59a182cb2c765481bfc8210964a0f5a21"
     },
     {
       "file": "node-graph-200x60-ansi256-light-side-by-side.mp4",
-      "bytes": 41343,
-      "sha256": "721eba000adaf310125b4d4afc6330a71442f89c3e5dab58acc76d6d48459ae0"
+      "bytes": 44336,
+      "sha256": "ae9cb858d570fc54e59eb31ac9d329f7f0a992a649a11afd0ea8c1f83cdaf55d"
     },
     {
       "file": "node-graph-200x60-ansi256-light-lunatui.png",
@@ -185,8 +185,8 @@
     },
     {
       "file": "node-graph-200x60-ansi16-light-side-by-side.mp4",
-      "bytes": 43999,
-      "sha256": "6d7e7d6d7192d0a8ed8893656d9015b044bee40e0f534af8acb1a89e177e089c"
+      "bytes": 32200,
+      "sha256": "1f4576cb6d59d708418801b4011928cc48df5511a5005265d1d9c9ebc8250f0c"
     },
     {
       "file": "node-graph-200x60-ansi16-light-lunatui.png",
@@ -200,8 +200,8 @@
     },
     {
       "file": "node-graph-80x24-truecolor-dark.gif",
-      "bytes": 39190,
-      "sha256": "ffcd2ed2454e29044775a3bb251227625c78b31706b5750c52ac64b8e0a1c560"
+      "bytes": 38034,
+      "sha256": "8cb5ad482472442723891bbb4b6f83f26362e7420971e6c72cd5d3f14a78ab3d"
     }
   ]
 }

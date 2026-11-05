@@ -1,5 +1,5 @@
 {
-  "source_commit": "0567f14a62ac666bbb61603eec4030dfe3e254ab",
+  "source_commit": "b627eff9d3f584753468aed67fcbbd60ce92c9d0",
   "source": "Actual Kitty X11 window captured by ffmpeg x11grab; no compositing.",
   "terminal_configuration": {
     "columns": 100,
@@ -20,10 +20,10 @@
       6.5
     ],
     "frame_sha256": [
-      "a86d365e5e541a0e324e14e0efbf4f6df51f98be80fb10539c6459dcbca30f55",
-      "e4728a4ec6fc65fa951958c01b6e2ce5a9b2bc8d0d688811ab0233b18c16a227",
-      "a86d365e5e541a0e324e14e0efbf4f6df51f98be80fb10539c6459dcbca30f55",
-      "b8b05a6217397324c30eb738a93b3a1f135a944b90de596f9ae0020e324cdf86"
+      "870c3cedf8fe974242849442d2bdb2594bdfe2560846725fd6946ac1d2662f3f",
+      "dfdfa079516b3a950b469c6a418228130776d47a7fbf36274e1100845a2be05a",
+      "870c3cedf8fe974242849442d2bdb2594bdfe2560846725fd6946ac1d2662f3f",
+      "2ae0837b11732165e55390f66e7271699e91b9d4b1b9cacc5b06ad930fc47593"
     ],
     "pixel_toggle_restores": true,
     "theme_switch_changes": true
@@ -31,13 +31,13 @@
   "artifacts": [
     {
       "file": "node-graph-kitty.webp",
-      "bytes": 52774,
-      "sha256": "983cbceb333bc318314a9a1f3da779e7cf0c981d1ade21593db2fac2f7a23ab7"
+      "bytes": 53208,
+      "sha256": "1a42b988fdb1bdde1abcf0eec36b33ef83b425598dd66304762945e0515d8328"
     },
     {
       "file": "node-graph-kitty.png",
-      "bytes": 32434,
-      "sha256": "333187b33709705db8c88c21f9e26cb6699b55ca9ec00dc0907f951d1236206e"
+      "bytes": 32420,
+      "sha256": "b3c005d56617aedf3aa3ac7040c35848fe353486f309bfa6a8579baca4900418"
     }
   ]
 }
