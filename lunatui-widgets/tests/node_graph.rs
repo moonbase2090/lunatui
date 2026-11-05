@@ -57,12 +57,12 @@ fn orders_fan_in_by_input_port() -> Result<(), Box<dyn core::error::Error>> {
         GraphNode::new("Merge", Size::new(8, 8)),
     ];
     let edges = [
-        NodeConnection::new(1, 0, 2, 4),
-        NodeConnection::new(0, 0, 2, 0),
+        NodeConnection::new(0, 0, 2, 4),
+        NodeConnection::new(1, 0, 2, 0),
     ];
     let graph = NodeGraph::new(&nodes, &edges)?;
-    assert_eq!(graph.node_area(0), Some(Rect::new(1, 1, 8, 4)));
-    assert_eq!(graph.node_area(1), Some(Rect::new(1, 5, 8, 4)));
+    assert_eq!(graph.node_area(0), Some(Rect::new(1, 5, 8, 4)));
+    assert_eq!(graph.node_area(1), Some(Rect::new(1, 1, 8, 4)));
     assert_eq!(graph.node_area(2), Some(Rect::new(14, 1, 8, 8)));
     let (grid, clusters) = paint(&graph);
     assert!(grid.row_display(2, &clusters).contains("├─────┤"));
@@ -257,5 +257,16 @@ fn a_long_connection_detours_around_an_intermediate_node() -> Result<(), NodeGra
         grid.row_display(6, &clusters),
         "          ╰─────╯          "
     );
+    Ok(())
+}
+
+#[test]
+fn clips_a_wide_cluster_that_straddles_the_node_interior() -> Result<(), NodeGraphError> {
+    let nodes = [GraphNode::new("a好", Size::new(4, 3)).body("a好")];
+    let graph = NodeGraph::new(&nodes, &[])?;
+    let (grid, clusters) = paint(&graph);
+    assert_eq!(grid.row_display(1, &clusters), " ╭a─╮ ");
+    assert_eq!(grid.row_display(2, &clusters), " │a │ ");
+    assert_eq!(grid.row_display(3, &clusters), " ╰──╯ ");
     Ok(())
 }

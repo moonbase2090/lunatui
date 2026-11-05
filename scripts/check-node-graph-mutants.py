@@ -22,6 +22,8 @@ mutants = [
     ('obstacle-routing', 'canvas.rs', 'if next != goal', 'if next == usize::MAX'),
     ('disabled-style', 'view.rs', 'style.attrs = style.attrs.set_dim(true);', 'style.attrs = style.attrs.set_dim(false);'),
     ('label-budget', 'layout.rs', '65_536_usize', '262_144_usize'),
+    ('input-port-order', 'layout.rs', 'entries.sort_by_key(|&(port, node)| (port, node));', 'entries.sort_by_key(|&(_, node)| node);'),
+    ('wide-grapheme-clip', 'canvas.rs', 'columns > usize::from(width - column)', 'columns > usize::from(width - column) + 1'),
 ]
 with tempfile.TemporaryDirectory(prefix='lunatui-node-mutants-') as temporary:
     checkout = Path(temporary) / 'repo'
@@ -46,6 +48,6 @@ with tempfile.TemporaryDirectory(prefix='lunatui-node-mutants-') as temporary:
         result = subprocess.run(command, cwd=checkout, env=environment, capture_output=True, text=True)
         (out / 'restored.log').write_text(result.stdout + result.stderr)
         result.check_returncode()
-        print(f'PASS: four mutants killed; restored tests pass at {head}')
+        print(f'PASS: {len(mutants)} mutants killed; restored tests pass at {head}')
     finally:
         subprocess.run(['git', 'worktree', 'remove', '--force', str(checkout)], cwd=ROOT, check=True)
