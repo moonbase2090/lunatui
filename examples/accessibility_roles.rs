@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Exports two snapshots of the same hit map before and after Tab navigation.
+#![doc = include_str!("../lunatui-runtime/README.md")]
 
 use std::io;
 
