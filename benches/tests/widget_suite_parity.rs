@@ -317,3 +317,70 @@ fn command_palette_matches_an_independent_reference_in_empty_and_fuzzy_states() 
     }
     Ok(())
 }
+
+#[test]
+fn effects_match_the_hand_written_fade_across_the_whole_timeline() -> Result<(), String> {
+    use lunatui_bench::widget_suite::effects;
+    use lunatui_core::Rect;
+    use lunatui_theme::{Theme, Variant};
+    use ratatui::layout::Rect as RatRect;
+
+    let case = CASES
+        .iter()
+        .find(|case| case.name == "effects")
+        .ok_or("missing effects case")?;
+    for (width, height) in SIZES {
+        for tick in (0..240).step_by(7).chain([59, 60, 179, 180, 239]) {
+            check(case, width, height, tick)?;
+        }
+    }
+    let light = Theme::builtin(Variant::Light);
+    for (width, height) in SIZES {
+        for tick in [0, 30, 100, 200] {
+            let mut grid = Grid::new(width, height);
+            let mut clusters = ClusterTable::new();
+            let mut buffer = Buffer::empty(RatRect::new(0, 0, width, height));
+            effects::native(
+                &mut grid,
+                &mut clusters,
+                &light,
+                Rect::new(0, 0, width, height),
+                tick,
+            );
+            effects::baseline_themed(&mut buffer, RatRect::new(0, 0, width, height), &light, tick);
+            let diffs = differences(&grid, &clusters, &buffer, width, height);
+            if !diffs.is_empty() {
+                return Err(format!(
+                    "effects light {width}x{height} tick {tick}: {:?}",
+                    &diffs[..diffs.len().min(3)]
+                ));
+            }
+        }
+    }
+    let (width, height) = SIZES[0];
+    let background = |tick: u32| {
+        let (grid, _, _) = render_both(case, width, height, tick);
+        (0..width)
+            .map(|x| grid.get(x, 0).map(|cell| cell.style().bg))
+            .collect::<Vec<_>>()
+    };
+    let text = |tick: u32| {
+        let (grid, clusters, _) = render_both(case, width, height, tick);
+        grid.display_text(&clusters)
+    };
+    assert_eq!(background(0), background(239));
+    let held = text(100);
+    assert!(held.contains("integration  3 failed"));
+    assert_eq!(text(30), held);
+    let (faded, _, _) = render_both(case, width, height, 30);
+    let (steady, _, _) = render_both(case, width, height, 100);
+    let moved = (0..height)
+        .flat_map(|y| (0..width).map(move |x| (x, y)))
+        .filter(|&(x, y)| faded.get(x, y) != steady.get(x, y))
+        .count();
+    assert!(moved > 500, "only {moved} cells changed at tick 30");
+    let (a, _, _) = render_both(case, width, height, 60);
+    let (b, _, _) = render_both(case, width, height, 179);
+    assert_eq!(a.cell_bits(40, 12), b.cell_bits(40, 12));
+    Ok(())
+}

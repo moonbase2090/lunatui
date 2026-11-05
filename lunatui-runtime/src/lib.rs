@@ -6,6 +6,22 @@
 mod anim;
 #[cfg(feature = "app")]
 mod app;
+#[cfg(feature = "effects")]
+/// Composable cell effects: fade, dissolve, sweep, slide and HSL shift.
+///
+/// An [`effect::Effect`] is a pure function of elapsed time. Render the widgets into a
+/// grid as usual, then call [`effect::Effect::render`] with the time since the effect
+/// started. The same elapsed time always produces the same cells, so frames are
+/// reproducible and a golden diff is exact. Combinators run effects in
+/// [`effect::Effect::sequence`] or [`effect::Effect::parallel`].
+///
+/// Every leaf has a strength that runs from 0 (the grid untouched) to 1 (fully
+/// applied) along its delay, duration and easing. [`effect::Effect::reversed`] flips
+/// the strength, which turns a fade-out into a fade-in. Colors blend in `OKLab`. A
+/// cell is rewritten only while the strength is above zero, so theme tokens and
+/// the focus and disabled colors a widget chose survive until an effect needs
+/// their RGB value.
+pub mod effect;
 #[cfg(feature = "app")]
 mod focus;
 #[cfg(feature = "image-presenter")]

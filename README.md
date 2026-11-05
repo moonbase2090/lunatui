@@ -418,6 +418,14 @@ The service board keeps equal-size Cells and antialiased Pixels views of all ten
 
 Screenshots: [CPU](docs/media/sparkline.png), [Errors](docs/media/sparkline-errors.png). Recorded from a clean source tree at `489ed9f350a8a7e24f11d4399d0b61f6a9e6e236` after merging current main in a fresh Ubuntu arm64 VM, using `EXAMPLE=pixel_sparkline FEATURES=image-presenter WIDTH=200 HEIGHT=44 FONT_SIZE=16 SECONDS_TO_RECORD=24 KEYS=3:Right,6:Right,9:Right,12:Right,15:Right,18:b,21:b scripts/record-pixels.sh`: 200×44 cells, 2601×1101 pixels, 30 fps, 24 seconds, lossless WebP 108,664 bytes. All eight steps hold for 2.7–3.3 seconds. All 720 source frames and all eight WebP frames match the seven inspected states; restoring Pixels repeats the earlier Connections frame exactly. The stills are unmodified video frames at 1 and 10 seconds. No compositing or dropped frames.
 
+### Effects
+
+A release-pipeline panel drawn with real widgets, then faded in, held and faded out with `lunatui_runtime::effect::Effect`. The panel on the left is native; the panel on the right is ratatui with a small hand-written fade, because ratatui has no effect system. Both produce the same cells at every frame.
+
+<img src="docs/media/effects-80x24-truecolor-dark.gif" alt="A release-pipeline panel fading in, holding, and fading out in the dark theme" width="691">
+
+[Screenshot](docs/media/effects-80x24-truecolor-dark-lunatui.png), [80x24 side-by-side recording](docs/media/effects-80x24-truecolor-dark-side-by-side.mp4), [200x60 side-by-side recording](docs/media/effects-200x60-truecolor-dark-side-by-side.mp4). The [recording guide](docs/recording-effects.md) reproduces both sizes, both themes and all three color profiles with the pinned renderer.
+
 ### Heatmap
 
 A live capacity board for eight services across twelve availability zones. The selected cell updates the inspector, a hot shard turns red, and the event log follows its rebalance and recovery. Missing readings remain visible.

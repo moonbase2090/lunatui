@@ -13,6 +13,7 @@ app = []
 accessibility = ["app"]
 keymap = []
 motion = []
+effects = ["motion", "lunatui-core/blit", "lunatui-core/render-color"]
 image-presenter = ["app", "dep:lunatui-image", "lunatui-term/pixel-layer"]
 
 [[test]]
@@ -22,6 +23,10 @@ required-features = ["keymap"]
 [[test]]
 name = "motion"
 required-features = ["motion"]
+
+[[test]]
+name = "effects"
+required-features = ["effects"]
 
 [[test]]
 name = "accessibility"
