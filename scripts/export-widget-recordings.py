@@ -28,9 +28,9 @@ for size in ['80x24', '200x60']:
             artifacts.append(video)
             for side in ['lunatui', 'ratatui']:
                 png = f'{name}-{side}.png'
-                subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-ss', '6.5',
+                subprocess.run(['ffmpeg', '-loglevel', 'error', '-y',
                                 '-i', str(args.directory / f'{name}-{side}.gif'),
-                                '-frames:v', '1', str(out / png)], check=True)
+                                '-vf', 'fps=30', '-ss', '6.5', '-frames:v', '1', str(out / png)], check=True)
                 artifacts.append(png)
 gallery = f'{args.case}-80x24-truecolor-dark.gif'
 shutil.copyfile(args.directory / f'{args.case}-80x24-truecolor-dark-lunatui.gif', out / gallery)
@@ -47,7 +47,8 @@ if args.case == 'checkbox':
     baseline = 'tui-checkbox 0.5.3, default features disabled'
 else:
     sources = ['benches/src/widget_suite/node_graph.rs', 'examples/widget_preview.rs',
-               'lunatui-widgets/src/node_graph.rs']
+               'lunatui-widgets/src/node_graph.rs', 'examples/node_graph.rs',
+               'lunatui-widgets/src/render_cx.rs']
     sources += [str(path.relative_to(ROOT)) for path in sorted((ROOT / 'lunatui-widgets/src/node_graph').glob('*.rs'))]
     baseline = 'tui-nodes 0.10.0, default features disabled'
 manifest = {

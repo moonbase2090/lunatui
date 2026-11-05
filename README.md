@@ -355,6 +355,7 @@ The `lunatui-choice` crate in a notification preferences screen. The run is scri
 <img src="docs/media/ui-choice.gif" alt="lunatui-choice: checkboxes, a mixed checkbox, a radio group and switches, with a disabled switch, in a notification preferences screen in the dark theme" width="1028">
 
 Screenshot: [docs/media/ui-choice.png](docs/media/ui-choice.png). Recorded from `cargo run --release -p lunatui-choice --example ui_choice` (120×36, 270 frames at 30 fps, truecolor, dark, about 10 seconds) with the pinned agg.
+
 ### Checkbox parity
 
 Native `lunatui-choice::Checkbox` on the left and `tui-checkbox` 0.5.3 on the right
@@ -369,6 +370,23 @@ stays fixed. The native preview below is real widget output.
 [200x60 side-by-side recording](docs/media/checkbox-200x60-truecolor-dark-side-by-side.mp4).
 The [recording guide](docs/recording-checkbox.md) reproduces both sizes, light/dark
 themes and truecolor/256/16-color profiles with the pinned renderer.
+
+### Node graph
+
+The native node graph routes repository and check inputs into a package and release.
+The scripted comparison moves selection, pulses the selected border and publishes
+the release. Both implementations use the same nodes, port rows and theme styles.
+
+<img src="docs/media/node-graph-80x24-truecolor-dark.gif" alt="Native node graph with two inputs, package and release, moving selection and routed connections" width="691">
+
+[Screenshot](docs/media/node-graph-80x24-truecolor-dark-lunatui.png),
+[80x24 side-by-side](docs/media/node-graph-80x24-truecolor-dark-side-by-side.mp4),
+[200x60 side-by-side](docs/media/node-graph-200x60-truecolor-dark-side-by-side.mp4).
+
+The [actual Kitty recording](docs/media/node-graph-kitty.webp) and
+[screenshot](docs/media/node-graph-kitty.png) show antialiased geometry, the pixel/cell
+toggle and both themes. The [recording guide](docs/recording-node-graph.md) covers the
+full size/theme/profile matrix and the timing scope.
 
 ### UI dialog
 

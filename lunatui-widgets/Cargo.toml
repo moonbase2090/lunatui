@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = ["pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge", "pixel-progress"]
+default = ["pixel-node-graph", "pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge", "pixel-progress"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 terminal = ["widget-state", "dep:vt100", "dep:lunatui-term", "lunatui-term/pty", "lunatui-theme/graphite-extensions"]

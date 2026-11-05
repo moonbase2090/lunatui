@@ -27,8 +27,8 @@ def glyph_frames(path, cols, rows, column, row, cells=3):
     result = []
     for time in TIMES:
         raw = subprocess.check_output([
-            "ffmpeg", "-loglevel", "error", "-ss", str(time), "-i", str(path),
-            "-vf", f"crop={width}:{height}:{left}:{top}", "-frames:v", "1",
+            "ffmpeg", "-loglevel", "error", "-i", str(path),
+            "-vf", f"fps=30,crop={width}:{height}:{left}:{top}", "-ss", str(time), "-frames:v", "1",
             "-pix_fmt", "rgb24", "-f", "rawvideo", "-",
         ])
         if len(raw) != width * height * 3:

@@ -40,8 +40,8 @@ The interactive scene animates continuously. Space pauses, arrows step, `b`
 switches between pixels and cells, `t` switches themes, and `q` exits. The optional
 `pixel-node-graph` feature uses measured pixel targets with text underlay for
 antialiased geometry and real cell labels. Unavailable, declined, oversized or
-incompatible targets retain the cell rendering. The feature is included in
-`all-widgets`; it is off by default on `lunatui-widgets`.
+incompatible targets retain the cell rendering. Both features are included in `all-widgets` and the default `lunatui-widgets`
+features. A cell-only build uses `--no-default-features --features node-graph`.
 
 A real Kitty framebuffer recording can be reproduced on Linux with Xvfb, Kitty,
 xdotool and FFmpeg:
@@ -49,7 +49,13 @@ xdotool and FFmpeg:
 ```sh
 EXAMPLE=node_graph FEATURES=image-presenter WIDTH=100 HEIGHT=32 \
   KEYS='2:space,3:Right,4:b,5:b,6:t' bash scripts/record-pixels.sh
+python3 scripts/check-node-graph-pixels.py target/pixel-capture
 ```
+
+The pixel checker compares the actual paused frames at 3.5, 4.5 and 5.5 seconds.
+Turning pixels off must change the framebuffer, and turning them back on must
+restore the same frame. The theme change at 6.5 seconds must also change it.
+This catches a recording that silently stayed on cell fallback throughout.
 
 ## Fair timing
 
@@ -66,3 +72,22 @@ transport and native pixel presentation are excluded. The frame/allocation gate
 requires a native/baseline frame ratio at most 1.05 and no allocation increase.
 Raw rounds and median/range summaries go to `target/node-graph-bench` by default;
 `WIDGET_BENCH_OUT` selects another directory.
+
+## Captures
+
+The [cell artifact manifest](media/node-graph-proof.json) and
+[native pixel manifest](media/node-graph-pixel-proof.json) identify the recorded
+commit and actual artifact hashes. Source hashes describe that commit; later
+preview additions do not mean earlier footage was recaptured.
+
+[Actual Kitty recording](media/node-graph-kitty.webp) and
+[screenshot](media/node-graph-kitty.png).
+
+| Theme / profile | 80x24 | 200x60 |
+|---|---|---|
+| dark / truecolor | [video](media/node-graph-80x24-truecolor-dark-side-by-side.mp4), [native](media/node-graph-80x24-truecolor-dark-lunatui.png), [baseline](media/node-graph-80x24-truecolor-dark-ratatui.png) | [video](media/node-graph-200x60-truecolor-dark-side-by-side.mp4), [native](media/node-graph-200x60-truecolor-dark-lunatui.png), [baseline](media/node-graph-200x60-truecolor-dark-ratatui.png) |
+| dark / ansi256 | [video](media/node-graph-80x24-ansi256-dark-side-by-side.mp4), [native](media/node-graph-80x24-ansi256-dark-lunatui.png), [baseline](media/node-graph-80x24-ansi256-dark-ratatui.png) | [video](media/node-graph-200x60-ansi256-dark-side-by-side.mp4), [native](media/node-graph-200x60-ansi256-dark-lunatui.png), [baseline](media/node-graph-200x60-ansi256-dark-ratatui.png) |
+| dark / ansi16 | [video](media/node-graph-80x24-ansi16-dark-side-by-side.mp4), [native](media/node-graph-80x24-ansi16-dark-lunatui.png), [baseline](media/node-graph-80x24-ansi16-dark-ratatui.png) | [video](media/node-graph-200x60-ansi16-dark-side-by-side.mp4), [native](media/node-graph-200x60-ansi16-dark-lunatui.png), [baseline](media/node-graph-200x60-ansi16-dark-ratatui.png) |
+| light / truecolor | [video](media/node-graph-80x24-truecolor-light-side-by-side.mp4), [native](media/node-graph-80x24-truecolor-light-lunatui.png), [baseline](media/node-graph-80x24-truecolor-light-ratatui.png) | [video](media/node-graph-200x60-truecolor-light-side-by-side.mp4), [native](media/node-graph-200x60-truecolor-light-lunatui.png), [baseline](media/node-graph-200x60-truecolor-light-ratatui.png) |
+| light / ansi256 | [video](media/node-graph-80x24-ansi256-light-side-by-side.mp4), [native](media/node-graph-80x24-ansi256-light-lunatui.png), [baseline](media/node-graph-80x24-ansi256-light-ratatui.png) | [video](media/node-graph-200x60-ansi256-light-side-by-side.mp4), [native](media/node-graph-200x60-ansi256-light-lunatui.png), [baseline](media/node-graph-200x60-ansi256-light-ratatui.png) |
+| light / ansi16 | [video](media/node-graph-80x24-ansi16-light-side-by-side.mp4), [native](media/node-graph-80x24-ansi16-light-lunatui.png), [baseline](media/node-graph-80x24-ansi16-light-ratatui.png) | [video](media/node-graph-200x60-ansi16-light-side-by-side.mp4), [native](media/node-graph-200x60-ansi16-light-lunatui.png), [baseline](media/node-graph-200x60-ansi16-light-ratatui.png) |

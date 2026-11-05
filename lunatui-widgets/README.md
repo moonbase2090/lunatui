@@ -199,8 +199,8 @@ Map `lunatui_runtime::keymap::Command::title()` to entry titles and its first ch
 
 ## Node graphs
 
-Enable `node-graph` for `GraphNode`, `NodeConnection`, `NodeGraph` and
-`NodeGraphView`. Build a validated DAG once, then draw its view with application-owned
+`GraphNode`, `NodeConnection`, `NodeGraph` and `NodeGraphView` are available with
+the default features. Build a validated DAG once, then draw its view with application-owned
 selection and scroll state. Connections use zero-based interior rows as ports;
 routes avoid node boxes. Labels preserve Unicode graphemes, and `node_at` maps
 terminal cells back to nodes after scrolling. Colors come from the active theme.
@@ -220,4 +220,5 @@ let view = graph.view().selected(Some(1)).scroll(0, 0);
 
 `pixel-node-graph` adds antialiased geometry on supported image sinks with measured
 cell sizes and text underlay. Other targets retain the same cell layout. Both
-features are part of `all-widgets`. See the [comparison and recording guide](../docs/recording-node-graph.md).
+features are enabled by default and part of `all-widgets`. A cell-only build uses
+`--no-default-features --features node-graph`. See the [comparison and recording guide](../docs/recording-node-graph.md).
