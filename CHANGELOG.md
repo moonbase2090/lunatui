@@ -8,9 +8,12 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.22] - 2026-11-05
+
 ### Added
 
 - The off-by-default experimental `accessibility` feature in `lunatui-runtime` adds `AccessibilityRole`, `HitMap::push_with_role` and `HitMap::write_accessibility_json`. It exports annotated hit regions as versioned JSON with IDs, roles, cell rectangles, depth and focus.
+- Inline image output in `lunatui-term` skips resending an image payload when the same image is drawn again at the same size, and drops the cached payload when the image is replaced.
 
 ## [0.1.21] - 2026-11-04
 
