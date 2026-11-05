@@ -64,6 +64,8 @@ mod markdown_view;
 mod mermaid;
 #[cfg(feature = "nested-menu")]
 mod nested_menu;
+#[cfg(feature = "node-graph")]
+mod node_graph;
 #[cfg(feature = "notification-center")]
 mod notification_center;
 #[cfg(feature = "number-input")]
@@ -259,3 +261,6 @@ pub use widget::Widget;
 
 #[cfg(feature = "terminal")]
 pub use terminal::{PseudoTerminal, TerminalCell, TerminalScreen};
+
+#[cfg(feature = "node-graph")]
+pub use node_graph::{GraphNode, NodeConnection, NodeGraph, NodeGraphError, NodeGraphView};

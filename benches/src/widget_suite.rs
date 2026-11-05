@@ -65,6 +65,8 @@ mod command_palette;
 pub mod effects;
 mod heatmap;
 mod mermaid;
+/// Shared native node-graph and tui-nodes comparison scene.
+pub mod node_graph;
 mod terminal;
 mod timeline;
 
@@ -128,6 +130,13 @@ pub struct Case {
 
 /// Every widget case, in report order.
 pub static CASES: &[Case] = &[
+    Case {
+        name: "node-graph",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: node_graph::native,
+        ratatui: node_graph::baseline,
+    },
     Case {
         name: "checkbox",
         gated: true,

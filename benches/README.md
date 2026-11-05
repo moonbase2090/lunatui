@@ -38,7 +38,7 @@ colors. Both sides use the same labels, geometry, focus schedule and checked
 states. The dark baseline theme is reused across frames. The baseline dependency
 is confined to this unpublished benchmark crate.
 
-Run `python3 scripts/bench-checkbox.py` for six paired rounds at both sizes with
+Run `python3 scripts/bench-widget.py` for six paired rounds at both sizes with
 alternating measurement order. It retains raw logs, medians and ranges, validates
 the selected case and emitted bytes, and enforces the existing frame/allocation
 gate. These are complete scene render/frame measurements, including headings,
@@ -47,3 +47,9 @@ See [Checkbox recording](../docs/recording-checkbox.md) for the visual proof.
 
 
 The `terminal` case includes identical VT parsing and screen allocation on both sides, followed by the native terminal widget or an independent Ratatui buffer adapter. Both use the same changing colored CLI bytes and sizes. It is an exact, gated case and participates in `criterion_widgets`. Both timing entrypoints abort with a nonzero exit code if any frame write fails. `scripts/check-terminal-mutants.py` injects a counting-sink failure to verify that the Criterion run rejects it.
+
+The gated `node-graph` case compares the native graph with pinned `tui-nodes` 0.10.0.
+Construction and automatic layout happen inside both timed render paths. Both use
+the same port rows, labels, sizes and theme styles. Run
+`python3 scripts/bench-widget.py --case node-graph` for six alternating rounds.
+See the [recording guide](../docs/recording-node-graph.md) for scope and visual proof.

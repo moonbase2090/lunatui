@@ -384,3 +384,56 @@ fn effects_match_the_hand_written_fade_across_the_whole_timeline() -> Result<(),
     assert_eq!(a.cell_bits(40, 12), b.cell_bits(40, 12));
     Ok(())
 }
+
+#[test]
+fn node_graph_matches_tui_nodes_across_selection_themes_and_offsets() -> Result<(), String> {
+    use lunatui_bench::widget_suite::node_graph;
+    use lunatui_core::Rect;
+    use lunatui_theme::{Theme, Variant};
+    use ratatui::layout::Rect as RatRect;
+    for variant in [Variant::Dark, Variant::Light] {
+        let theme = Theme::builtin(variant);
+        for (width, height) in [(0_u16, 0_u16), (7, 3), (80, 24), (200, 60)] {
+            for inset in [0, 2] {
+                let area = Rect::new(
+                    inset,
+                    inset,
+                    width.saturating_sub(inset * 2),
+                    height.saturating_sub(inset * 2),
+                );
+                for tick in [0, 1, 29, 59, 60, 89, 119, 120, 149, 179, 180, 209, 239] {
+                    let mut grid = Grid::new(width, height);
+                    let mut clusters = ClusterTable::new();
+                    let mut buffer = Buffer::empty(RatRect::new(0, 0, width, height));
+                    node_graph::native(&mut grid, &mut clusters, &theme, area, tick);
+                    node_graph::baseline_themed(
+                        &mut buffer,
+                        RatRect::new(area.x, area.y, area.width, area.height),
+                        &theme,
+                        tick,
+                    );
+                    let diffs = differences(&grid, &clusters, &buffer, width, height);
+                    if !diffs.is_empty() {
+                        return Err(format!(
+                            "node graph {variant:?} {width}x{height} inset {inset} tick {tick}: {:?}",
+                            &diffs[..diffs.len().min(3)]
+                        ));
+                    }
+                    if width >= 80 {
+                        let text: Vec<_> = (0..height)
+                            .map(|y| grid.row_display(y, &clusters))
+                            .collect();
+                        assert!(text.iter().any(|line| line.contains("Repository")));
+                        assert!(text.iter().any(|line| line.contains("Package")));
+                        assert_eq!(
+                            text.iter().any(|line| line.contains("published")),
+                            tick >= 180
+                        );
+                        assert!(text.iter().any(|line| line.contains("├─────┤")));
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}

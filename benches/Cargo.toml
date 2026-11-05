@@ -44,6 +44,7 @@ libc = "0.2.190"
 tui-popup = "=0.7.7"
 tui-scrollview = "=0.6.8"
 tui-checkbox = { version = "=0.5.3", default-features = false }
+tui-nodes = { version = "=0.10.0", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }

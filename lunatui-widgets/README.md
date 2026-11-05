@@ -196,3 +196,28 @@ palette.render(screen, cx);
 Map `lunatui_runtime::keymap::Command::title()` to entry titles and its first chord's `to_string()` to shortcut hints. On Enter use the returned entry index to dispatch that command's `id()`. A changed query should reset selection. The palette clips itself to its area, scrolls the query to keep the caret visible, clamps byte carets to grapheme boundaries and fits its selected row into `max_rows`. Escape/Enter and focus restoration belong to the app.
 
 `cargo run --release -p lunatui --features color-profiles --example widget_preview -- --side lunatui --case command-palette --width 120 --height 36 --frames 300 --fps 30 --theme dark` renders a scripted editor that executes Open file and Split pane right, then cancels a query with no matches. `scripts/record-command-palette.sh` captures and checks those states. `python3 scripts/check-command-palette-mutants.py` checks matching, scrolling, hit testing and Unicode behavior against mutations.
+
+## Node graphs
+
+Enable `node-graph` for `GraphNode`, `NodeConnection`, `NodeGraph` and
+`NodeGraphView`. Build a validated DAG once, then draw its view with application-owned
+selection and scroll state. Connections use zero-based interior rows as ports;
+routes avoid node boxes. Labels preserve Unicode graphemes, and `node_at` maps
+terminal cells back to nodes after scrolling. Colors come from the active theme.
+
+```rust
+# #[cfg(feature = "node-graph")] {
+use lunatui_core::Size;
+use lunatui_widgets::{GraphNode, NodeConnection, NodeGraph};
+let nodes = [GraphNode::new("Source", Size::new(16, 4)),
+             GraphNode::new("Build", Size::new(16, 4)).body("24 checks passed")];
+let edges = [NodeConnection::new(0, 0, 1, 0)];
+let graph = NodeGraph::new(&nodes, &edges)?;
+let view = graph.view().selected(Some(1)).scroll(0, 0);
+# }
+# Ok::<(), Box<dyn core::error::Error>>(())
+```
+
+`pixel-node-graph` adds antialiased geometry on supported image sinks with measured
+cell sizes and text underlay. Other targets retain the same cell layout. Both
+features are part of `all-widgets`. See the [comparison and recording guide](../docs/recording-node-graph.md).

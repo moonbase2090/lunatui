@@ -96,6 +96,11 @@ struct Preview {
 
 const PREVIEWS: &[Preview] = &[
     Preview {
+        name: "node-graph",
+        native: lunatui_bench::widget_suite::node_graph::native,
+        baseline: lunatui_bench::widget_suite::node_graph::baseline_themed,
+    },
+    Preview {
         name: "checkbox",
         native: lunatui_bench::widget_suite::checkbox::native,
         baseline: lunatui_bench::widget_suite::checkbox::baseline_themed,
