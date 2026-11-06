@@ -77,6 +77,8 @@ The quickstart page embeds the sources in `examples/templates/`. After changing 
 template, run `node scripts/sync-quickstart-source.mjs` from the repository root,
 then `node scripts/sync-quickstart-source.mjs --check` to verify the generated
 `site/quickstart.html` code blocks. The web-sandbox CI job runs the same check.
+Validate sandbox binary changes with the pinned Linux CI build. A build from
+another host may differ even when the canonical artifact needs no update.
 
 Benchmarks are separate: `cargo xtask bench` prints allocation and write metrics and runs the criterion and gungraun benchmarks in `benches/`.
 
