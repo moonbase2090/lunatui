@@ -133,7 +133,7 @@ pub struct Case {
 /// Every widget case, in report order.
 pub static CASES: &[Case] = &[
     Case {
-        name: "widget_list",
+        name: "widget-list",
         gated: true,
         parity: Parity::Exact,
         lunatui: widget_list::native,

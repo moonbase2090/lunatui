@@ -11,7 +11,7 @@ import statistics
 import subprocess
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--case", default="checkbox", choices=["checkbox", "node-graph"])
+parser.add_argument("--case", default="checkbox", choices=["checkbox", "node-graph", "widget-list"])
 CASE = parser.parse_args().case
 ROOT = Path(__file__).resolve().parent.parent
 OUT = Path(os.environ.get("WIDGET_BENCH_OUT", ROOT / "target" / f"{CASE}-bench"))

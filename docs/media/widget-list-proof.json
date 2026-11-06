@@ -1,0 +1,202 @@
+{
+  "source_commit": "aa9a3067dad8cf2081639696085c2fbceff53e20",
+  "source_sha256": {
+    "benches/src/widget_suite/widget_list.rs": "d32248410c06987068f5d23dd2debd6e1bca87db5aadc50a50a26d3713d58d74",
+    "examples/widget_preview.rs": "5e1c679867e4249aa4c57331c751048bf7f292f7ef0fcedbcd78823378729002",
+    "lunatui-widgets/src/widget_list.rs": "d75bd66f6ef6531a64115a7cd2145183e42d7ad3f5e8bd1a31ce16ad8f803b9c",
+    "lunatui-widgets/src/render_cx.rs": "961748a1ec9dcd579d068a2047e084c564ffbc4cd81cbf860416e8da0de42f5c"
+  },
+  "baseline": "tui-widget-list 0.15.3, default features disabled",
+  "renderer": "agg 1.9.0+lunatui.2",
+  "scripted_frames": 240,
+  "fps": 30,
+  "screenshot_second": 6.5,
+  "pixel_check": "12 size/theme/color cases passed from actual decoded recordings",
+  "artifacts": [
+    {
+      "file": "widget-list-80x24-truecolor-dark-side-by-side.mp4",
+      "bytes": 270804,
+      "sha256": "c67a339bd6ed1a9015ac02263f77f09e76ede85fc4d37a7761ee731d1702648e"
+    },
+    {
+      "file": "widget-list-80x24-truecolor-dark-lunatui.png",
+      "bytes": 16143,
+      "sha256": "7b4671c7d1e342a265781beb3b3610e410081e2037b3120acfcb458da54fe0fc"
+    },
+    {
+      "file": "widget-list-80x24-truecolor-dark-ratatui.png",
+      "bytes": 16143,
+      "sha256": "7b4671c7d1e342a265781beb3b3610e410081e2037b3120acfcb458da54fe0fc"
+    },
+    {
+      "file": "widget-list-80x24-ansi256-dark-side-by-side.mp4",
+      "bytes": 273512,
+      "sha256": "8172733260bdd24a61b8b8b41127c174696137656a2874650892802083ac4900"
+    },
+    {
+      "file": "widget-list-80x24-ansi256-dark-lunatui.png",
+      "bytes": 15886,
+      "sha256": "65301a818fa17fc00c0cfe900be4e67fd76a6900a22723844241b4ad7495a8e3"
+    },
+    {
+      "file": "widget-list-80x24-ansi256-dark-ratatui.png",
+      "bytes": 15886,
+      "sha256": "65301a818fa17fc00c0cfe900be4e67fd76a6900a22723844241b4ad7495a8e3"
+    },
+    {
+      "file": "widget-list-80x24-ansi16-dark-side-by-side.mp4",
+      "bytes": 282883,
+      "sha256": "7f373395223404f27a1fccaadb409d9eac7274ee84e5cf40939d31a33c926ca6"
+    },
+    {
+      "file": "widget-list-80x24-ansi16-dark-lunatui.png",
+      "bytes": 15782,
+      "sha256": "e7a2ff6918df48ae591ea11df299570cb21c0229e22b6ae29892e08bf1b4ec90"
+    },
+    {
+      "file": "widget-list-80x24-ansi16-dark-ratatui.png",
+      "bytes": 15782,
+      "sha256": "e7a2ff6918df48ae591ea11df299570cb21c0229e22b6ae29892e08bf1b4ec90"
+    },
+    {
+      "file": "widget-list-80x24-truecolor-light-side-by-side.mp4",
+      "bytes": 276685,
+      "sha256": "818dde583f3888c6e964ddfa57ba99092a0fa87a9291a0079abb6b884d3db5e0"
+    },
+    {
+      "file": "widget-list-80x24-truecolor-light-lunatui.png",
+      "bytes": 15840,
+      "sha256": "ee83beda507db7549a41e8e85c295f67b1354306bf435677e23b0a9c3e5bcd12"
+    },
+    {
+      "file": "widget-list-80x24-truecolor-light-ratatui.png",
+      "bytes": 15840,
+      "sha256": "ee83beda507db7549a41e8e85c295f67b1354306bf435677e23b0a9c3e5bcd12"
+    },
+    {
+      "file": "widget-list-80x24-ansi256-light-side-by-side.mp4",
+      "bytes": 276278,
+      "sha256": "fe8fcd157cd4f8a5d2004b336ce21acd8b40fa436a1c07942eedb74af271829f"
+    },
+    {
+      "file": "widget-list-80x24-ansi256-light-lunatui.png",
+      "bytes": 15189,
+      "sha256": "7840ed21e16f9fd0d33a6d73ab6ea758505b196dd85ec43b15c12023d668f27c"
+    },
+    {
+      "file": "widget-list-80x24-ansi256-light-ratatui.png",
+      "bytes": 15189,
+      "sha256": "7840ed21e16f9fd0d33a6d73ab6ea758505b196dd85ec43b15c12023d668f27c"
+    },
+    {
+      "file": "widget-list-80x24-ansi16-light-side-by-side.mp4",
+      "bytes": 284300,
+      "sha256": "39171eb3549c86b375ae5c6690cd1f61cf1bb3573022dcf04f80e3ab1124b565"
+    },
+    {
+      "file": "widget-list-80x24-ansi16-light-lunatui.png",
+      "bytes": 15783,
+      "sha256": "a911f0b4a8eaab2b362fe5d888bdb2c293bccca125e0d7fffa4ee24d0640d141"
+    },
+    {
+      "file": "widget-list-80x24-ansi16-light-ratatui.png",
+      "bytes": 15783,
+      "sha256": "a911f0b4a8eaab2b362fe5d888bdb2c293bccca125e0d7fffa4ee24d0640d141"
+    },
+    {
+      "file": "widget-list-200x60-truecolor-dark-side-by-side.mp4",
+      "bytes": 311898,
+      "sha256": "8f3a2e2d1956d54ce647361b0493ad94a2741e4d32afb14d49769f8f70d3fe87"
+    },
+    {
+      "file": "widget-list-200x60-truecolor-dark-lunatui.png",
+      "bytes": 31306,
+      "sha256": "0da652b5f2d2945084398ddaece416c7de14fd4afe5523cf68ac1a8543c09a44"
+    },
+    {
+      "file": "widget-list-200x60-truecolor-dark-ratatui.png",
+      "bytes": 31306,
+      "sha256": "0da652b5f2d2945084398ddaece416c7de14fd4afe5523cf68ac1a8543c09a44"
+    },
+    {
+      "file": "widget-list-200x60-ansi256-dark-side-by-side.mp4",
+      "bytes": 342672,
+      "sha256": "9bfec734cacbad21366fd6bf989fc92c001a404bfc77f4cfc6c14d1276d3740b"
+    },
+    {
+      "file": "widget-list-200x60-ansi256-dark-lunatui.png",
+      "bytes": 30889,
+      "sha256": "d6a8c879cd15845353aa4fddaa5eeec2992822c817cd8a983361b20c66d08765"
+    },
+    {
+      "file": "widget-list-200x60-ansi256-dark-ratatui.png",
+      "bytes": 30889,
+      "sha256": "d6a8c879cd15845353aa4fddaa5eeec2992822c817cd8a983361b20c66d08765"
+    },
+    {
+      "file": "widget-list-200x60-ansi16-dark-side-by-side.mp4",
+      "bytes": 359234,
+      "sha256": "1a61d2b64b7dd3f1fb09e193d388da289c04ec22574c386b6b64d4139cf7a651"
+    },
+    {
+      "file": "widget-list-200x60-ansi16-dark-lunatui.png",
+      "bytes": 30853,
+      "sha256": "0d4f07aa35448242fda1d6dc1feed14dc70369b2946c2c2511a628b4a552ed2f"
+    },
+    {
+      "file": "widget-list-200x60-ansi16-dark-ratatui.png",
+      "bytes": 30853,
+      "sha256": "0d4f07aa35448242fda1d6dc1feed14dc70369b2946c2c2511a628b4a552ed2f"
+    },
+    {
+      "file": "widget-list-200x60-truecolor-light-side-by-side.mp4",
+      "bytes": 326240,
+      "sha256": "767041af0b58d970e7bf8821aa66226c007b1af2f7bb1b650b455cc0d1d6f1ea"
+    },
+    {
+      "file": "widget-list-200x60-truecolor-light-lunatui.png",
+      "bytes": 30865,
+      "sha256": "d864a2b1e5b70a1437ba5765b97af9f5bd441cf66bad2d96a6dcc9c266ea9e54"
+    },
+    {
+      "file": "widget-list-200x60-truecolor-light-ratatui.png",
+      "bytes": 30865,
+      "sha256": "d864a2b1e5b70a1437ba5765b97af9f5bd441cf66bad2d96a6dcc9c266ea9e54"
+    },
+    {
+      "file": "widget-list-200x60-ansi256-light-side-by-side.mp4",
+      "bytes": 291305,
+      "sha256": "5fdd3dccca981ec908ad876b9e928be9b5c9fe27703145a81fdb5a985e9a0a17"
+    },
+    {
+      "file": "widget-list-200x60-ansi256-light-lunatui.png",
+      "bytes": 29626,
+      "sha256": "08fd77f7a6ef4fecb9b83fca6fa309e1c817b098ca95664f64bda7a7e5f8f3c6"
+    },
+    {
+      "file": "widget-list-200x60-ansi256-light-ratatui.png",
+      "bytes": 29626,
+      "sha256": "08fd77f7a6ef4fecb9b83fca6fa309e1c817b098ca95664f64bda7a7e5f8f3c6"
+    },
+    {
+      "file": "widget-list-200x60-ansi16-light-side-by-side.mp4",
+      "bytes": 327707,
+      "sha256": "1e78de160cf3d613a7ca97af4694691d4b68c1bbbad5a2eb4584ec1af9199c91"
+    },
+    {
+      "file": "widget-list-200x60-ansi16-light-lunatui.png",
+      "bytes": 30615,
+      "sha256": "69e8c82cc9d8a951e8cc0070e51622901c7725bad9d4210c70a06c5656da08f3"
+    },
+    {
+      "file": "widget-list-200x60-ansi16-light-ratatui.png",
+      "bytes": 30615,
+      "sha256": "69e8c82cc9d8a951e8cc0070e51622901c7725bad9d4210c70a06c5656da08f3"
+    },
+    {
+      "file": "widget-list-80x24-truecolor-dark.gif",
+      "bytes": 204608,
+      "sha256": "5eab210709a1f8687f373a43ec9bc3ad9c0894b6515d6dba24dc5e99ea058038"
+    }
+  ]
+}
