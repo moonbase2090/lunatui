@@ -1,6 +1,6 @@
 [package]
 name = "lunatui-layout"
-description = "Layout engine for lunatui: constraints, closed-form solver, solver fallback, Grid/Stack and memo."
+description = "Layout engine for lunatui: constraints, closed-form splits and named grids."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

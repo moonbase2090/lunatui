@@ -12,6 +12,7 @@ use lunatui_core::Rect;
 
 mod constraint;
 mod flex;
+mod grid;
 #[cfg(feature = "size-limits")]
 mod limit;
 mod solve_fast;
@@ -20,6 +21,7 @@ mod wrap;
 
 pub use constraint::Constraint;
 pub use flex::{Axis, Flex};
+pub use grid::{GridError, GridLayout, SolvedGrid};
 #[cfg(feature = "size-limits")]
 pub use limit::{Limit, aspect_fit};
 #[cfg(feature = "flex-wrap")]

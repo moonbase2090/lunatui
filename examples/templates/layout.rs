@@ -7,7 +7,7 @@ use std::env;
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
-use lunatui_layout::{Constraint, Layout};
+use lunatui_layout::{Constraint, GridError, GridLayout};
 use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
 use lunatui_term::Event;
 use lunatui_theme::{Theme, Token, Variant};
@@ -16,9 +16,27 @@ use lunatui_widgets::{Block, List, Paragraph, RenderCx, StatusBar, VecSource, Wi
 const WIDTH: u16 = 72;
 const HEIGHT: u16 = 22;
 
-struct Screen;
+struct Screen {
+    layout: GridLayout,
+}
 
 impl Screen {
+    fn new() -> Result<Self, GridError> {
+        let layout = GridLayout::new(
+            [
+                Constraint::Length(3),
+                Constraint::Fill(1),
+                Constraint::Length(1),
+            ],
+            [Constraint::Length(22), Constraint::Fill(1)],
+        )
+        .area("header", 0..1, 0..2)?
+        .area("sidebar", 1..2, 0..1)?
+        .area("body", 1..2, 1..2)?
+        .area("status", 2..3, 0..2)?;
+        Ok(Self { layout })
+    }
+
     fn nav() -> VecSource {
         let mut source = VecSource::new();
         for item in ["Templates", "Gallery", "Docs"] {
@@ -49,27 +67,17 @@ impl App for Screen {
         let raised = Style::new()
             .fg(cx.token(Token::TextPrimary))
             .bg(cx.token(Token::Surface1));
-        let rows = Layout::vertical([
-            Constraint::Length(3),
-            Constraint::Fill(1),
-            Constraint::Length(1),
-        ])
-        .split(area);
-        let Some(header) = rows.segments.first().copied() else {
+        let regions = self.layout.split(area);
+        let Some(header) = regions.get("header") else {
             return;
         };
-        let Some(middle) = rows.segments.get(1).copied() else {
+        let Some(sidebar) = regions.get("sidebar") else {
             return;
         };
-        let Some(status) = rows.segments.get(2).copied() else {
+        let Some(body) = regions.get("body") else {
             return;
         };
-        let columns =
-            Layout::horizontal([Constraint::Length(22), Constraint::Fill(1)]).split(middle);
-        let Some(sidebar) = columns.segments.first().copied() else {
-            return;
-        };
-        let Some(body) = columns.segments.get(1).copied() else {
+        let Some(status) = regions.get("status") else {
             return;
         };
         let header_block = Block::bordered()
@@ -109,7 +117,7 @@ impl App for Screen {
 }
 
 fn main() -> io::Result<()> {
-    let mut app = Screen;
+    let mut app = Screen::new().map_err(io::Error::other)?;
     if env::args().any(|arg| arg == "--snapshot") {
         let (grid, clusters) = render_once(&mut app, WIDTH, HEIGHT);
         io::stdout().write_all(grid.display_text(&clusters).as_bytes())?;
