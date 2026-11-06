@@ -10,6 +10,7 @@ use alloc::vec::Vec;
 
 use lunatui_core::Rect;
 
+mod breakpoints;
 mod constraint;
 mod flex;
 mod grid;
@@ -19,6 +20,7 @@ mod solve_fast;
 #[cfg(feature = "flex-wrap")]
 mod wrap;
 
+pub use breakpoints::Breakpoints;
 pub use constraint::Constraint;
 pub use flex::{Axis, Flex};
 pub use grid::{GridError, GridLayout, SolvedGrid};
