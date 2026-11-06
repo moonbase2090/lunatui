@@ -73,6 +73,11 @@ Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cas
 
 Examples live in this directory and are registered as `[[example]]` targets of the `lunatui` facade crate (`lunatui/Cargo.toml`).
 
+The quickstart page embeds the sources in `examples/templates/`. After changing a
+template, run `node scripts/sync-quickstart-source.mjs` from the repository root,
+then `node scripts/sync-quickstart-source.mjs --check` to verify the generated
+`site/quickstart.html` code blocks. The web-sandbox CI job runs the same check.
+
 Benchmarks are separate: `cargo xtask bench` prints allocation and write metrics and runs the criterion and gungraun benchmarks in `benches/`.
 
 To verify the deployment scene keeps its cell output, run `python3 scripts/check-gauge-cells.py --base <commit-before-change> --head <commit-to-check>`. The script builds isolated checkouts and compares four complete 240-frame streams across two terminal sizes, dark and light themes, and truecolor and ANSI16 profiles.
