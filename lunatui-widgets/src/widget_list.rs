@@ -72,6 +72,35 @@ pub struct ItemArea {
 /// edges of the area are drawn whole off-screen and clipped, so a tall item scrolls in and out
 /// row by row. Cells an item leaves with the default background take the list or highlight
 /// background. A height of zero hides an item.
+///
+/// # Example
+///
+/// ```
+/// use lunatui_core::{ClusterTable, Grid, Rect, Style};
+/// use lunatui_theme::{Theme, Variant};
+/// use lunatui_widgets::{RenderCx, Widget, WidgetList, WidgetListState};
+///
+/// let heights = [1u16, 3, 2];
+/// let list = WidgetList::new(
+///     heights.len(),
+///     |index, _width| heights[index],
+///     |index, area, _selected, cx: &mut RenderCx<'_>| {
+///         for row in 0..area.height {
+///             cx.put_str(area.x, area.y + row, &format!("{index}.{row}"), Style::new());
+///         }
+///     },
+/// )
+/// .state(WidgetListState { selected: Some(2), offset: 0, skip: 0 });
+///
+/// let theme = Theme::builtin(Variant::Dark);
+/// let mut grid = Grid::new(4, 4);
+/// let mut clusters = ClusterTable::new();
+/// let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+/// list.render(Rect::new(0, 0, 4, 4), &mut cx);
+/// // Six rows of items in a four-row area: the selected item scrolls fully into view.
+/// assert_eq!(grid.row_display(0, &clusters).trim_end(), "1.1");
+/// assert_eq!(grid.row_display(3, &clusters).trim_end(), "2.1");
+/// ```
 pub struct WidgetList<H, D> {
     len: usize,
     height: H,
