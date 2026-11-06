@@ -212,7 +212,7 @@ fn empty_lists_and_empty_areas_draw_nothing() {
     let empty = WidgetList::new(0, |_, _| 1, |_, _, _, _: &mut RenderCx<'_>| unreachable!());
     let (grid, clusters) = render(&empty, 4, 2);
     assert_eq!(text(&grid, &clusters), ["", ""]);
-    let (grid, clusters) = render(&list(WidgetListState::new()), 0, 0);
+    let (grid, _) = render(&list(WidgetListState::new()), 0, 0);
     assert_eq!(grid.height(), 0);
 }
 
