@@ -46,6 +46,14 @@ backgrounds, diff and encoding. Terminal-emulator rendering is outside the scope
 See [Checkbox recording](../docs/recording-checkbox.md) for the visual proof.
 
 
+The gated `widget-list` case renders a mixed-height activity feed with native
+`WidgetList` and the same scene with pinned `tui-widget-list` 0.15.3. Both sides use
+the same items, heights, colors and scripted selection. The baseline dependency is
+confined to this unpublished benchmark crate. Run
+`python3 scripts/bench-widget.py --case widget-list` for six paired rounds at both
+sizes. See [`WidgetList` recording](../docs/recording-widget-list.md) for the visual proof.
+
+
 The `terminal` case includes identical VT parsing and screen allocation on both sides, followed by the native terminal widget or an independent Ratatui buffer adapter. Both use the same changing colored CLI bytes and sizes. It is an exact, gated case and participates in `criterion_widgets`. Both timing entrypoints abort with a nonzero exit code if any frame write fails. `scripts/check-terminal-mutants.py` injects a counting-sink failure to verify that the Criterion run rejects it.
 
 The gated `node-graph` case compares the native graph with pinned `tui-nodes` 0.10.0.

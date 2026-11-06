@@ -388,6 +388,21 @@ The [actual Kitty recording](docs/media/node-graph-kitty.webp) and
 toggle and both themes. The [recording guide](docs/recording-node-graph.md) covers the
 full size/theme/profile matrix and the timing scope.
 
+### WidgetList parity
+
+Native `WidgetList` on the left and `tui-widget-list` 0.15.3 on the right render the
+same activity feed: section headings, messages, progress bars and a bordered alert,
+each a different height. The selection steps down the feed, and items at the edges
+scroll in and out row by row. The native preview below is real widget output, and
+the native frame is about 2.4 times faster at 80x24 and 4.3 times at 200x60 (see the
+[recording guide](docs/recording-widget-list.md)).
+
+<img src="docs/media/widget-list-80x24-truecolor-dark.gif" alt="An activity feed list of different-height items with a moving selection and rows scrolling in and out at the edges" width="691">
+
+[Screenshot](docs/media/widget-list-80x24-truecolor-dark-lunatui.png),
+[80x24 side-by-side recording](docs/media/widget-list-80x24-truecolor-dark-side-by-side.mp4),
+[200x60 side-by-side recording](docs/media/widget-list-200x60-truecolor-dark-side-by-side.mp4).
+
 ### UI dialog
 
 The `lunatui-dialog` crate in a project list. The run is scripted, not interactive: a prompt renames a project as its name is typed, an alert dialog asks before deleting it with a danger-colored action, and an alert reports the result. The panel is centered over a dimmed screen with a rounded border; focus uses the ring color and Delete uses the destructive color.

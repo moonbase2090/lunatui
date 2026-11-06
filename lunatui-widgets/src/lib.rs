@@ -125,6 +125,8 @@ mod tooltip;
 #[cfg(feature = "tree")]
 mod tree;
 mod widget;
+#[cfg(feature = "widget-list")]
+mod widget_list;
 
 #[cfg(feature = "accordion")]
 pub use accordion::{Accordion, AccordionSection, SectionArea};
@@ -258,6 +260,8 @@ pub use tooltip::{Tooltip, TooltipState};
 #[cfg(feature = "tree")]
 pub use tree::{Tree, TreeItem, TreeRow, TreeState};
 pub use widget::Widget;
+#[cfg(feature = "widget-list")]
+pub use widget_list::{ItemArea, WidgetList, WidgetListState};
 
 #[cfg(feature = "terminal")]
 pub use terminal::{PseudoTerminal, TerminalCell, TerminalScreen};

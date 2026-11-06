@@ -69,6 +69,8 @@ mod mermaid;
 pub mod node_graph;
 mod terminal;
 mod timeline;
+/// Shared mixed-height feed using native `WidgetList` and the pinned `tui-widget-list` baseline.
+pub mod widget_list;
 
 const BG: (u8, u8, u8) = (0x1a, 0x1b, 0x26);
 const TEXT: (u8, u8, u8) = (0xc0, 0xca, 0xf5);
@@ -130,6 +132,13 @@ pub struct Case {
 
 /// Every widget case, in report order.
 pub static CASES: &[Case] = &[
+    Case {
+        name: "widget-list",
+        gated: true,
+        parity: Parity::Exact,
+        lunatui: widget_list::native,
+        ratatui: widget_list::baseline,
+    },
     Case {
         name: "node-graph",
         gated: true,

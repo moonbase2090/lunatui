@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- Default-enabled `widget-list` feature with `WidgetList` and `WidgetListState`: a vertical list whose items are different widgets with different heights. A height closure and a draw closure replace per-item widget objects, items at the edges are drawn whole and clipped so tall items scroll row by row, the selected item scrolls fully into view with optional scroll padding, and `item_areas` reports each visible item for hit testing. The feature is included in `all-widgets`. The comparison suite adds pinned `tui-widget-list` with cell parity at every scripted selection, a gated benchmark and reproducible recordings.
 - `lunatui-data-table` adds `DataTable` and `Column`, wrapping the core `Table` and `Scrollbar` in a rounded frame with a muted bold header, striped rows and an accent cursor row, styled from `lunatui-ui-tokens`. Rows come from any `RowSource` and only the visible ones are read; a `TableState` adds cursor movement, range selection and sorting over the state's view. It re-exports `TableState`, `SortDirection`, `VecSource` and `RowSource`. The `ui_data_table` example is a deploy board built from it.
 
 ## [0.1.23] - 2026-11-05
