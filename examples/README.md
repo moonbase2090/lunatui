@@ -11,7 +11,7 @@ Each example runs from the repository root with one command (PRD M13). Start wit
 | `template_form` | `cargo run --example template_form` | Two fields. Tab moves focus, and typed keys edit the focused field. `--snapshot` prints one frame. | quickstart |
 | `template_dashboard` | `cargo run --example template_dashboard` | A sparkline, a gauge, and a table. The samples advance while the example runs. `--snapshot` prints one frame. | quickstart |
 | `template_popover` | `cargo run --example template_popover` | A panel beside an anchor. Enter toggles it. `--snapshot` prints one frame with the panel open. | quickstart |
-| `template_layout` | `cargo run --example template_layout` | Header, sidebar, body, and a status bar. `--snapshot` prints one frame. | quickstart |
+| `template_layout` | `cargo run --example template_layout` | Named grid areas for a header, sidebar, body and status bar, with column spans. `--snapshot` prints one frame. | quickstart |
 
 The source for each row is `templates/<name>.rs` without the `template_` prefix (`templates/minimal.rs` for `template_minimal`). Captures of those frames are on the [quickstart page](../site/quickstart.html).
 
@@ -72,6 +72,13 @@ Captures (M13) live in `captures/`. A `.png` shows the final screen, and a `.cas
 ![Spinner presets](captures/spinner-presets.gif)
 
 Examples live in this directory and are registered as `[[example]]` targets of the `lunatui` facade crate (`lunatui/Cargo.toml`).
+
+The quickstart page embeds the sources in `examples/templates/`. After changing a
+template, run `node scripts/sync-quickstart-source.mjs` from the repository root,
+then `node scripts/sync-quickstart-source.mjs --check` to verify the generated
+`site/quickstart.html` code blocks. The web-sandbox CI job runs the same check.
+Validate sandbox binary changes with the pinned Linux CI build. A build from
+another host may differ even when the canonical artifact needs no update.
 
 Benchmarks are separate: `cargo xtask bench` prints allocation and write metrics and runs the criterion and gungraun benchmarks in `benches/`.
 
