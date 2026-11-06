@@ -1,0 +1,207 @@
+{
+  "source_commit": "b627eff9d3f584753468aed67fcbbd60ce92c9d0",
+  "source_sha256": {
+    "benches/src/widget_suite/node_graph.rs": "56745a7d9493819f564b797d157f505ad2e7657e61de7277864db84b84f3b602",
+    "examples/widget_preview.rs": "68b3003b9dfbb31ea1bc6da59d3f62db2e850c3e38ede9227c54a9e7a5f44aac",
+    "lunatui-widgets/src/node_graph.rs": "9209392514f74430155e727ed806ce95591830a8a22d9f4f62e011908bd831ca",
+    "examples/node_graph.rs": "00012f54b5ae540e07b84224c3c270e0f1a5a5e75230ee073182e9ba2ada1daf",
+    "lunatui-widgets/src/render_cx.rs": "e0534f23c654b2f59b173d37d0cc440805875bcef43bf7305e90a9cbc4d52de6",
+    "lunatui-widgets/src/node_graph/canvas.rs": "35971e18edb7178972598aa291efe81df8ad7aab8cf328d222eb355d1624aaf0",
+    "lunatui-widgets/src/node_graph/layout.rs": "7aa9263b1c2b64a6624f464a33f2d0797e3e3f4f887f37382310677424ca3f18",
+    "lunatui-widgets/src/node_graph/pixel.rs": "ac2d11aa19b8443f5cc17581f44505734829366c3a479b9f53a2a82235ae52f5",
+    "lunatui-widgets/src/node_graph/view.rs": "e31427e32c31869d9b3b5e2eff679f2cf729c26259e41afeb17de6d4fccf8f0a"
+  },
+  "baseline": "tui-nodes 0.10.0, default features disabled",
+  "renderer": "agg 1.9.0+lunatui.2",
+  "scripted_frames": 240,
+  "fps": 30,
+  "screenshot_second": 6.5,
+  "pixel_check": "12 size/theme/color cases passed from actual decoded recordings",
+  "artifacts": [
+    {
+      "file": "node-graph-80x24-truecolor-dark-side-by-side.mp4",
+      "bytes": 41297,
+      "sha256": "a22179ede8bb6ec84ba001fda6db3b17e7d5f432cd719be9f81152ce68a19e56"
+    },
+    {
+      "file": "node-graph-80x24-truecolor-dark-lunatui.png",
+      "bytes": 13054,
+      "sha256": "a0a2e5c7e87e5a9fcad44bb0d452853b19a3510e3f2b0df1773fc62700ca8566"
+    },
+    {
+      "file": "node-graph-80x24-truecolor-dark-ratatui.png",
+      "bytes": 13057,
+      "sha256": "726b720ad4f5911f94a41ba2d360dde7228120a1cb55f695b4930b8be2a907d7"
+    },
+    {
+      "file": "node-graph-80x24-ansi256-dark-side-by-side.mp4",
+      "bytes": 37211,
+      "sha256": "240fe733c6c2d8f4ee9efe1b03a785bb1a5337a6f9c4cd33c278b09e7f5d5cef"
+    },
+    {
+      "file": "node-graph-80x24-ansi256-dark-lunatui.png",
+      "bytes": 12856,
+      "sha256": "b3ae2b65f1e0acc2d9e452f184ef113261c2bf3979c05341d4ceccb2012823d1"
+    },
+    {
+      "file": "node-graph-80x24-ansi256-dark-ratatui.png",
+      "bytes": 12856,
+      "sha256": "b3ae2b65f1e0acc2d9e452f184ef113261c2bf3979c05341d4ceccb2012823d1"
+    },
+    {
+      "file": "node-graph-80x24-ansi16-dark-side-by-side.mp4",
+      "bytes": 33125,
+      "sha256": "3caac3ca22c3c5bc4ea233decaa0c5c5f953f37487ad9c32f3c3af81c262825f"
+    },
+    {
+      "file": "node-graph-80x24-ansi16-dark-lunatui.png",
+      "bytes": 12357,
+      "sha256": "184c3f1c62400fd876963cd06d3bced51662b8bbecfae2ce2c89f33b2f0fd29a"
+    },
+    {
+      "file": "node-graph-80x24-ansi16-dark-ratatui.png",
+      "bytes": 12357,
+      "sha256": "184c3f1c62400fd876963cd06d3bced51662b8bbecfae2ce2c89f33b2f0fd29a"
+    },
+    {
+      "file": "node-graph-80x24-truecolor-light-side-by-side.mp4",
+      "bytes": 42715,
+      "sha256": "ca09688ff871d86ae4bed40cca3f08c195bc17912f008581311bce28e4f0a213"
+    },
+    {
+      "file": "node-graph-80x24-truecolor-light-lunatui.png",
+      "bytes": 12596,
+      "sha256": "6407a6908d03060365dfa50fef7a3d055d7851db03d70a38adc9c4090dca427d"
+    },
+    {
+      "file": "node-graph-80x24-truecolor-light-ratatui.png",
+      "bytes": 12614,
+      "sha256": "0d4f6e12764c99cddbe6621ff47b9c384d0dc57febb27f83d462ef0b0e485dae"
+    },
+    {
+      "file": "node-graph-80x24-ansi256-light-side-by-side.mp4",
+      "bytes": 38052,
+      "sha256": "a37c6bab6db0da9d5911db53f8ac6cc8e285f095f9394b702a6314282386ca51"
+    },
+    {
+      "file": "node-graph-80x24-ansi256-light-lunatui.png",
+      "bytes": 12115,
+      "sha256": "dc5a9679a497a877cef5c1882b5a480ab6d06a702b1403f77af835077dba6433"
+    },
+    {
+      "file": "node-graph-80x24-ansi256-light-ratatui.png",
+      "bytes": 12126,
+      "sha256": "97d4c1b3fe1216d6b01cdd9c792e93d3428d683248f2517422b55af1a15f4568"
+    },
+    {
+      "file": "node-graph-80x24-ansi16-light-side-by-side.mp4",
+      "bytes": 34255,
+      "sha256": "8694316c25765a1d4cf823e6ea9fd229886b23bb01562ba1f2dba7e3bc674e3d"
+    },
+    {
+      "file": "node-graph-80x24-ansi16-light-lunatui.png",
+      "bytes": 12266,
+      "sha256": "ff14edd3abbf6e229679dc2b37881c349902cb60c14038d0946498115f758482"
+    },
+    {
+      "file": "node-graph-80x24-ansi16-light-ratatui.png",
+      "bytes": 12266,
+      "sha256": "ff14edd3abbf6e229679dc2b37881c349902cb60c14038d0946498115f758482"
+    },
+    {
+      "file": "node-graph-200x60-truecolor-dark-side-by-side.mp4",
+      "bytes": 51868,
+      "sha256": "d843f0ac457f6a2a01871a3adc5e935a1322e65abbb146f6809fa7baae9004ff"
+    },
+    {
+      "file": "node-graph-200x60-truecolor-dark-lunatui.png",
+      "bytes": 21860,
+      "sha256": "c7da7aded6ba4a0e16ae5119020f98b3c6441b139196c729674ba988e04d1b81"
+    },
+    {
+      "file": "node-graph-200x60-truecolor-dark-ratatui.png",
+      "bytes": 21885,
+      "sha256": "6dfa415af1f15395ab788c24c590d22af7ad1d60d6e01238ab7d41a1bf0541fd"
+    },
+    {
+      "file": "node-graph-200x60-ansi256-dark-side-by-side.mp4",
+      "bytes": 43414,
+      "sha256": "e5b41500fff0e7ee70db281823c2f9d7dd53113388fbfcf77e75b00892335223"
+    },
+    {
+      "file": "node-graph-200x60-ansi256-dark-lunatui.png",
+      "bytes": 21633,
+      "sha256": "1a31d48b7e8c9619ae01508a93308809ffab57013a7d83a2220399b45c317f18"
+    },
+    {
+      "file": "node-graph-200x60-ansi256-dark-ratatui.png",
+      "bytes": 21633,
+      "sha256": "25e34c874d603995b15a327c9c6d53f79ea039349f526d9a46db19057d722b11"
+    },
+    {
+      "file": "node-graph-200x60-ansi16-dark-side-by-side.mp4",
+      "bytes": 38731,
+      "sha256": "4cc3fcb60f36081c30cc7b10de65f6d30f758ce0e5ecd40227225d63f6d94fd9"
+    },
+    {
+      "file": "node-graph-200x60-ansi16-dark-lunatui.png",
+      "bytes": 21269,
+      "sha256": "11c43f5a58d945c4cdf1e4a54bb990629559cef58c019ba5822c063066bc5b42"
+    },
+    {
+      "file": "node-graph-200x60-ansi16-dark-ratatui.png",
+      "bytes": 21269,
+      "sha256": "11c43f5a58d945c4cdf1e4a54bb990629559cef58c019ba5822c063066bc5b42"
+    },
+    {
+      "file": "node-graph-200x60-truecolor-light-side-by-side.mp4",
+      "bytes": 51747,
+      "sha256": "c6daaea70b402ea181465cc07df953cc8467c4886a905646ccabb91ac49e501d"
+    },
+    {
+      "file": "node-graph-200x60-truecolor-light-lunatui.png",
+      "bytes": 21482,
+      "sha256": "acaf0dcf88aa0e37d68a2d38a63ab4c55aaf892f4979f5208492434623ed58f2"
+    },
+    {
+      "file": "node-graph-200x60-truecolor-light-ratatui.png",
+      "bytes": 21480,
+      "sha256": "957a4e090410a2f07300c7145a470dc59a182cb2c765481bfc8210964a0f5a21"
+    },
+    {
+      "file": "node-graph-200x60-ansi256-light-side-by-side.mp4",
+      "bytes": 44336,
+      "sha256": "ae9cb858d570fc54e59eb31ac9d329f7f0a992a649a11afd0ea8c1f83cdaf55d"
+    },
+    {
+      "file": "node-graph-200x60-ansi256-light-lunatui.png",
+      "bytes": 20939,
+      "sha256": "d1c3de31c9123f07156f08886c525f5a99353c1b48b05f2687152b074dc61d2c"
+    },
+    {
+      "file": "node-graph-200x60-ansi256-light-ratatui.png",
+      "bytes": 20948,
+      "sha256": "5e787a977c088370691dc39fa330735fc351cd2d414e7c4b90c1b903ee80fb8f"
+    },
+    {
+      "file": "node-graph-200x60-ansi16-light-side-by-side.mp4",
+      "bytes": 32200,
+      "sha256": "1f4576cb6d59d708418801b4011928cc48df5511a5005265d1d9c9ebc8250f0c"
+    },
+    {
+      "file": "node-graph-200x60-ansi16-light-lunatui.png",
+      "bytes": 21196,
+      "sha256": "ff2295a02d8a3d5c9483e711c3ea42dca7a4cb1c75e5cf231138693a34654d79"
+    },
+    {
+      "file": "node-graph-200x60-ansi16-light-ratatui.png",
+      "bytes": 21196,
+      "sha256": "ff2295a02d8a3d5c9483e711c3ea42dca7a4cb1c75e5cf231138693a34654d79"
+    },
+    {
+      "file": "node-graph-80x24-truecolor-dark.gif",
+      "bytes": 38034,
+      "sha256": "8cb5ad482472442723891bbb4b6f83f26362e7420971e6c72cd5d3f14a78ab3d"
+    }
+  ]
+}

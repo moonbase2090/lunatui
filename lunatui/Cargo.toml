@@ -279,3 +279,9 @@ name = "embedded_terminal"
 path = "../examples/embedded_terminal.rs"
 test = false
 required-features = ["app", "color-profiles"]
+
+[[example]]
+name = "node_graph"
+path = "../examples/node_graph.rs"
+required-features = ["image-presenter"]
+test = true

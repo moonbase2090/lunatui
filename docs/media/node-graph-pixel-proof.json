@@ -1,0 +1,43 @@
+{
+  "source_commit": "b627eff9d3f584753468aed67fcbbd60ce92c9d0",
+  "source": "Actual Kitty X11 window captured by ffmpeg x11grab; no compositing.",
+  "terminal_configuration": {
+    "columns": 100,
+    "rows": 32,
+    "font_size_points": 14
+  },
+  "kitty": "kitty 0.32.2",
+  "frames": 240,
+  "duration_seconds": 8.0,
+  "duplicated_frames": 0,
+  "dropped_frames": 0,
+  "keys": "2:space,3:Right,4:b,5:b,6:t",
+  "checks": {
+    "sample_seconds": [
+      3.5,
+      4.5,
+      5.5,
+      6.5
+    ],
+    "frame_sha256": [
+      "870c3cedf8fe974242849442d2bdb2594bdfe2560846725fd6946ac1d2662f3f",
+      "dfdfa079516b3a950b469c6a418228130776d47a7fbf36274e1100845a2be05a",
+      "870c3cedf8fe974242849442d2bdb2594bdfe2560846725fd6946ac1d2662f3f",
+      "2ae0837b11732165e55390f66e7271699e91b9d4b1b9cacc5b06ad930fc47593"
+    ],
+    "pixel_toggle_restores": true,
+    "theme_switch_changes": true
+  },
+  "artifacts": [
+    {
+      "file": "node-graph-kitty.webp",
+      "bytes": 53208,
+      "sha256": "1a42b988fdb1bdde1abcf0eec36b33ef83b425598dd66304762945e0515d8328"
+    },
+    {
+      "file": "node-graph-kitty.png",
+      "bytes": 32420,
+      "sha256": "b3c005d56617aedf3aa3ac7040c35848fe353486f309bfa6a8579baca4900418"
+    }
+  ]
+}

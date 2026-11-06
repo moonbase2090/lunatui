@@ -1074,6 +1074,7 @@ dependencies = [
  "time",
  "tui-checkbox",
  "tui-menu",
+ "tui-nodes",
  "tui-popup",
  "tui-scrollview",
 ]
@@ -2494,6 +2495,16 @@ checksum = "d6d7f10ff29b3543148afcaba50642850082840adc4e8169c7f2c9d2bcdba3b6"
 dependencies = [
  "ratatui-core",
  "ratatui-widgets",
+]
+
+[[package]]
+name = "tui-nodes"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32406150d98eeb5655d92ad4af8aee816541d05e16b151b24c6be66190a50899"
+dependencies = [
+ "log",
+ "ratatui",
 ]
 
 [[package]]

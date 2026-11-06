@@ -209,6 +209,7 @@ allow = [
     "tiny-skia-path",
     "tui-checkbox",
     "tui-menu",
+    "tui-nodes",
     "tui-popup",
     "tui-scrollview",
     "unarray",

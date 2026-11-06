@@ -13,10 +13,10 @@ Install the pinned `agg` listed in `scripts/record-widget.sh`, plus asciinema 3
 and FFmpeg. Then run from the repository root:
 
 ```sh
-bash scripts/record-checkbox.sh
+bash scripts/record-widget-matrix.sh
 python3 scripts/check-checkbox-recordings.py target/checkbox-recordings
 # Verify again, export gallery media, and refresh the artifact manifest:
-python3 scripts/export-checkbox-recordings.py target/checkbox-recordings
+python3 scripts/export-widget-recordings.py target/checkbox-recordings
 ```
 
 The script uses the existing widget speed-test recording method. It captures
@@ -37,7 +37,7 @@ for every cell and frame.
 
 ```sh
 cargo test --locked -p lunatui-bench --test widget_suite_parity
-python3 scripts/bench-checkbox.py
+python3 scripts/bench-widget.py
 ```
 
 The cell comparison checks glyphs, foreground/background colors, bold and dim
@@ -45,7 +45,7 @@ attributes across all scripted states and both themes, with empty and tiny areas
 as additional cases. The benchmark runs the same fixture in release mode, reuses
 buffers, warms up, and measures six paired rounds with alternating side order.
 Raw runs and medians/ranges are written to `target/checkbox-bench` by default.
-`CHECKBOX_BENCH_OUT` selects another output directory.
+`WIDGET_BENCH_OUT` selects another output directory.
 
 Frame timings include the six controls, shared scene, diff, encoding and a
 counting output sink. Render-only timing and allocations are reported separately.
@@ -56,7 +56,9 @@ increase. These timings describe this full scene on the measured machine.
 
 Screenshots are decoded from each recording at 6.5 seconds. The native and baseline
 columns use the same frame time. The [artifact manifest](media/checkbox-proof.json)
-records source and artifact hashes.
+records source and artifact hashes. Source hashes describe the recorded commit,
+so later additions to the shared preview do not imply that old recordings were
+recaptured.
 
 | Theme / profile | 80x24 | 200x60 |
 |---|---|---|

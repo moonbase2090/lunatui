@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Moonbase 2090 LLC
 # SPDX-License-Identifier: MIT
-"""Run six interleaved, gated Checkbox comparisons and retain raw results and spread."""
+"""Run six interleaved, gated widget comparisons and retain raw results and spread."""
+import argparse
 import json
 import os
 from pathlib import Path
@@ -9,14 +10,17 @@ import platform
 import statistics
 import subprocess
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--case", default="checkbox", choices=["checkbox", "node-graph"])
+CASE = parser.parse_args().case
 ROOT = Path(__file__).resolve().parent.parent
-OUT = Path(os.environ.get("CHECKBOX_BENCH_OUT", ROOT / "target" / "checkbox-bench"))
+OUT = Path(os.environ.get("WIDGET_BENCH_OUT", ROOT / "target" / f"{CASE}-bench"))
 OUT.mkdir(parents=True, exist_ok=True)
 subprocess.run(["cargo", "bench", "--locked", "-p", "lunatui-bench", "--bench", "widget_suite", "--no-run"], cwd=ROOT, check=True)
 report = {"architecture": platform.machine(), "cpu_count": os.cpu_count(),
           "load_before": os.getloadavg(), "rounds": []}
 for round_number in range(6):
-    command = ["cargo", "bench", "--locked", "-p", "lunatui-bench", "--bench", "widget_suite", "--", "--case", "checkbox", "--gate"]
+    command = ["cargo", "bench", "--locked", "-p", "lunatui-bench", "--bench", "widget_suite", "--", "--case", CASE, "--gate"]
     baseline_first = round_number % 2 == 1
     if baseline_first:
         command.append("--baseline-first")
@@ -29,7 +33,7 @@ for round_number in range(6):
     rows = []
     for line in result.stdout.splitlines():
         fields = line.split()
-        if not fields or fields[0] != "checkbox":
+        if not fields or fields[0] != CASE:
             continue
         if len(fields) != 15 or fields[2] != "gated":
             raise SystemExit(f"Unexpected benchmark row: {line}")

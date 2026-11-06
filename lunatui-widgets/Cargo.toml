@@ -11,13 +11,15 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = ["pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge", "pixel-progress"]
+default = ["pixel-node-graph", "pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge", "pixel-progress"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 terminal = ["widget-state", "dep:vt100", "dep:lunatui-term", "lunatui-term/pty", "lunatui-theme/graphite-extensions"]
 heatmap = ["widget-state"]
 timeline = ["widget-state"]
 tree = ["widget-state"]
+node-graph = ["widget-state", "lunatui-theme/graphite-extensions"]
+pixel-node-graph = ["node-graph", "image"]
 nested-menu = ["widget-state", "lunatui-theme/graphite-extensions"]
 markdown = ["widget-state", "lunatui-text/markdown"]
 mermaid = ["widget-state", "lunatui-theme/graphite-extensions"]
@@ -72,7 +74,7 @@ scroll-view = ["widget-state", "lunatui-core/blit"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
 text-area = ["widget-state", "lunatui-theme/graphite-extensions", "dep:lunatui-runtime", "lunatui-runtime/keymap", "dep:lunatui-term"]
 symbol-font-fallback = ["graphite-render"]
-all-widgets = ["file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback", "split-keys", "split-persist"]
+all-widgets = ["node-graph", "pixel-node-graph", "file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback", "split-keys", "split-persist"]
 
 [dependencies]
 vt100 = { version = "=0.16.2", optional = true }
