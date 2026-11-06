@@ -1,0 +1,25 @@
+[package]
+name = "lunatui-data-table"
+description = "Data table component for lunatui."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lunatui-core = { version = "0.1.22", path = "../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.22", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.22", path = "../lunatui-widgets" }
+
+[dev-dependencies]
+lunatui-term = { version = "0.1.22", path = "../lunatui-term" }
+lunatui-theme = { version = "0.1.22", path = "../lunatui-theme" }
+
+[[example]]
+name = "ui_data_table"
+path = "examples/ui_data_table.rs"
+test = true

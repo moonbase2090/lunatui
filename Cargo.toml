@@ -17,6 +17,7 @@ members = [
     "lunatui-choice",
     "lunatui-dialog",
     "lunatui-field",
+    "lunatui-data-table",
     "lunatui-test",
     "lunatui-ratatui",
     "lunatui-prismattyc",

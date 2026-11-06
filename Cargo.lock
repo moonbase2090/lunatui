@@ -1130,6 +1130,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "lunatui-data-table"
+version = "0.1.22"
+dependencies = [
+ "lunatui-core",
+ "lunatui-term",
+ "lunatui-theme",
+ "lunatui-ui-tokens",
+ "lunatui-widgets",
+]
+
+[[package]]
 name = "lunatui-dialog"
 version = "0.1.22"
 dependencies = [
