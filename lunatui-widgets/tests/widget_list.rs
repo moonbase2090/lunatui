@@ -270,3 +270,145 @@ fn measure_sums_item_heights_up_to_the_available_rows() {
         lunatui_core::Size::new(0, 0)
     );
 }
+
+#[test]
+fn padding_never_moves_the_selected_item_past_the_middle_of_the_area() {
+    let huge = list(state(Some(2), 0, 0)).scroll_padding(10);
+    let capped = list(state(Some(2), 0, 0)).scroll_padding(2);
+    let area = Rect::new(0, 0, 6, 6);
+    assert_eq!(huge.scrolled(area), capped.scrolled(area));
+}
+
+#[test]
+fn padding_above_reveals_the_previous_item_when_the_selection_is_the_first_visible_item() {
+    let scrolled = list(state(Some(3), 3, 0))
+        .scroll_padding(2)
+        .scrolled(Rect::new(0, 0, 6, 8));
+    assert_eq!((scrolled.offset, scrolled.skip), (2, 0));
+}
+
+#[test]
+fn a_selection_and_offset_past_the_end_clamp_to_the_last_item() {
+    let scrolled = list(state(Some(9), 9, 0)).scrolled(Rect::new(0, 0, 6, 6));
+    assert_eq!(scrolled.selected, Some(4));
+    assert_eq!(scrolled.offset, 4);
+}
+
+#[test]
+fn a_zero_width_or_zero_height_area_resets_the_state() {
+    let widget = list(state(Some(3), 2, 1));
+    for area in [Rect::new(0, 0, 0, 5), Rect::new(0, 0, 5, 0)] {
+        assert_eq!(widget.scrolled(area), WidgetListState::new());
+        assert!(widget.item_areas(area).is_empty());
+    }
+}
+
+#[test]
+fn stepping_back_from_a_selection_past_the_end_lands_on_the_last_item() {
+    let mut state = WidgetListState {
+        selected: Some(7),
+        offset: 0,
+        skip: 0,
+    };
+    state.select_previous(3);
+    assert_eq!(state.selected, Some(2));
+}
+
+#[test]
+fn padding_above_takes_part_of_an_item_and_never_more_than_asked() {
+    // Padding of 3 rows above item 3: all of item 2 (2 rows) plus the last row of item 1.
+    let scrolled = list(state(Some(3), 3, 0))
+        .scroll_padding(3)
+        .scrolled(Rect::new(0, 0, 6, 8));
+    assert_eq!((scrolled.offset, scrolled.skip), (1, 2));
+}
+
+#[test]
+fn padding_above_is_capped_at_half_the_area() {
+    // Ten rows are asked for, but a 4-row area gives at most 2: item 2 and nothing more.
+    let scrolled = list(state(Some(3), 3, 0))
+        .scroll_padding(10)
+        .scrolled(Rect::new(0, 0, 6, 4));
+    assert_eq!((scrolled.offset, scrolled.skip), (2, 0));
+}
+
+#[test]
+fn padding_above_the_first_item_has_nothing_to_reveal() {
+    let scrolled = list(state(Some(0), 0, 0))
+        .scroll_padding(3)
+        .scrolled(Rect::new(0, 0, 6, 8));
+    assert_eq!((scrolled.offset, scrolled.skip), (0, 0));
+}
+
+#[test]
+fn item_areas_leave_out_hidden_and_zero_height_items() {
+    let widget = WidgetList::new(
+        4,
+        |index, _| [2, 0, 1, 1][index],
+        |_, _, _, _: &mut RenderCx<'_>| {},
+    )
+    .state(state(None, 0, 2));
+    // Item 0 is scrolled out whole, item 1 has no rows.
+    let indexes: Vec<usize> = widget
+        .item_areas(Rect::new(0, 0, 4, 4))
+        .iter()
+        .map(|item| item.index)
+        .collect();
+    assert_eq!(indexes, [2, 3]);
+}
+
+#[test]
+fn items_cut_by_an_edge_are_drawn_at_their_full_height() {
+    // Each row of an item reports the height the item was drawn with.
+    let widget = WidgetList::new(
+        3,
+        |_, _| 4,
+        |_, area, _, cx: &mut RenderCx<'_>| {
+            for row in 0..area.height {
+                cx.put_str(
+                    area.x,
+                    area.y + row,
+                    &format!("h{}", area.height),
+                    Style::new(),
+                );
+            }
+        },
+    )
+    .state(state(None, 0, 2));
+    // Rows 2..4 of item 0, all of item 1 cut after 2 rows: both edges are cut.
+    let (grid, clusters) = render(&widget, 4, 4);
+    assert_eq!(text(&grid, &clusters), ["h4", "h4", "h4", "h4"]);
+}
+
+#[test]
+fn padding_above_skips_zero_height_items_without_counting_them() {
+    let widget = WidgetList::new(
+        4,
+        |index, _| [2, 0, 1, 1][index],
+        |_, _, _, _: &mut RenderCx<'_>| {},
+    )
+    .state(state(Some(2), 2, 0))
+    .scroll_padding(1);
+    let scrolled = widget.scrolled(Rect::new(0, 0, 4, 4));
+    // The empty item 1 is passed over; the single padding row is the last row of item 0.
+    assert_eq!((scrolled.offset, scrolled.skip), (0, 1));
+}
+
+#[test]
+fn items_that_fit_are_drawn_at_their_real_position_in_the_area() {
+    let seen = std::cell::RefCell::new(Vec::new());
+    let widget = WidgetList::new(
+        2,
+        |_, _| 2,
+        |index, area, _, _: &mut RenderCx<'_>| seen.borrow_mut().push((index, area)),
+    );
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(10, 8);
+    let mut clusters = ClusterTable::new();
+    let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme);
+    widget.render(Rect::new(3, 2, 5, 4), &mut cx);
+    assert_eq!(
+        *seen.borrow(),
+        [(0, Rect::new(3, 2, 5, 2)), (1, Rect::new(3, 4, 5, 2))]
+    );
+}

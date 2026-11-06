@@ -178,7 +178,7 @@ where
         };
         state.selected = Some(selected);
         let selected_height = self.item_height(selected, area.width);
-        if selected < state.offset || (selected == state.offset && state.skip > 0) {
+        if selected <= state.offset {
             state.offset = selected;
             state.skip = 0;
             return self.pad_top(state, area);
