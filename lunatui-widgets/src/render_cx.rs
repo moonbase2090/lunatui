@@ -337,6 +337,24 @@ impl<'a> RenderCx<'a> {
         }
     }
 
+    #[cfg(feature = "widget-list")]
+    pub(crate) fn default_background(&mut self, area: Rect, bg: Color) {
+        if bg == Color::Default {
+            return;
+        }
+        for y in area.y..area.y.saturating_add(area.height) {
+            for x in area.x..area.x.saturating_add(area.width) {
+                let Some(cell) = self.grid.get(x, y) else {
+                    continue;
+                };
+                let style = cell.style();
+                if style.bg == Color::Default {
+                    self.grid.set_style(Rect::new(x, y, 1, 1), style.bg(bg));
+                }
+            }
+        }
+    }
+
     #[cfg(feature = "popup")]
     pub(crate) fn inherit(&mut self, area: Rect, style: Style) {
         for row in area.y..area.y.saturating_add(area.height) {
@@ -389,7 +407,7 @@ impl<'a> RenderCx<'a> {
         }
     }
 
-    #[cfg(feature = "scroll-view")]
+    #[cfg(any(feature = "scroll-view", feature = "widget-list"))]
     pub(crate) fn offscreen(&mut self, grid: &mut Grid, draw: impl FnOnce(&mut RenderCx<'_>)) {
         let mut cx = RenderCx {
             grid,
@@ -410,7 +428,7 @@ impl<'a> RenderCx<'a> {
             .map_or(Color::Default, |cell| cell.style().bg)
     }
 
-    #[cfg(feature = "scroll-view")]
+    #[cfg(any(feature = "scroll-view", feature = "widget-list"))]
     pub(crate) fn blit(&mut self, src: &Grid, from: Rect, x: u16, y: u16) {
         self.grid.blit(src, from, x, y);
     }
