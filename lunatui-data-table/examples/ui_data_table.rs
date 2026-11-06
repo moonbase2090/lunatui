@@ -17,29 +17,75 @@ use lunatui_theme::{Theme, Variant};
 use lunatui_ui_tokens::Role;
 use lunatui_widgets::{Block, Paragraph, RenderCx, Widget};
 
-const SERVICES: [(&str, &str, &str, &str); 12] = [
-    ("api", "v2.41.0", "live", "41 ms"),
-    ("web", "v8.12.3", "live", "58 ms"),
-    ("worker", "v1.9.0", "rolling", "73 ms"),
-    ("billing", "v3.2.1", "failed", "-"),
-    ("search", "v0.14.0", "live", "96 ms"),
-    ("auth", "v5.0.4", "live", "22 ms"),
-    ("docs", "v1.3.0", "live", "31 ms"),
-    ("mail", "v2.8.8", "live", "47 ms"),
-    ("queue", "v4.1.2", "live", "12 ms"),
-    ("cache", "v7.0.0", "rolling", "8 ms"),
-    ("metrics", "v2.2.5", "live", "19 ms"),
-    ("gateway", "v6.3.1", "live", "26 ms"),
+const SERVICES: [(&str, &str, &str, u32); 40] = [
+    ("api", "v2.41.0", "live", 41),
+    ("web", "v8.12.3", "live", 58),
+    ("worker", "v1.9.0", "rolling", 73),
+    ("billing", "v3.2.1", "failed", 0),
+    ("search", "v0.14.0", "live", 96),
+    ("auth", "v5.0.4", "live", 22),
+    ("docs", "v1.3.0", "live", 31),
+    ("mail", "v2.8.8", "live", 47),
+    ("queue", "v4.1.2", "live", 12),
+    ("cache", "v7.0.0", "rolling", 8),
+    ("metrics", "v2.2.5", "live", 19),
+    ("gateway", "v6.3.1", "live", 26),
+    ("ledger", "v1.4.7", "live", 35),
+    ("images", "v0.9.2", "live", 88),
+    ("notify", "v3.0.1", "live", 29),
+    ("export", "v2.5.0", "queued", 0),
+    ("import", "v2.5.0", "live", 64),
+    ("reports", "v1.1.9", "live", 52),
+    ("audit", "v4.4.0", "live", 17),
+    ("backup", "v1.0.8", "rolling", 43),
+    ("search-api", "v0.14.1", "live", 91),
+    ("cdn", "v5.2.2", "live", 15),
+    ("hooks", "v2.0.0", "failed", 0),
+    ("admin", "v3.7.3", "live", 38),
+    ("mobile", "v6.1.0", "live", 55),
+    ("feeds", "v1.8.4", "live", 44),
+    ("store", "v2.9.6", "live", 61),
+    ("status", "v1.2.0", "live", 9),
+    ("tokens", "v3.3.3", "live", 21),
+    ("files", "v2.7.1", "live", 49),
+    ("proxy", "v5.0.9", "live", 11),
+    ("billing-api", "v3.2.2", "rolling", 57),
+    ("preview", "v0.6.0", "live", 68),
+    ("crawler", "v1.5.5", "queued", 0),
+    ("sso", "v4.1.0", "live", 24),
+    ("limits", "v1.0.3", "live", 13),
+    ("archive", "v2.2.8", "live", 72),
+    ("digest", "v1.9.1", "live", 33),
+    ("relay", "v3.8.0", "live", 18),
+    ("console", "v6.0.2", "live", 46),
 ];
 
-fn source() -> VecSource {
+fn wave(tick: u32, period: u32, offset: u32) -> u32 {
+    let phase = (tick + offset) % period;
+    let half = period / 2;
+    let rise = if phase < half { phase } else { period - phase };
+    rise * 100 / half
+}
+
+fn source(tick: u32) -> VecSource {
     let mut source = VecSource::new();
-    for (name, version, state, latency) in SERVICES {
+    for (index, (name, version, state, base)) in SERVICES.iter().enumerate() {
+        let state = if *state == "rolling" && tick >= 180 {
+            "live"
+        } else {
+            state
+        };
+        let latency = if *base == 0 {
+            "-".to_owned()
+        } else {
+            let swing = wave(tick, 120, u32::try_from(index).unwrap_or(0) * 17) / 4;
+            format!("{} ms", base + swing)
+        };
         source.push_row(vec![
-            name.to_owned(),
-            version.to_owned(),
+            (*name).to_owned(),
+            (*version).to_owned(),
             state.to_owned(),
-            latency.to_owned(),
+            latency,
         ]);
     }
     source
@@ -63,13 +109,13 @@ fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect,
         area.width.saturating_sub(2),
         area.height.saturating_sub(3),
     );
-    let source = source();
+    let source = source(tick);
     let mut state = TableState::new();
-    if tick >= 120 {
+    if tick >= 150 {
         state.sort(&source, 0, SortDirection::Ascending);
     }
     DataTable::new(&source, table_columns()).sync(board, &mut state);
-    state.set_cursor(Some(((tick / 20) as usize) % SERVICES.len()));
+    state.set_cursor(Some(((tick / 15) as usize) % SERVICES.len()));
     DataTable::new(&source, table_columns())
         .state(&state)
         .render(board, &mut cx);
