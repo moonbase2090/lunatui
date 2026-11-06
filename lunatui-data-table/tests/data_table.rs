@@ -109,7 +109,6 @@ fn draws_frame_header_and_rows() {
 fn reads_only_the_visible_rows_at_the_offset() {
     let source = CountingSource::new(1000);
     let table = DataTable::new(&source, columns()).offset(5);
-    // Frame and header take 3 rows of 6, leaving 3 data rows.
     let (grid, clusters) = draw(24, 6, &table);
     assert_eq!(source.read_rows(), vec![5, 6, 7]);
     let text = grid.display_text(&clusters);
@@ -171,7 +170,6 @@ fn empty_source_shows_the_empty_text_under_the_header() {
 fn sync_reports_fitting_rows_and_clamps_the_cursor() {
     let three = DataTable::new(source(&[("a", "x"), ("b", "y"), ("c", "z")]), columns());
     let area = Rect::new(0, 0, 24, 8);
-    // Two frame rows and one header row leave 5 data rows.
     assert_eq!(three.data_rows(area), 5);
     assert_eq!(three.data_rows(Rect::new(0, 0, 24, 3)), 0);
     let borderless = DataTable::new(source(&[("a", "x")]), columns()).bordered(false);
