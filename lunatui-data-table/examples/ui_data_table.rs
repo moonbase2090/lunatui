@@ -15,7 +15,7 @@ use lunatui_data_table::{
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Variant};
 use lunatui_ui_tokens::Role;
-use lunatui_widgets::{Paragraph, RenderCx, Widget};
+use lunatui_widgets::{Block, Paragraph, RenderCx, Widget};
 
 const SERVICES: [(&str, &str, &str, &str); 12] = [
     ("api", "v2.41.0", "live", "41 ms"),
@@ -48,7 +48,7 @@ fn source() -> VecSource {
 fn draw(grid: &mut Grid, clusters: &mut ClusterTable, theme: &Theme, area: Rect, tick: u32) {
     let mut cx = RenderCx::new(grid, clusters, theme);
     let backdrop = Style::new().bg(cx.token(Role::Background.token()));
-    cx.fill(area, backdrop, ' ');
+    Block::new().style(backdrop).render(area, &mut cx);
     let title = Style::new()
         .fg(cx.token(Role::Primary.token()))
         .bg(cx.token(Role::Background.token()))
