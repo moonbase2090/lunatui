@@ -1,9 +1,9 @@
 {
-  "source_commit": "3ed1415d84ba6f763b5aea58f20637592cb9678a",
+  "source_commit": "35cd0e0d5edd6e6f6951194e27e68191a061ebc5",
   "source_sha256": {
     "benches/src/widget_suite/widget_list.rs": "1efddb581d019dbc2f702c7f7f6f224884098d09ec13ba4ef18daf3b66bf4111",
     "examples/widget_preview.rs": "5e1c679867e4249aa4c57331c751048bf7f292f7ef0fcedbcd78823378729002",
-    "lunatui-widgets/src/widget_list.rs": "8cb2804b4f7eb56e90f97915b73211d7131b717343d3655ab507a3bd4898106c",
+    "lunatui-widgets/src/widget_list.rs": "36d2dfbfde87a21a1cb6d54ba6007a1c137487f7fc6a98d9f6eda87eb1999a3b",
     "lunatui-widgets/src/render_cx.rs": "961748a1ec9dcd579d068a2047e084c564ffbc4cd81cbf860416e8da0de42f5c"
   },
   "baseline": "tui-widget-list 0.15.3, default features disabled",
@@ -15,8 +15,8 @@
   "artifacts": [
     {
       "file": "widget-list-80x24-truecolor-dark-side-by-side.mp4",
-      "bytes": 262286,
-      "sha256": "aa82982b2e74bf7f65c8250a8178bb1df6f6cea90ba1548d9a61e05cba914d78"
+      "bytes": 271839,
+      "sha256": "7121fa9e2dc1fbac753e823c4c8f4eb7a85cf8025c1f2882f6de01829eaa9ea8"
     },
     {
       "file": "widget-list-80x24-truecolor-dark-lunatui.png",
@@ -30,8 +30,8 @@
     },
     {
       "file": "widget-list-80x24-ansi256-dark-side-by-side.mp4",
-      "bytes": 278495,
-      "sha256": "870c1f66f22b241410bdfbcec5886327102eb463f4620d259c9abb9bc8a6fd0f"
+      "bytes": 259096,
+      "sha256": "3f64134e02fba04f5167f53304d8e86328c14c8f61bb06e88badd653d748d9ef"
     },
     {
       "file": "widget-list-80x24-ansi256-dark-lunatui.png",
@@ -45,8 +45,8 @@
     },
     {
       "file": "widget-list-80x24-ansi16-dark-side-by-side.mp4",
-      "bytes": 288657,
-      "sha256": "95b8b90a3ab2be417fd313294c43f9079134a2492376055eaa0eac92242d2028"
+      "bytes": 294587,
+      "sha256": "7cc7c32cd36d21c96a57ba375bf92142a83cdcddeecf59c546bb54b37a09022f"
     },
     {
       "file": "widget-list-80x24-ansi16-dark-lunatui.png",
@@ -60,8 +60,8 @@
     },
     {
       "file": "widget-list-80x24-truecolor-light-side-by-side.mp4",
-      "bytes": 288344,
-      "sha256": "8f55f5b2ea3a5818f2ac18bedf25f7ed227697248444d13c2a0c2af741f0c76f"
+      "bytes": 268304,
+      "sha256": "ef5e4d7c4dbad758e2f5e4e272214dc66484b7cfd723d58f5c190d1b9a65e0d3"
     },
     {
       "file": "widget-list-80x24-truecolor-light-lunatui.png",
@@ -75,8 +75,8 @@
     },
     {
       "file": "widget-list-80x24-ansi256-light-side-by-side.mp4",
-      "bytes": 257854,
-      "sha256": "68864d33af345f10b90272c00985e67935611c34810278422b4c1ca65daf5898"
+      "bytes": 259624,
+      "sha256": "85491d7a12a37083aa34f00c6e9f40595bae79658e71d2a0909bdf0e9120c894"
     },
     {
       "file": "widget-list-80x24-ansi256-light-lunatui.png",
@@ -90,8 +90,8 @@
     },
     {
       "file": "widget-list-80x24-ansi16-light-side-by-side.mp4",
-      "bytes": 292747,
-      "sha256": "23d765abe80e4d7c860383d6e31b32a384655ab4a0a4fe221f02e5f33129ee5e"
+      "bytes": 268828,
+      "sha256": "4e187663af027776424c45d2f9bd55556a3cfe3b27045b8bc378759163063cae"
     },
     {
       "file": "widget-list-80x24-ansi16-light-lunatui.png",
@@ -105,8 +105,8 @@
     },
     {
       "file": "widget-list-200x60-truecolor-dark-side-by-side.mp4",
-      "bytes": 323465,
-      "sha256": "1763fc1449200ed81cf4f47cfd46bf757ec61e0d0ee51013f63c74d1caeb5588"
+      "bytes": 335957,
+      "sha256": "12bea5d8d56c8e13f8eb7631ebb7bebe051cf33ab5f98c6f6bd6e1d8ef03ceb5"
     },
     {
       "file": "widget-list-200x60-truecolor-dark-lunatui.png",
@@ -120,8 +120,8 @@
     },
     {
       "file": "widget-list-200x60-ansi256-dark-side-by-side.mp4",
-      "bytes": 306932,
-      "sha256": "2c9092b201991998f07a76e0072690102d375f1062e7051c8547130a0cb78763"
+      "bytes": 314691,
+      "sha256": "407bbc92d2afcb86f8eb83d93a7000145776cae16543370106151eef41b2bf8d"
     },
     {
       "file": "widget-list-200x60-ansi256-dark-lunatui.png",
@@ -135,8 +135,8 @@
     },
     {
       "file": "widget-list-200x60-ansi16-dark-side-by-side.mp4",
-      "bytes": 344011,
-      "sha256": "ba52ad216f45a4611a60858951a72883cf1c39ee28c590d4eefc40af1eff2da7"
+      "bytes": 355746,
+      "sha256": "98c1a4acb3f5db1f06082c47fbed3d0d56d1f786902945d4bcde3463f4bb21c5"
     },
     {
       "file": "widget-list-200x60-ansi16-dark-lunatui.png",
@@ -150,8 +150,8 @@
     },
     {
       "file": "widget-list-200x60-truecolor-light-side-by-side.mp4",
-      "bytes": 368140,
-      "sha256": "9b8f6ac11ebfa0671a6d31fb2950e17be983d1f897b0f095038f46b18b67f5e4"
+      "bytes": 344288,
+      "sha256": "b6755adb6baaa7fb87bbf3186d5537138a26e336bbd3afc8c0acb49cc42b57f9"
     },
     {
       "file": "widget-list-200x60-truecolor-light-lunatui.png",
@@ -165,8 +165,8 @@
     },
     {
       "file": "widget-list-200x60-ansi256-light-side-by-side.mp4",
-      "bytes": 337971,
-      "sha256": "e63bb4edee0802a60218c4e70ce6c6501fab55f4a364b2e2e98b960e6c46a403"
+      "bytes": 323565,
+      "sha256": "e243dde9cd1c5fd70b253bffe0b94ee86f38b6254185cb1ae8b4600111a42f38"
     },
     {
       "file": "widget-list-200x60-ansi256-light-lunatui.png",
@@ -180,8 +180,8 @@
     },
     {
       "file": "widget-list-200x60-ansi16-light-side-by-side.mp4",
-      "bytes": 360079,
-      "sha256": "902387f58df925dfadc8cb82fb111641f0a9d2264c29764eb14218754dfb1f1d"
+      "bytes": 326823,
+      "sha256": "9140a6c4a6ba7130fcea2c1d46551052f978c853f8469ce9c77f41998acfeca4"
     },
     {
       "file": "widget-list-200x60-ansi16-light-lunatui.png",
@@ -196,7 +196,7 @@
     {
       "file": "widget-list-80x24-truecolor-dark.gif",
       "bytes": 204608,
-      "sha256": "af030e9de68e16058e8ea826793b4de07398e45b235b1493c92a41d9cb0750f8"
+      "sha256": "771f9aff8921c4b3ab98944757e3029382ed6bb036420e634da591aeb1e3eb95"
     }
   ]
 }
