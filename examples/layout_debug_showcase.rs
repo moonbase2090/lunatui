@@ -110,7 +110,7 @@ fn sidebar(cx: &mut RenderCx<'_>, theme: &Theme, side: Rect, tick: u32) {
         }
     }
     let facts = [
-        ("On call", "Ana Ruiz"),
+        ("On call", "Platform team"),
         ("Region", "us-west-2"),
         ("Uptime", "99.98%"),
         ("Deploys today", "7"),
