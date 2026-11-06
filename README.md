@@ -403,6 +403,14 @@ the native frame is about 2.4 times faster at 80x24 and 4.3 times at 200x60 (see
 [80x24 side-by-side recording](docs/media/widget-list-80x24-truecolor-dark-side-by-side.mp4),
 [200x60 side-by-side recording](docs/media/widget-list-200x60-truecolor-dark-side-by-side.mp4).
 
+### LayoutDebug
+
+An operations screen with live numbers: a services list, three stat cards, a load chart and an event log, all placed with `Layout`. At about two seconds the `LayoutDebug` overlay switches on and outlines every box with its `WxH` size, each box in its own theme color. The services column then widens and narrows again and the labels follow the new sizes, and the overlay switches off at the end.
+
+<img src="docs/media/layout-debug-120x36-truecolor-dark.gif" alt="An operations screen with live numbers; a layout debug overlay outlines the services list, stat cards, chart and log with their sizes while the services column resizes" width="1028">
+
+[Screenshot](docs/media/layout-debug-120x36-truecolor-dark.png). Recorded with `scripts/record-showcase.sh` (`CASE=layout-debug`, 120×36, `FRAMES=270`, dark, truecolor), about 9 seconds; the scene is `examples/layout_debug_showcase.rs`.
+
 ### UI dialog
 
 The `lunatui-dialog` crate in a project list. The run is scripted, not interactive: a prompt renames a project as its name is typed, an alert dialog asks before deleting it with a danger-colored action, and an alert reports the result. The panel is centered over a dimmed screen with a rounded border; focus uses the ring color and Delete uses the destructive color.
