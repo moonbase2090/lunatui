@@ -10,6 +10,7 @@ use alloc::vec::Vec;
 
 use lunatui_core::Rect;
 
+mod breakpoints;
 mod constraint;
 mod flex;
 #[cfg(feature = "size-limits")]
@@ -18,6 +19,7 @@ mod solve_fast;
 #[cfg(feature = "flex-wrap")]
 mod wrap;
 
+pub use breakpoints::Breakpoints;
 pub use constraint::Constraint;
 pub use flex::{Axis, Flex};
 #[cfg(feature = "size-limits")]
