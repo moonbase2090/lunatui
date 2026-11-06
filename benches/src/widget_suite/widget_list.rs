@@ -122,8 +122,6 @@ impl Styles {
         }
     }
 
-    // A selected row is bold. The baseline patches styles onto the row it filled first, so the
-    // alert's styles carry the same bold explicitly on both sides.
     fn alert(&self, picked: bool) -> Style {
         let bold = Attrs::new().set_bold(picked);
         self.alert.with_attrs(bold)

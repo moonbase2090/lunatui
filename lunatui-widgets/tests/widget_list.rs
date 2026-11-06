@@ -14,7 +14,6 @@ fn height(index: usize, _width: u16) -> u16 {
     HEIGHTS[index]
 }
 
-// Item `n` paints its index on every row, with a different glyph per row so a wrong clip shows.
 fn draw(index: usize, area: Rect, _selected: bool, cx: &mut RenderCx<'_>) {
     for row in 0..area.height {
         let text = format!("{index}.{row}");
@@ -299,7 +298,7 @@ fn a_zero_width_or_zero_height_area_resets_the_state() {
     let widget = list(state(Some(3), 2, 1));
     for area in [Rect::new(0, 0, 0, 5), Rect::new(0, 0, 5, 0)] {
         assert_eq!(widget.scrolled(area), WidgetListState::new());
-        assert!(widget.item_areas(area).is_empty());
+        assert_eq!(widget.item_areas(area), Vec::new());
     }
 }
 
@@ -316,7 +315,6 @@ fn stepping_back_from_a_selection_past_the_end_lands_on_the_last_item() {
 
 #[test]
 fn padding_above_takes_part_of_an_item_and_never_more_than_asked() {
-    // Padding of 3 rows above item 3: all of item 2 (2 rows) plus the last row of item 1.
     let scrolled = list(state(Some(3), 3, 0))
         .scroll_padding(3)
         .scrolled(Rect::new(0, 0, 6, 8));
@@ -325,7 +323,6 @@ fn padding_above_takes_part_of_an_item_and_never_more_than_asked() {
 
 #[test]
 fn padding_above_is_capped_at_half_the_area() {
-    // Ten rows are asked for, but a 4-row area gives at most 2: item 2 and nothing more.
     let scrolled = list(state(Some(3), 3, 0))
         .scroll_padding(10)
         .scrolled(Rect::new(0, 0, 6, 4));
@@ -348,7 +345,6 @@ fn item_areas_leave_out_hidden_and_zero_height_items() {
         |_, _, _, _: &mut RenderCx<'_>| {},
     )
     .state(state(None, 0, 2));
-    // Item 0 is scrolled out whole, item 1 has no rows.
     let indexes: Vec<usize> = widget
         .item_areas(Rect::new(0, 0, 4, 4))
         .iter()
@@ -359,7 +355,6 @@ fn item_areas_leave_out_hidden_and_zero_height_items() {
 
 #[test]
 fn items_cut_by_an_edge_are_drawn_at_their_full_height() {
-    // Each row of an item reports the height the item was drawn with.
     let widget = WidgetList::new(
         3,
         |_, _| 4,
@@ -375,7 +370,6 @@ fn items_cut_by_an_edge_are_drawn_at_their_full_height() {
         },
     )
     .state(state(None, 0, 2));
-    // Rows 2..4 of item 0, all of item 1 cut after 2 rows: both edges are cut.
     let (grid, clusters) = render(&widget, 4, 4);
     assert_eq!(text(&grid, &clusters), ["h4", "h4", "h4", "h4"]);
 }
@@ -390,7 +384,6 @@ fn padding_above_skips_zero_height_items_without_counting_them() {
     .state(state(Some(2), 2, 0))
     .scroll_padding(1);
     let scrolled = widget.scrolled(Rect::new(0, 0, 4, 4));
-    // The empty item 1 is passed over; the single padding row is the last row of item 0.
     assert_eq!((scrolled.offset, scrolled.skip), (0, 1));
 }
 

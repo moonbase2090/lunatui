@@ -234,17 +234,14 @@ fn widget_list_matches_tui_widget_list_across_every_selection_and_theme() -> Res
                             expect("Today", true);
                             expect("Deploy blocked", true);
                         }
-                        // Items 0 to 4 are 13 rows and the list is 17 tall: nothing scrolls yet.
                         40 => {
                             expect("Deploy blocked", true);
                             expect("Today", true);
                         }
-                        // Item 6 pushes the total to 18 rows, so the first row scrolls away.
                         60 => {
                             expect("Cache warm-up", true);
                             expect("Today", false);
                         }
-                        // Item 20 is the last item, a progress row at the bottom edge; item 18 is an alert.
                         200 => {
                             expect("Cache warm-up", true);
                             expect("Today", false);
