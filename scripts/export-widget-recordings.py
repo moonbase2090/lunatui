@@ -13,7 +13,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('directory', type=Path)
-parser.add_argument('--case', default='checkbox', choices=['checkbox', 'node-graph'])
+parser.add_argument('--case', default='checkbox', choices=['checkbox', 'node-graph', 'widget-list'])
 args = parser.parse_args()
 subprocess.run([sys.executable, str(ROOT / f'scripts/check-{args.case}-recordings.py'),
                 str(args.directory)], check=True)
@@ -45,6 +45,10 @@ if args.case == 'checkbox':
     sources = ['benches/src/widget_suite/checkbox.rs', 'examples/widget_preview.rs',
                'lunatui-choice/src/lib.rs', 'lunatui-ui-tokens/src/lib.rs']
     baseline = 'tui-checkbox 0.5.3, default features disabled'
+elif args.case == 'widget-list':
+    sources = ['benches/src/widget_suite/widget_list.rs', 'examples/widget_preview.rs',
+               'lunatui-widgets/src/widget_list.rs', 'lunatui-widgets/src/render_cx.rs']
+    baseline = 'tui-widget-list 0.15.3, default features disabled'
 else:
     sources = ['benches/src/widget_suite/node_graph.rs', 'examples/widget_preview.rs',
                'lunatui-widgets/src/node_graph.rs', 'examples/node_graph.rs',

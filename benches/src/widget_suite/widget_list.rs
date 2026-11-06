@@ -4,8 +4,7 @@
 use std::sync::OnceLock;
 
 use lunatui_core::{Attrs, ClusterTable, Grid, Rect, Style};
-use lunatui_theme::{Theme, Variant};
-use lunatui_ui_tokens::Role;
+use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
     Block, BorderType, Paragraph, RenderCx, Widget, WidgetList, WidgetListState,
 };
@@ -102,26 +101,24 @@ struct Styles {
     panel_border: Style,
 }
 
-fn ink(theme: &Theme, fg: Role, bg: Role) -> Style {
-    Style::new()
-        .fg(theme.resolve(fg.token()))
-        .bg(theme.resolve(bg.token()))
+fn ink(theme: &Theme, fg: Token, bg: Token) -> Style {
+    Style::new().fg(theme.resolve(fg)).bg(theme.resolve(bg))
 }
 
 impl Styles {
     fn new(theme: &Theme) -> Self {
         let bold = Attrs::new().set_bold(true);
         Self {
-            card: ink(theme, Role::Foreground, Role::Card),
-            pick: ink(theme, Role::Foreground, Role::Border).with_attrs(bold),
-            dim: ink(theme, Role::Muted, Role::Card),
-            dim_pick: ink(theme, Role::Muted, Role::Border).with_attrs(bold),
-            accent: ink(theme, Role::Primary, Role::Card),
-            accent_pick: ink(theme, Role::Primary, Role::Border).with_attrs(bold),
-            alert: ink(theme, Role::Destructive, Role::Card),
-            alert_dim: ink(theme, Role::Muted, Role::Card),
-            page: ink(theme, Role::Foreground, Role::Background),
-            panel_border: ink(theme, Role::Border, Role::Card),
+            card: ink(theme, Token::TextPrimary, Token::Surface1),
+            pick: ink(theme, Token::TextStrong, Token::FocusFill).with_attrs(bold),
+            dim: ink(theme, Token::TextMuted, Token::Surface1),
+            dim_pick: ink(theme, Token::TextMutedOnFocus, Token::FocusFill).with_attrs(bold),
+            accent: ink(theme, Token::Accent, Token::Surface1),
+            accent_pick: ink(theme, Token::Ok, Token::FocusFill).with_attrs(bold),
+            alert: ink(theme, Token::Fail, Token::Surface1),
+            alert_dim: ink(theme, Token::TextMuted, Token::Surface1),
+            page: ink(theme, Token::TextPrimary, Token::Surface0),
+            panel_border: ink(theme, Token::Border, Token::Surface1),
         }
     }
 
