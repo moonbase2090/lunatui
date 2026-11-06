@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
-use lunatui_image::ImageSource;
+use lunatui_image::{Fit, ImageId, ImageRequest, ImageSource};
 use lunatui_term::{Caps, CellPixels, Encoder, Event, GraphicsProtocol, PixelLayer, Protocols};
 
 use super::{FrameState, render_present};
@@ -136,5 +136,138 @@ fn switching_saturation_to_latency_finishes_upload_before_the_new_title_and_reti
             .map_err(|error| error.to_string())?
             .contains("a=t")
     );
+    render_present(&mut app, area, &mut frames, |parts| {
+        transactions.push(parts.iter().map(|part| part.to_vec()).collect::<Vec<_>>());
+        Ok(())
+    })
+    .map_err(|error| error.to_string())?;
+    assert_eq!(
+        transactions.len(),
+        4,
+        "unchanged Kitty frame must skip output"
+    );
     Ok(())
+}
+
+struct ImageSwitch {
+    position: Option<Rect>,
+    id: ImageId,
+    pixels: ImageSource,
+}
+
+impl App for ImageSwitch {
+    fn update(&mut self, _: &Event) -> ControlFlow {
+        ControlFlow::Continue
+    }
+
+    fn render(&mut self, _: &mut Grid, _: Rect, _: &mut ClusterTable) {}
+
+    fn render_frame(&mut self, frame: &mut RenderFrame<'_>, _: Rect) {
+        if let Some(area) = self.position {
+            let (_, _, images) = frame.parts();
+            assert!(images.submit(ImageRequest::new(
+                self.id,
+                0,
+                &self.pixels,
+                area,
+                Fit::Stretch,
+                0,
+                255,
+            )));
+        }
+    }
+}
+
+fn immediate_image_repaints_blank_cells(
+    graphics: GraphicsProtocol,
+    image_command: &str,
+    next_position: Option<Rect>,
+) -> Result<(), String> {
+    let area = Rect::new(0, 0, 6, 4);
+    let caps = Caps {
+        protocols: Protocols {
+            graphics,
+            ..Protocols::default()
+        },
+        cell_pixels: CellPixels::new(1, 1),
+        ..Caps::default()
+    };
+    let mut frames = FrameState {
+        prev: Grid::new(6, 4),
+        next: Grid::new(6, 4),
+        clusters: ClusterTable::new(),
+        encoder: Encoder::new(),
+        last_palette: None,
+        images: PixelLayer::from_caps(&caps),
+    };
+    let mut app = ImageSwitch {
+        position: Some(Rect::new(2, 1, 2, 2)),
+        id: ImageId::new(1).ok_or("nonzero image identity")?,
+        pixels: ImageSource::rgba8(2, 2, [255, 0, 0, 255].repeat(4).into_boxed_slice())
+            .map_err(|error| error.to_string())?,
+    };
+    let mut output = Vec::new();
+    render_present(&mut app, area, &mut frames, |parts| {
+        output.extend(parts.iter().flat_map(|part| part.iter()).copied());
+        Ok(())
+    })
+    .map_err(|error| error.to_string())?;
+    assert!(String::from_utf8_lossy(&output).contains(image_command));
+
+    let mut screen = lunatui_test::Oracle::new(4, 6);
+    screen.process(b"\x1b[2;3HXX\x1b[3;3HXX");
+    app.position = next_position;
+    let mut presents = 0;
+    render_present(&mut app, area, &mut frames, |parts| {
+        presents += 1;
+        screen.process(parts[0]);
+        Ok(())
+    })
+    .map_err(|error| error.to_string())?;
+    assert_eq!(presents, 1, "{graphics:?} needs a cell repaint frame");
+    assert_eq!(
+        screen.contents(),
+        "      \n      \n      \n      ",
+        "{graphics:?} must overwrite old pixels"
+    );
+    if next_position.is_none() {
+        render_present(&mut app, area, &mut frames, |_| {
+            presents += 1;
+            Ok(())
+        })
+        .map_err(|error| error.to_string())?;
+        assert_eq!(
+            presents, 1,
+            "an unchanged empty frame must skip presentation"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn omitted_iterm2_images_repaint_default_blank_cells() -> Result<(), String> {
+    immediate_image_repaints_blank_cells(GraphicsProtocol::Iterm2, "\x1b]1337;File=inline=1;", None)
+}
+
+#[test]
+fn omitted_sixel_images_repaint_default_blank_cells() -> Result<(), String> {
+    immediate_image_repaints_blank_cells(GraphicsProtocol::Sixel, "\x1bP0;1;0q", None)
+}
+
+#[test]
+fn moved_iterm2_images_repaint_default_blank_cells() -> Result<(), String> {
+    immediate_image_repaints_blank_cells(
+        GraphicsProtocol::Iterm2,
+        "\x1b]1337;File=inline=1;",
+        Some(Rect::new(0, 0, 2, 2)),
+    )
+}
+
+#[test]
+fn moved_sixel_images_repaint_default_blank_cells() -> Result<(), String> {
+    immediate_image_repaints_blank_cells(
+        GraphicsProtocol::Sixel,
+        "\x1bP0;1;0q",
+        Some(Rect::new(0, 0, 2, 2)),
+    )
 }

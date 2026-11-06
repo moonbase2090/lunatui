@@ -170,26 +170,32 @@ fn render_present<A: App>(
     #[cfg(not(feature = "image-presenter"))]
     app.render(&mut frames.next, area, &mut frames.clusters);
     let palette = app.token_palette().map(<[Color]>::to_vec);
-    if palette != frames.last_palette {
-        frames.prev = Grid::new(area.width, area.height);
-        frames.last_palette = palette;
-    }
+    let repaint = palette != frames.last_palette;
+    frames.last_palette = palette;
     #[cfg(feature = "image-presenter")]
-    if frames.images.needs_cell_repaint() {
-        frames.prev = Grid::new(area.width, area.height);
-    }
-    let runs = diff_runs(&frames.prev, &frames.next);
+    let repaint = repaint || frames.images.needs_cell_repaint();
+    let has_cells = if repaint {
+        frames.next.width() != 0 && frames.next.height() != 0
+    } else {
+        !diff_runs(&frames.prev, &frames.next).is_empty()
+    };
     if let Some(colors) = frames.last_palette.as_ref() {
         frames.encoder.set_token_palette(colors.clone());
     } else {
         frames.encoder.set_token_palette(Vec::new());
     }
-    let cell_bytes = frames.encoder.encode_diff(
-        &frames.prev,
-        &frames.next,
-        &frames.clusters,
-        ColorMode::TrueColor,
-    );
+    let cell_bytes = if repaint {
+        frames
+            .encoder
+            .encode_full(&frames.next, &frames.clusters, ColorMode::TrueColor)
+    } else {
+        frames.encoder.encode_diff(
+            &frames.prev,
+            &frames.next,
+            &frames.clusters,
+            ColorMode::TrueColor,
+        )
+    };
     #[cfg(feature = "image-presenter")]
     let (upload_bytes, image_bytes) = frames.images.finish_frame_parts();
     #[cfg(feature = "image-presenter")]
@@ -202,7 +208,7 @@ fn render_present<A: App>(
     }
     #[cfg(not(feature = "image-presenter"))]
     let has_images = false;
-    if !runs.is_empty() || has_images {
+    if has_cells || has_images {
         #[cfg(feature = "image-presenter")]
         present(&payloads)?;
         #[cfg(not(feature = "image-presenter"))]
@@ -255,10 +261,10 @@ fn probe_pixel_layer() -> (PixelLayer, Vec<u8>) {
 
 #[cfg(test)]
 mod tests {
-    use lunatui_core::GlyphSlot;
-    use lunatui_term::Event;
+    use lunatui_core::{ClusterTable, Color, GlyphSlot, Grid, Rect, Style};
+    use lunatui_term::{Encoder, Event};
 
-    use super::render_once;
+    use super::{FrameState, render_once, render_present};
     use crate::app::{App, ControlFlow};
     use crate::options::RunOptions;
 
@@ -300,6 +306,65 @@ mod tests {
         let options = RunOptions::new(80, 24);
         assert_eq!(options.width, 80);
         assert_eq!(options.height, 24);
+    }
+
+    struct PaletteApp {
+        palette: Option<Vec<Color>>,
+    }
+
+    impl App for PaletteApp {
+        fn update(&mut self, _: &Event) -> ControlFlow {
+            ControlFlow::Continue
+        }
+
+        fn render(&mut self, grid: &mut Grid, _: Rect, clusters: &mut ClusterTable) {
+            grid.put_str(0, 0, Style::new().fg(Color::Token(0)), "界x", clusters);
+        }
+
+        fn token_palette(&self) -> Option<&[Color]> {
+            self.palette.as_deref()
+        }
+    }
+
+    #[test]
+    fn palette_changes_and_removal_repaint_then_unchanged_frames_skip() -> Result<(), String> {
+        let area = Rect::new(0, 0, 4, 1);
+        let mut frames = FrameState {
+            prev: Grid::new(4, 1),
+            next: Grid::new(4, 1),
+            clusters: ClusterTable::new(),
+            encoder: Encoder::new(),
+            last_palette: None,
+            #[cfg(feature = "image-presenter")]
+            images: super::PixelLayer::new(super::PixelMode::Cells),
+        };
+        let mut app = PaletteApp { palette: None };
+        for (palette, expected) in [
+            (Some(vec![Color::Rgb(1, 2, 3)]), "\x1b[38;2;1;2;3m界x"),
+            (Some(vec![Color::Rgb(4, 5, 6)]), "\x1b[38;2;4;5;6m界x"),
+            (None, "\x1b[38;5;0m界x"),
+        ] {
+            app.palette = palette;
+            let mut output = Vec::new();
+            render_present(&mut app, area, &mut frames, |parts| {
+                output.extend(parts.iter().flat_map(|part| part.iter()).copied());
+                Ok(())
+            })
+            .map_err(|error| error.to_string())?;
+            assert!(String::from_utf8_lossy(&output).contains(expected));
+            let mut screen = lunatui_test::Oracle::new(1, 4);
+            screen.process(&output);
+            assert_eq!(screen.contents(), "界x ");
+
+            let mut presents = 0;
+            render_present(&mut app, area, &mut frames, |_| {
+                presents += 1;
+                Ok(())
+            })
+            .map_err(|error| error.to_string())?;
+            assert_eq!(presents, 0, "same palette and cells must skip output");
+        }
+        Ok(())
     }
 }
 
