@@ -281,7 +281,7 @@ impl RatWidget for Item<'_> {
         let line = |y: u16| RatRect::new(area.x, area.y + y, area.width, 1);
         let text = |value: &str, style: Style, y: u16, buffer: &mut Buffer| {
             if y < area.height {
-                RatParagraph::new(value.to_owned())
+                RatParagraph::new(value)
                     .style(rat_style(style))
                     .render(line(y), buffer);
             }
