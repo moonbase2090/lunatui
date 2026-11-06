@@ -405,3 +405,20 @@ fn items_that_fit_are_drawn_at_their_real_position_in_the_area() {
         [(0, Rect::new(3, 2, 5, 2)), (1, Rect::new(3, 4, 5, 2))]
     );
 }
+
+#[test]
+fn stepping_forward_from_the_largest_index_does_not_overflow() {
+    let mut state = WidgetListState {
+        selected: Some(usize::MAX),
+        offset: 0,
+        skip: 0,
+    };
+    state.select_next(3);
+    assert_eq!(state.selected, Some(2));
+}
+
+#[test]
+fn an_offset_past_the_end_clamps_even_with_nothing_selected() {
+    let scrolled = list(state(None, 9, 0)).scrolled(Rect::new(0, 0, 6, 6));
+    assert_eq!((scrolled.offset, scrolled.selected), (4, None));
+}

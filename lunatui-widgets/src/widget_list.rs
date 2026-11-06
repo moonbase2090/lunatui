@@ -37,7 +37,7 @@ impl WidgetListState {
         self.selected = match (self.selected, len) {
             (_, 0) => None,
             (None, _) => Some(0),
-            (Some(index), _) => Some((index + 1).min(len - 1)),
+            (Some(index), _) => Some(index.saturating_add(1).min(len - 1)),
         };
     }
 
