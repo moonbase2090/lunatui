@@ -14,7 +14,7 @@ use ratatui::{
 };
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
-/// Items in the feed. One selection step takes [`STEP`] ticks.
+/// Items in the feed. One selection step takes ten ticks.
 pub const ITEMS: usize = 21;
 const STEP: u32 = 10;
 
