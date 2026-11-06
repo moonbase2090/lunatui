@@ -52,6 +52,8 @@ mod hex_viewer;
 mod image;
 #[cfg(feature = "key-hints")]
 mod key_hint_bar;
+#[cfg(feature = "layout-debug")]
+mod layout_debug;
 mod lightcycle;
 #[cfg(feature = "line-gauge")]
 mod line_gauge;
@@ -174,6 +176,8 @@ pub use hex_viewer::{HexViewer, HexViewerState};
 pub use image::Image;
 #[cfg(feature = "key-hints")]
 pub use key_hint_bar::KeyHintBar;
+#[cfg(feature = "layout-debug")]
+pub use layout_debug::LayoutDebug;
 pub use lightcycle::Lightcycle;
 #[cfg(feature = "line-gauge")]
 pub use line_gauge::LineGauge;
