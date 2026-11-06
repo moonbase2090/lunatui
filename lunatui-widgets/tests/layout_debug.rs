@@ -193,3 +193,85 @@ fn takes_no_space() {
         lunatui_core::Size::new(0, 0)
     );
 }
+
+#[test]
+fn huge_boxes_cost_only_the_visible_edges() {
+    let overlay = LayoutDebug::new()
+        .rect(Rect::new(0, 0, u16::MAX, u16::MAX))
+        .rect(Rect::new(3, 1, u16::MAX, u16::MAX));
+    let (grid, clusters) = render(&overlay, 12, 5, Rect::new(2, 1, 8, 3));
+    assert_eq!(rows(&grid, &clusters)[0], "............");
+    assert_eq!(rows(&grid, &clusters)[1], "...┌65535x..");
+}
+
+#[test]
+fn wide_names_are_sized_by_display_width() {
+    let overlay = LayoutDebug::new().named("日本", Rect::new(0, 0, 11, 3));
+    let (grid, clusters) = render(&overlay, 11, 3, Rect::new(0, 0, 11, 3));
+    assert_eq!(rows(&grid, &clusters)[0], "┌日本 11x3┐");
+    let overlay = LayoutDebug::new().named("日本", Rect::new(0, 0, 9, 3));
+    let (grid, clusters) = render(&overlay, 9, 3, Rect::new(0, 0, 9, 3));
+    assert_eq!(rows(&grid, &clusters)[0], "┌───────┐");
+}
+
+#[test]
+fn wide_label_never_overwrites_the_border() {
+    let overlay = LayoutDebug::new().named("日本語", Rect::new(0, 0, 13, 3));
+    let (grid, clusters) = render(&overlay, 13, 3, Rect::new(0, 0, 13, 3));
+    let top = rows(&grid, &clusters)[0].clone();
+    assert!(top.starts_with('┌') && top.ends_with('┐'), "{top}");
+    assert_eq!(top, "┌日本語 13x3┐");
+}
+
+#[test]
+fn wide_character_cut_by_the_render_area_is_not_drawn() {
+    let overlay = LayoutDebug::new().named("日本", Rect::new(0, 0, 14, 3));
+    let (grid, clusters) = render(&overlay, 14, 3, Rect::new(0, 0, 4, 3));
+    assert_eq!(rows(&grid, &clusters)[0], "┌日─..........");
+}
+
+#[test]
+fn control_and_zero_width_characters_are_left_out_of_names() {
+    let overlay = LayoutDebug::new().named("a\u{7}\u{301}b\n", Rect::new(0, 0, 10, 3));
+    let (grid, clusters) = render(&overlay, 10, 3, Rect::new(0, 0, 10, 3));
+    assert_eq!(rows(&grid, &clusters)[0], "┌ab 10x3─┐");
+}
+
+#[test]
+fn empty_boxes_draw_nothing_even_next_to_other_boxes() {
+    for rect in [
+        Rect::new(2, 0, 0, 4),
+        Rect::new(0, 1, 6, 0),
+        Rect::new(0, 0, 0, 0),
+    ] {
+        let (grid, clusters) = render(&LayoutDebug::new().rect(rect), 6, 4, Rect::new(0, 0, 6, 4));
+        assert_eq!(rows(&grid, &clusters), ["......"; 4], "{rect:?}");
+    }
+}
+
+#[test]
+fn two_row_boxes_are_labeled_and_one_row_boxes_are_not() {
+    let (grid, clusters) = render(
+        &LayoutDebug::new().rect(Rect::new(0, 0, 8, 2)),
+        8,
+        2,
+        Rect::new(0, 0, 8, 2),
+    );
+    assert_eq!(rows(&grid, &clusters), ["┌8x2───┐", "└──────┘"]);
+    let (grid, clusters) = render(
+        &LayoutDebug::new().rect(Rect::new(0, 0, 8, 1)),
+        8,
+        1,
+        Rect::new(0, 0, 8, 1),
+    );
+    assert_eq!(rows(&grid, &clusters), ["────────"]);
+}
+
+#[test]
+fn narrow_boxes_never_underflow_the_label_room() {
+    for width in 1..=4 {
+        let rect = Rect::new(0, 0, width, 3);
+        let (grid, clusters) = render(&LayoutDebug::new().rect(rect), 4, 3, Rect::new(0, 0, 4, 3));
+        assert!(!rows(&grid, &clusters)[0].contains('x'), "width {width}");
+    }
+}

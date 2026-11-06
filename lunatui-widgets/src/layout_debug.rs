@@ -94,22 +94,54 @@ impl LayoutDebug {
     }
 
     fn label(rect: Rect, name: Option<&str>) -> String {
+        let size = format!("{}x{}", rect.width, rect.height);
         match name {
-            Some(name) => format!("{name} {}x{}", rect.width, rect.height),
-            None => format!("{}x{}", rect.width, rect.height),
+            Some(name) => {
+                let name: String = name.chars().filter(|&ch| cell_width(ch) > 0).collect();
+                format!("{name} {size}")
+            }
+            None => size,
         }
     }
 }
 
-fn plot(cx: &mut RenderCx<'_>, area: Rect, x: u16, y: u16, glyph: &str, style: Style) {
-    let inside = x >= area.x
-        && y >= area.y
-        && u32::from(x) < u32::from(area.x) + u32::from(area.width)
-        && u32::from(y) < u32::from(area.y) + u32::from(area.height);
-    if inside {
-        let style = style.bg(cx.bg_at(x, y));
-        cx.put_str(x, y, glyph, style);
+fn cell_width(ch: char) -> u16 {
+    let mut buf = [0u8; 4];
+    u16::try_from(lunatui_core::width(ch.encode_utf8(&mut buf))).unwrap_or(0)
+}
+
+fn visible(start: u32, len: u32, area_start: u16, area_len: u16) -> core::ops::Range<u32> {
+    let lo = start.max(u32::from(area_start));
+    let hi = (start + len).min(u32::from(area_start) + u32::from(area_len));
+    lo..hi.max(lo)
+}
+
+fn edge_glyph(rect: Rect, x: u32, y: u32) -> &'static str {
+    let left = x == u32::from(rect.x);
+    let top = y == u32::from(rect.y);
+    let right = x + 1 == u32::from(rect.x) + u32::from(rect.width);
+    let bottom = y + 1 == u32::from(rect.y) + u32::from(rect.height);
+    match (rect.width, rect.height) {
+        (1, 1) => "▪",
+        (_, 1) => "─",
+        (1, _) => "│",
+        _ => match (left || right, top || bottom, left, top) {
+            (true, true, true, true) => "┌",
+            (true, true, false, true) => "┐",
+            (true, true, true, false) => "└",
+            (true, true, false, false) => "┘",
+            (true, false, _, _) => "│",
+            _ => "─",
+        },
     }
+}
+
+fn plot(cx: &mut RenderCx<'_>, x: u32, y: u32, glyph: &str, style: Style) {
+    let (Ok(x), Ok(y)) = (u16::try_from(x), u16::try_from(y)) else {
+        return;
+    };
+    let style = style.bg(cx.bg_at(x, y));
+    cx.put_str(x, y, glyph, style);
 }
 
 impl Widget for LayoutDebug {
@@ -118,44 +150,44 @@ impl Widget for LayoutDebug {
             return;
         }
         for (position, (rect, name)) in self.boxes.iter().enumerate() {
-            if rect.width == 0 || rect.height == 0 {
-                continue;
-            }
             let color = cx.token(CYCLE[position % CYCLE.len()]);
             let style = Style::new().fg(color);
-            let left = rect.x;
-            let top = rect.y;
-            let right = rect.x.saturating_add(rect.width - 1);
-            let bottom = rect.y.saturating_add(rect.height - 1);
-            for y in top..=bottom {
-                for x in left..=right {
-                    let on_x = x == left || x == right;
-                    let on_y = y == top || y == bottom;
-                    if !on_x && !on_y {
-                        continue;
+            let (left, top) = (u32::from(rect.x), u32::from(rect.y));
+            let (width, height) = (u32::from(rect.width), u32::from(rect.height));
+            let columns = visible(left, width, area.x, area.width);
+            let rows = visible(top, height, area.y, area.height);
+            let horizontal = [top, (top + height).saturating_sub(1)];
+            for &y in &horizontal[..if height == 1 { 1 } else { 2 }] {
+                if rows.contains(&y) {
+                    for x in columns.clone() {
+                        plot(cx, x, y, edge_glyph(*rect, x, y), style);
                     }
-                    let glyph = match (on_x, on_y, x == left, y == top) {
-                        (true, true, _, _) if rect.width == 1 && rect.height == 1 => "▪",
-                        (true, true, _, _) if rect.height == 1 => "─",
-                        (true, true, _, _) if rect.width == 1 => "│",
-                        (true, true, true, true) => "┌",
-                        (true, true, false, true) => "┐",
-                        (true, true, true, false) => "└",
-                        (true, true, false, false) => "┘",
-                        (true, false, _, _) => "│",
-                        _ => "─",
-                    };
-                    plot(cx, area, x, y, glyph, style);
                 }
             }
-            let label = Self::label(*rect, name.as_deref());
-            let room = usize::from(rect.width.saturating_sub(2));
-            if rect.width >= 3 && rect.height >= 2 && label.chars().count() <= room {
-                let bold = style.with_attrs(Attrs::new().set_bold(true));
-                for (offset, ch) in label.chars().enumerate() {
-                    let x = left.saturating_add(1 + u16::try_from(offset).unwrap_or(u16::MAX));
-                    plot(cx, area, x, top, ch.encode_utf8(&mut [0; 4]), bold);
+            let vertical = [left, (left + width).saturating_sub(1)];
+            for &x in &vertical[..if width == 1 { 1 } else { 2 }] {
+                if columns.contains(&x) {
+                    for y in rows.clone() {
+                        plot(cx, x, y, edge_glyph(*rect, x, y), style);
+                    }
                 }
+            }
+            if rect.height < 2 || !rows.contains(&top) {
+                continue;
+            }
+            let label = Self::label(*rect, name.as_deref());
+            if lunatui_core::width(&label) > usize::from(rect.width.saturating_sub(2)) {
+                continue;
+            }
+            let bold = style.with_attrs(Attrs::new().set_bold(true));
+            let mut x = left + 1;
+            for ch in label.chars() {
+                let cells = u32::from(cell_width(ch));
+                let inside = x >= columns.start && x + cells <= columns.end;
+                if inside {
+                    plot(cx, x, top, ch.encode_utf8(&mut [0; 4]), bold);
+                }
+                x += cells;
             }
         }
     }
