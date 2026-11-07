@@ -17,6 +17,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
+- Linux `PtyProcess` allocates both PTY descriptors with close-on-exec set atomically, preventing concurrent command launches from inheriting them. The slave-path fallback retains the same protection when `TIOCGPTPEER` is unavailable.
 - Moving or removing iTerm2 and Sixel images restores default blank cells beneath their old placement. The runtime uses `Encoder::encode_full` for requested repaints, preserving ordinary delta encoding and unchanged-frame skips.
 
 ## [0.1.23] - 2026-11-05

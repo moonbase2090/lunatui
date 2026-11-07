@@ -4,7 +4,9 @@
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{self, Read, Write};
-use std::os::fd::{AsRawFd, FromRawFd};
+use std::os::fd::AsRawFd;
+#[cfg(not(target_os = "linux"))]
+use std::os::fd::FromRawFd;
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, ExitStatus, Stdio};
 
@@ -246,7 +248,36 @@ fn window_size(size: PtySize) -> libc::winsize {
     }
 }
 
-fn open(size: PtySize) -> io::Result<(File, File)> {
+#[cfg(target_os = "linux")]
+fn open_pair(size: PtySize) -> io::Result<(File, File)> {
+    use rustix::fs::{Mode, open};
+    use rustix::io::Errno;
+    use rustix::pty::{OpenptFlags, grantpt, ioctl_tiocgptpeer, openpt, ptsname, unlockpt};
+    use rustix::termios::{Winsize, tcsetwinsize};
+
+    let flags = OpenptFlags::RDWR | OpenptFlags::NOCTTY | OpenptFlags::CLOEXEC;
+    let master = openpt(flags)?;
+    grantpt(&master)?;
+    unlockpt(&master)?;
+    let slave = match ioctl_tiocgptpeer(&master, flags) {
+        Ok(slave) => slave,
+        Err(Errno::NOTTY) => open(ptsname(&master, Vec::new())?, flags.into(), Mode::empty())?,
+        Err(error) => return Err(error.into()),
+    };
+    tcsetwinsize(
+        &master,
+        Winsize {
+            ws_col: size.cols(),
+            ws_row: size.rows(),
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        },
+    )?;
+    Ok((master.into(), slave.into()))
+}
+
+#[cfg(not(target_os = "linux"))]
+fn open_pair(size: PtySize) -> io::Result<(File, File)> {
     let mut master = -1;
     let mut slave = -1;
     let mut winsize = window_size(size);
@@ -282,6 +313,11 @@ fn open(size: PtySize) -> io::Result<(File, File)> {
             return Err(io::Error::last_os_error());
         }
     }
+    Ok((master, slave))
+}
+
+fn open(size: PtySize) -> io::Result<(File, File)> {
+    let (master, slave) = open_pair(size)?;
     let flags = {
         // SAFETY: master owns the descriptor and this command reads integer flags.
         unsafe { libc::fcntl(master.as_raw_fd(), libc::F_GETFL) }
