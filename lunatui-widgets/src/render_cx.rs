@@ -3,6 +3,8 @@
 
 #[cfg(feature = "image")]
 use core::fmt;
+#[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
+use lunatui_core::NativeAttrs;
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 
 use lunatui_core::UnderlineStyle;
@@ -26,6 +28,8 @@ pub struct RenderCx<'a> {
     palette: Option<&'a PreparedPalette>,
     #[cfg(feature = "image")]
     image_sink: Option<&'a mut dyn ImageSink>,
+    #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
+    native: bool,
 }
 
 #[cfg(feature = "image")]
@@ -67,6 +71,8 @@ impl<'a> RenderCx<'a> {
             palette: None,
             #[cfg(feature = "image")]
             image_sink: None,
+            #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
+            native: false,
         }
     }
 
@@ -417,6 +423,8 @@ impl<'a> RenderCx<'a> {
             palette: self.palette,
             #[cfg(feature = "image")]
             image_sink: None,
+            #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
+            native: self.native,
         };
         draw(&mut cx);
     }
@@ -438,6 +446,102 @@ impl<'a> RenderCx<'a> {
         self.grid.set_style(area, style);
     }
 
+    /// Declares whether the host draws native alpha and sub-cell offsets this frame.
+    ///
+    /// Set it only after the host affirmed the native features. With it off, alpha and offset
+    /// calls fall back to cell-only drawing that touches the same cells.
+    #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
+    #[must_use]
+    pub fn native(mut self, on: bool) -> Self {
+        self.native = on;
+        self
+    }
+
+    /// Whether the host draws native alpha and sub-cell offsets this frame.
+    #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
+    #[must_use]
+    pub fn is_native(&self) -> bool {
+        self.native
+    }
+
+    /// Fills the backgrounds of `area` with `color` at `alpha` in `[0.0, 1.0]`, keeping glyphs.
+    ///
+    /// A native host receives `color` with that opacity over its own backdrop. Otherwise each
+    /// cell takes `color` blended over the background already under it. The same cells change
+    /// either way.
+    #[cfg(feature = "native-alpha")]
+    pub fn translucent_fill(&mut self, area: Rect, color: Color, alpha: f32) {
+        if !self.native {
+            self.blend_backdrop(area, alpha, color);
+            return;
+        }
+        let bg_alpha = alpha_byte(alpha);
+        let rgb = resolve_rgb(color, self.theme);
+        let end_x = area.x.saturating_add(area.width).min(self.grid.width());
+        let end_y = area.y.saturating_add(area.height).min(self.grid.height());
+        for row in area.y..end_y {
+            for col in area.x..end_x {
+                let Some(cell) = self.grid.get(col, row) else {
+                    continue;
+                };
+                let style = cell.style().bg(Color::Rgb(rgb.0, rgb.1, rgb.2));
+                self.grid.set_style(Rect::new(col, row, 1, 1), style);
+                let current = self.grid.native(col, row);
+                self.grid.set_native(
+                    col,
+                    row,
+                    NativeAttrs::new(current.fg_alpha, bg_alpha, current.dx, current.dy),
+                );
+            }
+        }
+    }
+
+    /// Sets the glyph opacity of `area` to `alpha` in `[0.0, 1.0]`. Only a native host draws it;
+    /// otherwise nothing changes.
+    #[cfg(feature = "native-alpha")]
+    pub fn fade_glyphs(&mut self, area: Rect, alpha: f32) {
+        if !self.native {
+            return;
+        }
+        let fg_alpha = alpha_byte(alpha);
+        let end_x = area.x.saturating_add(area.width).min(self.grid.width());
+        let end_y = area.y.saturating_add(area.height).min(self.grid.height());
+        for row in area.y..end_y {
+            for col in area.x..end_x {
+                let current = self.grid.native(col, row);
+                self.grid.set_native(
+                    col,
+                    row,
+                    NativeAttrs::new(fg_alpha, current.bg_alpha, current.dx, current.dy),
+                );
+            }
+        }
+    }
+
+    /// Draws `ch` at the fractional cell position `(x, y)`.
+    ///
+    /// The glyph always lands in the nearest cell. A native host also shifts it by the
+    /// remaining fraction, in eighths of a cell, so motion looks smooth; otherwise the shift is
+    /// dropped and the same cell is drawn. Positions below zero or past `u16::MAX` are ignored.
+    #[cfg(feature = "native-subcell")]
+    pub fn put_glyph_at(&mut self, x: f32, y: f32, ch: char, style: Style) {
+        let (col, dx) = nearest_cell(x);
+        let (row, dy) = nearest_cell(y);
+        let (Some(col), Some(row)) = (col, row) else {
+            return;
+        };
+        let mut buf = [0u8; 4];
+        self.put_str(col, row, ch.encode_utf8(&mut buf), style);
+        if self.native {
+            let current = self.grid.native(col, row);
+            self.grid.set_native(
+                col,
+                row,
+                NativeAttrs::new(current.fg_alpha, current.bg_alpha, dx, dy),
+            );
+        }
+    }
+
     /// Alpha-composites `tint` over each cell background in `area` (glyphs unchanged).
     pub fn blend_backdrop(&mut self, area: Rect, alpha: f32, tint: Color) {
         let tint_rgb = resolve_rgb(tint, self.theme);
@@ -455,6 +559,46 @@ impl<'a> RenderCx<'a> {
             }
         }
     }
+}
+
+#[cfg(feature = "native-alpha")]
+fn alpha_byte(alpha: f32) -> u8 {
+    let target = alpha.clamp(0.0, 1.0) * 255.0;
+    (0..=u8::MAX)
+        .rev()
+        .min_by(|a, b| {
+            (f32::from(*a) - target)
+                .abs()
+                .total_cmp(&(f32::from(*b) - target).abs())
+        })
+        .unwrap_or(u8::MAX)
+}
+
+#[cfg(feature = "native-subcell")]
+fn nearest_cell(position: f32) -> (Option<u16>, i8) {
+    if !position.is_finite() || position < -0.5 || position >= f32::from(u16::MAX) {
+        return (None, 0);
+    }
+    let limit = position + 0.5;
+    let (mut low, mut high) = (0u16, u16::MAX);
+    while low < high {
+        let mid = low + (high - low).div_ceil(2);
+        if f32::from(mid) <= limit {
+            low = mid;
+        } else {
+            high = mid - 1;
+        }
+    }
+    let whole = low;
+    let offset = (-4..=4i8)
+        .min_by(|a, b| {
+            let want = (position - f32::from(whole)) * 8.0;
+            (f32::from(*a) - want)
+                .abs()
+                .total_cmp(&(f32::from(*b) - want).abs())
+        })
+        .unwrap_or(0);
+    (Some(whole), offset)
 }
 
 pub(crate) fn clip_to_coordinates(area: Rect) -> Rect {

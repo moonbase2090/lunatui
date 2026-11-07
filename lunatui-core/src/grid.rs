@@ -10,6 +10,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::cell::{Cell, CellWidth, Meta, word_width};
 use crate::grapheme::{ClusterTable, DecodedGlyph, GlyphSlot, cluster_display_width};
+#[cfg(feature = "native-attrs")]
+use crate::native::{ExtTable, NativeAttrs};
 use crate::style::Style;
 use crate::width::char_width;
 
@@ -58,8 +60,14 @@ pub struct Grid {
     height: u16,
     cells: Vec<u128>,
     rows: Vec<RowDirty>,
+    #[cfg(feature = "native-attrs")]
+    ext: ExtTable,
 }
 
+#[cfg(feature = "native-attrs")]
+const EXT_WORD_SHIFT: u32 = 96 + 16;
+#[cfg(feature = "native-attrs")]
+const EXT_BITS: u128 = 0xFFFF_u128 << EXT_WORD_SHIFT;
 const STYLE_BITS: u128 = (0xFFFF_FFFF_u128 << 32) | (0xFFFF_FFFF_u128 << 64) | (0xFFF_u128 << 96);
 
 impl Grid {
@@ -73,6 +81,8 @@ impl Grid {
             height,
             cells: alloc::vec![blank; len],
             rows: alloc::vec![RowDirty::default(); usize::from(height)],
+            #[cfg(feature = "native-attrs")]
+            ext: ExtTable::new(),
         }
     }
 
@@ -115,6 +125,79 @@ impl Grid {
         let width = usize::from(self.width);
         let start = usize::from(row) * width;
         &self.cells[start..start + width]
+    }
+
+    /// Sets the alpha and sub-cell attributes of the cell at `(x, y)`.
+    ///
+    /// A continuation cell applies them to its lead, and a width-2 lead carries them to its
+    /// continuation cell. The defaults remove any attributes. When the frame table is full the
+    /// attributes are dropped and the cell is unchanged.
+    #[cfg(feature = "native-attrs")]
+    pub fn set_native(&mut self, x: u16, y: u16, attrs: NativeAttrs) {
+        let Some(cell) = self.get(x, y) else {
+            return;
+        };
+        let lead = if cell.meta().width == CellWidth::Continuation {
+            x.saturating_sub(1)
+        } else {
+            x
+        };
+        let index = self.ext.intern(attrs);
+        let span = match self.get(lead, y).map(|cell| cell.meta().width) {
+            Some(CellWidth::Two) => 2,
+            _ => 1,
+        };
+        for col in lead..lead.saturating_add(span).min(self.width) {
+            self.set_ext_index(col, y, index);
+        }
+    }
+
+    /// The alpha and sub-cell attributes of the cell at `(x, y)`; the opaque defaults when none
+    /// are set or `(x, y)` is out of bounds.
+    #[cfg(feature = "native-attrs")]
+    #[must_use]
+    pub fn native(&self, x: u16, y: u16) -> NativeAttrs {
+        self.get(x, y)
+            .and_then(|cell| self.ext.get(cell.meta().ext))
+            .unwrap_or_default()
+    }
+
+    /// The frame's attribute table.
+    #[cfg(feature = "native-attrs")]
+    #[must_use]
+    pub fn ext_table(&self) -> &ExtTable {
+        &self.ext
+    }
+
+    /// Starts this grid's attribute table from `previous`'s, so equal attributes keep equal
+    /// cell indices between frames. Call it on a grid no cell has attributes on yet.
+    #[cfg(feature = "native-attrs")]
+    pub fn seed_native_from(&mut self, previous: &Grid) {
+        self.ext.seed_from(&previous.ext);
+    }
+
+    /// A copy of this grid with every alpha and sub-cell attribute removed.
+    ///
+    /// This is what an ANSI-only host receives: glyphs, widths, colors and attributes are
+    /// unchanged.
+    #[cfg(feature = "native-attrs")]
+    #[must_use]
+    pub fn without_native(&self) -> Grid {
+        let mut stripped = self.clone();
+        stripped.ext.clear();
+        for word in &mut stripped.cells {
+            *word &= !EXT_BITS;
+        }
+        stripped
+    }
+
+    #[cfg(feature = "native-attrs")]
+    fn set_ext_index(&mut self, x: u16, y: u16, index: u16) {
+        if let Some(slot) = self.index(x, y) {
+            let word = self.cells[slot] & !EXT_BITS;
+            self.cells[slot] = word | (u128::from(index) << EXT_WORD_SHIFT);
+            self.mark_dirty(y, x, x + 1);
+        }
     }
 
     /// Clears all row dirty flags and spans.
@@ -517,6 +600,8 @@ impl Grid {
                     word
                 };
             }
+            #[cfg(feature = "native-attrs")]
+            self.adopt_native(src, dst_row, x, width);
             for col in [x, end - 1] {
                 let Some(cell) = self.get(col, dst_row) else {
                     continue;
@@ -531,6 +616,22 @@ impl Grid {
                 }
             }
             self.mark_dirty(dst_row, x, end);
+        }
+    }
+
+    #[cfg(all(feature = "native-attrs", feature = "blit"))]
+    fn adopt_native(&mut self, src: &Grid, row: u16, x: u16, width: u16) {
+        for col in x..x + width {
+            let Some(slot) = self.index(col, row) else {
+                continue;
+            };
+            let from = u16::try_from((self.cells[slot] >> EXT_WORD_SHIFT) & 0xFFFF).unwrap_or(0);
+            if from == 0 {
+                continue;
+            }
+            let attrs = src.ext.get(from).unwrap_or_default();
+            let index = self.ext.intern(attrs);
+            self.set_ext_index(col, row, index);
         }
     }
 

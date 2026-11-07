@@ -85,6 +85,19 @@ feature lands, and records its numbers in that PR.
 - ABI 1.0 frames stay valid; hosts without the feature never see the attributes.
 - Public API additions are additive; no existing signature changes.
 
+## Amendment: what a translucent cell stores
+
+Decision 3 said widgets write the existing approximation into the cell. For
+backgrounds that cannot hold in both modes, because a blended color and a tint with
+an alpha are different cell values. The rule is now: the app declares per frame
+whether the host draws native attributes. With native off, `translucent_fill`
+writes the blended background (the existing approximation) and no attributes. With
+native on, it writes the tint color and `bg_alpha`, which the host composites over
+its own backdrop. Glyph, width and the set of changed cells are identical in both
+modes; only color values and attributes differ. Offsets follow the original rule:
+the glyph is drawn in the nearest cell in both modes and native adds the remaining
+eighths.
+
 ## Fallback rule (testable)
 
 For any scene, rendering with the attributes stripped must produce the same glyph
