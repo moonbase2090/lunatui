@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed. Nothing here is active: the host has no native feature today (see
+Accepted. Nothing here is active: the host has no native feature today (see
 `docs/native-protocol.md`). This ADR fixes the data model so the app-side API and
 the later protocol revision agree, and so ANSI output stays identical in layout.
 
