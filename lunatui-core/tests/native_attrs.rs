@@ -393,3 +393,19 @@ fn visible_diff_does_not_filter_when_only_the_width_changes() {
     lunatui_core::diff_runs_visible_into(&previous, &next, &mut visible);
     assert_eq!(plain, visible);
 }
+
+#[test]
+fn visible_diff_reuses_the_run_buffer() {
+    let (previous, _) = text_grid("abcdef");
+    let (mut next, _) = text_grid("aXcdeY");
+    next.seed_native_from(&previous);
+    next.set_native(2, 0, glass());
+    let mut runs = Vec::with_capacity(64);
+    let address = runs.as_ptr();
+    for _ in 0..3 {
+        lunatui_core::diff_runs_visible_into(&previous, &next, &mut runs);
+        assert_eq!(runs.as_ptr(), address);
+        assert!(runs.capacity() >= 64);
+        assert_eq!(runs.len(), 2);
+    }
+}

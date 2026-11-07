@@ -6,7 +6,10 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use lunatui_core::{ClusterTable, Grid, NativeAttrs, Style, diff_runs};
+use lunatui_core::{
+    ChangedRun, ClusterTable, Grid, NativeAttrs, Style, diff_runs, diff_runs_into,
+    diff_runs_visible_into,
+};
 
 const WIDTH: u16 = 200;
 const HEIGHT: u16 = 60;
@@ -83,5 +86,58 @@ fn seed_and_diff(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, paint, seed_and_diff);
+fn shifted_frame(clusters: &mut ClusterTable) -> Grid {
+    let mut grid = Grid::new(WIDTH, HEIGHT);
+    let line = "native alpha and sub-cell offsets over a dashboard row ".repeat(4);
+    for row in 0..HEIGHT {
+        let start = usize::from(row % 7) + 1;
+        grid.put_str(
+            0,
+            row,
+            Style::new(),
+            &line[start..start + usize::from(WIDTH)],
+            clusters,
+        );
+    }
+    grid
+}
+
+fn visible_diff(c: &mut Criterion) {
+    let mut clusters = ClusterTable::new();
+    let mut plain = text_frame(&mut clusters);
+    plain.clear_dirty();
+    let mut tinted = text_frame(&mut clusters);
+    tinted.seed_native_from(&plain);
+    tenth_translucent(&mut tinted);
+    let shifted = shifted_frame(&mut clusters);
+    let mut runs: Vec<ChangedRun> = Vec::new();
+    let mut group = c.benchmark_group("native_attrs_visible_diff_200x60");
+    group.bench_function("attribute_only_plain_diff", |b| {
+        b.iter(|| {
+            diff_runs_into(&plain, &tinted, &mut runs);
+            black_box(runs.len())
+        });
+    });
+    group.bench_function("attribute_only_visible_diff", |b| {
+        b.iter(|| {
+            diff_runs_visible_into(&plain, &tinted, &mut runs);
+            black_box(runs.len())
+        });
+    });
+    group.bench_function("no_attributes_plain_diff", |b| {
+        b.iter(|| {
+            diff_runs_into(&plain, &shifted, &mut runs);
+            black_box(runs.len())
+        });
+    });
+    group.bench_function("no_attributes_visible_diff", |b| {
+        b.iter(|| {
+            diff_runs_visible_into(&plain, &shifted, &mut runs);
+            black_box(runs.len())
+        });
+    });
+    group.finish();
+}
+
+criterion_group!(benches, paint, seed_and_diff, visible_diff);
 criterion_main!(benches);

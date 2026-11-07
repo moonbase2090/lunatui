@@ -304,6 +304,12 @@ fn parse(bytes: &[u8], minor: u16) -> Result<Frame, String> {
     })
 }
 
+fn offered() -> FrameEncoder {
+    let mut encoder = FrameEncoder::new();
+    encoder.offer_alpha(true);
+    encoder
+}
+
 fn glass() -> NativeAttrs {
     NativeAttrs::new(255, 128, 0, 0)
 }
@@ -375,7 +381,7 @@ fn a_reply_without_the_flag_keeps_attributes_stripped() -> Result<(), String> {
 
 #[test]
 fn unknown_flag_bits_do_not_affirm_the_feature() {
-    let mut encoder = FrameEncoder::new();
+    let mut encoder = offered();
     assert_eq!(
         encoder.affirm_alpha(ACTIVE_FLAG_ALPHA | 2),
         AttributeMode::Stripped
@@ -390,7 +396,7 @@ fn unknown_flag_bits_do_not_affirm_the_feature() {
 #[test]
 fn negotiated_frames_carry_the_attributes() -> Result<(), String> {
     let (grid, clusters) = scene();
-    let mut encoder = FrameEncoder::new();
+    let mut encoder = offered();
     assert_eq!(
         encoder.affirm_alpha(ACTIVE_FLAG_ALPHA),
         AttributeMode::Native
@@ -423,7 +429,7 @@ fn negotiated_frames_carry_the_attributes() -> Result<(), String> {
 #[test]
 fn equal_attributes_share_one_record_and_a_wide_pair_shares_its_lead() -> Result<(), String> {
     let (grid, clusters) = scene();
-    let mut encoder = FrameEncoder::new();
+    let mut encoder = offered();
     let _ = encoder.affirm_alpha(ACTIVE_FLAG_ALPHA);
     let frame = parse(&encode(&mut encoder, &grid, &clusters)?, 1)?;
     assert_eq!(frame.cells[1][3] >> 16, frame.cells[4][3] >> 16);
@@ -436,7 +442,7 @@ fn equal_attributes_share_one_record_and_a_wide_pair_shares_its_lead() -> Result
 fn negotiated_and_stripped_frames_agree_on_everything_but_the_attributes() -> Result<(), String> {
     let (grid, clusters) = scene();
     let mut plain = FrameEncoder::new();
-    let mut native = FrameEncoder::new();
+    let mut native = offered();
     let _ = native.affirm_alpha(ACTIVE_FLAG_ALPHA);
     let stripped = parse(&encode(&mut plain, &grid, &clusters)?, 0)?;
     let rich = parse(&encode(&mut native, &grid, &clusters)?, 1)?;
@@ -453,7 +459,7 @@ fn a_negotiated_frame_without_attributes_is_byte_identical_to_abi_1_0() -> Resul
     let (grid, clusters) = scene();
     let bare = grid.without_native();
     let mut plain = FrameEncoder::new();
-    let mut native = FrameEncoder::new();
+    let mut native = offered();
     let _ = native.affirm_alpha(ACTIVE_FLAG_ALPHA);
     let old = encode(&mut plain, &bare, &clusters)?;
     let new = encode(&mut native, &bare, &clusters)?;
@@ -466,7 +472,7 @@ fn a_negotiated_frame_without_attributes_is_byte_identical_to_abi_1_0() -> Resul
 #[test]
 fn a_1_0_host_rejects_a_frame_with_attribute_records() -> Result<(), String> {
     let (grid, clusters) = scene();
-    let mut encoder = FrameEncoder::new();
+    let mut encoder = offered();
     let _ = encoder.affirm_alpha(ACTIVE_FLAG_ALPHA);
     let bytes = encode(&mut encoder, &grid, &clusters)?;
     assert!(parse(&bytes, 0).is_err());
@@ -489,7 +495,7 @@ fn clusters_are_copied_once_and_remapped() -> Result<(), String> {
 #[test]
 fn failure_ends_native_output_and_asks_for_an_ansi_repaint() {
     let (grid, clusters) = scene();
-    let mut encoder = FrameEncoder::new();
+    let mut encoder = offered();
     let _ = encoder.affirm_alpha(ACTIVE_FLAG_ALPHA);
     let big = Grid::new(MAX_FRAME_AXIS, 9);
     assert_eq!(
@@ -584,7 +590,7 @@ fn a_full_attribute_table_still_gives_a_valid_frame() -> Result<(), String> {
             grid.set_native(x, y, attrs);
         }
     }
-    let mut encoder = FrameEncoder::new();
+    let mut encoder = offered();
     let _ = encoder.affirm_alpha(ACTIVE_FLAG_ALPHA);
     let frame = parse(&encode(&mut encoder, &grid, &clusters)?, 1)?;
     assert!(frame.attributes.len() <= 20_000);
@@ -706,7 +712,7 @@ fn a_cluster_the_table_does_not_hold_is_refused() {
 
 #[test]
 fn the_mode_and_detached_state_are_reported() {
-    let mut encoder = FrameEncoder::new();
+    let mut encoder = offered();
     assert!(!encoder.is_detached());
     let _ = encoder.affirm_alpha(ACTIVE_FLAG_ALPHA);
     assert_eq!(encoder.mode(), AttributeMode::Native);
@@ -761,7 +767,7 @@ fn a_frame_over_one_slot_is_refused_and_stripping_makes_it_fit() -> Result<(), S
             grid.set_native(x, y, attrs);
         }
     }
-    let mut encoder = FrameEncoder::new();
+    let mut encoder = offered();
     assert!(encoder.encode(&grid, &clusters, 1, 1, None).is_ok());
     let _ = encoder.affirm_alpha(ACTIVE_FLAG_ALPHA);
     assert_eq!(
@@ -769,4 +775,33 @@ fn a_frame_over_one_slot_is_refused_and_stripping_makes_it_fit() -> Result<(), S
         Some(EncodeError::TooLarge)
     );
     Ok(())
+}
+
+#[test]
+fn without_an_offer_the_client_stays_on_abi_1_0() {
+    let mut encoder = FrameEncoder::new();
+    assert_eq!(encoder.hello_ring_minor(), 0);
+    assert_eq!(
+        encoder.affirm_alpha(ACTIVE_FLAG_ALPHA),
+        AttributeMode::Stripped
+    );
+    encoder.offer_alpha(false);
+    assert_eq!(encoder.hello_ring_minor(), 0);
+    assert_eq!(
+        encoder.affirm_alpha(ACTIVE_FLAG_ALPHA),
+        AttributeMode::Stripped
+    );
+}
+
+#[test]
+fn an_offer_sends_ring_minor_1_and_resets_the_mode() {
+    let mut encoder = offered();
+    assert_eq!(encoder.hello_ring_minor(), 1);
+    assert_eq!(encoder.mode(), AttributeMode::Stripped);
+    assert_eq!(
+        encoder.affirm_alpha(ACTIVE_FLAG_ALPHA),
+        AttributeMode::Native
+    );
+    encoder.offer_alpha(true);
+    assert_eq!(encoder.mode(), AttributeMode::Stripped);
 }

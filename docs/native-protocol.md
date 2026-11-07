@@ -110,11 +110,17 @@ Damage records are 16 bytes: u32 row at0, u32 starting column at4, u32 cell coun
 
 ## Alpha and sub-cell attributes (ring ABI 1.1)
 
-Accepted in ADR 0009. This revision is client-side only: the host has no native feature today, and nothing here changes ring ABI 1.0 or the control records above.
+Accepted in ADR 0009. The host has no native feature today. Hosts and clients that do not use `native.alpha.v1` behave exactly as ring ABI 1.0 describes.
 
-Feature `native.alpha.v1` is advertised next to `native.grid.v1`. A client that wants attributes sends ring ABI minor 1 in HELLO. The host affirms the feature by setting bit 0 (`0x0001`) of the ACTIVE response header flags; every other bit stays zero. A client treats anything else, including a reply without the bit, a reply with extra bits and every ABI 1.0 host, as "attributes stripped": it sends plain ABI 1.0 frames and never writes an attribute. Affirmation covers the session only; a resize, release or failure starts the next session stripped.
+Ring ABI 1.1 amends three rules (HELLO ring minor, mapping header minor, ACTIVE flags), and only for a host that lists the feature. Everything else, and every host that does not list it, stays exactly as written above.
 
-Frames in a session that affirmed the feature use these additions. Everything else is as in ABI 1.0, and the mapping header minor is 1.
+- The host lists `native.alpha.v1` next to `native.grid.v1` in its capability reply. A client that sees both may send ring ABI minor 1 in HELLO. A client that does not see the feature always sends minor 0, so a 1.0 host never receives a minor other than 0.
+- A host that received minor 1 writes minor 1 in the mapping header and the client checks that it equals the minor it sent; after minor 0 the mapping header minor is 0, as in ABI 1.0.
+- ACTIVE header flags are zero except that a host which received a HELLO with minor 1 may set bit 0 (`0x0001`) to affirm that frames may carry attributes. Every other bit stays zero. A host that received minor 0 sends flags 0.
+
+A client treats anything else as "attributes stripped" and sends plain ABI 1.0 frames: no listed feature, a HELLO with minor 0, a reply without the bit, a reply with extra bits, and a bit set on a session that never offered minor 1. Affirmation covers the session only; a resize, release or failure starts the next session stripped.
+
+Frames in a session that affirmed the feature use these additions. Everything else is as in ABI 1.0.
 
 | Offset | Type | Meaning |
 |---|---|---|

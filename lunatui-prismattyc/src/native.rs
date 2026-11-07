@@ -12,6 +12,10 @@ pub const MAX_CAPABILITY_VERSION: &str = "0.4";
 /// Feature identifier that advertises shared-memory grid transport.
 pub const NATIVE_GRID_FEATURE: &str = "native.grid.v1";
 
+/// Feature identifier a host lists next to `native.grid.v1` when it understands ring ABI 1.1
+/// alpha and sub-cell attributes.
+pub const NATIVE_ALPHA_FEATURE: &str = "native.alpha.v1";
+
 /// Maximum printable-ASCII APC body accepted by the dedicated decoder.
 pub const MAX_APC_BODY: usize = 4096;
 
@@ -53,6 +57,9 @@ pub struct DiscoveryResult {
     pub discovery: NativeDiscovery,
     /// Bytes that are not consumed as a correlated capability reply.
     pub preserved_input: Vec<u8>,
+    /// Whether the advertised features also list `native.alpha.v1`. Always false unless
+    /// [`discovery`](Self::discovery) is [`NativeDiscovery::Advertised`].
+    pub alpha_offered: bool,
 }
 
 impl DiscoveryResult {
@@ -114,11 +121,13 @@ impl DiscoveryDecoder {
 
     /// Current discovery state after every complete sequence seen so far.
     pub fn snapshot(&self) -> DiscoveryResult {
-        let (discovery, mut preserved, pending) = drain(self.expected_id, &self.bytes);
+        let (discovery, alpha_offered, mut preserved, pending) =
+            drain(self.expected_id, &self.bytes);
         preserved.extend_from_slice(&pending);
         DiscoveryResult {
             discovery,
             preserved_input: preserved,
+            alpha_offered,
         }
     }
 
@@ -143,6 +152,7 @@ pub fn discover_from_input(
         return DiscoveryResult {
             discovery: NativeDiscovery::Unavailable,
             preserved_input: input.to_vec(),
+            alpha_offered: false,
         };
     }
     let mut decoder = DiscoveryDecoder::new(expected_id);
@@ -150,10 +160,11 @@ pub fn discover_from_input(
     decoder.finish()
 }
 
-fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, Vec<u8>, Vec<u8>) {
+fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, Vec<u8>, Vec<u8>) {
     let mut preserved = Vec::new();
     let mut i = 0;
     let mut discovery = NativeDiscovery::Unavailable;
+    let mut alpha = false;
     while i < input.len() {
         if input[i] != 0x1b {
             preserved.push(input[i]);
@@ -161,7 +172,7 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, Vec<u8>, Vec<u8>) 
             continue;
         }
         if i + 1 >= input.len() {
-            return (discovery, preserved, input[i..].to_vec());
+            return (discovery, alpha, preserved, input[i..].to_vec());
         }
         match input[i + 1] {
             b'_' => match take_apc(&input[i..]) {
@@ -171,7 +182,9 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, Vec<u8>, Vec<u8>) 
                             id,
                             offer,
                             generation,
+                            alpha: offered,
                         } => {
+                            alpha = offered;
                             discovery = NativeDiscovery::Advertised {
                                 id,
                                 offer,
@@ -188,16 +201,18 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, Vec<u8>, Vec<u8>) 
                         }
                         CapClass::Malformed => {
                             discovery = NativeDiscovery::Unavailable;
+                            alpha = false;
                             i += total;
                         }
                     }
                 }
                 ApcTake::Malformed { total } => {
                     discovery = NativeDiscovery::Unavailable;
+                    alpha = false;
                     i += total;
                 }
                 ApcTake::Incomplete => {
-                    return (discovery, preserved, input[i..].to_vec());
+                    return (discovery, alpha, preserved, input[i..].to_vec());
                 }
             },
             b'P' => match take_string_seq(&input[i..], b'P') {
@@ -205,21 +220,21 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, Vec<u8>, Vec<u8>) 
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, preserved, input[i..].to_vec()),
+                None => return (discovery, alpha, preserved, input[i..].to_vec()),
             },
             b']' => match take_string_seq(&input[i..], b']') {
                 Some(total) => {
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, preserved, input[i..].to_vec()),
+                None => return (discovery, alpha, preserved, input[i..].to_vec()),
             },
             b'[' => match take_csi(&input[i..]) {
                 Some(total) => {
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, preserved, input[i..].to_vec()),
+                None => return (discovery, alpha, preserved, input[i..].to_vec()),
             },
             _ => {
                 preserved.push(input[i]);
@@ -227,7 +242,7 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, Vec<u8>, Vec<u8>) 
             }
         }
     }
-    (discovery, preserved, Vec::new())
+    (discovery, alpha, preserved, Vec::new())
 }
 
 enum ApcTake<'a> {
@@ -307,6 +322,7 @@ enum CapClass {
         id: u32,
         offer: [u8; 16],
         generation: u64,
+        alpha: bool,
     },
     MatchedUnavailable,
     StaleMatched,
@@ -431,6 +447,7 @@ fn finish_cap_class(
         id: got_id,
         offer,
         generation,
+        alpha: feat.split(',').any(|f| f == NATIVE_ALPHA_FEATURE),
     }
 }
 

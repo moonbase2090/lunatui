@@ -8,9 +8,6 @@ use lunatui_core::{Cell, ClusterId, ClusterTable, Color, DecodedGlyph, Grid};
 
 use crate::native::ansi_fallback_repaint_prefix;
 
-/// Feature identifier a host lists for alpha and sub-cell attributes (ring ABI 1.1).
-pub const NATIVE_ALPHA_FEATURE: &str = "native.alpha.v1";
-
 /// Ring ABI minor version that carries alpha and sub-cell attributes.
 pub const RING_ABI_MINOR_ALPHA: u16 = 1;
 
@@ -99,12 +96,15 @@ impl std::error::Error for EncodeError {}
 /// Writes complete native grid frames in the wire format of `docs/native-protocol.md`.
 ///
 /// The encoder starts with attributes stripped, so every frame is a ring ABI 1.0 frame. Call
+/// [`offer_alpha`](Self::offer_alpha) with the discovery result, send
+/// [`hello_ring_minor`](Self::hello_ring_minor) in HELLO, then call
 /// [`affirm_alpha`](Self::affirm_alpha) with the flags of the host's ACTIVE response; only an
 /// affirmative reply turns attributes on. A failed encode or any other session failure ends
 /// native output through [`fail`](Self::fail).
 #[derive(Clone, Debug, Default)]
 pub struct FrameEncoder {
     mode: AttributeMode,
+    offered: bool,
     detached: bool,
     palette: Vec<Color>,
     bytes: Vec<u8>,
@@ -133,12 +133,34 @@ impl FrameEncoder {
         self.detached
     }
 
+    /// Records whether the host's capability reply listed `native.alpha.v1`
+    /// ([`DiscoveryResult::alpha_offered`](crate::DiscoveryResult::alpha_offered)).
+    ///
+    /// Call it before HELLO. Without an offer the client never leaves ABI 1.0: it sends ring
+    /// minor 0 and an ACTIVE reply with flags is not accepted.
+    pub fn offer_alpha(&mut self, offered: bool) {
+        self.offered = offered;
+        self.mode = AttributeMode::Stripped;
+    }
+
+    /// The ring ABI minor version to put in HELLO: [`RING_ABI_MINOR_ALPHA`] when the host
+    /// offered `native.alpha.v1`, otherwise 0.
+    #[must_use]
+    pub fn hello_ring_minor(&self) -> u16 {
+        if self.offered {
+            RING_ABI_MINOR_ALPHA
+        } else {
+            0
+        }
+    }
+
     /// Applies the flags of the host's ACTIVE response and returns the resulting mode.
     ///
-    /// Only [`ACTIVE_FLAG_ALPHA`] on its own affirms the feature. A reply without it, or with
-    /// any other bit set, keeps attributes stripped.
+    /// Attributes turn on only when the host offered the feature, so HELLO carried ring minor
+    /// 1, and the flags are exactly [`ACTIVE_FLAG_ALPHA`]. Any other reply keeps attributes
+    /// stripped.
     pub fn affirm_alpha(&mut self, active_flags: u16) -> AttributeMode {
-        self.mode = if active_flags == ACTIVE_FLAG_ALPHA && !self.detached {
+        self.mode = if self.offered && active_flags == ACTIVE_FLAG_ALPHA && !self.detached {
             AttributeMode::Native
         } else {
             AttributeMode::Stripped

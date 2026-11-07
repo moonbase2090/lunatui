@@ -191,3 +191,50 @@ fn discovery_query_is_nonzero_id_envelope() {
     );
     assert_eq!(discovery_query(0), None);
 }
+
+fn reply_with_features(features: &str) -> Vec<u8> {
+    let text = String::from_utf8_lossy(&affirmative_0_4())
+        .replace("features=native.grid.v1", &format!("features={features}"));
+    text.into_bytes()
+}
+
+#[test]
+fn the_alpha_feature_is_reported_only_when_listed() {
+    for (features, expected) in [
+        ("native.grid.v1", false),
+        ("native.grid.v1,native.alpha.v1", true),
+        ("native.alpha.v1,native.grid.v1", true),
+        ("native.grid.v1,native.alpha.v2", false),
+        ("native.grid.v1,xnative.alpha.v1", false),
+    ] {
+        let input = reply_with_features(features);
+        let result = discover_from_input(NativePolicy::DirectLocal, 17, &input);
+        assert!(matches!(
+            result.discovery,
+            NativeDiscovery::Advertised { .. }
+        ));
+        assert_eq!(result.alpha_offered, expected, "{features}");
+    }
+}
+
+#[test]
+fn alpha_is_not_offered_without_an_advertisement() {
+    let alpha_only = reply_with_features("native.alpha.v1");
+    for input in [Vec::new(), alpha_only, affirmative_0_4()[..20].to_vec()] {
+        let result = discover_from_input(NativePolicy::DirectLocal, 17, &input);
+        assert_eq!(result.discovery, NativeDiscovery::Unavailable);
+        assert!(!result.alpha_offered);
+    }
+    let input = reply_with_features("native.grid.v1,native.alpha.v1");
+    let disabled = discover_from_input(NativePolicy::Disabled, 17, &input);
+    assert!(!disabled.alpha_offered);
+}
+
+#[test]
+fn a_later_malformed_reply_clears_the_alpha_offer() {
+    let mut input = reply_with_features("native.grid.v1,native.alpha.v1");
+    input.extend_from_slice(b"\x1b_Prismattyc;cap;r;id=17;v=0.4;features=\x1b\\");
+    let result = discover_from_input(NativePolicy::DirectLocal, 17, &input);
+    assert_eq!(result.discovery, NativeDiscovery::Unavailable);
+    assert!(!result.alpha_offered);
+}

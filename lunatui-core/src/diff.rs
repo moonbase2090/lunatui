@@ -65,8 +65,9 @@ pub fn diff_runs_visible_into(previous: &Grid, next: &Grid, runs: &mut Vec<Chang
 
 #[cfg(feature = "native-attrs")]
 fn drop_attribute_only(previous: &Grid, next: &Grid, runs: &mut Vec<ChangedRun>) {
-    let source = core::mem::take(runs);
-    for run in source {
+    let original = runs.len();
+    for at in 0..original {
+        let run = runs[at];
         let before = previous.row_bits(run.row);
         let after = next.row_bits(run.row);
         let (start, end) = (usize::from(run.col), usize::from(run.col + run.width));
@@ -91,6 +92,7 @@ fn drop_attribute_only(previous: &Grid, next: &Grid, runs: &mut Vec<ChangedRun>)
             }
         }
     }
+    runs.drain(..original);
 }
 
 /// Full-grid diff used for tests and for size changes (full invalidation).
