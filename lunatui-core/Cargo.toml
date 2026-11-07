@@ -11,7 +11,8 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = []
+default = ["native-attrs"]
+native-attrs = []
 subcell = []
 blit = []
 render-color = ["dep:libm"]
@@ -49,3 +50,8 @@ required-features = ["subcell"]
 name = "blit"
 path = "tests/blit.rs"
 required-features = ["blit"]
+
+[[test]]
+name = "native_attrs"
+path = "tests/native_attrs.rs"
+required-features = ["native-attrs"]
