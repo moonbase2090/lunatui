@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+use std::fs::File;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -24,36 +25,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         drop(process);
         Ok(())
     });
-    let deadline = Instant::now() + Duration::from_secs(10);
-    let paused = loop {
-        if ready.exists() {
-            break true;
+    let inspected = (|| -> Result<(bool, String), Box<dyn std::error::Error>> {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let paused = loop {
+            if ready.exists() {
+                break true;
+            }
+            match opened_rx.try_recv() {
+                Ok(()) => break false,
+                Err(mpsc::TryRecvError::Disconnected) => return Err("PTY allocation failed".into()),
+                Err(mpsc::TryRecvError::Empty) => {}
+            }
+            if Instant::now() >= deadline {
+                return Err("PTY allocation timed out".into());
+            }
+            thread::sleep(Duration::from_millis(1));
+        };
+        let output_path = ready.with_extension("fds");
+        let status = Command::new("/bin/sh")
+            .args([
+                "-c",
+                "for fd in /proc/$$/fd/*; do readlink \"$fd\" || true; done",
+            ])
+            .stdin(Stdio::null())
+            .stdout(File::create(&output_path)?)
+            .stderr(Stdio::null())
+            .status()?;
+        if !status.success() {
+            return Err("descriptor inspection failed".into());
         }
-        match opened_rx.try_recv() {
-            Ok(()) => break false,
-            Err(mpsc::TryRecvError::Disconnected) => return Err("PTY allocation failed".into()),
-            Err(mpsc::TryRecvError::Empty) => {}
-        }
-        if Instant::now() >= deadline {
-            std::fs::write(&release, b"release")?;
-            return Err("PTY allocation timed out".into());
-        }
-        thread::sleep(Duration::from_millis(1));
-    };
-    let inspected = Command::new("/bin/sh")
-        .args([
-            "-c",
-            "for fd in /proc/$$/fd/*; do readlink \"$fd\" || true; done",
-        ])
-        .output();
-    std::fs::write(&release, b"release")?;
+        Ok((paused, std::fs::read_to_string(output_path)?))
+    })();
+    let released = std::fs::write(&release, b"release");
     let _ = stop_tx.send(());
-    worker.join().map_err(|_| "PTY worker panicked")??;
-    let inspected = inspected?;
-    if !inspected.status.success() {
-        return Err("descriptor inspection failed".into());
-    }
-    let output = String::from_utf8(inspected.stdout)?;
+    let joined = worker.join().map_err(|_| "PTY worker panicked");
+    released?;
+    joined??;
+    let (paused, output) = inspected?;
     let leaked = output.lines().any(|line| {
         line == "/dev/ptmx" || line == "/dev/pts/ptmx" || line.starts_with("/dev/pts/")
     });

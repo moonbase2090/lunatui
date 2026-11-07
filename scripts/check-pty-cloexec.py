@@ -85,7 +85,8 @@ def main():
     atomic = bool(masters and slaves) and all(cloexec(line) for line in masters + slaves)
     injected = [index for index, line in enumerate(trace)
                 if "TIOCGPTPEER" in line and "ENOTTY" in line and "INJECTED" in line]
-    fallback = bool(injected) and any(
+    unexpected_injection = any("INJECTED" in line and "TIOCGPTPEER" not in line for line in trace)
+    fallback = bool(injected) and not unexpected_injection and any(
         index > injected[0] and re.search(r'open(?:at)?\(.*"/dev/pts/\d+"', line)
         and re.search(r'= \d+(?: |$)', line) and cloexec(line)
         for index, line in enumerate(trace))
@@ -95,7 +96,8 @@ def main():
         result.returncode == 0 and not leaked and atomic and (not args.fallback or fallback))
     summary = dict(head=run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True).stdout.strip(),
                    expect_race=args.expect_race, fallback_requested=args.fallback,
-                   fallback_injected=bool(injected), fallback_exercised=fallback, paused_openpty=paused, inherited_pty=leaked,
+                   fallback_injected=bool(injected), fallback_exercised=fallback,
+                   unexpected_injection=unexpected_injection, paused_openpty=paused, inherited_pty=leaked,
                    atomic_creation=atomic, master_syscalls=masters, slave_syscalls=slaves,
                    probe_exit=result.returncode, passed=passed)
     (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
