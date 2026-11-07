@@ -169,11 +169,21 @@ impl Grid {
         &self.ext
     }
 
-    /// Starts this grid's attribute table from `previous`'s, so equal attributes keep equal
-    /// cell indices between frames. Call it on a grid no cell has attributes on yet.
+    /// Starts this grid's attribute table from the entries `previous` still uses, so equal
+    /// attributes keep equal cell indices between frames while entries no cell refers to any
+    /// more are dropped and their slots reused. Call it on a grid no cell has attributes on yet.
     #[cfg(feature = "native-attrs")]
     pub fn seed_native_from(&mut self, previous: &Grid) {
-        self.ext.seed_from(&previous.ext);
+        let mut live = alloc::vec![false; previous.ext.slot_count() + 1];
+        for word in &previous.cells {
+            let index = usize::try_from((word >> EXT_WORD_SHIFT) & 0xFFFF).unwrap_or(0);
+            if let Some(flag) = live.get_mut(index) {
+                *flag = true;
+            }
+        }
+        self.ext.seed_from(&previous.ext, |index| {
+            live.get(usize::from(index)).copied().unwrap_or(false)
+        });
     }
 
     /// A copy of this grid with every alpha and sub-cell attribute removed.

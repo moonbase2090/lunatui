@@ -35,8 +35,8 @@ fn defaults_are_opaque_and_unshifted() {
 #[test]
 fn offsets_clamp_instead_of_wrapping() {
     let attrs = NativeAttrs::new(255, 255, i8::MAX, i8::MIN);
-    assert_eq!(attrs.dx, MAX_SUBCELL_OFFSET);
-    assert_eq!(attrs.dy, -MAX_SUBCELL_OFFSET);
+    assert_eq!(attrs.dx(), MAX_SUBCELL_OFFSET);
+    assert_eq!(attrs.dy(), -MAX_SUBCELL_OFFSET);
 }
 
 #[test]
@@ -79,16 +79,72 @@ fn full_table_drops_new_attributes_but_keeps_old_ones() {
 }
 
 #[test]
-fn clear_and_seed_reset_the_entries() {
+fn seeding_keeps_live_entries_at_their_index_and_frees_the_rest() {
+    let mut previous = ExtTable::new();
+    let first = previous.intern(glass());
+    let second = previous.intern(shifted());
+    let third = previous.intern(NativeAttrs::new(10, 20, 1, 1));
+    let mut next = ExtTable::new();
+    next.intern(shifted());
+    next.seed_from(&previous, |index| index != second);
+    assert_eq!(next.len(), 2);
+    assert_eq!(next.slot_count(), 3);
+    assert_eq!(next.get(first), Some(glass()));
+    assert_eq!(next.get(second), None);
+    assert_eq!(next.get(third), Some(NativeAttrs::new(10, 20, 1, 1)));
+    assert_eq!(next.intern(glass()), first);
+    assert_eq!(next.intern(shifted()), second);
+    assert_eq!(next.slot_count(), 3);
+    next.clear();
+    assert!(next.is_empty());
+    assert_eq!(next.slot_count(), 0);
+}
+
+#[test]
+fn seeding_trims_unused_slots_at_the_end() {
     let mut previous = ExtTable::new();
     previous.intern(glass());
     previous.intern(shifted());
     let mut next = ExtTable::new();
-    next.intern(shifted());
-    next.seed_from(&previous);
-    assert_eq!(next, previous);
-    next.clear();
+    next.seed_from(&previous, |index| index == 1);
+    assert_eq!(next.slot_count(), 1);
+    assert_eq!(next.intern(shifted()), 2);
+    next.seed_from(&previous, |_| false);
+    assert_eq!(next.slot_count(), 0);
     assert!(next.is_empty());
+    assert_eq!(next.intern(shifted()), 1);
+}
+
+#[test]
+fn a_long_run_of_changing_attributes_never_saturates_the_table() {
+    let mut grid = Grid::new(4, 1);
+    let mut clusters = ClusterTable::new();
+    grid.put_str(0, 0, Style::new(), "abcd", &mut clusters);
+    let mut previous = grid.clone();
+    for frame in 0..3000u32 {
+        let mut next = Grid::new(4, 1);
+        next.put_str(0, 0, Style::new(), "abcd", &mut clusters);
+        next.seed_native_from(&previous);
+        let alpha = u8::try_from(frame % 250).unwrap_or(0);
+        let wobble = i8::try_from(frame % 5).unwrap_or(0);
+        next.set_native(0, 0, NativeAttrs::new(alpha, 100, wobble, 0));
+        next.set_native(1, 0, NativeAttrs::new(alpha, 50, 0, wobble));
+        assert!(next.ext_table().slot_count() <= 4, "frame {frame}");
+        assert_ne!(next.native(0, 0), NativeAttrs::OPAQUE);
+        previous = next;
+    }
+}
+
+#[test]
+fn attributes_can_only_be_built_inside_the_offset_range() {
+    let attrs = NativeAttrs::OPAQUE.with_offset(100, -100);
+    assert_eq!(
+        (attrs.dx(), attrs.dy()),
+        (MAX_SUBCELL_OFFSET, -MAX_SUBCELL_OFFSET)
+    );
+    let attrs = NativeAttrs::OPAQUE.with_fg_alpha(10).with_bg_alpha(20);
+    assert_eq!((attrs.fg_alpha(), attrs.bg_alpha()), (10, 20));
+    assert_eq!((attrs.dx(), attrs.dy()), (0, 0));
 }
 
 #[test]
@@ -244,6 +300,6 @@ proptest! {
         let mut table = ExtTable::new();
         let first = table.intern(attrs);
         prop_assert_eq!(table.intern(attrs), first);
-        prop_assert!(attrs.dx.abs() <= MAX_SUBCELL_OFFSET && attrs.dy.abs() <= MAX_SUBCELL_OFFSET);
+        prop_assert!(attrs.dx().abs() <= MAX_SUBCELL_OFFSET && attrs.dy().abs() <= MAX_SUBCELL_OFFSET);
     }
 }

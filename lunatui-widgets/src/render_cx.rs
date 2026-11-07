@@ -3,8 +3,6 @@
 
 #[cfg(feature = "image")]
 use core::fmt;
-#[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
-use lunatui_core::NativeAttrs;
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 
 use lunatui_core::UnderlineStyle;
@@ -487,11 +485,8 @@ impl<'a> RenderCx<'a> {
                 let style = cell.style().bg(Color::Rgb(rgb.0, rgb.1, rgb.2));
                 self.grid.set_style(Rect::new(col, row, 1, 1), style);
                 let current = self.grid.native(col, row);
-                self.grid.set_native(
-                    col,
-                    row,
-                    NativeAttrs::new(current.fg_alpha, bg_alpha, current.dx, current.dy),
-                );
+                self.grid
+                    .set_native(col, row, current.with_bg_alpha(bg_alpha));
             }
         }
     }
@@ -509,11 +504,8 @@ impl<'a> RenderCx<'a> {
         for row in area.y..end_y {
             for col in area.x..end_x {
                 let current = self.grid.native(col, row);
-                self.grid.set_native(
-                    col,
-                    row,
-                    NativeAttrs::new(fg_alpha, current.bg_alpha, current.dx, current.dy),
-                );
+                self.grid
+                    .set_native(col, row, current.with_fg_alpha(fg_alpha));
             }
         }
     }
@@ -522,7 +514,9 @@ impl<'a> RenderCx<'a> {
     ///
     /// The glyph always lands in the nearest cell. A native host also shifts it by the
     /// remaining fraction, in eighths of a cell, so motion looks smooth; otherwise the shift is
-    /// dropped and the same cell is drawn. Positions below zero or past `u16::MAX` are ignored.
+    /// dropped and the same cell is drawn. A position rounds to the nearest cell, so anything
+    /// from -0.5 up lands in the first one. Positions below -0.5, at or past `u16::MAX`, or not
+    /// finite are ignored.
     #[cfg(feature = "native-subcell")]
     pub fn put_glyph_at(&mut self, x: f32, y: f32, ch: char, style: Style) {
         let (col, dx) = nearest_cell(x);
@@ -534,11 +528,7 @@ impl<'a> RenderCx<'a> {
         self.put_str(col, row, ch.encode_utf8(&mut buf), style);
         if self.native {
             let current = self.grid.native(col, row);
-            self.grid.set_native(
-                col,
-                row,
-                NativeAttrs::new(current.fg_alpha, current.bg_alpha, dx, dy),
-            );
+            self.grid.set_native(col, row, current.with_offset(dx, dy));
         }
     }
 

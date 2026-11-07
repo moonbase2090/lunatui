@@ -91,7 +91,7 @@ fn native_translucent_fill_marks_exactly_the_filled_cells() {
     for y in 0..H {
         for x in 0..W {
             let inside = (1..15).contains(&x) && (1..5).contains(&y);
-            let alpha = native.native(x, y).bg_alpha;
+            let alpha = native.native(x, y).bg_alpha();
             assert_eq!(alpha != 255, inside, "cell {x},{y}");
             if inside {
                 assert_eq!(alpha, 153);
@@ -116,11 +116,11 @@ fn native_translucent_fill_keeps_the_tint_not_the_blend() {
 fn glyph_alpha_applies_only_in_native_mode() {
     let (native, _c) = scene(true);
     for x in 2..8 {
-        assert_eq!(native.native(x, 3).fg_alpha, 128);
+        assert_eq!(native.native(x, 3).fg_alpha(), 128);
     }
-    assert_eq!(native.native(8, 3).fg_alpha, 255);
+    assert_eq!(native.native(8, 3).fg_alpha(), 255);
     let (ansi, _c) = scene(false);
-    assert_eq!(ansi.native(2, 3).fg_alpha, 255);
+    assert_eq!(ansi.native(2, 3).fg_alpha(), 255);
 }
 
 #[test]
