@@ -11,16 +11,16 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-core = { version = "0.1.23", path = "../lunatui-core" }
-lunatui-ui-tokens = { version = "0.1.23", path = "../lunatui-ui-tokens" }
-lunatui-widgets = { version = "0.1.23", path = "../lunatui-widgets", features = ["button", "radio"] }
+lunatui-core = { version = "0.1.24", path = "../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.24", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.24", path = "../lunatui-widgets", features = ["button", "radio"] }
 
 [dev-dependencies]
-lunatui-badge = { version = "0.1.23", path = "../lunatui-badge" }
-lunatui-button = { version = "0.1.23", path = "../lunatui-button" }
-lunatui-card = { version = "0.1.23", path = "../lunatui-card" }
-lunatui-term = { version = "0.1.23", path = "../lunatui-term" }
-lunatui-theme = { version = "0.1.23", path = "../lunatui-theme" }
+lunatui-badge = { version = "0.1.24", path = "../lunatui-badge" }
+lunatui-button = { version = "0.1.24", path = "../lunatui-button" }
+lunatui-card = { version = "0.1.24", path = "../lunatui-card" }
+lunatui-term = { version = "0.1.24", path = "../lunatui-term" }
+lunatui-theme = { version = "0.1.24", path = "../lunatui-theme" }
 
 [[example]]
 name = "ui_choice"
