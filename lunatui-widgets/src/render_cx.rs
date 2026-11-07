@@ -421,7 +421,7 @@ impl<'a> RenderCx<'a> {
         draw(&mut cx);
     }
 
-    #[cfg(feature = "scroll-view")]
+    #[cfg(any(feature = "scroll-view", feature = "layout-debug"))]
     pub(crate) fn bg_at(&self, x: u16, y: u16) -> Color {
         self.grid
             .get(x, y)

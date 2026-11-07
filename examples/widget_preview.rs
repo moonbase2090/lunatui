@@ -60,6 +60,8 @@ mod code_view_showcase;
 mod deploy_board;
 #[path = "dialog_showcase.rs"]
 mod dialog_showcase;
+#[path = "layout_debug_showcase.rs"]
+mod layout_debug_showcase;
 #[path = "menu_mnemonic_showcase.rs"]
 mod menu_mnemonic_showcase;
 #[path = "menu_showcase.rs"]
@@ -174,6 +176,11 @@ const PREVIEWS: &[Preview] = &[
         name: "toggle",
         native: toggle_native,
         baseline: toggle_baseline,
+    },
+    Preview {
+        name: "layout-debug",
+        native: layout_debug_showcase::render,
+        baseline: layout_debug_baseline,
     },
     Preview {
         name: "tooltip",
@@ -4390,6 +4397,10 @@ fn popover_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u3
     if let Some(case) = CASES.iter().find(|case| case.name == "popover") {
         (case.ratatui)(buffer, area, tick);
     }
+}
+
+fn layout_debug_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, _tick: u32) {
+    RatBlock::new().render(area, buffer);
 }
 
 fn tooltip_baseline(buffer: &mut Buffer, area: RatRect, _theme: &Theme, tick: u32) {
