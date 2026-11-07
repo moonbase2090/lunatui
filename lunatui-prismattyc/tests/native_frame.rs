@@ -644,7 +644,7 @@ fn every_error_has_its_own_message() {
     ];
     let messages: Vec<String> = errors.iter().map(ToString::to_string).collect();
     for (index, message) in messages.iter().enumerate() {
-        assert!(!message.is_empty());
+        assert_ne!(message, "");
         assert_eq!(
             messages.iter().filter(|other| *other == message).count(),
             1,
@@ -673,7 +673,7 @@ fn distinct_clusters_get_consecutive_ids_and_exact_color_words() -> Result<(), S
 }
 
 #[test]
-fn cluster_text_is_limited_to_1024_bytes() -> Result<(), String> {
+fn cluster_text_is_limited_to_1024_bytes() {
     let exact = format!("e{}\u{20DD}", "\u{301}".repeat(510));
     let over = format!("e{}\u{20DD}\u{301}", "\u{301}".repeat(510));
     assert_eq!((exact.len(), over.len()), (1024, 1026));
@@ -688,7 +688,6 @@ fn cluster_text_is_limited_to_1024_bytes() -> Result<(), String> {
             assert_eq!(result.err(), Some(EncodeError::TooLarge));
         }
     }
-    Ok(())
 }
 
 #[test]
