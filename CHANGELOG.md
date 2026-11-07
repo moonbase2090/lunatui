@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.24] - 2026-11-07
+
 ### Added
 
 - Default-enabled `native-alpha` and `native-subcell` features: `lunatui-core` adds `NativeAttrs` (foreground and background alpha, sub-cell glyph offset in eighths of a cell), the per-frame `ExtTable` that cells refer to by index, and `Grid::set_native`, `native`, `without_native` and `seed_native_from`. Cells without attributes are bit-identical to before, overwriting a cell clears its attributes, `blit` carries them over, and a full table drops attributes instead of failing. `lunatui-widgets` adds `RenderCx::native`, `translucent_fill`, `fade_glyphs` and `put_glyph_at`. With native mode off, a translucent fill blends into the background underneath and a glyph lands in the nearest cell, so the same cells change in both modes. Nothing is active until a host negotiates native mode.
