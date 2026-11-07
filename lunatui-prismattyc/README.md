@@ -35,3 +35,7 @@ let _stats = match backend.present(&grid, &clusters) {
     Err(err) => panic!("present: {err}"),
 };
 ```
+
+## Native frame encoder (ring ABI 1.1 attributes)
+
+[`FrameEncoder`] writes complete native grid frames for the shared-memory ring. It starts with alpha and sub-cell attributes stripped, so every frame is a plain ABI 1.0 frame. [`FrameEncoder::offer_alpha`] records whether discovery saw `native.alpha.v1` ([`DiscoveryResult::alpha_offered`]) and [`FrameEncoder::hello_ring_minor`] gives the minor to send in HELLO (0 unless offered). [`FrameEncoder::affirm_alpha`] turns attributes on only after an offer and for an ACTIVE reply whose flags are exactly [`ACTIVE_FLAG_ALPHA`]. A failure goes through [`FrameEncoder::fail`], which ends native output and returns the ANSI repaint prefix. There is no transport yet: nothing in this crate maps memory or talks to a host, and rendering stays ANSI.

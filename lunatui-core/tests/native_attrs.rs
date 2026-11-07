@@ -303,3 +303,109 @@ proptest! {
         prop_assert!(attrs.dx().abs() <= MAX_SUBCELL_OFFSET && attrs.dy().abs() <= MAX_SUBCELL_OFFSET);
     }
 }
+
+#[test]
+fn visible_diff_leaves_out_attribute_only_cells() {
+    let (previous, _) = text_grid("abcdef");
+    let (mut next, _) = text_grid("abcdef");
+    next.seed_native_from(&previous);
+    next.set_native(1, 0, glass());
+    next.set_native(2, 0, glass());
+    let mut runs = Vec::new();
+    lunatui_core::diff_runs_into(&previous, &next, &mut runs);
+    assert_ne!(runs.len(), 0);
+    lunatui_core::diff_runs_visible_into(&previous, &next, &mut runs);
+    assert_eq!(runs.len(), 0);
+}
+
+#[test]
+fn visible_diff_cuts_a_run_around_attribute_only_cells() {
+    let (previous, _) = text_grid("abcdef");
+    let (mut next, _) = text_grid("aXcdeY");
+    next.seed_native_from(&previous);
+    next.set_native(1, 0, glass());
+    next.set_native(2, 0, glass());
+    next.set_native(3, 0, glass());
+    let mut runs = Vec::new();
+    lunatui_core::diff_runs_visible_into(&previous, &next, &mut runs);
+    let spans: Vec<(u16, u16)> = runs.iter().map(|run| (run.col, run.width)).collect();
+    assert_eq!(spans, vec![(1, 1), (5, 1)]);
+}
+
+#[test]
+fn visible_diff_matches_the_plain_diff_without_attributes() {
+    let (previous, _) = text_grid("abcdef");
+    let (next, _) = text_grid("abXdeY");
+    let (mut plain, mut visible) = (Vec::new(), Vec::new());
+    lunatui_core::diff_runs_into(&previous, &next, &mut plain);
+    lunatui_core::diff_runs_visible_into(&previous, &next, &mut visible);
+    assert_eq!(plain, visible);
+}
+
+#[test]
+fn visible_diff_keeps_every_cell_on_a_size_change() {
+    let (previous, _) = text_grid("abcdef");
+    let mut next = Grid::new(4, 2);
+    next.set_native(0, 0, glass());
+    let (mut plain, mut visible) = (Vec::new(), Vec::new());
+    lunatui_core::diff_runs_into(&previous, &next, &mut plain);
+    lunatui_core::diff_runs_visible_into(&previous, &next, &mut visible);
+    assert_eq!(plain, visible);
+}
+
+#[test]
+fn visible_diff_keeps_a_cell_whose_glyph_and_attribute_both_changed() {
+    let (previous, _) = text_grid("abc");
+    let (mut next, _) = text_grid("aXc");
+    next.seed_native_from(&previous);
+    next.set_native(1, 0, shifted());
+    let mut runs = Vec::new();
+    lunatui_core::diff_runs_visible_into(&previous, &next, &mut runs);
+    assert_eq!(runs.len(), 1);
+    assert_eq!((runs[0].col, runs[0].width), (1, 1));
+}
+
+#[test]
+fn visible_diff_does_not_filter_when_only_the_height_changes() {
+    let mut clusters = ClusterTable::new();
+    let mut previous = Grid::new(4, 1);
+    previous.put_str(0, 0, Style::new(), "abcd", &mut clusters);
+    let mut next = Grid::new(4, 2);
+    next.put_str(0, 0, Style::new(), "abcd", &mut clusters);
+    next.set_native(1, 0, glass());
+    let (mut plain, mut visible) = (Vec::new(), Vec::new());
+    lunatui_core::diff_runs_into(&previous, &next, &mut plain);
+    lunatui_core::diff_runs_visible_into(&previous, &next, &mut visible);
+    assert_eq!(plain, visible);
+    assert!(visible.iter().any(|run| run.row == 0));
+}
+
+#[test]
+fn visible_diff_does_not_filter_when_only_the_width_changes() {
+    let mut clusters = ClusterTable::new();
+    let mut previous = Grid::new(4, 2);
+    previous.put_str(0, 0, Style::new(), "abcd", &mut clusters);
+    let mut next = Grid::new(5, 2);
+    next.put_str(0, 0, Style::new(), "abcd", &mut clusters);
+    next.set_native(1, 0, glass());
+    let (mut plain, mut visible) = (Vec::new(), Vec::new());
+    lunatui_core::diff_runs_into(&previous, &next, &mut plain);
+    lunatui_core::diff_runs_visible_into(&previous, &next, &mut visible);
+    assert_eq!(plain, visible);
+}
+
+#[test]
+fn visible_diff_reuses_the_run_buffer() {
+    let (previous, _) = text_grid("abcdef");
+    let (mut next, _) = text_grid("aXcdeY");
+    next.seed_native_from(&previous);
+    next.set_native(2, 0, glass());
+    let mut runs = Vec::with_capacity(64);
+    let address = runs.as_ptr();
+    for _ in 0..3 {
+        lunatui_core::diff_runs_visible_into(&previous, &next, &mut runs);
+        assert_eq!(runs.as_ptr(), address);
+        assert!(runs.capacity() >= 64);
+        assert_eq!(runs.len(), 2);
+    }
+}

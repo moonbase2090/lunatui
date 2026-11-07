@@ -46,6 +46,55 @@ pub fn diff_runs_into(previous: &Grid, next: &Grid, runs: &mut Vec<ChangedRun>) 
     }
 }
 
+/// Like [`diff_runs_into`], but leaves out cells whose only change is an alpha or sub-cell
+/// attribute.
+///
+/// Those attributes never reach ANSI output, so an ANSI encoder that repainted such a cell
+/// would write the bytes it wrote before. A run is cut around them. Grids without attributes
+/// take the same path as [`diff_runs_into`]. A size change keeps every cell.
+pub fn diff_runs_visible_into(previous: &Grid, next: &Grid, runs: &mut Vec<ChangedRun>) {
+    diff_runs_into(previous, next, runs);
+    #[cfg(feature = "native-attrs")]
+    if previous.width() == next.width()
+        && previous.height() == next.height()
+        && !(previous.ext_table().is_empty() && next.ext_table().is_empty())
+    {
+        drop_attribute_only(previous, next, runs);
+    }
+}
+
+#[cfg(feature = "native-attrs")]
+fn drop_attribute_only(previous: &Grid, next: &Grid, runs: &mut Vec<ChangedRun>) {
+    let original = runs.len();
+    for at in 0..original {
+        let run = runs[at];
+        let before = previous.row_bits(run.row);
+        let after = next.row_bits(run.row);
+        let (start, end) = (usize::from(run.col), usize::from(run.col + run.width));
+        let mut open: Option<usize> = None;
+        for column in start..=end {
+            let visible = column < end
+                && match (before.get(column), after.get(column)) {
+                    (Some(old), Some(new)) => (old ^ new) & !crate::grid::EXT_BITS != 0,
+                    _ => true,
+                };
+            match (visible, open) {
+                (true, None) => open = Some(column),
+                (false, Some(from)) => {
+                    runs.push(ChangedRun {
+                        row: run.row,
+                        col: u16::try_from(from).unwrap_or(run.col),
+                        width: u16::try_from(column - from).unwrap_or(run.width),
+                    });
+                    open = None;
+                }
+                _ => {}
+            }
+        }
+    }
+    runs.drain(..original);
+}
+
 /// Full-grid diff used for tests and for size changes (full invalidation).
 #[must_use]
 pub fn diff_runs_naive(previous: &Grid, next: &Grid) -> Vec<ChangedRun> {

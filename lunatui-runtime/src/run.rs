@@ -5,7 +5,7 @@ use std::io::{self, IsTerminal};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs};
+use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs_visible_into};
 use lunatui_term::{ColorMode, Encoder, MouseTracking, Session, SessionOptions, SyncOutput};
 
 #[cfg(feature = "image-presenter")]
@@ -177,7 +177,9 @@ fn render_present<A: App>(
     let has_cells = if repaint {
         frames.next.width() != 0 && frames.next.height() != 0
     } else {
-        !diff_runs(&frames.prev, &frames.next).is_empty()
+        let mut runs = Vec::new();
+        diff_runs_visible_into(&frames.prev, &frames.next, &mut runs);
+        !runs.is_empty()
     };
     if let Some(colors) = frames.last_palette.as_ref() {
         frames.encoder.set_token_palette(colors.clone());
@@ -216,6 +218,7 @@ fn render_present<A: App>(
     }
     frames.prev = frames.next.clone();
     frames.next = Grid::new(area.width, area.height);
+    frames.next.seed_native_from(&frames.prev);
     Ok(())
 }
 
@@ -364,6 +367,69 @@ mod tests {
             .map_err(|error| error.to_string())?;
             assert_eq!(presents, 0, "same palette and cells must skip output");
         }
+        Ok(())
+    }
+
+    struct Tinted {
+        reverse: bool,
+    }
+
+    impl App for Tinted {
+        fn update(&mut self, _: &Event) -> ControlFlow {
+            ControlFlow::Continue
+        }
+
+        fn render(&mut self, grid: &mut Grid, _: Rect, clusters: &mut ClusterTable) {
+            grid.put_str(0, 0, Style::new(), "ab", clusters);
+            let first = lunatui_core::NativeAttrs::new(255, 100, 0, 0);
+            let second = lunatui_core::NativeAttrs::new(255, 50, 0, 0);
+            if self.reverse {
+                grid.set_native(1, 0, second);
+                grid.set_native(0, 0, first);
+            } else {
+                grid.set_native(0, 0, first);
+                grid.set_native(1, 0, second);
+            }
+        }
+    }
+
+    fn present_once(
+        app: &mut Tinted,
+        area: Rect,
+        frames: &mut FrameState,
+    ) -> Result<usize, String> {
+        let mut bytes = 0;
+        render_present(app, area, frames, |parts| {
+            bytes += parts.iter().map(|part| part.len()).sum::<usize>();
+            Ok(())
+        })
+        .map_err(|error| error.to_string())?;
+        Ok(bytes)
+    }
+
+    #[test]
+    fn frames_keep_attribute_indices_and_attribute_only_changes_write_nothing() -> Result<(), String>
+    {
+        let area = Rect::new(0, 0, 4, 1);
+        let mut frames = FrameState {
+            prev: Grid::new(4, 1),
+            next: Grid::new(4, 1),
+            clusters: ClusterTable::new(),
+            encoder: Encoder::new(),
+            last_palette: None,
+            #[cfg(feature = "image-presenter")]
+            images: super::PixelLayer::new(super::PixelMode::Cells),
+        };
+        let mut app = Tinted { reverse: false };
+        assert!(present_once(&mut app, area, &mut frames)? > 0);
+        let first = (frames.prev.cell_bits(0, 0), frames.prev.cell_bits(1, 0));
+        app.reverse = true;
+        assert_eq!(present_once(&mut app, area, &mut frames)?, 0);
+        assert_eq!(
+            (frames.prev.cell_bits(0, 0), frames.prev.cell_bits(1, 0)),
+            first,
+            "equal attributes keep their table index across frames"
+        );
         Ok(())
     }
 }

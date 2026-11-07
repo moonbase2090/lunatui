@@ -5,7 +5,7 @@ mod cursor;
 mod sgr;
 
 use lunatui_core::{
-    Cell, CellWidth, ChangedRun, ClusterTable, Color, DecodedGlyph, Grid, diff_runs_into,
+    Cell, CellWidth, ChangedRun, ClusterTable, Color, DecodedGlyph, Grid, diff_runs_visible_into,
 };
 
 pub(crate) use cursor::write_cup;
@@ -57,7 +57,7 @@ impl Encoder {
         clusters: &ClusterTable,
         colors: ColorMode,
     ) -> &[u8] {
-        diff_runs_into(previous, next, &mut self.runs);
+        diff_runs_visible_into(previous, next, &mut self.runs);
         self.encode_prepared_runs(next, clusters, colors)
     }
 
