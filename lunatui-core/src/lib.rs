@@ -10,6 +10,8 @@ mod color;
 mod diff;
 mod grapheme;
 mod grid;
+#[cfg(feature = "native-attrs")]
+mod native;
 #[cfg(feature = "render-color")]
 /// Shared perceptual color conversion and interpolation.
 pub mod oklab;
@@ -36,6 +38,8 @@ pub use grapheme::{
     MAX_CLUSTER_IDS, clip_display_prefix, cluster_display_width, text_display_width,
 };
 pub use grid::{Grid, Rect, RowDirty};
+#[cfg(feature = "native-attrs")]
+pub use native::{ExtTable, MAX_EXT_ENTRIES, MAX_SUBCELL_OFFSET, NativeAttrs};
 pub use size::Size;
 pub use style::Style;
 pub use width::{UNICODE_VERSION, char_width, width};

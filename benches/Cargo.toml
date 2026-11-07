@@ -100,6 +100,10 @@ name = "criterion_core_diff"
 harness = false
 
 [[bench]]
+name = "criterion_native_attrs"
+harness = false
+
+[[bench]]
 name = "widget_suite"
 harness = false
 
