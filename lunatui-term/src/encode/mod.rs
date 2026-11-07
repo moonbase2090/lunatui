@@ -57,6 +57,37 @@ impl Encoder {
         clusters: &ClusterTable,
         colors: ColorMode,
     ) -> &[u8] {
+        diff_runs_into(previous, next, &mut self.runs);
+        self.encode_prepared_runs(next, clusters, colors)
+    }
+
+    /// Encodes every cell in `next`, including unchanged default blanks.
+    ///
+    /// Use this when terminal contents need repainting independently of logical grid damage.
+    /// Dirty spans are ignored; cursor, style, and glyph encoding match [`Self::encode_diff`].
+    pub fn encode_full(
+        &mut self,
+        next: &Grid,
+        clusters: &ClusterTable,
+        colors: ColorMode,
+    ) -> &[u8] {
+        self.runs.clear();
+        if next.width() != 0 {
+            self.runs.extend((0..next.height()).map(|row| ChangedRun {
+                row,
+                col: 0,
+                width: next.width(),
+            }));
+        }
+        self.encode_prepared_runs(next, clusters, colors)
+    }
+
+    fn encode_prepared_runs(
+        &mut self,
+        next: &Grid,
+        clusters: &ClusterTable,
+        colors: ColorMode,
+    ) -> &[u8] {
         self.buffer.clear();
         self.pen = Pen::default();
         self.cursor_col = 0;
@@ -64,7 +95,6 @@ impl Encoder {
         self.cursor_placed = false;
         let color = colors == ColorMode::TrueColor;
         let mut one_wide_key: Option<u128> = None;
-        diff_runs_into(previous, next, &mut self.runs);
         let runs = std::mem::take(&mut self.runs);
         for run in &runs {
             let mut col = run.col;

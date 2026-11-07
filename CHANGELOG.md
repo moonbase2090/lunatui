@@ -16,6 +16,11 @@ Every PR adds its entry under **Unreleased**.
 - `lunatui-layout` adds `GridLayout` with shared row and column tracks, named areas, cell and span lookup, independent gaps and flex, and grid margins. It reuses existing constraint rounding and shrinking, and the layout template now composes its screen through named spans.
 - `lunatui-data-table` adds `DataTable` and `Column`, wrapping the core `Table` and `Scrollbar` in a rounded frame with a muted bold header, striped rows and an accent cursor row, styled from `lunatui-ui-tokens`. Rows come from any `RowSource` and only the visible ones are read; a `TableState` adds cursor movement, range selection and sorting over the state's view. It re-exports `TableState`, `SortDirection`, `VecSource` and `RowSource`. The `ui_data_table` example is a deploy board built from it.
 
+### Fixed
+
+- Linux `PtyProcess` allocates both PTY descriptors with close-on-exec set atomically, preventing concurrent command launches from inheriting them. The slave-path fallback retains the same protection when `TIOCGPTPEER` is unavailable.
+- Moving or removing iTerm2 and Sixel images restores default blank cells beneath their old placement. The runtime uses `Encoder::encode_full` for requested repaints, preserving ordinary delta encoding and unchanged-frame skips.
+
 ## [0.1.23] - 2026-11-05
 
 ### Added

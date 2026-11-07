@@ -27,7 +27,7 @@ png = { version = "=0.18.1", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.190"
-rustix = { version = "1.0.5", default-features = false, features = ["std", "termios", "fs"] }
+rustix = { version = "1.0.5", default-features = false, features = ["std", "termios", "fs", "pty"] }
 
 [target.'cfg(windows)'.dependencies]
 crossterm = "0.29.0"

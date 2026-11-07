@@ -7,6 +7,64 @@ use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
 use lunatui_term::{ColorMode, Encoder};
 
 #[test]
+fn full_repaint_writes_default_blank_cells_without_dirty_spans() {
+    let grid = Grid::new(2, 2);
+    let clusters = ClusterTable::new();
+    let mut encoder = Encoder::new();
+    assert_eq!(
+        encoder.encode_full(&grid, &clusters, ColorMode::TrueColor),
+        b"\x1b[1;1H  \x1b[2;1H  \x1b[m\x1b[m\x1b[m\x1b[0m"
+    );
+    assert_eq!(
+        encoder.encode_diff(&grid, &grid, &clusters, ColorMode::TrueColor),
+        b"\x1b[m\x1b[m\x1b[m\x1b[0m"
+    );
+}
+
+#[test]
+fn full_repaint_preserves_clusters_wide_glyphs_and_trailing_blanks() {
+    let mut grid = Grid::new(5, 1);
+    let mut clusters = ClusterTable::new();
+    grid.put_str(0, 0, Style::new(), "e\u{301}日", &mut clusters);
+    grid.clear_dirty();
+    let mut encoder = Encoder::new();
+    assert_eq!(
+        encoder.encode_full(&grid, &clusters, ColorMode::NoColor),
+        "\x1b[1;1He\u{301}日  \x1b[m\x1b[m\x1b[m\x1b[0m".as_bytes()
+    );
+}
+
+#[test]
+fn full_repaint_resolves_new_palette_and_skips_zero_sized_rows() {
+    let mut grid = Grid::new(2, 1);
+    let mut clusters = ClusterTable::new();
+    grid.fill(
+        Rect::new(0, 0, 2, 1),
+        Style::new().bg(Color::Token(0)),
+        ' ',
+        &mut clusters,
+    );
+    grid.clear_dirty();
+    let mut encoder = Encoder::new();
+    encoder.set_token_palette(vec![Color::Rgb(1, 2, 3)]);
+    assert_eq!(
+        encoder.encode_full(&grid, &clusters, ColorMode::TrueColor),
+        b"\x1b[1;1H\x1b[48;2;1;2;3m  \x1b[m\x1b[m\x1b[m\x1b[0m"
+    );
+    encoder.set_token_palette(vec![Color::Rgb(4, 5, 6)]);
+    assert_eq!(
+        encoder.encode_full(&grid, &clusters, ColorMode::TrueColor),
+        b"\x1b[1;1H\x1b[48;2;4;5;6m  \x1b[m\x1b[m\x1b[m\x1b[0m"
+    );
+    for grid in [Grid::new(0, 2), Grid::new(2, 0)] {
+        assert_eq!(
+            encoder.encode_full(&grid, &clusters, ColorMode::TrueColor),
+            b"\x1b[m\x1b[m\x1b[m\x1b[0m"
+        );
+    }
+}
+
+#[test]
 fn empty_to_two_ascii_cells_matches_transcript() {
     let mut clusters = ClusterTable::new();
     let prev = Grid::new(2, 1);
