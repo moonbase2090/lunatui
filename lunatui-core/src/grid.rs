@@ -67,7 +67,7 @@ pub struct Grid {
 #[cfg(feature = "native-attrs")]
 const EXT_WORD_SHIFT: u32 = 96 + 16;
 #[cfg(feature = "native-attrs")]
-const EXT_BITS: u128 = 0xFFFF_u128 << EXT_WORD_SHIFT;
+pub(crate) const EXT_BITS: u128 = 0xFFFF_u128 << EXT_WORD_SHIFT;
 const STYLE_BITS: u128 = (0xFFFF_FFFF_u128 << 32) | (0xFFFF_FFFF_u128 << 64) | (0xFFF_u128 << 96);
 
 impl Grid {

@@ -108,6 +108,24 @@ Cluster records are 16 bytes: u32 offset into the frame UTF-8 blob at0, u32 byte
 
 Damage records are 16 bytes: u32 row at0, u32 starting column at4, u32 cell count at8, u32 reserved=0 at12. Records are sorted row/column, nonempty, nonoverlapping, within geometry, and expand to include complete wide glyphs. Full-snapshot flag implies whole-grid damage and zero damage records; non-full zero records means no cell damage, but cursor metadata can still change. Initial and resized frames require the full flag. The host validates and copies before rendering; it does not retain shared-memory pointers after acknowledging consumption.
 
+## Alpha and sub-cell attributes (ring ABI 1.1)
+
+Accepted in ADR 0009. This revision is client-side only: the host has no native feature today, and nothing here changes ring ABI 1.0 or the control records above.
+
+Feature `native.alpha.v1` is advertised next to `native.grid.v1`. A client that wants attributes sends ring ABI minor 1 in HELLO. The host affirms the feature by setting bit 0 (`0x0001`) of the ACTIVE response header flags; every other bit stays zero. A client treats anything else, including a reply without the bit, a reply with extra bits and every ABI 1.0 host, as "attributes stripped": it sends plain ABI 1.0 frames and never writes an attribute. Affirmation covers the session only; a resize, release or failure starts the next session stripped.
+
+Frames in a session that affirmed the feature use these additions. Everything else is as in ABI 1.0, and the mapping header minor is 1.
+
+| Offset | Type | Meaning |
+|---|---|---|
+| 76 | u32 | Attribute record count, at most the cell count; zero when no cell has attributes |
+| 80 | u32 | Attribute records offset: the damage records offset (the end of the blob rounded up to 8) when the count is nonzero, else zero |
+| 84 | 44 bytes | Reserved zero |
+
+Attribute records follow the damage records. A record is 8 bytes: u8 `fg_alpha` at 0 (255 opaque), u8 `bg_alpha` at 1, i8 `dx` at 2 and i8 `dy` at 3 in 1/8 cell, each in -7..=7, then four reserved-zero bytes. Records are unique, never all-default, and numbered from 1 in the order cells first use them. Cell `meta` bits 16..31 hold the record number (0 = none); bits 14 and 15 stay zero. A continuation cell carries its lead's number. A frame with no attributes in a session that affirmed the feature is byte-identical to an ABI 1.0 frame.
+
+The attributes refine what is drawn inside the cells; they never change the cells themselves, so glyphs, widths, wide-cell pairing, colors and damage are the same as in a stripped frame. On any frame error the client follows the existing recovery: stop native publication and repaint with ANSI. The ANSI encoder never reads the attributes, and a cell whose only change is an attribute is not repainted.
+
 ## Resize and terminal ownership
 
 Every frame carries a complete snapshot and a frame-local cluster dictionary. Damage is an optional rendering hint. No frame requires a prior slot's cluster IDs or incremental cell payload. The host validates the copied cells and geometry before rendering and acknowledges consumption only after it no longer references slot memory. Consumption is not a GPU presentation acknowledgment. Dropped intermediate frames cannot lose a delta chain because each later frame is complete.

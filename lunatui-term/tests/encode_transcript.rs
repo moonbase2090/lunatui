@@ -295,3 +295,42 @@ fn random_style_runs_decode_to_the_requested_styles() {
         assert_eq!(printed, want);
     }
 }
+
+#[test]
+fn attribute_only_changes_encode_like_an_unchanged_grid() {
+    let mut clusters = ClusterTable::new();
+    let mut previous = Grid::new(6, 1);
+    previous.put_str(0, 0, Style::new(), "abcdef", &mut clusters);
+    let mut tinted = previous.clone();
+    tinted.seed_native_from(&previous);
+    tinted.set_native(1, 0, lunatui_core::NativeAttrs::new(255, 128, 0, 0));
+    tinted.set_native(2, 0, lunatui_core::NativeAttrs::new(255, 255, 3, 0));
+    let mut encoder = Encoder::new();
+    let unchanged = encoder
+        .encode_diff(&previous, &previous, &clusters, ColorMode::TrueColor)
+        .to_vec();
+    let with_attributes = encoder
+        .encode_diff(&previous, &tinted, &clusters, ColorMode::TrueColor)
+        .to_vec();
+    assert_eq!(with_attributes, unchanged);
+}
+
+#[test]
+fn a_changed_glyph_with_an_attribute_encodes_like_one_without() {
+    let mut clusters = ClusterTable::new();
+    let mut previous = Grid::new(6, 1);
+    previous.put_str(0, 0, Style::new(), "abcdef", &mut clusters);
+    let mut plain = Grid::new(6, 1);
+    plain.put_str(0, 0, Style::new(), "aXcdeY", &mut clusters);
+    let mut tinted = plain.clone();
+    tinted.set_native(1, 0, lunatui_core::NativeAttrs::new(255, 128, 0, 0));
+    tinted.set_native(2, 0, lunatui_core::NativeAttrs::new(255, 128, 0, 0));
+    let mut encoder = Encoder::new();
+    let expected = encoder
+        .encode_diff(&previous, &plain, &clusters, ColorMode::TrueColor)
+        .to_vec();
+    let actual = encoder
+        .encode_diff(&previous, &tinted, &clusters, ColorMode::TrueColor)
+        .to_vec();
+    assert_eq!(actual, expected);
+}
