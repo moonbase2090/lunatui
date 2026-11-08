@@ -39,6 +39,7 @@ Changes to this file need MB2090 sign-off (`.github/CODEOWNERS`).
 | Workspace lints | `[workspace.lints]` in `Cargo.toml`, clippy with `-D warnings` | `missing_docs`, `unsafe_op_in_unsafe_fn`, clippy `pedantic`, and the restriction lints `allow_attributes`, `allow_attributes_without_reason`, `undocumented_unsafe_blocks`, `unwrap_used`, `expect_used`, `panic`, `todo`, `unimplemented` |
 | Comments (M14) | `cargo xtask check` | Any comment except the fixed license header, `// SAFETY:` runs directly before `unsafe`, and `///` docs. Also `//!` and every block comment |
 | Doc placement (M14) | `cargo xtask check` | `///` on anything but `pub` items, and crate docs other than `include_str!` of a README |
+| Error types (API review) | `cargo xtask check` | A `pub` type named `*Error` in a library crate's `src/` without `#[non_exhaustive]` |
 | Expectations (M16) | `cargo xtask check` | Unlisted, unreasoned or stale `#[expect]` |
 | Member manifests (M16) | `cargo xtask check` | A member without `[lints] workspace = true`, or with its own `[lints.*]` table |
 | Dependency allowlist (M16) | `cargo deny` (`[bans] allow` in `deny.toml`) | Any crate not on the allowlist, including transitive and platform-specific crates |

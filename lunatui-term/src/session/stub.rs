@@ -44,6 +44,7 @@ impl Default for SessionOptions {
 
 /// Errors from terminal session setup and presentation.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum SessionError {
     /// Session APIs are only implemented on Unix in PR 10.
     Unsupported,

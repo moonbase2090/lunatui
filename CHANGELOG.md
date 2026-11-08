@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Changed
+
+- Breaking: `SessionError` (all platform versions), `NodeGraphError`, `RampError`, `ThemeLoadError` and `MermaidError` are now `#[non_exhaustive]`, so a new failure kind is no longer a breaking change. A `match` on `SessionError` or `NodeGraphError` needs a wildcard arm (`_ => ...`); `RampError` is no longer constructible outside `lunatui-core`. `cargo xtask check` now fails on any public `*Error` type without the attribute.
+
 ### Added
 
 - `docs/api-review.md`: the public API inventory for 1.0 and the breaking-change list, with each entry marked do-now, accept or defer. Documentation only; no code changes.

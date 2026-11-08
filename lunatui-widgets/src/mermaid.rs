@@ -27,6 +27,7 @@ const MAX_CELLS: i64 = 1_000_000;
 
 /// Why a Mermaid source could not be parsed or drawn.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct MermaidError {
     line: usize,
     message: String,

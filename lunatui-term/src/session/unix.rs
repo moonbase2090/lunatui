@@ -60,6 +60,7 @@ impl Default for SessionOptions {
 
 /// Errors from terminal session setup and presentation.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum SessionError {
     /// The writer is not connected to a terminal.
     NotATty,

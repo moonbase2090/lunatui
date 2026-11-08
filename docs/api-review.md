@@ -70,8 +70,8 @@ Convention checks that pass: no public function is named `get_*`.
 
 | # | Entry | Disposition |
 |---|---|---|
-| A1 | `SessionError` (three copies), `NodeGraphError`: add `#[non_exhaustive]`. A new failure kind must not be a breaking change. | do-now, change 1 |
-| A2 | `ThemeLoadError`, `MermaidError`, `RampError`: struct errors. Add `#[non_exhaustive]` where a field is public, and keep fields private otherwise. | do-now, change 1 |
+| A1 | `SessionError` (three copies), `NodeGraphError`: add `#[non_exhaustive]`. A new failure kind must not be a breaking change. | done in change 1 |
+| A2 | `ThemeLoadError`, `MermaidError`, `RampError`: struct errors. Every `pub` type named `*Error` carries `#[non_exhaustive]`, including struct errors whose fields are private, so one mechanical rule covers them all. | done in change 1; `cargo xtask check` now enforces it |
 | A3 | One `Error` and `Result` per crate (§3). Nine domain names exist, each specific and already used by callers. Renaming them gains nothing a reader needs. | accept; amend §3 to say each fallible area names its error `<Area>Error`, is `#[non_exhaustive]`, and a crate adds a `Result` alias only when it has one error type. The amendment needs the maintainer's sign-off. |
 
 ### B. Enums without `#[non_exhaustive]`
