@@ -11,6 +11,7 @@ use crate::token::Token;
 
 /// Error loading a theme file.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ThemeLoadError {
     message: String,
 }

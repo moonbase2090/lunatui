@@ -51,6 +51,7 @@ pub enum RampOutput {
 
 /// An unsupported number of prepared samples.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct RampError;
 
 impl fmt::Display for RampError {

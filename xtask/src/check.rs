@@ -3,6 +3,7 @@
 
 mod comments;
 mod docs;
+mod errors;
 mod expectations;
 mod manifests;
 
@@ -70,6 +71,7 @@ fn violations() -> io::Result<Vec<Violation>> {
         let file = syn::parse_file(&source)
             .map_err(|error| io::Error::other(format!("{}: {error}", path.display())))?;
         found.extend(docs::violations(&path, &file));
+        found.extend(errors::violations(&path, &file));
         expected.extend(expectations::in_file(&path, &file));
     }
     let lints_doc = fs::read_to_string(LINTS_DOC)?;

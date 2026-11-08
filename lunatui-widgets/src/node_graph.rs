@@ -73,6 +73,7 @@ impl NodeConnection {
 
 /// Why a node graph cannot be laid out.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum NodeGraphError {
     /// A connection refers to a node outside the supplied slice.
     InvalidNode,
