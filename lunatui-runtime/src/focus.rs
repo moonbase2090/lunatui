@@ -80,7 +80,15 @@ impl FocusManager {
         self.index = Some(next);
     }
 
-    /// Moves focus to the nearest neighbor in `direction`.
+    /// Moves focus to the nearest neighbor in `direction`, based on rect geometry.
+    ///
+    /// A candidate must start at or beyond the current rect's edge in that
+    /// direction, so overlapping or containing rects never receive arrow
+    /// focus. Candidates whose range overlaps the current rect on the cross
+    /// axis (the same row band for Left and Right, the same column band for
+    /// Up and Down) win over diagonal ones; within a group the smallest edge
+    /// gap wins, then the smallest cross-axis offset. Exact ties keep the
+    /// first registered entry. Focus stays put when nothing is eligible.
     pub fn arrow(&mut self, direction: FocusDirection) {
         let Some(index) = self.index else {
             if !self.entries.is_empty() {
@@ -89,20 +97,17 @@ impl FocusManager {
             return;
         };
         let (_, current) = self.entries[index];
-        let (cx, cy) = center(current);
         let mut best: Option<usize> = None;
-        let mut best_distance = f64::MAX;
+        let mut best_key: Option<(bool, i64, i64, i64)> = None;
         for (candidate, (_, area)) in self.entries.iter().enumerate() {
             if candidate == index {
                 continue;
             }
-            let (tx, ty) = center(*area);
-            if !in_direction(direction, cx, cy, tx, ty) {
+            let Some(key) = spatial_key(direction, current, *area) else {
                 continue;
-            }
-            let distance = (tx - cx).powi(2) + (ty - cy).powi(2);
-            if distance < best_distance {
-                best_distance = distance;
+            };
+            if best_key.is_none_or(|held| key < held) {
+                best_key = Some(key);
                 best = Some(candidate);
             }
         }
@@ -112,20 +117,61 @@ impl FocusManager {
     }
 }
 
-fn center(area: Rect) -> (f64, f64) {
-    (
-        f64::from(area.x) + f64::from(area.width) / 2.0,
-        f64::from(area.y) + f64::from(area.height) / 2.0,
-    )
+struct Edges {
+    primary_min: i64,
+    primary_max: i64,
+    cross_min: i64,
+    cross_max: i64,
 }
 
-fn in_direction(direction: FocusDirection, cx: f64, cy: f64, tx: f64, ty: f64) -> bool {
+fn edges(direction: FocusDirection, area: Rect) -> Edges {
+    let left = i64::from(area.x);
+    let right = left + i64::from(area.width);
+    let top = i64::from(area.y);
+    let bottom = top + i64::from(area.height);
     match direction {
-        FocusDirection::Left => tx < cx,
-        FocusDirection::Right => tx > cx,
-        FocusDirection::Up => ty < cy,
-        FocusDirection::Down => ty > cy,
+        FocusDirection::Left | FocusDirection::Right => Edges {
+            primary_min: left,
+            primary_max: right,
+            cross_min: top,
+            cross_max: bottom,
+        },
+        FocusDirection::Up | FocusDirection::Down => Edges {
+            primary_min: top,
+            primary_max: bottom,
+            cross_min: left,
+            cross_max: right,
+        },
     }
+}
+
+fn spatial_key(
+    direction: FocusDirection,
+    current: Rect,
+    candidate: Rect,
+) -> Option<(bool, i64, i64, i64)> {
+    let current = edges(direction, current);
+    let candidate = edges(direction, candidate);
+    let primary_gap = match direction {
+        FocusDirection::Right | FocusDirection::Down => candidate.primary_min - current.primary_max,
+        FocusDirection::Left | FocusDirection::Up => current.primary_min - candidate.primary_max,
+    };
+    if primary_gap < 0 {
+        return None;
+    }
+    let cross_gap = (candidate.cross_min - current.cross_max)
+        .max(current.cross_min - candidate.cross_max)
+        .max(0);
+    let aligned = cross_gap == 0;
+    let score = if aligned {
+        primary_gap
+    } else {
+        primary_gap + cross_gap
+    };
+    let cross_center_delta = ((candidate.cross_min + candidate.cross_max)
+        - (current.cross_min + current.cross_max))
+        .abs();
+    Some((!aligned, score, primary_gap, cross_center_delta))
 }
 
 #[cfg(test)]

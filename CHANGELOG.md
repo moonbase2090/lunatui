@@ -16,6 +16,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `docs/api-review.md`: the public API inventory for 1.0 and the breaking-change list, with each entry marked do-now, accept or defer. Documentation only; no code changes.
 
+### Fixed
+
+- `FocusManager::arrow` in `lunatui-runtime` now navigates by rect edges instead of center distance. A candidate must start at or beyond the current rect's edge in the arrow direction, so overlapping or containing rects never receive arrow focus; candidates in the same row or column band beat closer diagonal ones, the smallest edge gap wins within a group, and exact ties keep the first registered entry. Adjacent panes with no gap stay reachable.
+
 ## [0.1.25] - 2026-11-07
 
 ### Added
