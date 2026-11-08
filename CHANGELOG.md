@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/api-review.md`: the public API inventory for 1.0 and the breaking-change list, with each entry marked do-now, accept or defer. Documentation only; no code changes.
+
 ## [0.1.25] - 2026-11-07
 
 ### Added
