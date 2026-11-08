@@ -54,7 +54,7 @@ Convention checks that pass: no public function is named `get_*`.
 
 ### A. Error types
 
-`conventions.md` §3 asks for one `Error` enum and one `Result` alias per library crate, both `#[non_exhaustive]`. The crates have eleven domain-named error types instead and no `Result` alias:
+`conventions.md` §3 asks for one `Error` enum and one `Result` alias per library crate, both `#[non_exhaustive]`. The crates have nine domain-named error types (eleven declarations, counting the three platform copies of `SessionError`) instead and no `Result` alias:
 
 | Type | Crate | `non_exhaustive` |
 |---|---|---|
@@ -72,7 +72,7 @@ Convention checks that pass: no public function is named `get_*`.
 |---|---|---|
 | A1 | `SessionError` (three copies), `NodeGraphError`: add `#[non_exhaustive]`. A new failure kind must not be a breaking change. | do-now, change 1 |
 | A2 | `ThemeLoadError`, `MermaidError`, `RampError`: struct errors. Add `#[non_exhaustive]` where a field is public, and keep fields private otherwise. | do-now, change 1 |
-| A3 | One `Error` and `Result` per crate (§3). Eleven domain names exist, each specific and already used by callers. Renaming them gains nothing a reader needs. | accept; amend §3 to say each fallible area names its error `<Area>Error`, is `#[non_exhaustive]`, and a crate adds a `Result` alias only when it has one error type. The amendment needs the maintainer's sign-off. |
+| A3 | One `Error` and `Result` per crate (§3). Nine domain names exist, each specific and already used by callers. Renaming them gains nothing a reader needs. | accept; amend §3 to say each fallible area names its error `<Area>Error`, is `#[non_exhaustive]`, and a crate adds a `Result` alias only when it has one error type. The amendment needs the maintainer's sign-off. |
 
 ### B. Enums without `#[non_exhaustive]`
 
@@ -117,7 +117,7 @@ A struct with public fields and no `#[non_exhaustive]` cannot gain a field witho
 
 ### F. Conventions that are about layout, not API
 
-Eight `mod.rs` files exist (`core`: `simd`, `symbols`; `runtime`: `anim`; `term`: `encode`, `sys`, `session`; `text`: `markdown`, `wrap`) against the rule that a module is `<concept>.rs` plus `<concept>/`. Eleven crates also keep more than re-exports in `lib.rs`. Neither changes a public path, so neither is a breaking change.
+Eight `mod.rs` files exist (`core`: `simd`, `symbols`; `runtime`: `anim`; `term`: `encode`, `sys`, `session`; `text`: `markdown`, `wrap`) against the rule that a module is `<concept>.rs` plus `<concept>/`. Ten crates also keep more than re-exports in `lib.rs`. Neither changes a public path, so neither is a breaking change.
 
 | # | Entry | Disposition |
 |---|---|---|
