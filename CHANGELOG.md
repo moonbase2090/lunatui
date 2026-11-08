@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.25] - 2026-11-07
+
 ### Added
 
 - Native frame encoder in `lunatui-prismattyc` (`FrameEncoder`) for the native alpha and sub-cell attributes: attributes are stripped unless the host affirms `native.alpha.v1`, frames without attributes stay byte-identical to ring ABI 1.0, and the protocol note documents the 1.1 additions. The ANSI encoder and the runtime ignore attribute-only changes (`diff_runs_visible_into`), and the runtime keeps attribute table indices stable between frames. No transport or host support yet.
