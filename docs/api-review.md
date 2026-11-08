@@ -16,7 +16,7 @@ The inventory comes from scanning `src/` of every library crate for public items
 
 Not yet reviewed, and needed before the list can close:
 
-- Trait surfaces (`App`, `Widget`, `RenderCx`, the sink traits): whether each is sealed, and which methods may grow defaults.
+- Trait surfaces (`App`, `Widget`, the sink traits; `RenderCx` is a struct and falls under the struct rules): whether each is sealed, and which methods may grow defaults.
 - Facade parity: whether `lunatui` re-exports what each crate exports, and nothing it should not.
 - Feature gating of public items, and items that are public only for tests or benches.
 - Deprecated items, and items documented as experimental.
@@ -45,6 +45,8 @@ Counts are from the scan. "Struct fields" is public structs with at least one pu
 | lunatui-theme | 3 | 1 | 4 | 1 |
 | lunatui-ui-tokens | 2 | 2 | 1 | 0 |
 | lunatui-widgets | 44 | 22 | 151 | 29 |
+
+Totals: 77 public enum declarations without `#[non_exhaustive]` and 72 public struct declarations with public fields and no `#[non_exhaustive]`. Counted as distinct names per crate, that is 71 enums and 69 structs: the unix, stub and windows copies of `SyncOutput`, `MouseTracking`, `SessionError` and `SessionOptions` count once, and core has two structs named `Set` in different modules. Of the 71 enums, 2 are error enums (A1) and 69 are classified in B1 to B6.
 
 Convention checks that pass: no public function is named `get_*`.
 
@@ -96,7 +98,7 @@ A struct with public fields and no `#[non_exhaustive]` cannot gain a field witho
 | C1 | Complete value types: `Size`, `Rect`, `Style`, `Meta`, `Padding`, `PixelPoint`, `PixelRect`, `TextPosition`, `TimelineItemId`, `Divider`, and the geometry shapes `Points`, `Line`, `Rectangle`, `Circle`. | accept |
 | C2 | Option and configuration types that will gain fields: `RunOptions`, `SessionOptions`, `ProbeEnv`, `ToastPlacement`. Add `#[non_exhaustive]` and keep `Default` plus builder methods as the way to construct them. | do-now, change 5 |
 | C3 | Result and report types a library produces and callers only read: `Caps`, `ProbeReply`, `TermIdentity`, `DecModes`, `Protocols`, `DiscoveryResult`, `FrameDiff`, `PresentStats`, `SearchMatch`, `PieLayout`, `SplitLayout`, `Solved`, `SolvedGrid`, `Wrapped`, `WrappedLine`, `ImageGeometry`, `TreeRow`, `HeatmapCell`, `TimelineTick`, `LogEntry`, `DiffLine`, `DiffHunk`. Add `#[non_exhaustive]`. | do-now, change 5 |
-| C4 | The rest of the 76 counted structs (event payloads, state holders, markdown tree nodes, rendering areas). Each is decided with its crate's change using the same rule: complete value stays, grows gets `#[non_exhaustive]`. | defer to changes 2 to 5; the closing change lists the result |
+| C4 | The rest of the 72 struct declarations in the table (those not named in C1 to C3) (event payloads, state holders, markdown tree nodes, rendering areas). Each is decided with its crate's change using the same rule: complete value stays, grows gets `#[non_exhaustive]`. | defer to changes 2 to 5; the closing change lists the result |
 
 ### D. Naming
 
