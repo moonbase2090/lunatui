@@ -130,6 +130,7 @@ impl Modifiers {
 
 /// A key identity after legacy and kitty sequences are normalized.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum KeyCode {
     /// A Unicode scalar.
     Char(char),
@@ -181,6 +182,7 @@ pub enum KeyCode {
 
 /// Press, repeat or release.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum KeyKind {
     /// The key went down.
     #[default]

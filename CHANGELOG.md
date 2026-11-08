@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Changed
+
+- Breaking: the open enums in `lunatui-term` are now `#[non_exhaustive]`: `Event`, `KeyCode`, `KeyKind`, `MouseKind`, `MouseButton`, `Scroll`, `Paste`, `ColorDepth`, `PrivateMode`, `KeyboardProtocol`, `GraphicsProtocol`, `Hyperlinks`, `WidthPolicy`, `Multiplexer` and `RecordedTerminal`, so a new input kind, key or capability value is no longer a breaking change. A `match` on any of them outside `lunatui-term` needs a wildcard arm (`_ => ...`); the `caps` and `keys` examples show it.
+
 ## [0.1.26] - 2026-11-08
 
 ### Changed

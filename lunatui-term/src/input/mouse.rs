@@ -5,6 +5,7 @@ use super::keys::{Modifiers, decimal};
 
 /// A mouse button.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum MouseButton {
     /// The primary button.
     Left,
@@ -18,6 +19,7 @@ pub enum MouseButton {
 
 /// Wheel direction.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Scroll {
     /// Wheel away from the user.
     Up,
@@ -31,6 +33,7 @@ pub enum Scroll {
 
 /// What the pointer did.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum MouseKind {
     /// A button went down.
     Down(MouseButton),

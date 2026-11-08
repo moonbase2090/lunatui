@@ -3,6 +3,7 @@
 
 /// Bracketed paste, streamed in bounded chunks.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Paste {
     /// `CSI 200 ~` opened a paste.
     Start,

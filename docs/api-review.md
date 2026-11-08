@@ -82,7 +82,7 @@ Downstream code that matches an open enum then needs a wildcard arm. That is the
 
 | # | Entry | Disposition |
 |---|---|---|
-| B1 | Open enums, term: `Event`, `KeyCode`, `KeyKind`, `MouseKind`, `MouseButton`, `Scroll`, `Paste`, `ColorDepth`, `PrivateMode`, `KeyboardProtocol`, `GraphicsProtocol`, `Hyperlinks`, `WidthPolicy`, `Multiplexer`, `RecordedTerminal`. | do-now, change 2 |
+| B1 | Open enums, term: `Event`, `KeyCode`, `KeyKind`, `MouseKind`, `MouseButton`, `Scroll`, `Paste`, `ColorDepth`, `PrivateMode`, `KeyboardProtocol`, `GraphicsProtocol`, `Hyperlinks`, `WidthPolicy`, `Multiplexer`, `RecordedTerminal`. | done in change 2 |
 | B2 | Open enums, core, layout and text: `Color`, `UnderlineStyle`, `DecodedGlyph`, `Constraint`, `Flex`, and the markdown nodes `Block`, `Inline`, `Alignment` (module-only, but reachable through the public `markdown` module). | do-now, change 3 |
 | B3 | Open enums, widgets and the widget crates: `BorderType`, `SpinnerPattern`, `BigTextFont`, `PixelSize`, `LogLevel`, `DiffKind`, `TimelineStatus`, `EditResult`, `MenuEvent`, `ColorPickerFocus`, `Look`, `ButtonSize`, `Fit` (image). | do-now, change 4 |
 | B4 | Open enums, runtime, theme and prismattyc: `Ease`, `Profile`, `Variant`, `NativeDiscovery`. | do-now, change 3 |

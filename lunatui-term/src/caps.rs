@@ -59,6 +59,7 @@ const HYPERLINK_TERMINALS: &[&str] = &[
 /// How many colors the probe will use.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum ColorDepth {
     /// `NO_COLOR` is set, or `TERM` is unset or `dumb`.
     #[default]
@@ -74,6 +75,7 @@ pub enum ColorDepth {
 /// What a DECRQM reply said about one private mode.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum PrivateMode {
     /// No DECRPM reply arrived before primary device attributes.
     #[default]
@@ -105,6 +107,7 @@ pub struct DecModes {
 /// Keyboard protocol the probe recognized.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum KeyboardProtocol {
     /// No kitty keyboard reply arrived.
     #[default]
@@ -116,6 +119,7 @@ pub enum KeyboardProtocol {
 /// Graphics protocol the probe recognized.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum GraphicsProtocol {
     /// No supported graphics reply arrived.
     #[default]
@@ -131,6 +135,7 @@ pub enum GraphicsProtocol {
 /// Whether the terminal is treated as OSC 8 capable.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum Hyperlinks {
     /// The program name is not in the known OSC 8 set.
     #[default]
@@ -154,6 +159,7 @@ pub struct Protocols {
 /// Columns for East Asian Width Ambiguous scalars when mode 2027 is off.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum WidthPolicy {
     /// Ambiguous scalars take one column. This is also the policy when mode 2027 is on.
     #[default]
@@ -176,6 +182,7 @@ impl WidthPolicy {
 /// Which multiplexer environment variables were set.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum Multiplexer {
     /// Neither `TMUX` nor `STY` was set.
     #[default]
