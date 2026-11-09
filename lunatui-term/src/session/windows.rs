@@ -34,12 +34,39 @@ pub enum MouseTracking {
 }
 
 /// Options for [`Session::enter`].
+///
+/// Downstream code cannot build this with a struct literal, because fields can be added. Start from the constructor and change fields on the value:
+///
+/// ```compile_fail,E0639
+/// use lunatui_term::SessionOptions;
+///
+/// fn literal() -> SessionOptions {
+///     SessionOptions { ..SessionOptions::default() }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct SessionOptions {
     /// Synchronized output wrapping for [`Session::present_frame`].
     pub sync_output: SyncOutput,
     /// Pointer reporting for interactive apps.
     pub mouse_tracking: MouseTracking,
+}
+
+impl SessionOptions {
+    /// Sets synchronized output wrapping for [`Session::present_frame`].
+    #[must_use]
+    pub const fn sync_output(mut self, value: SyncOutput) -> Self {
+        self.sync_output = value;
+        self
+    }
+
+    /// Sets pointer reporting.
+    #[must_use]
+    pub const fn mouse_tracking(mut self, value: MouseTracking) -> Self {
+        self.mouse_tracking = value;
+        self
+    }
 }
 
 impl Default for SessionOptions {

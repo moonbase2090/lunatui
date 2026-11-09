@@ -2,7 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 /// Options for an interactive [`run`](crate::run::run) session (PRD §3.2, roadmap PR 23).
+///
+/// Downstream code cannot build this with a struct literal, because fields can be added. Start from the constructor and change fields on the value:
+///
+/// ```compile_fail,E0639
+/// use lunatui_runtime::RunOptions;
+///
+/// fn literal() -> RunOptions {
+///     let base = RunOptions::new(1, 1);
+///     RunOptions { width: 2, ..base }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct RunOptions {
     /// Terminal width in columns.
     pub width: u16,

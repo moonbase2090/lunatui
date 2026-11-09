@@ -56,10 +56,9 @@ fn main() -> io::Result<()> {
                 let bytes = encoder.encode_diff(&prev, &next, &clusters, ColorMode::NoColor);
                 let mut session = Session::enter_with_options(
                     io::stdout().lock(),
-                    SessionOptions {
-                        sync_output: SyncOutput::Enabled,
-                        mouse_tracking: lunatui_term::MouseTracking::Disabled,
-                    },
+                    SessionOptions::default()
+                        .sync_output(SyncOutput::Enabled)
+                        .mouse_tracking(lunatui_term::MouseTracking::Disabled),
                 )?;
                 session.present_frame(bytes)?;
             }

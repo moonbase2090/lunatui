@@ -170,10 +170,9 @@ fn run_live(options: Options) -> io::Result<FrameTimes> {
         let mut samples = Vec::with_capacity(usize::try_from(options.frames).unwrap_or(0));
         let mut session = Session::enter_with_options(
             io::stdout().lock(),
-            SessionOptions {
-                sync_output: SyncOutput::Enabled,
-                mouse_tracking: lunatui_term::MouseTracking::Disabled,
-            },
+            SessionOptions::default()
+                .sync_output(SyncOutput::Enabled)
+                .mouse_tracking(lunatui_term::MouseTracking::Disabled),
         )?;
         for tick in 0..options.frames {
             advance_model(&mut model, tick);

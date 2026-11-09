@@ -385,10 +385,9 @@ fn run_live(options: &Options) -> io::Result<Option<FrameTimes>> {
         let stdout = io::stdout();
         let mut session = Session::enter_with_options(
             stdout,
-            SessionOptions {
-                sync_output: SyncOutput::Enabled,
-                mouse_tracking: lunatui_term::MouseTracking::Disabled,
-            },
+            SessionOptions::default()
+                .sync_output(SyncOutput::Enabled)
+                .mouse_tracking(lunatui_term::MouseTracking::Disabled),
         )?;
         let epoch = Instant::now();
         let mut sched = Scheduler::animating(FRAME_INTERVAL);

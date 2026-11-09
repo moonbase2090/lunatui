@@ -9,10 +9,7 @@ use lunatui_term::{
 };
 
 fn env_256() -> ProbeEnv {
-    ProbeEnv {
-        term: String::from("xterm-256color"),
-        ..ProbeEnv::default()
-    }
+    ProbeEnv::default().term("xterm-256color")
 }
 
 fn count_slice(haystack: &[u8], needle: &[u8]) -> usize {
@@ -190,11 +187,11 @@ fn replies_after_device_attributes_are_ignored() {
 
 #[test]
 fn apple_terminal_without_mode_2027_uses_ambiguous_wide() {
-    let caps = Caps::from_env(&ProbeEnv {
-        term_program: String::from("Apple_Terminal"),
-        locale: String::from("en_US.UTF-8"),
-        ..ProbeEnv::default()
-    });
+    let caps = Caps::from_env(
+        &ProbeEnv::default()
+            .term_program("Apple_Terminal")
+            .locale("en_US.UTF-8"),
+    );
     assert_eq!(caps.width, WidthPolicy::AmbiguousWide);
     assert_eq!(caps.width.ambiguous_columns(), 2);
     assert_eq!(caps.protocols.hyperlinks, Hyperlinks::Osc8);
@@ -202,11 +199,9 @@ fn apple_terminal_without_mode_2027_uses_ambiguous_wide() {
 
 #[test]
 fn mode_2027_reset_overrides_the_apple_terminal_fallback() {
-    let env = ProbeEnv {
-        term_program: String::from("Apple_Terminal"),
-        locale: String::from("en_US.UTF-8"),
-        ..ProbeEnv::default()
-    };
+    let env = ProbeEnv::default()
+        .term_program("Apple_Terminal")
+        .locale("en_US.UTF-8");
     let reply = ProbeReply::from_replies(&env, b"\x1b[?2027;2$y\x1b[c");
     assert_eq!(reply.caps.modes.grapheme_clusters, PrivateMode::Reset);
     assert_eq!(reply.caps.width, WidthPolicy::Unicode);
@@ -218,10 +213,7 @@ fn mode_2027_reset_overrides_the_apple_terminal_fallback() {
 
 #[test]
 fn locked_off_mode_2027_keeps_the_apple_terminal_fallback() {
-    let env = ProbeEnv {
-        term_program: String::from("Apple_Terminal"),
-        ..ProbeEnv::default()
-    };
+    let env = ProbeEnv::default().term_program("Apple_Terminal");
     let reply = ProbeReply::from_replies(&env, b"\x1b[?2027;4$y\x1b[c");
     assert_eq!(reply.caps.modes.grapheme_clusters, PrivateMode::LockedOff);
     assert_eq!(reply.caps.width, WidthPolicy::AmbiguousWide);
@@ -231,32 +223,27 @@ fn locked_off_mode_2027_keeps_the_apple_terminal_fallback() {
 #[test]
 fn unknown_terminal_in_a_cjk_locale_uses_ambiguous_wide() {
     for locale in ["ja_JP.UTF-8", "ko_KR.UTF-8", "zh-Hans.UTF-8", "zh_CN.UTF-8"] {
-        let caps = Caps::from_env(&ProbeEnv {
-            locale: String::from(locale),
-            ..ProbeEnv::default()
-        });
+        let caps = Caps::from_env(&ProbeEnv::default().locale(locale));
         assert_eq!(caps.width, WidthPolicy::AmbiguousWide, "{locale}");
     }
 }
 
 #[test]
 fn kitty_stays_unicode_in_a_cjk_locale_when_mode_2027_is_absent() {
-    let caps = Caps::from_env(&ProbeEnv {
-        term_program: String::from("kitty"),
-        locale: String::from("ja_JP.UTF-8"),
-        ..ProbeEnv::default()
-    });
+    let caps = Caps::from_env(
+        &ProbeEnv::default()
+            .term_program("kitty")
+            .locale("ja_JP.UTF-8"),
+    );
     assert_eq!(caps.width, WidthPolicy::Unicode);
 }
 
 #[test]
 fn no_color_stays_mono_when_a_truecolor_reply_arrives() {
-    let env = ProbeEnv {
-        term: String::from("xterm-256color"),
-        colorterm: String::from("truecolor"),
-        no_color: true,
-        ..ProbeEnv::default()
-    };
+    let env = ProbeEnv::default()
+        .term("xterm-256color")
+        .colorterm("truecolor")
+        .no_color(true);
     let reply = ProbeReply::from_replies(&env, RecordedTerminal::Kitty.replies());
     assert_eq!(reply.caps.color, ColorDepth::Mono);
     assert_eq!(reply.caps.background_dark, Some(true));
@@ -264,12 +251,12 @@ fn no_color_stays_mono_when_a_truecolor_reply_arrives() {
 
 #[test]
 fn force_color_overrides_no_color() {
-    let caps = Caps::from_env(&ProbeEnv {
-        colorterm: String::from("truecolor"),
-        no_color: true,
-        force_color: true,
-        ..ProbeEnv::default()
-    });
+    let caps = Caps::from_env(
+        &ProbeEnv::default()
+            .colorterm("truecolor")
+            .no_color(true)
+            .force_color(true),
+    );
     assert_eq!(caps.color, ColorDepth::TrueColor);
 }
 
@@ -299,10 +286,7 @@ fn unknown_bytes_do_not_set_modes_and_a_later_report_still_does() {
 
 #[test]
 fn prismattyc_is_native_and_uses_unicode_widths() {
-    let caps = Caps::from_env(&ProbeEnv {
-        term_program: String::from("prismattyc"),
-        ..ProbeEnv::default()
-    });
+    let caps = Caps::from_env(&ProbeEnv::default().term_program("prismattyc"));
     assert!(caps.identity.prismattyc_native);
     assert_eq!(caps.width, WidthPolicy::Unicode);
     assert_eq!(caps.protocols.hyperlinks, Hyperlinks::Osc8);
