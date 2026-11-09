@@ -13,7 +13,18 @@ use crate::flex::{Axis, Flex};
 use crate::solve_fast;
 
 /// The result of [`Layout::split_wrapped`](crate::Layout::split_wrapped).
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_layout::Wrapped;
+///
+/// fn destructures(value: Wrapped) {
+///     let Wrapped { segments: _, lines: _, needs_solver: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Wrapped {
     /// One rectangle per constraint, in order.
     pub segments: Vec<Rect>,
@@ -25,7 +36,18 @@ pub struct Wrapped {
 }
 
 /// One line of a [`Wrapped`] split.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_layout::WrappedLine;
+///
+/// fn destructures(value: WrappedLine) {
+///     let WrappedLine { area: _, segments: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct WrappedLine {
     /// The band this line occupies: the full main-axis length and the line's cross-axis size.
     pub area: Rect,

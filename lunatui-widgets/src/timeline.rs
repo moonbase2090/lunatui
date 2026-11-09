@@ -139,7 +139,18 @@ impl<'a> TimelineLane<'a> {
 }
 
 /// An axis label placed at a time. Ticks are expected in ascending time order.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::TimelineTick;
+///
+/// fn destructures(value: TimelineTick<'_>) {
+///     let TimelineTick { at: _, label: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct TimelineTick<'a> {
     /// The time the tick marks.
     pub at: i64,

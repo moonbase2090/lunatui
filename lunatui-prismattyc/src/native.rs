@@ -64,8 +64,19 @@ pub enum NativeDiscovery {
 }
 
 /// Outcome of one discovery attempt.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_prismattyc::DiscoveryResult;
+///
+/// fn destructures(value: DiscoveryResult) {
+///     let DiscoveryResult { discovery: _, preserved_input: _, alpha_offered: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub struct DiscoveryResult {
     /// Parsed discovery state.
     pub discovery: NativeDiscovery,

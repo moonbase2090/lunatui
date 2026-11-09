@@ -7,7 +7,6 @@ use lunatui_core::Rect;
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};
 use lunatui_term::{
     Caps, GraphicsProtocol, Multiplexer, PixelImage, PixelLayer, PixelMode, ProbeEnv, ProbeReply,
-    Protocols, TermIdentity,
 };
 
 const PIXEL: [u8; 4] = [1, 2, 3, 4];
@@ -64,25 +63,13 @@ fn pixel_image_rejects_empty_sides_and_wrong_lengths() {
 
 #[test]
 fn mode_needs_the_kitty_reply_and_no_multiplexer() {
-    let kitty = Protocols {
-        graphics: GraphicsProtocol::Kitty,
-        ..Protocols::default()
-    };
-    let direct = Caps {
-        protocols: kitty,
-        ..Caps::default()
-    };
+    let mut direct = Caps::default();
+    direct.protocols.graphics = GraphicsProtocol::Kitty;
     assert_eq!(PixelMode::from_caps(&direct), PixelMode::Kitty);
     assert_eq!(PixelMode::from_caps(&Caps::default()), PixelMode::Cells);
     for multiplexer in [Multiplexer::Tmux, Multiplexer::Screen, Multiplexer::Both] {
-        let wrapped = Caps {
-            protocols: kitty,
-            identity: TermIdentity {
-                multiplexer,
-                ..TermIdentity::default()
-            },
-            ..Caps::default()
-        };
+        let mut wrapped = direct.clone();
+        wrapped.identity.multiplexer = multiplexer;
         assert_eq!(
             PixelMode::from_caps(&wrapped),
             PixelMode::Cells,
@@ -395,15 +382,11 @@ fn kitty_probe_enables_native_resolution_upload_for_the_placement()
 }
 
 fn immediate_layer(protocol: GraphicsProtocol) -> PixelLayer {
-    PixelLayer::from_caps(&Caps {
-        protocols: Protocols {
-            graphics: protocol,
-            ..Protocols::default()
-        },
-        cell_pixels: lunatui_term::CellPixels::new(1, 2),
-        background_rgb: Some([0, 0, 0]),
-        ..Caps::default()
-    })
+    let mut caps = Caps::default();
+    caps.protocols.graphics = protocol;
+    caps.cell_pixels = lunatui_term::CellPixels::new(1, 2);
+    caps.background_rgb = Some([0, 0, 0]);
+    PixelLayer::from_caps(&caps)
 }
 
 fn inline_pixels(output: &[u8]) -> Result<(u32, u32, Vec<u8>), Box<dyn std::error::Error>> {
@@ -626,13 +609,8 @@ fn sixel_uses_actual_pixels_and_retransmits_unchanged_frames()
 fn protocol_choice_and_rejection_keep_unsupported_paths_on_cells()
 -> Result<(), Box<dyn std::error::Error>> {
     for graphics in [GraphicsProtocol::Iterm2, GraphicsProtocol::Sixel] {
-        let mut caps = Caps {
-            protocols: Protocols {
-                graphics,
-                ..Protocols::default()
-            },
-            ..Caps::default()
-        };
+        let mut caps = Caps::default();
+        caps.protocols.graphics = graphics;
         assert_eq!(
             PixelMode::from_caps(&caps),
             PixelMode::Cells,

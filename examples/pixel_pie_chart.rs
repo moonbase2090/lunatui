@@ -345,16 +345,12 @@ mod tests {
     #[test]
     fn real_presenter_caches_and_retires_all_three_native_images()
     -> Result<(), Box<dyn std::error::Error>> {
-        use lunatui_term::{Caps, CellPixels, GraphicsProtocol, PixelLayer, Protocols};
-        let mut layer = PixelLayer::from_caps(&Caps {
-            protocols: Protocols {
-                graphics: GraphicsProtocol::Kitty,
-                ..Protocols::default()
-            },
-            cell_pixels: CellPixels::new(4, 8),
-            background_rgb: Some([0, 0, 0]),
-            ..Caps::default()
-        });
+        use lunatui_term::{Caps, CellPixels, GraphicsProtocol, PixelLayer};
+        let mut caps = Caps::default();
+        caps.protocols.graphics = GraphicsProtocol::Kitty;
+        caps.cell_pixels = CellPixels::new(4, 8);
+        caps.background_rgb = Some([0, 0, 0]);
+        let mut layer = PixelLayer::from_caps(&caps);
         let mut screen = screen()?;
         let mut grid = Grid::new(248, 44);
         let mut clusters = ClusterTable::new();

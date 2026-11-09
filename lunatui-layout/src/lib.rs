@@ -30,7 +30,18 @@ pub use limit::{Limit, aspect_fit};
 pub use wrap::{Wrapped, WrappedLine};
 
 /// Segments and the gaps around them.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_layout::Solved;
+///
+/// fn destructures(value: Solved) {
+///     let Solved { segments: _, spacers: _, needs_solver: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Solved {
     /// One rectangle per constraint, in order.
     pub segments: Vec<Rect>,

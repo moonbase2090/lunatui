@@ -36,7 +36,7 @@ fn color(token: Token) -> Color {
 fn found(items: &[&str], query: &str) -> Vec<(usize, Vec<(usize, usize)>)> {
     SearchBox::filter(items, query)
         .into_iter()
-        .map(|SearchMatch { index, ranges }| {
+        .map(|SearchMatch { index, ranges, .. }| {
             (
                 index,
                 ranges.into_iter().map(|r| (r.start, r.end)).collect(),

@@ -16,13 +16,33 @@ const MIN_WITH_CLEAR: u16 = 12;
 const TEXT_AT: u16 = 3;
 
 /// One item that matched a [`SearchBox::filter`] query.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::SearchMatch;
+///
+/// fn destructures(value: SearchMatch) {
+///     let SearchMatch { index: _, ranges: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct SearchMatch {
     /// Index of the item in the filtered slice.
     pub index: usize,
     /// Byte ranges of the item's text the query terms matched, sorted and not overlapping, for
     /// highlighting with [`SearchBox::put_highlighted`]. Empty for an empty query.
     pub ranges: Vec<Range<usize>>,
+}
+
+impl SearchMatch {
+    /// Builds a match for an item, for a caller that runs its own matcher and passes the result to
+    /// [`ComboBox::with_matches`](crate::ComboBox::with_matches).
+    #[must_use]
+    pub const fn new(index: usize, ranges: Vec<Range<usize>>) -> Self {
+        Self { index, ranges }
+    }
 }
 
 /// A one-row search field: a prompt, the query (or a placeholder while it is empty), a match count

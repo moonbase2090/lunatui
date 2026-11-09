@@ -75,7 +75,18 @@ impl PieSlice {
 }
 
 /// Where a [`PieChart`] draws its disc and its legend.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::PieLayout;
+///
+/// fn destructures(value: PieLayout) {
+///     let PieLayout { pie: _, legend: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct PieLayout {
     /// The cells the disc is drawn in.
     pub pie: Rect,
