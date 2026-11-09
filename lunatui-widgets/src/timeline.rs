@@ -24,6 +24,7 @@ use crate::{RenderCx, Widget, WidgetState};
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum TimelineStatus {
     /// Scheduled work. Its progress uses the accent token; without progress it has not
     /// started and draws as track only, so future work recedes behind finished and active work.

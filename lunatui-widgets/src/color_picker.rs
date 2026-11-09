@@ -31,6 +31,7 @@ const HEX_DIGITS: &[u8; 16] = b"0123456789ABCDEF";
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ColorPickerFocus {
     /// The saturation and value square.
     #[default]

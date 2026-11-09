@@ -42,6 +42,7 @@ pub enum Variant {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ButtonSize {
     /// One cell.
     Small,

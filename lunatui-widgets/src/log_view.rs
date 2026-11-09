@@ -30,6 +30,7 @@ const LEVELS: usize = 5;
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum LogLevel {
     /// Fine-grained detail.
     Trace,

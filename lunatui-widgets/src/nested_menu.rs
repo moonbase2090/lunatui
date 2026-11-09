@@ -22,6 +22,7 @@ use crate::{Block, Borders, RenderCx, Widget, WidgetState};
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum MenuEvent<T> {
     /// The payload attached to the selected leaf.
     Selected(T),

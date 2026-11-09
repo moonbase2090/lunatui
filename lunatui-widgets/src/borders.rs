@@ -64,6 +64,7 @@ impl core::ops::BitOr for Borders {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum BorderType {
     /// `symbols::border::PLAIN`.
     #[default]

@@ -22,6 +22,7 @@ use lunatui_widgets::{RenderCx, Widget};
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Look {
     /// Tone color as the background, bold text on top.
     #[default]

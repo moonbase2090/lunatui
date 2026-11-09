@@ -221,7 +221,7 @@ impl Frame {
                     self.dirty = false;
                     self.status = "Saved src/metrics.rs".into();
                 }
-                MenuEvent::Selected(_) => continue,
+                _ => continue,
             }
             self.activity.push(self.status.clone());
             self.menu.reset();

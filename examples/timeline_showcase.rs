@@ -301,7 +301,7 @@ fn inspector(cx: &mut RenderCx<'_>, area: Rect, tick: u32, ground: Style) {
         TimelineStatus::Planned => (Token::Accent, "PLANNED / on track"),
         TimelineStatus::Done => (Token::Ok, "DONE / shipped"),
         TimelineStatus::AtRisk => (Token::Warn, "AT RISK / review owed"),
-        TimelineStatus::Blocked => (Token::Fail, "BLOCKED / waiting on fix"),
+        TimelineStatus::Blocked | _ => (Token::Fail, "BLOCKED / waiting on fix"),
     };
     let tone = cx.token(token);
     let bold = ground.with_attrs(Attrs::new().set_bold(true));

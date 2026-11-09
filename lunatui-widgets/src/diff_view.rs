@@ -22,6 +22,7 @@ use crate::{RenderCx, Widget, WidgetState};
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DiffKind {
     /// Present on both sides.
     Context,

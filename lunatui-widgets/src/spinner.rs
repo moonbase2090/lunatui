@@ -34,6 +34,7 @@ const BARS: [&str; 6] = ["▁▃▅", "▃▅▇", "▅▇▅", "▇▅▃", "�
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum SpinnerPattern {
     /// Rotating Braille dots.
     #[default]

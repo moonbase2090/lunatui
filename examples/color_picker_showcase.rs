@@ -213,7 +213,7 @@ fn editor_notes(cx: &mut RenderCx<'_>, editor: Rect, app: &App, fill: Style) {
     let part = match app.picker.focus() {
         ColorPickerFocus::Square => "saturation and value",
         ColorPickerFocus::Hue => "hue",
-        ColorPickerFocus::Hex => "hex entry",
+        ColorPickerFocus::Hex | _ => "hex entry",
     };
     Paragraph::new(format!("Editing {part}"))
         .style(fill)

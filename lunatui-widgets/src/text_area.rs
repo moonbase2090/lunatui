@@ -71,6 +71,7 @@ pub enum VimMode {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum EditResult {
     /// Event did not affect this editor.
     Ignored,

@@ -48,6 +48,7 @@ impl PixelSize {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Fit {
     /// Preserve the full image and center it, leaving unused viewport space.
     #[default]

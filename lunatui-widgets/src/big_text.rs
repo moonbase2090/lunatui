@@ -32,6 +32,7 @@ const GLYPH_COLUMNS: usize = 16;
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum BigTextFont {
     /// A modified 8×8 face derived from Press Start 2P by `CodeMan38` under OFL-1.1.
     #[default]
@@ -70,6 +71,7 @@ pub enum BigTextFont {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum PixelSize {
     /// Two cells per pixel, full block or space. Sixteen by eight cells.
     #[default]
