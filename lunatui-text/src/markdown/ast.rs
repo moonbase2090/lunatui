@@ -7,7 +7,18 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 /// A parsed Markdown document.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_text::markdown::Document;
+///
+/// fn destructures(value: Document) {
+///     let Document { blocks: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Document {
     /// Top-level blocks in source order.
     pub blocks: Vec<Block>,
@@ -65,7 +76,18 @@ pub enum Block {
 }
 
 /// A list and its items.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_text::markdown::List;
+///
+/// fn destructures(value: List) {
+///     let List { start: _, tight: _, items: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct List {
     /// Number of the first item of an ordered list; `None` for a bullet list.
     pub start: Option<u64>,
@@ -76,7 +98,18 @@ pub struct List {
 }
 
 /// One list item.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_text::markdown::Item;
+///
+/// fn destructures(value: Item) {
+///     let Item { checked: _, blocks: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Item {
     /// `Some` for a task item (`[ ]` or `[x]`); `Some(true)` when checked.
     pub checked: Option<bool>,
@@ -115,7 +148,18 @@ pub enum Alignment {
 }
 
 /// A table: a header row, a delimiter row that sets alignment, and body rows.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_text::markdown::Table;
+///
+/// fn destructures(value: Table) {
+///     let Table { alignments: _, header: _, rows: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Table {
     /// Alignment of each column.
     pub alignments: Vec<Alignment>,

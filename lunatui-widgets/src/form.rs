@@ -77,7 +77,18 @@ impl FormField {
 }
 
 /// Where one field's parts sit in a [`Form::layout`].
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::FieldArea;
+///
+/// fn destructures(value: FieldArea) {
+///     let FieldArea { index: _, row: _, label: _, input: _, message: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct FieldArea {
     /// Index of the field.
     pub index: usize,

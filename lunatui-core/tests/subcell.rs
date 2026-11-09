@@ -8,11 +8,10 @@ use lunatui_core::subcell::{GlyphCapabilities, GlyphSet, horizontal_eighths, ver
 #[test]
 fn startup_selection_obeys_font_support_order() {
     for bits in 0..8 {
-        let capabilities = GlyphCapabilities {
-            octants: bits & 4 != 0,
-            braille: bits & 2 != 0,
-            blocks: bits & 1 != 0,
-        };
+        let capabilities = GlyphCapabilities::default()
+            .octants(bits & 4 != 0)
+            .braille(bits & 2 != 0)
+            .blocks(bits & 1 != 0);
         let expected = [
             GlyphSet::Ascii,
             GlyphSet::Blocks,

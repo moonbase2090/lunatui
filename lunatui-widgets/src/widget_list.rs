@@ -53,7 +53,18 @@ impl WidgetListState {
 }
 
 /// One item of a [`WidgetList`] as placed in an area, for hit testing.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::ItemArea;
+///
+/// fn destructures(value: ItemArea) {
+///     let ItemArea { index: _, rect: _, skip: _, height: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ItemArea {
     /// Item index.
     pub index: usize,

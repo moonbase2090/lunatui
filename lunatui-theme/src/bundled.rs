@@ -5,7 +5,18 @@ use crate::serde::{ThemeLoadError, theme_from_toml_strict};
 use crate::theme::Theme;
 
 /// Metadata for one embedded theme file.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_theme::BundledTheme;
+///
+/// fn destructures(value: BundledTheme) {
+///     let BundledTheme { id: _, name: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
 pub struct BundledTheme {
     /// Stable id (filename stem).
     pub id: &'static str,

@@ -5,7 +5,7 @@
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_theme::{Theme, Variant};
-use lunatui_widgets::{ItemArea, RenderCx, Widget, WidgetList, WidgetListState};
+use lunatui_widgets::{RenderCx, Widget, WidgetList, WidgetListState};
 
 const HEIGHTS: [u16; 5] = [1, 3, 2, 4, 1];
 const HIGHLIGHT: Color = Color::Rgb(42, 35, 87);
@@ -167,28 +167,17 @@ fn an_unselected_item_cut_by_the_area_bottom_gets_no_highlight() {
 
 #[test]
 fn item_areas_report_the_visible_rect_skip_and_full_height() {
-    let areas = list(state(None, 1, 2)).item_areas(Rect::new(2, 5, 6, 4));
+    let areas: Vec<_> = list(state(None, 1, 2))
+        .item_areas(Rect::new(2, 5, 6, 4))
+        .iter()
+        .map(|area| (area.index, area.rect, area.skip, area.height))
+        .collect();
     assert_eq!(
         areas,
         [
-            ItemArea {
-                index: 1,
-                rect: Rect::new(2, 5, 6, 1),
-                skip: 2,
-                height: 3
-            },
-            ItemArea {
-                index: 2,
-                rect: Rect::new(2, 6, 6, 2),
-                skip: 0,
-                height: 2
-            },
-            ItemArea {
-                index: 3,
-                rect: Rect::new(2, 8, 6, 1),
-                skip: 0,
-                height: 4
-            },
+            (1, Rect::new(2, 5, 6, 1), 2, 3),
+            (2, Rect::new(2, 6, 6, 2), 0, 2),
+            (3, Rect::new(2, 8, 6, 1), 0, 4),
         ]
     );
 }

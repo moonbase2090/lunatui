@@ -5,7 +5,7 @@
 
 use lunatui_core::{Rect, Style};
 use lunatui_runtime::{HitId, HitMap};
-use lunatui_term::{Modifiers, MouseButton, MouseEvent, MouseKind, MouseUnit};
+use lunatui_term::{MouseButton, MouseEvent, MouseKind};
 use lunatui_widgets::{List, Tabs, VecSource};
 
 const TABS: HitId = HitId(100);
@@ -13,13 +13,7 @@ const ROWS: HitId = HitId(200);
 const POPUP: HitId = HitId(900);
 
 fn click(column: u16, row: u16) -> MouseEvent {
-    MouseEvent {
-        kind: MouseKind::Down(MouseButton::Left),
-        column,
-        row,
-        modifiers: Modifiers::default(),
-        unit: MouseUnit::Cells,
-    }
+    MouseEvent::new(MouseKind::Down(MouseButton::Left), column, row)
 }
 
 fn tabs() -> Tabs {

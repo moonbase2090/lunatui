@@ -5,7 +5,18 @@
 mod octants;
 
 /// Font support established by the application at startup.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_core::subcell::GlyphCapabilities;
+///
+/// fn destructures(value: GlyphCapabilities) {
+///     let GlyphCapabilities { octants: _, braille: _, blocks: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct GlyphCapabilities {
     /// All octant glyphs and their legacy block aliases render correctly.
     pub octants: bool,
@@ -13,6 +24,29 @@ pub struct GlyphCapabilities {
     pub braille: bool,
     /// Half and quarter block characters render as single cells.
     pub blocks: bool,
+}
+
+impl GlyphCapabilities {
+    /// Sets whether all octant glyphs and their legacy block aliases render correctly.
+    #[must_use]
+    pub const fn octants(mut self, value: bool) -> Self {
+        self.octants = value;
+        self
+    }
+
+    /// Sets whether Braille patterns render as single cells.
+    #[must_use]
+    pub const fn braille(mut self, value: bool) -> Self {
+        self.braille = value;
+        self
+    }
+
+    /// Sets whether half and quarter block characters render as single cells.
+    #[must_use]
+    pub const fn blocks(mut self, value: bool) -> Self {
+        self.blocks = value;
+        self
+    }
 }
 
 /// A glyph tier selected once from known font capabilities.
