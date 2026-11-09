@@ -127,7 +127,10 @@ struct App {
 impl App {
     fn handle(&mut self) {
         let events: Vec<_> = self.menu.drain_events().collect();
-        for MenuEvent::Selected(action) in events {
+        for event in events {
+            let MenuEvent::Selected(action) = event else {
+                continue;
+            };
             self.menu.reset();
             match action {
                 Action::Recent => {

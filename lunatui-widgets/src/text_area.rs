@@ -54,7 +54,24 @@ pub enum VimMode {
 }
 
 /// Outcome of handling one input event.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::EditResult;
+///
+/// fn covers_every_value(value: EditResult) -> u8 {
+///     match value {
+///         EditResult::Ignored => 0,
+///         EditResult::StateChanged => 0,
+///         EditResult::DocumentChanged => 0,
+///         EditResult::DocumentChangedWithoutUndo => 0,
+///         EditResult::PasteRejected => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum EditResult {
     /// Event did not affect this editor.
     Ignored,

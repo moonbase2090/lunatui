@@ -9,7 +9,20 @@ use lunatui_theme::Token;
 use crate::{Block, Borders, RenderCx, Widget, WidgetState};
 
 /// An action emitted when a leaf menu item is selected.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::MenuEvent;
+///
+/// fn covers_every_value(value: MenuEvent<u8>) -> u8 {
+///     match value {
+///         MenuEvent::Selected(_) => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum MenuEvent<T> {
     /// The payload attached to the selected leaf.
     Selected(T),

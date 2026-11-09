@@ -13,7 +13,24 @@ use crate::{RenderCx, Widget, WidgetState};
 const LEVELS: usize = 5;
 
 /// How serious a log entry is, from least to most.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::LogLevel;
+///
+/// fn covers_every_value(value: LogLevel) -> u8 {
+///     match value {
+///         LogLevel::Trace => 0,
+///         LogLevel::Debug => 0,
+///         LogLevel::Info => 0,
+///         LogLevel::Warn => 0,
+///         LogLevel::Error => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum LogLevel {
     /// Fine-grained detail.
     Trace,

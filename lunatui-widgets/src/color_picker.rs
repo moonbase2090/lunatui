@@ -16,7 +16,22 @@ const MIN_WIDTH: u16 = 6;
 const HEX_DIGITS: &[u8; 16] = b"0123456789ABCDEF";
 
 /// The part of a [`ColorPicker`] the keyboard moves.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::ColorPickerFocus;
+///
+/// fn covers_every_value(value: ColorPickerFocus) -> u8 {
+///     match value {
+///         ColorPickerFocus::Square => 0,
+///         ColorPickerFocus::Hue => 0,
+///         ColorPickerFocus::Hex => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ColorPickerFocus {
     /// The saturation and value square.
     #[default]

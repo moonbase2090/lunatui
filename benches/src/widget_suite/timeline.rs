@@ -162,7 +162,7 @@ pub(super) fn baseline(buffer: &mut Buffer, area: RatRect, tick: u32) {
                 TimelineStatus::Planned => Token::Accent,
                 TimelineStatus::Done => Token::Ok,
                 TimelineStatus::AtRisk => Token::Warn,
-                TimelineStatus::Blocked => Token::Fail,
+                TimelineStatus::Blocked | _ => Token::Fail,
             };
             if milestone {
                 let x = floor(at);
