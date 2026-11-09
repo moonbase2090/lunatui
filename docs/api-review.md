@@ -14,12 +14,7 @@ The list is closed when no entry is open.
 
 The inventory comes from scanning `src/` of every library crate for public items: `pub enum`, `pub struct` with public fields, error types, `get_` functions, `pub mod` in `lib.rs`, and `mod.rs` files. It is a source scan, not rustdoc output, so an item is counted when it is declared `pub`, whether or not it is reachable from the crate root. Items hidden behind a private module are marked **module-only** and are decided separately. The web crate and the test helper crate are not public API and are left out.
 
-Not yet reviewed, and needed before the list can close:
-
-- Trait surfaces (`App`, `Widget`, the sink traits; `RenderCx` is a struct and falls under the struct rules): whether each is sealed, and which methods may grow defaults.
-- Facade parity: whether `lunatui` re-exports what each crate exports, and nothing it should not.
-- Feature gating of public items, and items that are public only for tests or benches.
-- Deprecated items, and items documented as experimental.
+The review also covers trait surfaces, facade parity, feature gating and deprecated items (section G). The rules that come out of it are written down in [`stability.md`](stability.md).
 
 ## Inventory
 
@@ -101,14 +96,31 @@ A struct with public fields and no `#[non_exhaustive]` cannot gain a field witho
 | C1 | Complete value types: `Size`, `Rect`, `Style`, `Meta`, `Padding`, `PixelPoint`, `PixelRect`, `TextPosition`, `TimelineItemId`, `Divider`, and the geometry shapes `Points`, `Line`, `Rectangle`, `Circle`. | accept |
 | C2 | Option and configuration types that will gain fields: `RunOptions`, `SessionOptions`, `ProbeEnv`, `ToastPlacement`. Add `#[non_exhaustive]` and keep `Default` plus builder methods as the way to construct them. | done in change 5 |
 | C3 | Result and report types a library produces and callers only read: `Caps`, `ProbeReply`, `TermIdentity`, `DecModes`, `Protocols`, `DiscoveryResult`, `FrameDiff`, `PresentStats`, `SearchMatch`, `PieLayout`, `SplitLayout`, `Solved`, `SolvedGrid`, `Wrapped`, `WrappedLine`, `ImageGeometry`, `TreeRow`, `HeatmapCell`, `TimelineTick`, `LogEntry`, `DiffLine`, `DiffHunk`. Add `#[non_exhaustive]`. `HeatmapCell` is also an input to `Heatmap::selected` and is a complete two-coordinate value, so it stays open to construction (C1). `SolvedGrid` and `TreeRow` have private fields, so they can already neither be built nor listed field by field outside their crate, and the attribute would change nothing. `SearchMatch` is also passed in to `ComboBox::with_matches`, so it gains `SearchMatch::new`. | done in change 6; `HeatmapCell` accepted as a complete value; `SolvedGrid` and `TreeRow` need no change |
-| C4 | The rest of the 72 struct declarations in the table (those not named in C1 to C3) (event payloads, state holders, markdown tree nodes, rendering areas). Each is decided with its crate's change using the same rule: complete value stays, grows gets `#[non_exhaustive]`. | defer to changes 2 to 5; the closing change lists the result |
+| C4 | The rest of the struct declarations (those not named in C1 to C3): event payloads, state holders, markdown tree nodes, layout areas. Decided in the table below with the same rule: complete value stays, grows gets `#[non_exhaustive]`. | done in change 7 |
+
+C4 decisions. Each struct is listed once; "stays" means a complete value that callers build and match by field.
+
+| Structs | Decision |
+|---|---|
+| `SectionArea`, `FieldArea`, `PaneArea`, `ItemArea` (widgets) | `#[non_exhaustive]`: layout results that callers only read. |
+| `Document`, `List`, `Item`, `Table` (text markdown) | `#[non_exhaustive]`: tree nodes, like the `Block` and `Inline` enums that hold them. |
+| `BundledTheme` (theme), `TerminalCell` (widgets) | `#[non_exhaustive]`: metadata and borrowed views the library produces. |
+| `KeyEvent`, `MouseEvent` (term) | `#[non_exhaustive]`: an input event gains a field when a protocol does. `KeyEvent` already had builders; `MouseEvent` gains `new`, `modifiers` and `unit`. |
+| `GlyphCapabilities` (core) | `#[non_exhaustive]`: a new glyph tier adds a flag. Gains `octants`, `braille` and `blocks` setters. |
+| `TabMove` (widgets) | stays: a complete `from` and `to` pair that callers build to reorder their own titles with `TabMove::apply`. |
+| `CellFlags`, `ChangedRun`, `RowDirty` (core) | stay: the packed cell format and the diff contract fix them (cell ADR); a new field is a format change. |
+| `Set` in `symbols::border` and `symbols::line`, `BarSet` (widgets) | stay: glyph tables that mirror the ratatui symbol sets one for one. |
+| `Rect` in `graphite`, `FontRun`, `HeatmapCell`, canvas shapes (see C1) | stay: complete geometry and position values. |
+| `StyledSpan`, `StyledLine`, `StyledText` (ratatui) | stay: complete conversion values with no producer-side state. |
+| `RowBuilder`, `RowIndex`, `Wrap` (text), `WidgetListState` (widgets) | stay: each has one public field that is its whole meaning, or is a state value with a `Default` and public fields by design. |
+| `SolvedGrid`, `TreeRow` | already covered in C3: private fields. |
 
 ### D. Naming
 
 | # | Entry | Disposition |
 |---|---|---|
 | D1 | `get_*` functions: none found. | accept |
-| D2 | `as_`, `to_` and `into_` conversions, and boolean predicate names (§2) are a review rule with no mechanical check. A scan for the common slips (`to_` on a borrowed cheap view, `is_` on a non-boolean) is part of the closing change. | defer to the closing change |
+| D2 | `as_`, `to_` and `into_` conversions, and boolean predicate names (§2) are a review rule with no mechanical check. The scan for the common slips found none: no `as_` function returns an owned `String`, `Vec` or `Box`, no `to_` function on `&self` returns a reference, no `into_` function takes `&self`, and no `is_` or `has_` function returns anything but `bool`. The scan was by pattern over one-line signatures, so it is a spot check, not a proof. | accept; no mechanical check added |
 
 ### E. Module exposure
 
@@ -116,7 +128,7 @@ A struct with public fields and no `#[non_exhaustive]` cannot gain a field witho
 
 | # | Entry | Disposition |
 |---|---|---|
-| E1 | Review each public module: keep it public only if the crate root does not already re-export what a caller needs. A module made private is a breaking change. | defer to the closing change (needs the facade parity check from the scope list) |
+| E1 | Review each public module: keep it public only if the crate root does not already re-export what a caller needs. A module made private is a breaking change. Every one of the thirteen modules is a namespace callers import from (`symbols` for the glyph tables, `subcell` for glyph selection, `markdown`, `wrap` and `source` for the text tree and row sources, `canvas` and `graphite` for their widget families, `effect` and `keymap` for the runtime features, `paint`, `oklab` and `simd` for the color and kernel layers, `sys` for the Windows console layer), or a group the root deliberately does not flatten. | accept: none is made private |
 
 ### F. Conventions that are about layout, not API
 
@@ -126,14 +138,24 @@ Eight `mod.rs` files exist (`core`: `simd`, `symbols`; `runtime`: `anim`; `term`
 |---|---|---|
 | F1 | `mod.rs` files and `lib.rs` content. Both rules are marked "CI (planned)". The fix is an `xtask` check plus the file moves, with no API effect. | accept for 1.0 (not a breaking change); tracked as separate conventions work |
 
+### G. Trait surfaces, facade, features and deprecated items
+
+| # | Entry | Disposition |
+|---|---|---|
+| G1 | Trait surfaces. Twelve public traits: `App`, `Widget`, `ImageSink`, `HostRenderer`, `RowSource`, `TextMetrics`, `HostFontMetrics`, `CodeHighlight`, `Shape`, `CellStyle`, `SparklineValue`, `DateStyle`. All are meant to be implemented by downstream code or used as `dyn` objects (`Widget` is held as `&dyn Widget` by `Card` and `Field`), so none is sealed and none can be. The rule instead: a method added to one of them after 1.0 must have a default body, because a new required method breaks every implementer. The required methods today are the stable contract. `App` and `ImageSink` already follow this: their later additions (`render_frame`, `needs_animation_frames`, `token_palette`, `pixel_target`, `submit_raster`) all have defaults. | accept; the rule is in `stability.md` |
+| G2 | Facade parity. `lunatui` re-exports only the runtime entry points (`App`, `ControlFlow`, `RunOptions`, `is_quit`, `render_once`, `run`, and the `Result` alias), behind the `app` feature. It does not mirror the other crates, on purpose: a program depends on `lunatui-core`, `lunatui-widgets` and the rest directly. Nothing is re-exported that should not be, and every re-exported item is in the stable surface. | accept; the facade stays this small until a user need says otherwise |
+| G3 | Feature gating. Features are additive, named for the capability, and use `dep:` for optional dependencies (conventions §9); the widget features all appear in `all-widgets`. A public item behind a feature is public API under that feature. No public item exists only for tests or benches: nothing is `#[doc(hidden)]`, and the bench and test helper crates are not published API. The long default feature list of `lunatui-widgets` is a product choice (features on by default), not an API problem. | accept |
+| G4 | Deprecated and experimental items. No item carries `#[deprecated]`. One surface is documented as experimental: the version-1 accessibility export in `lunatui-runtime`, behind the `accessibility` feature. | accept; the accessibility export is excluded from the 1.0 stability promise until its documentation drops the word "experimental" |
+
 ## Changes this list expects
 
 1. Error types: A1, A2, and the amendment in A3.
 2. Term enums: B1, plus term structs from C4.
 3. Core, layout, text, runtime, theme and prismattyc enums: B2, B4, B6.
 4. Widget enums: B3, plus widget structs from C4.
-5. Option structs: C2.
-6. Result structs: C3.
-7. Closing change: D2, E1, the C4 leftovers, the scope items above, and a stability policy for 1.0 (what counts as breaking, how `non_exhaustive` and features are used).
+5. Option structs: C2. Done.
+6. Result structs: C3. Done.
+7. Closing change: C4, D2, E1, section G, and the stability policy in [`stability.md`](stability.md). Done.
+8. The conventions §3 amendment (A3), a separate change because `docs/conventions.md` needs the maintainer's sign-off. It is the last open entry.
 
 Each change adds a `CHANGELOG.md` entry under Unreleased that names the types and shows the one-line fix for downstream code (a wildcard arm, or `..Default::default()` for a struct literal). The sweeps default to the smallest change that closes their entries, and a `non_exhaustive` addition lands in the same change as the fix to any in-repo caller it breaks.
