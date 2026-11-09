@@ -2,6 +2,8 @@
 
 These are lunatui's own measurements of its dashboard scene on one machine, with one scope. They are not compared with other libraries here.
 
+The 2026-11-09 library frame times, including p99, are in [latency.md](latency.md). The table below is the October 2026 run.
+
 ## Dashboard frame
 
 Measured on an Apple M5 Max (macOS, arm64) with the release profile, October 2026. The scene is the same scripted dashboard at each size. Each run draws 240 frames; the table shows the median of five runs.

@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/latency.md`: library frame time for the scripted dashboard at 80×24 and 200×60, with median, p95, and p99 from a release run. Terminal parse time and input-to-photon time are listed as not measured.
+
 ### Changed
 
 - Breaking: more structs are now `#[non_exhaustive]`: the layout results `SectionArea`, `FieldArea`, `PaneArea` and `ItemArea`, the markdown nodes `Document`, `List`, `Item` and `Table`, `BundledTheme`, `TerminalCell`, `KeyEvent`, `MouseEvent` and `GlyphCapabilities`. Outside its crate, a struct literal for one of them no longer compiles and a pattern that names its fields needs a trailing `..`. Build a `MouseEvent` with `MouseEvent::new(kind, column, row)` and the `modifiers` and `unit` setters, and `GlyphCapabilities` from `GlyphCapabilities::default()` with the `octants`, `braille` and `blocks` setters. `KeyEvent` already had builders.
