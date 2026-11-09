@@ -14,6 +14,7 @@
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct RunOptions {
     /// Terminal width in columns.
     pub width: u16,

@@ -116,6 +116,7 @@ impl Toast {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ToastPlacement {
     /// The toast.
     pub id: ToastId,

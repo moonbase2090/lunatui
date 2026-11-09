@@ -222,6 +222,7 @@ pub struct TermIdentity {
 /// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub struct ProbeEnv {
     /// `TERM`.
     pub term: String,
@@ -237,6 +238,50 @@ pub struct ProbeEnv {
     pub force_color: bool,
     /// `TMUX` and `STY`.
     pub multiplexer: Multiplexer,
+}
+
+impl ProbeEnv {
+    /// Sets `TERM`.
+    pub fn term(mut self, value: impl Into<String>) -> Self {
+        self.term = value.into();
+        self
+    }
+
+    /// Sets `COLORTERM`.
+    pub fn colorterm(mut self, value: impl Into<String>) -> Self {
+        self.colorterm = value.into();
+        self
+    }
+
+    /// Sets `TERM_PROGRAM`.
+    pub fn term_program(mut self, value: impl Into<String>) -> Self {
+        self.term_program = value.into();
+        self
+    }
+
+    /// Sets the locale.
+    pub fn locale(mut self, value: impl Into<String>) -> Self {
+        self.locale = value.into();
+        self
+    }
+
+    /// Sets whether `NO_COLOR` is set and non-empty.
+    pub fn no_color(mut self, value: bool) -> Self {
+        self.no_color = value;
+        self
+    }
+
+    /// Sets whether `CLICOLOR_FORCE` forces color.
+    pub fn force_color(mut self, value: bool) -> Self {
+        self.force_color = value;
+        self
+    }
+
+    /// Sets the multiplexer.
+    pub fn multiplexer(mut self, value: Multiplexer) -> Self {
+        self.multiplexer = value;
+        self
+    }
 }
 
 impl ProbeEnv {

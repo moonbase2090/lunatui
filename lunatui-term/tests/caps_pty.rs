@@ -16,10 +16,7 @@ use lunatui_term::{
 };
 
 fn env_256() -> ProbeEnv {
-    ProbeEnv {
-        term: String::from("xterm-256color"),
-        ..ProbeEnv::default()
-    }
+    ProbeEnv::default().term("xterm-256color")
 }
 
 #[test]

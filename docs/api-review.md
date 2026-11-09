@@ -99,8 +99,8 @@ A struct with public fields and no `#[non_exhaustive]` cannot gain a field witho
 | # | Entry | Disposition |
 |---|---|---|
 | C1 | Complete value types: `Size`, `Rect`, `Style`, `Meta`, `Padding`, `PixelPoint`, `PixelRect`, `TextPosition`, `TimelineItemId`, `Divider`, and the geometry shapes `Points`, `Line`, `Rectangle`, `Circle`. | accept |
-| C2 | Option and configuration types that will gain fields: `RunOptions`, `SessionOptions`, `ProbeEnv`, `ToastPlacement`. Add `#[non_exhaustive]` and keep `Default` plus builder methods as the way to construct them. | do-now, change 5 |
-| C3 | Result and report types a library produces and callers only read: `Caps`, `ProbeReply`, `TermIdentity`, `DecModes`, `Protocols`, `DiscoveryResult`, `FrameDiff`, `PresentStats`, `SearchMatch`, `PieLayout`, `SplitLayout`, `Solved`, `SolvedGrid`, `Wrapped`, `WrappedLine`, `ImageGeometry`, `TreeRow`, `HeatmapCell`, `TimelineTick`, `LogEntry`, `DiffLine`, `DiffHunk`. Add `#[non_exhaustive]`. | do-now, change 5 |
+| C2 | Option and configuration types that will gain fields: `RunOptions`, `SessionOptions`, `ProbeEnv`, `ToastPlacement`. Add `#[non_exhaustive]` and keep `Default` plus builder methods as the way to construct them. | done in change 5 |
+| C3 | Result and report types a library produces and callers only read: `Caps`, `ProbeReply`, `TermIdentity`, `DecModes`, `Protocols`, `DiscoveryResult`, `FrameDiff`, `PresentStats`, `SearchMatch`, `PieLayout`, `SplitLayout`, `Solved`, `SolvedGrid`, `Wrapped`, `WrappedLine`, `ImageGeometry`, `TreeRow`, `HeatmapCell`, `TimelineTick`, `LogEntry`, `DiffLine`, `DiffHunk`. Add `#[non_exhaustive]`. | do-now, change 6 |
 | C4 | The rest of the 72 struct declarations in the table (those not named in C1 to C3) (event payloads, state holders, markdown tree nodes, rendering areas). Each is decided with its crate's change using the same rule: complete value stays, grows gets `#[non_exhaustive]`. | defer to changes 2 to 5; the closing change lists the result |
 
 ### D. Naming
@@ -132,7 +132,8 @@ Eight `mod.rs` files exist (`core`: `simd`, `symbols`; `runtime`: `anim`; `term`
 2. Term enums: B1, plus term structs from C4.
 3. Core, layout, text, runtime, theme and prismattyc enums: B2, B4, B6.
 4. Widget enums: B3, plus widget structs from C4.
-5. Option and result structs: C2, C3.
-6. Closing change: D2, E1, the C4 leftovers, the scope items above, and a stability policy for 1.0 (what counts as breaking, how `non_exhaustive` and features are used).
+5. Option structs: C2.
+6. Result structs: C3.
+7. Closing change: D2, E1, the C4 leftovers, the scope items above, and a stability policy for 1.0 (what counts as breaking, how `non_exhaustive` and features are used).
 
 Each change adds a `CHANGELOG.md` entry under Unreleased that names the types and shows the one-line fix for downstream code (a wildcard arm, or `..Default::default()` for a struct literal). The sweeps default to the smallest change that closes their entries, and a `non_exhaustive` addition lands in the same change as the fix to any in-repo caller it breaks.

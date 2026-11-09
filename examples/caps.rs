@@ -212,22 +212,19 @@ mod tests {
 
     #[test]
     fn apple_terminal_without_a_tty_shows_the_ambiguous_wide_fallback() {
-        let caps = Caps::from_env(&ProbeEnv {
-            term: String::from("xterm-256color"),
-            colorterm: String::from("truecolor"),
-            term_program: String::from("Apple_Terminal"),
-            locale: String::from("en_US.UTF-8"),
-            ..ProbeEnv::default()
-        });
+        let caps = Caps::from_env(
+            &ProbeEnv::default()
+                .term("xterm-256color")
+                .colorterm("truecolor")
+                .term_program("Apple_Terminal")
+                .locale("en_US.UTF-8"),
+        );
         assert_eq!(picture(&caps, "not a tty"), APPLE_TERMINAL_BOX);
     }
 
     #[test]
     fn paths_in_the_program_name_are_not_printed() {
-        let caps = Caps::from_env(&ProbeEnv {
-            term_program: String::from("/opt/terminal"),
-            ..ProbeEnv::default()
-        });
+        let caps = Caps::from_env(&ProbeEnv::default().term_program("/opt/terminal"));
         let drawn = picture(&caps, "not a tty");
         assert!(!drawn.contains("/opt"));
         assert!(drawn.contains("redacted"));

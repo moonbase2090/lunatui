@@ -36,11 +36,28 @@ pub enum MouseTracking {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct SessionOptions {
     /// Synchronized output wrapping for [`Session::present_frame`].
     pub sync_output: SyncOutput,
     /// Pointer reporting (unsupported on non-Unix stubs).
     pub mouse_tracking: MouseTracking,
+}
+
+impl SessionOptions {
+    /// Sets synchronized output wrapping for [`Session::present_frame`].
+    #[must_use]
+    pub const fn sync_output(mut self, value: SyncOutput) -> Self {
+        self.sync_output = value;
+        self
+    }
+
+    /// Sets pointer reporting.
+    #[must_use]
+    pub const fn mouse_tracking(mut self, value: MouseTracking) -> Self {
+        self.mouse_tracking = value;
+        self
+    }
 }
 
 impl Default for SessionOptions {

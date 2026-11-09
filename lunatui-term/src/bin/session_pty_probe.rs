@@ -40,10 +40,9 @@ fn run_mouse() -> i32 {
     let stdout = io::stdout();
     let Ok(mut session) = Session::enter_with_options(
         stdout,
-        SessionOptions {
-            sync_output: SyncOutput::Disabled,
-            mouse_tracking: MouseTracking::Sgr,
-        },
+        SessionOptions::default()
+            .sync_output(SyncOutput::Disabled)
+            .mouse_tracking(MouseTracking::Sgr),
     ) else {
         return 2;
     };
@@ -57,10 +56,9 @@ fn run_panic() -> i32 {
     let stdout = io::stdout();
     let Ok(_session) = Session::enter_with_options(
         stdout,
-        SessionOptions {
-            sync_output: SyncOutput::Disabled,
-            mouse_tracking: MouseTracking::Disabled,
-        },
+        SessionOptions::default()
+            .sync_output(SyncOutput::Disabled)
+            .mouse_tracking(MouseTracking::Disabled),
     ) else {
         return 2;
     };

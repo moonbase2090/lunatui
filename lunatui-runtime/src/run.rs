@@ -53,10 +53,9 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
     let mut input = Input::open()?;
     let mut session = Session::enter_with_options(
         io::stdout(),
-        SessionOptions {
-            sync_output: SyncOutput::Enabled,
-            mouse_tracking: MouseTracking::Sgr,
-        },
+        SessionOptions::default()
+            .sync_output(SyncOutput::Enabled)
+            .mouse_tracking(MouseTracking::Sgr),
     )?;
     let area = Rect::new(0, 0, options.width, options.height);
     let mut frames = FrameState {
