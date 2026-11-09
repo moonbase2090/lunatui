@@ -32,6 +32,8 @@ pub struct FairRunStats {
     pub median: Duration,
     /// 95th percentile frame draw time.
     pub p95: Duration,
+    /// 99th percentile frame draw time.
+    pub p99: Duration,
     /// Wall time for the measured loop.
     pub wall: Duration,
     /// Process CPU time (user + system) over the run.
@@ -151,6 +153,7 @@ fn summarize(
     FairRunStats {
         median: percentile(&sorted, 50),
         p95: percentile(&sorted, 95),
+        p99: percentile(&sorted, 99),
         wall,
         cpu,
         bytes_per_frame: write.bytes / frames_usize,
@@ -172,9 +175,10 @@ fn percentile(sorted: &[Duration], pct: usize) -> Duration {
 #[must_use]
 pub fn format_report_line(side: &str, stats: &FairRunStats) -> String {
     format!(
-        "SIDE={side} median_ns={} p95_ns={} wall_ns={} cpu_ns={} bytes_per_frame={} writes_per_frame={} allocs_tenths={} rss_kib={}",
+        "SIDE={side} median_ns={} p95_ns={} p99_ns={} wall_ns={} cpu_ns={} bytes_per_frame={} writes_per_frame={} allocs_tenths={} rss_kib={}",
         stats.median.as_nanos(),
         stats.p95.as_nanos(),
+        stats.p99.as_nanos(),
         stats.wall.as_nanos(),
         stats.cpu.as_nanos(),
         stats.bytes_per_frame,
@@ -192,6 +196,7 @@ pub fn format_report_line(side: &str, stats: &FairRunStats) -> String {
 pub fn parse_report_line(line: &str) -> io::Result<FairRunStats> {
     let mut median_ns = None;
     let mut p95_ns = None;
+    let mut p99_ns = None;
     let mut wall_ns = None;
     let mut cpu_ns = None;
     let mut bytes_per_frame = None;
@@ -205,6 +210,7 @@ pub fn parse_report_line(line: &str) -> io::Result<FairRunStats> {
         match k {
             "median_ns" => median_ns = Some(parse_u128(v)?),
             "p95_ns" => p95_ns = Some(parse_u128(v)?),
+            "p99_ns" => p99_ns = Some(parse_u128(v)?),
             "wall_ns" => wall_ns = Some(parse_u128(v)?),
             "cpu_ns" => cpu_ns = Some(parse_u128(v)?),
             "bytes_per_frame" => bytes_per_frame = Some(parse_usize(v)?),
@@ -219,6 +225,7 @@ pub fn parse_report_line(line: &str) -> io::Result<FairRunStats> {
             u64::try_from(median_ns.ok_or_else(missing)?).unwrap_or(u64::MAX),
         ),
         p95: Duration::from_nanos(u64::try_from(p95_ns.ok_or_else(missing)?).unwrap_or(u64::MAX)),
+        p99: Duration::from_nanos(u64::try_from(p99_ns.ok_or_else(missing)?).unwrap_or(u64::MAX)),
         wall: Duration::from_nanos(u64::try_from(wall_ns.ok_or_else(missing)?).unwrap_or(u64::MAX)),
         cpu: Duration::from_nanos(u64::try_from(cpu_ns.ok_or_else(missing)?).unwrap_or(u64::MAX)),
         bytes_per_frame: bytes_per_frame.ok_or_else(missing)?,
@@ -301,4 +308,40 @@ fn rss_kib() -> usize {
 #[cfg(not(unix))]
 fn rss_kib() -> usize {
     0
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+
+    use super::*;
+
+    #[test]
+    fn p99_is_the_upper_tail_not_the_median() -> io::Result<()> {
+        let samples: Vec<_> = (1..=100).map(Duration::from_nanos).collect();
+        let stats = summarize(
+            &samples,
+            Duration::from_millis(1),
+            Duration::from_millis(1),
+            WriteStats {
+                writes: 100,
+                bytes: 100,
+                flushes: 0,
+            },
+            AllocStats::default(),
+            100,
+            0,
+        );
+        assert_eq!(stats.median, Duration::from_nanos(50));
+        assert_eq!(stats.p95, Duration::from_nanos(95));
+        assert_eq!(stats.p99, Duration::from_nanos(99));
+        assert_ne!(stats.p99, stats.median);
+
+        let line = format_report_line("lunatui", &stats);
+        let parsed = parse_report_line(&line)?;
+        assert_eq!(parsed.p99, Duration::from_nanos(99));
+        assert_ne!(parsed.p99, parsed.median);
+        assert_ne!(parsed.p99, parsed.p95);
+        Ok(())
+    }
 }

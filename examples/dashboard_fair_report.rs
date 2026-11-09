@@ -84,9 +84,10 @@ fn run_side(example: &str, options: Options) -> io::Result<FairRunStats> {
 
 fn print_run(side: &str, run: u32, stats: &FairRunStats) {
     println!(
-        "run {run}: {side} median={} p95={} wall_ms={:.1} cpu_ms={:.1} rss_kib={} bytes/frame={} writes/frame={} allocs/frame≈{}",
+        "run {run}: {side} median={} p95={} p99={} wall_ms={:.1} cpu_ms={:.1} rss_kib={} bytes/frame={} writes/frame={} allocs/frame≈{}",
         micros(stats.median),
         micros(stats.p95),
+        micros(stats.p99),
         stats.wall.as_secs_f64() * 1000.0,
         stats.cpu.as_secs_f64() * 1000.0,
         stats.rss_kib,
@@ -99,8 +100,10 @@ fn print_run(side: &str, run: u32, stats: &FairRunStats) {
 fn print_agg(label: &str, runs: &[FairRunStats]) {
     let mut medians: Vec<_> = runs.iter().map(|r| r.median).collect();
     let mut p95s: Vec<_> = runs.iter().map(|r| r.p95).collect();
+    let mut p99s: Vec<_> = runs.iter().map(|r| r.p99).collect();
     medians.sort_unstable();
     p95s.sort_unstable();
+    p99s.sort_unstable();
     let mid = runs.len() / 2;
     let alloc_sum: u64 = runs.iter().map(|r| r.allocs_per_frame_tenths).sum();
     let alloc_avg = alloc_sum / u64::try_from(runs.len().max(1)).unwrap_or(1);
@@ -108,10 +111,11 @@ fn print_agg(label: &str, runs: &[FairRunStats]) {
     let writes_avg = runs.iter().map(|r| r.writes_per_frame).sum::<usize>() / runs.len().max(1);
     let rss_max = runs.iter().map(|r| r.rss_kib).max().unwrap_or(0);
     println!(
-        "{label}: across {} runs median-of-medians={} median-of-p95={} avg_bytes/frame={} avg_writes/frame={} avg_allocs/frame≈{} max_rss_kib={}",
+        "{label}: across {} runs median-of-medians={} median-of-p95={} median-of-p99={} avg_bytes/frame={} avg_writes/frame={} avg_allocs/frame≈{} max_rss_kib={}",
         runs.len(),
         micros(medians[mid]),
         micros(p95s[mid]),
+        micros(p99s[mid]),
         bytes_avg,
         writes_avg,
         tenths(alloc_avg),
