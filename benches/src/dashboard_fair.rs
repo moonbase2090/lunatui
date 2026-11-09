@@ -309,3 +309,36 @@ fn rss_kib() -> usize {
 fn rss_kib() -> usize {
     0
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn p99_is_the_upper_tail_not_the_median() {
+        let samples: Vec<_> = (1..=100).map(Duration::from_nanos).collect();
+        let stats = summarize(
+            &samples,
+            Duration::from_millis(1),
+            Duration::from_millis(1),
+            WriteStats {
+                writes: 100,
+                bytes: 100,
+                flushes: 0,
+            },
+            AllocStats::default(),
+            100,
+            0,
+        );
+        assert_eq!(stats.median, Duration::from_nanos(50));
+        assert_eq!(stats.p95, Duration::from_nanos(95));
+        assert_eq!(stats.p99, Duration::from_nanos(99));
+        assert_ne!(stats.p99, stats.median);
+
+        let line = format_report_line("lunatui", &stats);
+        let parsed = parse_report_line(&line).unwrap();
+        assert_eq!(parsed.p99, Duration::from_nanos(99));
+        assert_ne!(parsed.p99, parsed.median);
+        assert_ne!(parsed.p99, parsed.p95);
+    }
+}
