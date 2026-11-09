@@ -21,6 +21,7 @@ const MAX_REPLIES: usize = 4096;
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct TerminalCell<'a> {
     /// Text stored by the VT parser, including supported combining characters.
     pub text: &'a str,

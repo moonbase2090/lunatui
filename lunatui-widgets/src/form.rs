@@ -88,6 +88,7 @@ impl FormField {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct FieldArea {
     /// Index of the field.
     pub index: usize,

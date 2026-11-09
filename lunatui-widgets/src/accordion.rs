@@ -91,6 +91,7 @@ impl AccordionSection {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct SectionArea {
     /// Index of the section.
     pub index: usize,

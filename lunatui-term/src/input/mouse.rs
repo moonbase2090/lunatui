@@ -69,6 +69,7 @@ pub enum MouseUnit {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct MouseEvent {
     /// Button, motion or wheel.
     pub kind: MouseKind,
@@ -80,6 +81,34 @@ pub struct MouseEvent {
     pub modifiers: Modifiers,
     /// Cells or pixels, from the parser's mode.
     pub unit: MouseUnit,
+}
+
+impl MouseEvent {
+    /// A cell-unit event with no modifiers at a zero-based column and row.
+    #[must_use]
+    pub const fn new(kind: MouseKind, column: u16, row: u16) -> Self {
+        Self {
+            kind,
+            column,
+            row,
+            modifiers: Modifiers::new(),
+            unit: MouseUnit::Cells,
+        }
+    }
+
+    /// Sets the modifiers carried in the button code.
+    #[must_use]
+    pub const fn modifiers(mut self, modifiers: Modifiers) -> Self {
+        self.modifiers = modifiers;
+        self
+    }
+
+    /// Sets whether the position is in cells or pixels.
+    #[must_use]
+    pub const fn unit(mut self, unit: MouseUnit) -> Self {
+        self.unit = unit;
+        self
+    }
 }
 
 pub(crate) fn mouse_from_sgr(body: &str, release: bool, pixels: bool) -> Option<MouseEvent> {

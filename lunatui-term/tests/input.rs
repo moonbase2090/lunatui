@@ -142,79 +142,60 @@ fn captured_mouse_paste_and_focus_decode() {
         (
             "sgr-down",
             b"\x1b[<0;1;1M",
-            &[Event::Mouse(MouseEvent {
-                kind: MouseKind::Down(MouseButton::Left),
-                column: 0,
-                row: 0,
-                modifiers: Modifiers::new(),
-                unit: MouseUnit::Cells,
-            })],
+            &[Event::Mouse(MouseEvent::new(
+                MouseKind::Down(MouseButton::Left),
+                0,
+                0,
+            ))],
         ),
         (
             "sgr-up",
             b"\x1b[<0;1;1m",
-            &[Event::Mouse(MouseEvent {
-                kind: MouseKind::Up(MouseButton::Left),
-                column: 0,
-                row: 0,
-                modifiers: Modifiers::new(),
-                unit: MouseUnit::Cells,
-            })],
+            &[Event::Mouse(MouseEvent::new(
+                MouseKind::Up(MouseButton::Left),
+                0,
+                0,
+            ))],
         ),
         (
             "sgr-drag",
             b"\x1b[<32;5;6M",
-            &[Event::Mouse(MouseEvent {
-                kind: MouseKind::Drag(MouseButton::Left),
-                column: 4,
-                row: 5,
-                modifiers: Modifiers::new(),
-                unit: MouseUnit::Cells,
-            })],
+            &[Event::Mouse(MouseEvent::new(
+                MouseKind::Drag(MouseButton::Left),
+                4,
+                5,
+            ))],
         ),
         (
             "sgr-wheel",
             b"\x1b[<64;1;1M",
-            &[Event::Mouse(MouseEvent {
-                kind: MouseKind::Scroll(Scroll::Up),
-                column: 0,
-                row: 0,
-                modifiers: Modifiers::new(),
-                unit: MouseUnit::Cells,
-            })],
+            &[Event::Mouse(MouseEvent::new(
+                MouseKind::Scroll(Scroll::Up),
+                0,
+                0,
+            ))],
         ),
         (
             "sgr-move",
             b"\x1b[<35;1;1M",
-            &[Event::Mouse(MouseEvent {
-                kind: MouseKind::Move,
-                column: 0,
-                row: 0,
-                modifiers: Modifiers::new(),
-                unit: MouseUnit::Cells,
-            })],
+            &[Event::Mouse(MouseEvent::new(MouseKind::Move, 0, 0))],
         ),
         (
             "sgr-alt",
             b"\x1b[<8;1;1M",
-            &[Event::Mouse(MouseEvent {
-                kind: MouseKind::Down(MouseButton::Left),
-                column: 0,
-                row: 0,
-                modifiers: Modifiers::new().alt(),
-                unit: MouseUnit::Cells,
-            })],
+            &[Event::Mouse(
+                MouseEvent::new(MouseKind::Down(MouseButton::Left), 0, 0)
+                    .modifiers(Modifiers::new().alt()),
+            )],
         ),
         (
             "x10",
             b"\x1b[M   ",
-            &[Event::Mouse(MouseEvent {
-                kind: MouseKind::Down(MouseButton::Left),
-                column: 0,
-                row: 0,
-                modifiers: Modifiers::new(),
-                unit: MouseUnit::Cells,
-            })],
+            &[Event::Mouse(MouseEvent::new(
+                MouseKind::Down(MouseButton::Left),
+                0,
+                0,
+            ))],
         ),
         ("focus-in", b"\x1b[I", &[Event::Focus(Focus::In)]),
         ("focus-out", b"\x1b[O", &[Event::Focus(Focus::Out)]),
@@ -263,41 +244,14 @@ fn parse_of_encode_matches_the_event() {
         ),
         Event::Key(KeyEvent::press(KeyCode::Char('a')).text("hi")),
         Event::Key(KeyEvent::press(KeyCode::Char('0')).keypad(true)),
-        Event::Mouse(MouseEvent {
-            kind: MouseKind::Down(MouseButton::Left),
-            column: 3,
-            row: 4,
-            modifiers: Modifiers::new().shift(),
-            unit: MouseUnit::Cells,
-        }),
-        Event::Mouse(MouseEvent {
-            kind: MouseKind::Up(MouseButton::Right),
-            column: 0,
-            row: 0,
-            modifiers: Modifiers::new(),
-            unit: MouseUnit::Cells,
-        }),
-        Event::Mouse(MouseEvent {
-            kind: MouseKind::Drag(MouseButton::Middle),
-            column: 1,
-            row: 2,
-            modifiers: Modifiers::new(),
-            unit: MouseUnit::Cells,
-        }),
-        Event::Mouse(MouseEvent {
-            kind: MouseKind::Scroll(Scroll::Down),
-            column: 8,
-            row: 1,
-            modifiers: Modifiers::new(),
-            unit: MouseUnit::Cells,
-        }),
-        Event::Mouse(MouseEvent {
-            kind: MouseKind::Move,
-            column: 2,
-            row: 2,
-            modifiers: Modifiers::new(),
-            unit: MouseUnit::Pixels,
-        }),
+        Event::Mouse(
+            MouseEvent::new(MouseKind::Down(MouseButton::Left), 3, 4)
+                .modifiers(Modifiers::new().shift()),
+        ),
+        Event::Mouse(MouseEvent::new(MouseKind::Up(MouseButton::Right), 0, 0)),
+        Event::Mouse(MouseEvent::new(MouseKind::Drag(MouseButton::Middle), 1, 2)),
+        Event::Mouse(MouseEvent::new(MouseKind::Scroll(Scroll::Down), 8, 1)),
+        Event::Mouse(MouseEvent::new(MouseKind::Move, 2, 2).unit(MouseUnit::Pixels)),
         Event::Focus(Focus::In),
         Event::Focus(Focus::Out),
     ];
@@ -454,13 +408,9 @@ fn pixel_mode_labels_the_same_sgr_bytes() {
     events.extend(parser.flush());
     assert_eq!(
         events,
-        vec![Event::Mouse(MouseEvent {
-            kind: MouseKind::Down(MouseButton::Left),
-            column: 9,
-            row: 19,
-            modifiers: Modifiers::new(),
-            unit: MouseUnit::Pixels,
-        })]
+        vec![Event::Mouse(
+            MouseEvent::new(MouseKind::Down(MouseButton::Left), 9, 19).unit(MouseUnit::Pixels)
+        )]
     );
 }
 

@@ -18,6 +18,7 @@ use alloc::vec::Vec;
 /// }
 /// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Document {
     /// Top-level blocks in source order.
     pub blocks: Vec<Block>,
@@ -86,6 +87,7 @@ pub enum Block {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct List {
     /// Number of the first item of an ordered list; `None` for a bullet list.
     pub start: Option<u64>,
@@ -107,6 +109,7 @@ pub struct List {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Item {
     /// `Some` for a task item (`[ ]` or `[x]`); `Some(true)` when checked.
     pub checked: Option<bool>,
@@ -156,6 +159,7 @@ pub enum Alignment {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Table {
     /// Alignment of each column.
     pub alignments: Vec<Alignment>,

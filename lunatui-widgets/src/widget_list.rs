@@ -64,6 +64,7 @@ impl WidgetListState {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct ItemArea {
     /// Item index.
     pub index: usize,

@@ -16,6 +16,7 @@ use crate::theme::Theme;
 /// }
 /// ```
 #[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
 pub struct BundledTheme {
     /// Stable id (filename stem).
     pub id: &'static str,
