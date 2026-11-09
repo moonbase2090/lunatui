@@ -210,6 +210,16 @@ pub struct TermIdentity {
 }
 
 /// Environment the probe reads before any query.
+///
+/// Downstream code cannot build this with a struct literal, because fields can be added. Start from the constructor and change fields on the value:
+///
+/// ```compile_fail,E0639
+/// use lunatui_term::ProbeEnv;
+///
+/// fn literal() -> ProbeEnv {
+///     ProbeEnv { ..ProbeEnv::default() }
+/// }
+/// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[must_use]
 pub struct ProbeEnv {

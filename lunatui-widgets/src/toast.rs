@@ -102,6 +102,19 @@ impl Toast {
 }
 
 /// Where a toast is drawn this frame, for rendering and hit testing.
+///
+/// Downstream code cannot build this with a struct literal, because fields can be added. Start from the constructor and change fields on the value:
+///
+/// ```compile_fail,E0639
+/// use lunatui_widgets::ToastPlacement;
+///
+/// use lunatui_core::Rect;
+/// use lunatui_widgets::ToastId;
+///
+/// fn literal(id: ToastId, rect: Rect) -> ToastPlacement {
+///     ToastPlacement { id, rect, z: 0 }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ToastPlacement {
     /// The toast.

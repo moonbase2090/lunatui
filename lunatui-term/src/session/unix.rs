@@ -41,6 +41,16 @@ pub enum SyncOutput {
 }
 
 /// Options for [`Session::enter`].
+///
+/// Downstream code cannot build this with a struct literal, because fields can be added. Start from the constructor and change fields on the value:
+///
+/// ```compile_fail,E0639
+/// use lunatui_term::SessionOptions;
+///
+/// fn literal() -> SessionOptions {
+///     SessionOptions { ..SessionOptions::default() }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SessionOptions {
     /// Synchronized output wrapping for [`Session::present_frame`].
