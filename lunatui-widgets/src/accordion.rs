@@ -80,6 +80,16 @@ impl AccordionSection {
 }
 
 /// Where one section's header and body sit in an accordion layout.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::SectionArea;
+///
+/// fn destructures(value: SectionArea) {
+///     let SectionArea { index: _, header: _, body: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SectionArea {
     /// Index of the section.

@@ -10,6 +10,16 @@ const HISTORY_ROWS: usize = 256;
 const MAX_REPLIES: usize = 4096;
 
 /// A borrowed emulator cell in Lunatui colors and attributes.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::TerminalCell;
+///
+/// fn destructures(value: TerminalCell<'_>) {
+///     let TerminalCell { text: _, style: _, width: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TerminalCell<'a> {
     /// Text stored by the VT parser, including supported combining characters.

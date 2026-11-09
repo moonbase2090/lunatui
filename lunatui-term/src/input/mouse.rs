@@ -58,6 +58,16 @@ pub enum MouseUnit {
 }
 
 /// One decoded pointer event.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_term::MouseEvent;
+///
+/// fn destructures(value: MouseEvent) {
+///     let MouseEvent { kind: _, column: _, row: _, modifiers: _, unit: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MouseEvent {
     /// Button, motion or wheel.

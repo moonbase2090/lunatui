@@ -5,6 +5,16 @@
 mod octants;
 
 /// Font support established by the application at startup.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_core::subcell::GlyphCapabilities;
+///
+/// fn destructures(value: GlyphCapabilities) {
+///     let GlyphCapabilities { octants: _, braille: _, blocks: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct GlyphCapabilities {
     /// All octant glyphs and their legacy block aliases render correctly.

@@ -56,6 +56,16 @@ pub struct SplitTree {
 }
 
 /// One pane's place in a [`SplitLayout`].
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::PaneArea;
+///
+/// fn destructures(value: PaneArea) {
+///     let PaneArea { pane: _, rect: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PaneArea {
     /// The pane.

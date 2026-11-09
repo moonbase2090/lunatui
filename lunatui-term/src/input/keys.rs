@@ -194,6 +194,16 @@ pub enum KeyKind {
 }
 
 /// One decoded key.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_term::KeyEvent;
+///
+/// fn destructures(value: KeyEvent) {
+///     let KeyEvent { code: _, modifiers: _, kind: _, alternates: _, text: _, keypad: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyEvent {
     /// Key identity.
