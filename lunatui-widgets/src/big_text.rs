@@ -18,6 +18,19 @@ const INK_COLUMNS: u8 = 8;
 const GLYPH_COLUMNS: usize = 16;
 
 /// Bitmap font used to draw large text.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::BigTextFont;
+///
+/// fn covers_every_value(value: BigTextFont) -> u8 {
+///     match value {
+///         BigTextFont::Modified8x8 => 0,
+///         BigTextFont::FiveBySeven => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum BigTextFont {
     /// A modified 8×8 face derived from Press Start 2P by `CodeMan38` under OFL-1.1.
@@ -38,6 +51,24 @@ pub enum BigTextFont {
 /// pixels square. [`PixelSize::HalfWidth`] and [`PixelSize::Quadrant`] do not.
 /// [`PixelSize::Sextant`] pads the bitmap with one blank pixel row. Sextant and octant sizes pack
 /// as quadrants until [`BigText::subcell_glyphs`] reports that the font has those blocks.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::PixelSize;
+///
+/// fn covers_every_value(value: PixelSize) -> u8 {
+///     match value {
+///         PixelSize::Full => 0,
+///         PixelSize::HalfHeight => 0,
+///         PixelSize::HalfWidth => 0,
+///         PixelSize::Quadrant => 0,
+///         PixelSize::Sextant => 0,
+///         PixelSize::Octant => 0,
+///         PixelSize::Braille => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum PixelSize {
     /// Two cells per pixel, full block or space. Sixteen by eight cells.

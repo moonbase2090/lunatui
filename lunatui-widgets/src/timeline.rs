@@ -8,6 +8,21 @@ use crate::render_cx::clip_to_coordinates;
 use crate::{RenderCx, Widget, WidgetState};
 
 /// The schedule state of a span or milestone, drawn with a semantic theme token.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::TimelineStatus;
+///
+/// fn covers_every_value(value: TimelineStatus) -> u8 {
+///     match value {
+///         TimelineStatus::Planned => 0,
+///         TimelineStatus::Done => 0,
+///         TimelineStatus::AtRisk => 0,
+///         TimelineStatus::Blocked => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum TimelineStatus {
     /// Scheduled work. Its progress uses the accent token; without progress it has not

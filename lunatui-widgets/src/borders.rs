@@ -48,6 +48,21 @@ impl core::ops::BitOr for Borders {
 }
 
 /// Border glyph set (ratatui `BorderType` parity).
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::BorderType;
+///
+/// fn covers_every_value(value: BorderType) -> u8 {
+///     match value {
+///         BorderType::Plain => 0,
+///         BorderType::Rounded => 0,
+///         BorderType::Double => 0,
+///         BorderType::Thick => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum BorderType {
     /// `symbols::border::PLAIN`.

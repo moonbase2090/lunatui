@@ -16,6 +16,23 @@ const ARC: [&str; 4] = ["◜", "◝", "◞", "◟"];
 const BARS: [&str; 6] = ["▁▃▅", "▃▅▇", "▅▇▅", "▇▅▃", "▅▃▁", "▃▁▃"];
 
 /// Frame family used by a spinner.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::SpinnerPattern;
+///
+/// fn covers_every_value(value: SpinnerPattern) -> u8 {
+///     match value {
+///         SpinnerPattern::BrailleDots => 0,
+///         SpinnerPattern::HalfMoon => 0,
+///         SpinnerPattern::Quadrant => 0,
+///         SpinnerPattern::BrailleRing => 0,
+///         SpinnerPattern::Arc => 0,
+///         SpinnerPattern::Bars => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum SpinnerPattern {
     /// Rotating Braille dots.

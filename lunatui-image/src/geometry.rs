@@ -32,6 +32,21 @@ impl PixelSize {
 }
 
 /// Pixel fitting behavior for an image viewport.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_image::Fit;
+///
+/// fn covers_every_value(value: Fit) -> u8 {
+///     match value {
+///         Fit::Contain => 0,
+///         Fit::Cover => 0,
+///         Fit::Stretch => 0,
+///         Fit::Native => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Fit {
     /// Preserve the full image and center it, leaving unused viewport space.

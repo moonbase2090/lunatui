@@ -27,6 +27,20 @@ pub enum Variant {
 }
 
 /// How much blank space a [`Button`] keeps on each side of its label.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_button::ButtonSize;
+///
+/// fn covers_every_value(value: ButtonSize) -> u8 {
+///     match value {
+///         ButtonSize::Small => 0,
+///         ButtonSize::Medium => 0,
+///         ButtonSize::Large => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ButtonSize {
     /// One cell.

@@ -7,6 +7,20 @@ use lunatui_theme::Token;
 use crate::{RenderCx, Widget, WidgetState};
 
 /// How a line differs between the two sides of a [`Diff`].
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::DiffKind;
+///
+/// fn covers_every_value(value: DiffKind) -> u8 {
+///     match value {
+///         DiffKind::Context => 0,
+///         DiffKind::Added => 0,
+///         DiffKind::Removed => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DiffKind {
     /// Present on both sides.

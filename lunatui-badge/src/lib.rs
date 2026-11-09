@@ -8,6 +8,19 @@ use lunatui_ui_tokens::{Role, Tone, surface};
 use lunatui_widgets::{RenderCx, Widget};
 
 /// How a [`Badge`] is filled.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_badge::Look;
+///
+/// fn covers_every_value(value: Look) -> u8 {
+///     match value {
+///         Look::Filled => 0,
+///         Look::Subtle => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Look {
     /// Tone color as the background, bold text on top.
