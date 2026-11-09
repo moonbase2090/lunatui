@@ -16,6 +16,21 @@ pub struct GlyphCapabilities {
 }
 
 /// A glyph tier selected once from known font capabilities.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_core::subcell::GlyphSet;
+///
+/// fn covers_every_value(value: GlyphSet) -> u8 {
+///     match value {
+///         GlyphSet::Octants => 0,
+///         GlyphSet::Braille => 0,
+///         GlyphSet::Blocks => 0,
+///         GlyphSet::Ascii => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum GlyphSet {
     /// Exact 2×4 coverage with Unicode octants and block aliases.

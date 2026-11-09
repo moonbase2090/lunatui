@@ -31,6 +31,19 @@ pub enum NativePolicy {
 }
 
 /// Result of parsing host capability traffic for native.grid.v1.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_prismattyc::NativeDiscovery;
+///
+/// fn covers_every_value(value: NativeDiscovery) -> u8 {
+///     match value {
+///         NativeDiscovery::Unavailable => 0,
+///         NativeDiscovery::Advertised { .. } => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[must_use]
 pub enum NativeDiscovery {

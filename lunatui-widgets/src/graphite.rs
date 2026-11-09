@@ -92,6 +92,20 @@ impl Rect {
 }
 
 /// Text style face understood by Graphite's text measurement contract.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_widgets::graphite::Face;
+///
+/// fn covers_every_value(value: Face) -> u8 {
+///     match value {
+///         Face::Regular => 0,
+///         Face::SemiBold => 0,
+///         Face::Mono => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Face {
     /// Regular-weight proportional text.
