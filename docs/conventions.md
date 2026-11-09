@@ -33,8 +33,8 @@ The dependency directions above are inferred from PRD §3.1 and must be confirme
 
 | Rule | Check |
 |---|---|
-| Each library crate has one error type, `pub enum Error`, in `src/error.rs`. It is `#[non_exhaustive]` and implements `Display`, `std::error::Error` and `From` for wrapped sources. | Review |
-| Each library crate has `pub type Result<T, E = Error> = core::result::Result<T, E>`. | Review |
+| Each fallible area names its error `<Area>Error` (`SessionError`, `ThemeLoadError`), in the module that fails. It is `#[non_exhaustive]`, including a struct error whose fields are private, and implements `Display`, `std::error::Error` and `From` for wrapped sources. | CI: `cargo xtask check` requires the attribute on every `pub` type named `*Error` |
+| A crate adds `pub type Result<T, E = Error> = core::result::Result<T, E>` only when it has one error type. A crate with several names each `<Area>Error` and has no alias. | Review |
 | Errors propagate with `?`. Library code never calls `unwrap`, `expect`, `panic!`, `todo!` or `unimplemented!` (M11). | CI: `clippy::unwrap_used`, `expect_used`, `panic`, `todo`, `unimplemented`, denied workspace-wide crates |
 | Binaries (`xtask`, examples, benches) return `std::io::Result<()>` or `ExitCode` from `main`. | Review |
 | Error impls are hand-written. Adding an error-derive crate is a dependency-allowlist change (M16). | CI (cargo-deny allowlist, planned) |

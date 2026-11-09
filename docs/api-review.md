@@ -67,7 +67,7 @@ Convention checks that pass: no public function is named `get_*`.
 |---|---|---|
 | A1 | `SessionError` (three copies), `NodeGraphError`: add `#[non_exhaustive]`. A new failure kind must not be a breaking change. | done in change 1 |
 | A2 | `ThemeLoadError`, `MermaidError`, `RampError`: struct errors. Every `pub` type named `*Error` carries `#[non_exhaustive]`, including struct errors whose fields are private, so one mechanical rule covers them all. | done in change 1; `cargo xtask check` now enforces it |
-| A3 | One `Error` and `Result` per crate (§3). Nine domain names exist, each specific and already used by callers. Renaming them gains nothing a reader needs. | accept; amend §3 to say each fallible area names its error `<Area>Error`, is `#[non_exhaustive]`, and a crate adds a `Result` alias only when it has one error type. The amendment needs the maintainer's sign-off. |
+| A3 | One `Error` and `Result` per crate (§3). Nine domain names exist, each specific and already used by callers. Renaming them gains nothing a reader needs. | done in change 8: §3 now says each fallible area names its error `<Area>Error`, is `#[non_exhaustive]`, and a crate adds a `Result` alias only when it has one error type |
 
 ### B. Enums without `#[non_exhaustive]`
 
@@ -156,6 +156,6 @@ Eight `mod.rs` files exist (`core`: `simd`, `symbols`; `runtime`: `anim`; `term`
 5. Option structs: C2. Done.
 6. Result structs: C3. Done.
 7. Closing change: C4, D2, E1, section G, and the stability policy in [`stability.md`](stability.md). Done.
-8. The conventions §3 amendment (A3), a separate change because `docs/conventions.md` needs the maintainer's sign-off. It is the last open entry.
+8. The conventions §3 amendment (A3), a separate change because `docs/conventions.md` needs the maintainer's sign-off. Done. The breaking-change list is closed.
 
 Each change adds a `CHANGELOG.md` entry under Unreleased that names the types and shows the one-line fix for downstream code (a wildcard arm, or `..Default::default()` for a struct literal). The sweeps default to the smallest change that closes their entries, and a `non_exhaustive` addition lands in the same change as the fix to any in-repo caller it breaks.
