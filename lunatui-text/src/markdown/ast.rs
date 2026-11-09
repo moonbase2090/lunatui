@@ -14,7 +14,27 @@ pub struct Document {
 }
 
 /// A block-level element.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_text::markdown::Block;
+///
+/// fn covers_every_value(value: Block) -> u8 {
+///     match value {
+///         Block::Paragraph(..) => 0,
+///         Block::Heading { .. } => 0,
+///         Block::ThematicBreak => 0,
+///         Block::BlockQuote(..) => 0,
+///         Block::List(..) => 0,
+///         Block::CodeBlock { .. } => 0,
+///         Block::Html(..) => 0,
+///         Block::Table(..) => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Block {
     /// A paragraph of inline content.
     Paragraph(Vec<Inline>),
@@ -65,7 +85,23 @@ pub struct Item {
 }
 
 /// Horizontal alignment of a table column.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_text::markdown::Alignment;
+///
+/// fn covers_every_value(value: Alignment) -> u8 {
+///     match value {
+///         Alignment::None => 0,
+///         Alignment::Left => 0,
+///         Alignment::Center => 0,
+///         Alignment::Right => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Alignment {
     /// No alignment given.
     #[default]
@@ -90,7 +126,29 @@ pub struct Table {
 }
 
 /// An inline element.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_text::markdown::Inline;
+///
+/// fn covers_every_value(value: Inline) -> u8 {
+///     match value {
+///         Inline::Text(..) => 0,
+///         Inline::Code(..) => 0,
+///         Inline::Emphasis(..) => 0,
+///         Inline::Strong(..) => 0,
+///         Inline::Strikethrough(..) => 0,
+///         Inline::Link { .. } => 0,
+///         Inline::Image { .. } => 0,
+///         Inline::SoftBreak => 0,
+///         Inline::HardBreak => 0,
+///         Inline::Html(..) => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Inline {
     /// Literal text with escapes and entities already resolved.
     Text(String),

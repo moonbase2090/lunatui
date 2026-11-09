@@ -41,7 +41,21 @@ pub fn blend_rgb(background: [u8; 3], foreground: [u8; 3], opacity: Opacity) -> 
 }
 
 /// The output policy resolved once when preparing a color ramp.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_core::paint::RampOutput;
+///
+/// fn covers_every_value(value: RampOutput) -> u8 {
+///     match value {
+///         RampOutput::TrueColor => 0,
+///         RampOutput::Solid(..) => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RampOutput {
     /// Prepare a perceptual truecolor gradient.
     TrueColor,

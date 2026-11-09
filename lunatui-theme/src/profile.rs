@@ -10,8 +10,24 @@ use oklab::nearest;
 use palette::rgb;
 
 /// How many colors a frame is allowed to use.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_theme::Profile;
+///
+/// fn covers_every_value(value: Profile) -> u8 {
+///     match value {
+///         Profile::TrueColor => 0,
+///         Profile::Ansi256 => 0,
+///         Profile::Ansi16 => 0,
+///         Profile::Mono => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum Profile {
     /// Keep RGB and indexed colors as written.
     TrueColor,

@@ -2,7 +2,23 @@
 // SPDX-License-Identifier: MIT
 
 /// Easing curve applied to normalized progress in `[0, 1]`.
+///
+/// Downstream code must keep a wildcard arm, because new values can be added:
+///
+/// ```compile_fail,E0004
+/// use lunatui_runtime::Ease;
+///
+/// fn covers_every_value(value: Ease) -> u8 {
+///     match value {
+///         Ease::Linear => 0,
+///         Ease::InOutCubic => 0,
+///         Ease::OutCubic => 0,
+///         Ease::InCubic => 0,
+///     }
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[non_exhaustive]
 pub enum Ease {
     /// `t`.
     #[default]

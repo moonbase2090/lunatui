@@ -25,9 +25,9 @@ impl HostFontMetrics for Fonts {
 
     fn primary_font(&self, face: Face) -> Font {
         match face {
-            Face::Regular => Font::Text,
             Face::SemiBold => Font::Bold,
             Face::Mono => Font::Mono,
+            Face::Regular | _ => Font::Text,
         }
     }
 
