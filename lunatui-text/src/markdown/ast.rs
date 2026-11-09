@@ -34,6 +34,7 @@ pub struct Document {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Block {
     /// A paragraph of inline content.
     Paragraph(Vec<Inline>),
@@ -100,6 +101,7 @@ pub struct Item {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Alignment {
     /// No alignment given.
     #[default]
@@ -146,6 +148,7 @@ pub struct Table {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Inline {
     /// Literal text with escapes and entities already resolved.
     Text(String),

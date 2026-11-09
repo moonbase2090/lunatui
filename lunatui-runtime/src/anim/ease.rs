@@ -18,6 +18,7 @@
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[non_exhaustive]
 pub enum Ease {
     /// `t`.
     #[default]

@@ -55,6 +55,7 @@ pub fn blend_rgb(background: [u8; 3], foreground: [u8; 3], opacity: Opacity) -> 
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RampOutput {
     /// Prepare a perceptual truecolor gradient.
     TrueColor,

@@ -78,16 +78,19 @@ Convention checks that pass: no public function is named `get_*`.
 
 Rule for the sweep: an enum that names a set the outside world defines or extends (protocol and capability values, input kinds, themes, styles, constraint kinds, AST nodes, fonts and patterns) is **open** and gets `#[non_exhaustive]`. An enum that is a closed two-to-four-way choice with a fixed meaning (an axis, a direction, a boolean-like mode) is **closed** and stays exhaustive, so callers can match it without a wildcard.
 
-Downstream code that matches an open enum then needs a wildcard arm. That is the intended cost and the reason to do it before 1.0.
+Each enum made `#[non_exhaustive]` in this pass carries a `compile_fail,E0004` doctest that matches every value without a wildcard, so removing the attribute fails the test. Downstream code that matches an open enum then needs a wildcard arm. That is the intended cost and the reason to do it before 1.0.
 
 | # | Entry | Disposition |
 |---|---|---|
 | B1 | Open enums, term: `Event`, `KeyCode`, `KeyKind`, `MouseKind`, `MouseButton`, `Scroll`, `Paste`, `ColorDepth`, `PrivateMode`, `KeyboardProtocol`, `GraphicsProtocol`, `Hyperlinks`, `WidthPolicy`, `Multiplexer`, `RecordedTerminal`. | done in change 2 |
-| B2 | Open enums, core, layout and text: `Color`, `UnderlineStyle`, `DecodedGlyph`, `Constraint`, `Flex`, and the markdown nodes `Block`, `Inline`, `Alignment` (module-only, but reachable through the public `markdown` module). | do-now, change 3 |
+| B2 | Open enums, text: the markdown nodes `Block`, `Inline` and `Alignment`, reachable through the public `markdown` module. | done in change 3 |
+| B2a | `Color`, `UnderlineStyle` and `DecodedGlyph` in core: the packed cell format fixes them (`Color` uses all four values of its two kind bits, the glyph slot has three fixed kinds, the underline field has six styles in three bits), so a new value is a cell-format change under the cell ADR, not an additive one. Encoders in other crates match them exhaustively on purpose, so a format change is a compile error there. | accept |
+| B2b | `Constraint` and `Flex` in layout: a closed algebra the solver implements and the ratatui parity tests mirror variant for variant. A new variant needs solver work and a parity case, so it is an API decision, not a drive-by addition. | accept |
 | B3 | Open enums, widgets and the widget crates: `BorderType`, `SpinnerPattern`, `BigTextFont`, `PixelSize`, `LogLevel`, `DiffKind`, `TimelineStatus`, `EditResult`, `MenuEvent`, `ColorPickerFocus`, `Look`, `ButtonSize`, `Fit` (image). | do-now, change 4 |
-| B4 | Open enums, runtime, theme and prismattyc: `Ease`, `Profile`, `Variant`, `NativeDiscovery`. | do-now, change 3 |
+| B4 | Open enums, runtime, theme and prismattyc: `Ease`, `Profile`, `NativeDiscovery`. | done in change 3 |
+| B4a | `Variant` in theme: light or dark, a two-way choice with no third meaning. | accept |
 | B5 | Closed enums stay exhaustive: `Axis`, `Orientation`, `Direction` (effects), `FocusDirection`, `Alignment` and `TitlePosition` (widgets), `MouseUnit`, `Focus`, `ColorMode`, `SyncOutput`, `MouseTracking`, `ControlFlow`, `State`, `SchedulePoll`, `CellWidth`, `DiffLayout`, `WeekStart`, `SplitAxis`, `RenderDirection`, `Baseline`, `KeymapMode`, `VimMode`, `FileKind`, `AttributeMode`, `NativePolicy`, `PressRoute`. | accept |
-| B6 | Module-only enums not reachable from the crate root: `RampOutput`, `GlyphSet`, `Face`. Make them `pub(crate)` if no public signature uses them, otherwise apply the rule above. | do-now, change 3 (check reachability first) |
+| B6 | `RampOutput`, `GlyphSet` and `Face`: the first scan called them module-only, but each is in a public module and in a public signature or used across crates, so they are public API. Each names an extensible set (an output policy, a glyph tier, Graphite's face contract), so they get `#[non_exhaustive]`. | done in change 3 |
 
 ### C. Structs with public fields
 

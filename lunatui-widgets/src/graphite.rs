@@ -107,6 +107,7 @@ impl Rect {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Face {
     /// Regular-weight proportional text.
     Regular,

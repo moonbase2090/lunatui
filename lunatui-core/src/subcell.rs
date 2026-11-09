@@ -32,6 +32,7 @@ pub struct GlyphCapabilities {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum GlyphSet {
     /// Exact 2×4 coverage with Unicode octants and block aliases.
     Octants,

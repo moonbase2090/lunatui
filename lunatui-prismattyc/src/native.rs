@@ -46,6 +46,7 @@ pub enum NativePolicy {
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum NativeDiscovery {
     /// Native setup is not available. ANSI remains the only renderer.
     Unavailable,

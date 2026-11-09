@@ -111,6 +111,7 @@ fn gather(inlines: &[Inline], mark: Mark, out: &mut Vec<Atom>) {
             Inline::SoftBreak => out.push(Atom::Space(mark)),
             Inline::HardBreak => out.push(Atom::Break),
             Inline::Html(raw) => words(raw, mark.with(DIM), out),
+            _ => {}
         }
     }
 }
@@ -314,6 +315,7 @@ impl Layout {
                 }
             }
             Block::Table(table) => self.table(table),
+            _ => {}
         }
     }
 

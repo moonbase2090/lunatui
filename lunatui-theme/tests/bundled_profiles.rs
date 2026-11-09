@@ -17,7 +17,7 @@ fn bundled_theme_profiles_downsample_tokens() -> Result<(), ThemeLoadError> {
                 Profile::Ansi256 => assert!(matches!(color, Color::Indexed(_))),
                 Profile::Ansi16 => assert!(matches!(color, Color::Indexed(index) if index < 16)),
                 Profile::Mono => assert!(matches!(color, Color::Indexed(0 | 15))),
-                Profile::TrueColor => {}
+                _ => {}
             }
         }
     }

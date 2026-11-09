@@ -27,6 +27,7 @@ use palette::rgb;
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum Profile {
     /// Keep RGB and indexed colors as written.
     TrueColor,
