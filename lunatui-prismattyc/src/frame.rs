@@ -4,6 +4,16 @@
 use lunatui_core::{ChangedRun, ClusterTable, Grid};
 
 /// Packed grid plus damage runs for one present (PRD §2.12).
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_prismattyc::FrameDiff;
+///
+/// fn destructures(value: FrameDiff<'_>) {
+///     let FrameDiff { previous: _, next: _, clusters: _, runs: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct FrameDiff<'a> {
     /// Grid before this frame.
@@ -17,6 +27,16 @@ pub struct FrameDiff<'a> {
 }
 
 /// Accounting returned from [`crate::PrismattycBackend::present`].
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_prismattyc::PresentStats;
+///
+/// fn destructures(value: PresentStats) {
+///     let PresentStats { changed_runs: _, changed_cells: _, ansi_bytes: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PresentStats {
     /// Number of [`ChangedRun`] entries applied.

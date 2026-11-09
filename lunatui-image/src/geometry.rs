@@ -80,6 +80,16 @@ pub struct PixelRect {
 }
 
 /// Shared source crop and destination placement for a fitted image.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_image::ImageGeometry;
+///
+/// fn destructures(value: ImageGeometry) {
+///     let ImageGeometry { source: _, destination: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ImageGeometry {
     /// Source pixels to sample.

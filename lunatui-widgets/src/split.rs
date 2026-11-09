@@ -82,6 +82,16 @@ pub struct Divider {
 }
 
 /// Where the panes and dividers of a [`SplitTree`] sit in an area.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::SplitLayout;
+///
+/// fn destructures(value: SplitLayout) {
+///     let SplitLayout { panes: _, dividers: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct SplitLayout {
     /// Every pane shown, in tree order. A zoomed tree shows only the zoomed pane.

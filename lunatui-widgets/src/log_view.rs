@@ -67,6 +67,16 @@ impl LogLevel {
 }
 
 /// One line of a [`LogBuffer`].
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::LogEntry;
+///
+/// fn destructures(value: LogEntry) {
+///     let LogEntry { level: _, target: _, message: _, stamp: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LogEntry {
     /// How serious the entry is.

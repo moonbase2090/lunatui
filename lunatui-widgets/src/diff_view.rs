@@ -33,6 +33,16 @@ pub enum DiffKind {
 }
 
 /// One line of a [`DiffHunk`].
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::DiffLine;
+///
+/// fn destructures(value: DiffLine) {
+///     let DiffLine { kind: _, old: _, new: _, text: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DiffLine {
     /// Whether the line is context, added, or removed.
@@ -46,6 +56,16 @@ pub struct DiffLine {
 }
 
 /// A run of changed lines with its surrounding context.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::DiffHunk;
+///
+/// fn destructures(value: DiffHunk) {
+///     let DiffHunk { header: _, lines: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DiffHunk {
     /// The `@@ -a,b +c,d @@ section` line.

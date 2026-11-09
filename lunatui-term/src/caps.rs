@@ -91,6 +91,16 @@ pub enum PrivateMode {
 }
 
 /// DEC private modes the probe asks about.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_term::DecModes;
+///
+/// fn destructures(value: DecModes) {
+///     let DecModes { synchronized_output: _, grapheme_clusters: _, bracketed_paste: _, focus_events: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
 pub struct DecModes {
@@ -145,6 +155,16 @@ pub enum Hyperlinks {
 }
 
 /// Protocols reported beside the DEC modes.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_term::Protocols;
+///
+/// fn destructures(value: Protocols) {
+///     let Protocols { keyboard: _, graphics: _, hyperlinks: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
 pub struct Protocols {
@@ -196,6 +216,16 @@ pub enum Multiplexer {
 }
 
 /// Terminal name and version from the environment or `XTVERSION`.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_term::TermIdentity;
+///
+/// fn destructures(value: TermIdentity) {
+///     let TermIdentity { program: _, version: _, prismattyc_native: _, multiplexer: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[must_use]
 pub struct TermIdentity {
@@ -337,6 +367,16 @@ impl CellPixels {
 }
 
 /// Capability result: color, modes, protocols, and the width fallback.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_term::Caps;
+///
+/// fn destructures(value: Caps) {
+///     let Caps { color: _, modes: _, protocols: _, width: _, identity: _, background_dark: _, background_rgb: _, cell_pixels: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[must_use]
 pub struct Caps {
@@ -386,6 +426,16 @@ impl Caps {
 }
 
 /// Parsed replies plus whether primary device attributes arrived.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_term::ProbeReply;
+///
+/// fn destructures(value: ProbeReply) {
+///     let ProbeReply { caps: _, saw_device_attributes: _, pending_input: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[must_use]
 pub struct ProbeReply {

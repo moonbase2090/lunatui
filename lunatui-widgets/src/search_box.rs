@@ -16,6 +16,16 @@ const MIN_WITH_CLEAR: u16 = 12;
 const TEXT_AT: u16 = 3;
 
 /// One item that matched a [`SearchBox::filter`] query.
+///
+/// Downstream code cannot list every field without `..`, because fields can be added:
+///
+/// ```compile_fail,E0638
+/// use lunatui_widgets::SearchMatch;
+///
+/// fn destructures(value: SearchMatch) {
+///     let SearchMatch { index: _, ranges: _ } = value;
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SearchMatch {
     /// Index of the item in the filtered slice.
