@@ -312,10 +312,12 @@ fn rss_kib() -> usize {
 
 #[cfg(test)]
 mod tests {
+    use std::io;
+
     use super::*;
 
     #[test]
-    fn p99_is_the_upper_tail_not_the_median() {
+    fn p99_is_the_upper_tail_not_the_median() -> io::Result<()> {
         let samples: Vec<_> = (1..=100).map(Duration::from_nanos).collect();
         let stats = summarize(
             &samples,
@@ -336,9 +338,10 @@ mod tests {
         assert_ne!(stats.p99, stats.median);
 
         let line = format_report_line("lunatui", &stats);
-        let parsed = parse_report_line(&line).unwrap();
+        let parsed = parse_report_line(&line)?;
         assert_eq!(parsed.p99, Duration::from_nanos(99));
         assert_ne!(parsed.p99, parsed.median);
         assert_ne!(parsed.p99, parsed.p95);
+        Ok(())
     }
 }
