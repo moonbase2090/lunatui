@@ -371,10 +371,7 @@ fn supplied_matches_replace_filtering() {
 
 #[test]
 fn supplied_ranges_that_do_not_fit_are_ignored() {
-    let found = vec![SearchMatch {
-        index: 0,
-        ranges: vec![3..99, 1..2],
-    }];
+    let found = vec![SearchMatch::new(0, vec![3..99, 1..2])];
     let combo = ComboBox::new("x", 1, &FRUIT)
         .open(true)
         .with_matches(&found);

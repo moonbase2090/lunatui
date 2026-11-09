@@ -41,6 +41,7 @@ pub use wrap::{Wrapped, WrappedLine};
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Solved {
     /// One rectangle per constraint, in order.
     pub segments: Vec<Rect>,

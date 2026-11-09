@@ -3,7 +3,7 @@
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSource};
-use lunatui_term::{Caps, CellPixels, Encoder, Event, GraphicsProtocol, PixelLayer, Protocols};
+use lunatui_term::{Caps, CellPixels, Encoder, Event, GraphicsProtocol, PixelLayer};
 
 use super::{FrameState, render_present};
 use crate::{App, ControlFlow, RenderFrame};
@@ -52,14 +52,9 @@ fn command_id(stream: &[u8], action: &str) -> Result<String, String> {
 fn switching_saturation_to_latency_finishes_upload_before_the_new_title_and_retires_old_pixels()
 -> Result<(), String> {
     let area = Rect::new(0, 0, 20, 12);
-    let caps = Caps {
-        protocols: Protocols {
-            graphics: GraphicsProtocol::Kitty,
-            ..Protocols::default()
-        },
-        cell_pixels: CellPixels::new(13, 25),
-        ..Caps::default()
-    };
+    let mut caps = Caps::default();
+    caps.protocols.graphics = GraphicsProtocol::Kitty;
+    caps.cell_pixels = CellPixels::new(13, 25);
     let mut frames = FrameState {
         prev: Grid::new(20, 12),
         next: Grid::new(20, 12),
@@ -184,14 +179,9 @@ fn immediate_image_repaints_blank_cells(
     next_position: Option<Rect>,
 ) -> Result<(), String> {
     let area = Rect::new(0, 0, 6, 4);
-    let caps = Caps {
-        protocols: Protocols {
-            graphics,
-            ..Protocols::default()
-        },
-        cell_pixels: CellPixels::new(1, 1),
-        ..Caps::default()
-    };
+    let mut caps = Caps::default();
+    caps.protocols.graphics = graphics;
+    caps.cell_pixels = CellPixels::new(1, 1);
     let mut frames = FrameState {
         prev: Grid::new(6, 4),
         next: Grid::new(6, 4),

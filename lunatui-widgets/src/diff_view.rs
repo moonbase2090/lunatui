@@ -44,6 +44,7 @@ pub enum DiffKind {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct DiffLine {
     /// Whether the line is context, added, or removed.
     pub kind: DiffKind,
@@ -67,6 +68,7 @@ pub struct DiffLine {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct DiffHunk {
     /// The `@@ -a,b +c,d @@ section` line.
     pub header: String,

@@ -150,6 +150,7 @@ impl<'a> TimelineLane<'a> {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct TimelineTick<'a> {
     /// The time the tick marks.
     pub at: i64,

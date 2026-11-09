@@ -4,7 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::Rect;
-use lunatui_layout::{Constraint, Flex, Layout, WrappedLine};
+use lunatui_layout::{Constraint, Flex, Layout};
 use proptest::prelude::*;
 
 fn rect(x: u16, y: u16, width: u16, height: u16) -> Rect {
@@ -25,18 +25,14 @@ fn segments_that_do_not_fit_move_to_the_next_line() {
             rect(22, 5, 20, 3),
         ]
     );
+    let lines: Vec<_> = wrapped
+        .lines
+        .iter()
+        .map(|line| (line.area, line.segments.clone()))
+        .collect();
     assert_eq!(
-        wrapped.lines,
-        [
-            WrappedLine {
-                area: rect(0, 0, 50, 3),
-                segments: 0..2,
-            },
-            WrappedLine {
-                area: rect(0, 5, 50, 3),
-                segments: 2..4,
-            },
-        ]
+        lines,
+        [(rect(0, 0, 50, 3), 0..2), (rect(0, 5, 50, 3), 2..4)]
     );
     assert!(!wrapped.needs_solver);
 }

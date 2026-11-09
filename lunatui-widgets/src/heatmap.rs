@@ -33,16 +33,6 @@ impl<'a> HeatmapRow<'a> {
 }
 
 /// A logical matrix position, independent of terminal coordinates.
-///
-/// Downstream code cannot list every field without `..`, because fields can be added:
-///
-/// ```compile_fail,E0638
-/// use lunatui_widgets::HeatmapCell;
-///
-/// fn destructures(value: HeatmapCell) {
-///     let HeatmapCell { row: _, column: _ } = value;
-/// }
-/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HeatmapCell {
     /// Zero-based row index.

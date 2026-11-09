@@ -78,6 +78,7 @@ impl LogLevel {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct LogEntry {
     /// How serious the entry is.
     pub level: LogLevel,

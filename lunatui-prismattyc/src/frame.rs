@@ -15,6 +15,7 @@ use lunatui_core::{ChangedRun, ClusterTable, Grid};
 /// }
 /// ```
 #[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
 pub struct FrameDiff<'a> {
     /// Grid before this frame.
     pub previous: &'a Grid,
@@ -38,6 +39,7 @@ pub struct FrameDiff<'a> {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct PresentStats {
     /// Number of [`ChangedRun`] entries applied.
     pub changed_runs: usize,

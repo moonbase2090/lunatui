@@ -76,6 +76,7 @@ pub enum NativeDiscovery {
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub struct DiscoveryResult {
     /// Parsed discovery state.
     pub discovery: NativeDiscovery,

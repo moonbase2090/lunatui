@@ -93,6 +93,7 @@ pub struct Divider {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[non_exhaustive]
 pub struct SplitLayout {
     /// Every pane shown, in tree order. A zoomed tree shows only the zoomed pane.
     pub panes: Vec<PaneArea>,

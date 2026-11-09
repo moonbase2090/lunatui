@@ -24,6 +24,7 @@ use crate::solve_fast;
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Wrapped {
     /// One rectangle per constraint, in order.
     pub segments: Vec<Rect>,
@@ -46,6 +47,7 @@ pub struct Wrapped {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct WrappedLine {
     /// The band this line occupies: the full main-axis length and the line's cross-axis size.
     pub area: Rect,

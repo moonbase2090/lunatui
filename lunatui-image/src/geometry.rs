@@ -91,6 +91,7 @@ pub struct PixelRect {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub struct ImageGeometry {
     /// Source pixels to sample.
     pub source: PixelRect,

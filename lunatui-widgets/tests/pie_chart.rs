@@ -101,6 +101,10 @@ fn muted(token: Token) -> Color {
     Color::Rgb(r, g, b)
 }
 
+fn areas(layout: PieLayout) -> (Rect, Rect) {
+    (layout.pie, layout.legend)
+}
+
 #[test]
 fn a_full_pie_fills_a_round_disc() {
     assert_eq!(rows(&full(), 6, 3), [" ████ ", "██████", " ████ "]);
@@ -477,18 +481,12 @@ fn colors_without_rgb_values_are_not_muted() {
 fn the_legend_goes_beside_the_disc_when_that_leaves_more_room() {
     let chart = PieChart::new([PieSlice::new("A", 1.0), PieSlice::new("Bb", 1.0)]);
     assert_eq!(
-        chart.layout(Rect::new(0, 0, 40, 10)),
-        PieLayout {
-            pie: Rect::new(0, 0, 20, 10),
-            legend: Rect::new(22, 4, 9, 2),
-        }
+        areas(chart.layout(Rect::new(0, 0, 40, 10))),
+        (Rect::new(0, 0, 20, 10), Rect::new(22, 4, 9, 2))
     );
     assert_eq!(
-        chart.layout(Rect::new(3, 2, 40, 10)),
-        PieLayout {
-            pie: Rect::new(3, 2, 20, 10),
-            legend: Rect::new(25, 6, 9, 2),
-        }
+        areas(chart.layout(Rect::new(3, 2, 40, 10))),
+        (Rect::new(3, 2, 20, 10), Rect::new(25, 6, 9, 2))
     );
 }
 
@@ -496,11 +494,8 @@ fn the_legend_goes_beside_the_disc_when_that_leaves_more_room() {
 fn the_legend_goes_under_the_disc_when_that_leaves_more_room() {
     let chart = PieChart::new([PieSlice::new("A", 1.0), PieSlice::new("Bb", 1.0)]);
     assert_eq!(
-        chart.layout(Rect::new(0, 0, 30, 20)),
-        PieLayout {
-            pie: Rect::new(0, 0, 30, 15),
-            legend: Rect::new(10, 16, 9, 2),
-        }
+        areas(chart.layout(Rect::new(0, 0, 30, 20))),
+        (Rect::new(0, 0, 30, 15), Rect::new(10, 16, 9, 2))
     );
 }
 
@@ -508,11 +503,8 @@ fn the_legend_goes_under_the_disc_when_that_leaves_more_room() {
 fn without_a_legend_the_disc_is_centered() {
     let chart = halves();
     assert_eq!(
-        chart.layout(Rect::new(0, 0, 40, 10)),
-        PieLayout {
-            pie: Rect::new(10, 0, 20, 10),
-            legend: Rect::new(0, 0, 0, 0),
-        }
+        areas(chart.layout(Rect::new(0, 0, 40, 10))),
+        (Rect::new(10, 0, 20, 10), Rect::new(0, 0, 0, 0))
     );
     let empty = PieChart::new(Vec::<PieSlice>::new());
     assert_eq!(
@@ -728,18 +720,12 @@ fn a_sixteen_color_palette_still_gives_neighbouring_slices_different_colors() {
 fn an_offset_area_with_room_to_spare_centers_the_disc_and_legend() {
     let chart = PieChart::new([PieSlice::new("A", 1.0), PieSlice::new("Bb", 1.0)]);
     assert_eq!(
-        chart.layout(Rect::new(3, 2, 30, 12)),
-        PieLayout {
-            pie: Rect::new(3, 3, 19, 9),
-            legend: Rect::new(24, 7, 9, 2),
-        }
+        areas(chart.layout(Rect::new(3, 2, 30, 12))),
+        (Rect::new(3, 3, 19, 9), Rect::new(24, 7, 9, 2))
     );
     assert_eq!(
-        chart.cell_aspect(1.0).layout(Rect::new(5, 4, 30, 30)),
-        PieLayout {
-            pie: Rect::new(6, 4, 27, 27),
-            legend: Rect::new(15, 32, 9, 2),
-        }
+        areas(chart.cell_aspect(1.0).layout(Rect::new(5, 4, 30, 30))),
+        (Rect::new(6, 4, 27, 27), Rect::new(15, 32, 9, 2))
     );
     assert_eq!(
         halves().layout(Rect::new(3, 2, 24, 20)).pie,
@@ -805,19 +791,13 @@ fn a_cell_takes_the_slice_covering_most_of_it() {
 fn spare_room_is_split_evenly_around_the_disc() {
     let five = PieChart::new(["A", "B", "C", "D", "E"].map(|label| PieSlice::new(label, 1.0)));
     assert_eq!(
-        five.layout(Rect::new(3, 2, 30, 14)),
-        PieLayout {
-            pie: Rect::new(3, 4, 20, 10),
-            legend: Rect::new(25, 6, 8, 5),
-        }
+        areas(five.layout(Rect::new(3, 2, 30, 14))),
+        (Rect::new(3, 4, 20, 10), Rect::new(25, 6, 8, 5))
     );
     let two = PieChart::new([PieSlice::new("A", 1.0), PieSlice::new("Bb", 1.0)]).cell_aspect(1.0);
     assert_eq!(
-        two.layout(Rect::new(5, 4, 31, 30)),
-        PieLayout {
-            pie: Rect::new(7, 4, 27, 27),
-            legend: Rect::new(16, 32, 9, 2),
-        }
+        areas(two.layout(Rect::new(5, 4, 31, 30))),
+        (Rect::new(7, 4, 27, 27), Rect::new(16, 32, 9, 2))
     );
 }
 
@@ -825,11 +805,8 @@ fn spare_room_is_split_evenly_around_the_disc() {
 fn a_tiny_area_keeps_what_fits_of_the_legend() {
     let chart = PieChart::new([PieSlice::new("A", 1.0), PieSlice::new("Bb", 1.0)]);
     assert_eq!(
-        chart.layout(Rect::new(0, 0, 5, 1)),
-        PieLayout {
-            pie: Rect::new(0, 0, 0, 0),
-            legend: Rect::new(2, 0, 3, 1),
-        }
+        areas(chart.layout(Rect::new(0, 0, 5, 1))),
+        (Rect::new(0, 0, 0, 0), Rect::new(2, 0, 3, 1))
     );
     assert_eq!(rows(&chart, 5, 1), ["  ●  "]);
 }

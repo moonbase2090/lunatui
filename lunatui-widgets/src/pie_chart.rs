@@ -86,6 +86,7 @@ impl PieSlice {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct PieLayout {
     /// The cells the disc is drawn in.
     pub pie: Rect,

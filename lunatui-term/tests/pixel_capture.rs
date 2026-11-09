@@ -7,9 +7,7 @@ use std::collections::BTreeMap;
 
 use lunatui_core::Rect;
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};
-use lunatui_term::{
-    Caps, CellPixels, GraphicsProtocol, PixelImage, PixelLayer, PixelMode, Protocols,
-};
+use lunatui_term::{Caps, CellPixels, GraphicsProtocol, PixelImage, PixelLayer, PixelMode};
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 #[derive(Debug)]
@@ -387,14 +385,9 @@ fn split_frames_finish_chunked_uploads_before_any_visible_update() -> Result<(),
 fn immediate_protocols_keep_the_entire_image_after_cell_output() -> Result<(), String> {
     let image = PixelImage::new(1, 1, &[0, 255, 0, 255]).ok_or("bad image")?;
     for graphics in [GraphicsProtocol::Iterm2, GraphicsProtocol::Sixel] {
-        let caps = Caps {
-            protocols: Protocols {
-                graphics,
-                ..Protocols::default()
-            },
-            cell_pixels: CellPixels::new(1, 2),
-            ..Caps::default()
-        };
+        let mut caps = Caps::default();
+        caps.protocols.graphics = graphics;
+        caps.cell_pixels = CellPixels::new(1, 2);
         let mut layer = PixelLayer::from_caps(&caps);
         layer.begin_frame();
         layer.image(10, 1, &image, Rect::new(0, 0, 2, 1), 0);
@@ -503,14 +496,10 @@ fn fit_changes_keep_pixels_visible_and_wire_ids_do_not_collide_with_widget_ids()
 }
 
 fn measured_layer() -> PixelLayer {
-    PixelLayer::from_caps(&Caps {
-        protocols: Protocols {
-            graphics: GraphicsProtocol::Kitty,
-            ..Protocols::default()
-        },
-        cell_pixels: CellPixels::new(1, 1),
-        ..Caps::default()
-    })
+    let mut caps = Caps::default();
+    caps.protocols.graphics = GraphicsProtocol::Kitty;
+    caps.cell_pixels = CellPixels::new(1, 1);
+    PixelLayer::from_caps(&caps)
 }
 
 fn solid_source(width: u32, height: u32, rgba: [u8; 4]) -> Result<ImageSource, String> {

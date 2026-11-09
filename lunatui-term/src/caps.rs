@@ -103,6 +103,7 @@ pub enum PrivateMode {
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub struct DecModes {
     /// Mode 2026, synchronized output.
     pub synchronized_output: PrivateMode,
@@ -167,6 +168,7 @@ pub enum Hyperlinks {
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub struct Protocols {
     /// Kitty keyboard protocol.
     pub keyboard: KeyboardProtocol,
@@ -228,6 +230,7 @@ pub enum Multiplexer {
 /// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub struct TermIdentity {
     /// `XTVERSION` name, or `TERM_PROGRAM` when no version reply arrived.
     pub program: String,
@@ -379,6 +382,7 @@ impl CellPixels {
 /// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub struct Caps {
     /// Color depth from the environment, upgraded when an OSC rgb reply arrives.
     pub color: ColorDepth,
@@ -438,6 +442,7 @@ impl Caps {
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub struct ProbeReply {
     /// Caps after applying every reply that arrived before device attributes.
     pub caps: Caps,
