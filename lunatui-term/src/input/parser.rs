@@ -21,6 +21,7 @@ pub enum Focus {
 
 /// A decoded terminal event.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Event {
     /// A key.
     Key(KeyEvent),

@@ -4,6 +4,7 @@
 /// A terminal whose reply transcript the probe is checked against.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[must_use]
+#[non_exhaustive]
 pub enum RecordedTerminal {
     /// xterm 384: modes 2026 and 2027 unrecognized, paste and focus reset.
     Xterm,

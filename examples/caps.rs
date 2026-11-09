@@ -102,6 +102,7 @@ fn color_name(color: ColorDepth) -> &'static str {
         ColorDepth::Ansi16 => "ansi16",
         ColorDepth::Ansi256 => "ansi256",
         ColorDepth::TrueColor => "truecolor",
+        _ => "other",
     }
 }
 
@@ -112,6 +113,7 @@ fn mode_name(mode: PrivateMode) -> &'static str {
         PrivateMode::Set => "set",
         PrivateMode::Reset => "reset",
         PrivateMode::LockedOff => "locked-off",
+        _ => "other",
     }
 }
 
@@ -119,6 +121,7 @@ fn keyboard_name(protocol: KeyboardProtocol) -> &'static str {
     match protocol {
         KeyboardProtocol::Unknown => "unknown",
         KeyboardProtocol::Kitty => "kitty",
+        _ => "other",
     }
 }
 
@@ -128,6 +131,7 @@ fn graphics_name(protocol: GraphicsProtocol) -> &'static str {
         GraphicsProtocol::Kitty => "kitty",
         GraphicsProtocol::Iterm2 => "iterm2",
         GraphicsProtocol::Sixel => "sixel",
+        _ => "other",
     }
 }
 
@@ -135,6 +139,7 @@ fn hyperlink_name(links: Hyperlinks) -> &'static str {
     match links {
         Hyperlinks::Unknown => "unknown",
         Hyperlinks::Osc8 => "osc8",
+        _ => "other",
     }
 }
 
@@ -142,6 +147,7 @@ fn width_name(policy: WidthPolicy) -> &'static str {
     match policy {
         WidthPolicy::Unicode => "unicode",
         WidthPolicy::AmbiguousWide => "ambiguous-wide",
+        _ => "other",
     }
 }
 
@@ -151,6 +157,7 @@ fn mux_name(multiplexer: Multiplexer) -> &'static str {
         Multiplexer::Tmux => "tmux",
         Multiplexer::Screen => "screen",
         Multiplexer::Both => "tmux+screen",
+        _ => "other",
     }
 }
 

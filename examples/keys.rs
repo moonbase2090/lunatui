@@ -49,6 +49,7 @@ fn label(event: &Event) -> String {
         Event::Paste(Paste::Chunk(text)) => format!("paste {text}"),
         Event::Focus(Focus::In) => String::from("focus in"),
         Event::Focus(Focus::Out) => String::from("focus out"),
+        _ => String::from("other event"),
     }
 }
 
@@ -79,6 +80,7 @@ fn key_label(key: &KeyEvent) -> String {
         KeyKind::Press => {}
         KeyKind::Repeat => text.push_str(" repeat"),
         KeyKind::Release => text.push_str(" release"),
+        _ => text.push_str(" other"),
     }
     if let Some(extra) = &key.text {
         text.push(' ');
@@ -112,6 +114,7 @@ fn code_name(code: KeyCode) -> String {
         KeyCode::Pause => String::from("pause"),
         KeyCode::Menu => String::from("menu"),
         KeyCode::Other(number) => format!("other {number}"),
+        _ => String::from("other"),
     }
 }
 
@@ -125,6 +128,7 @@ fn mouse_label(mouse: &lunatui_term::MouseEvent) -> String {
         MouseKind::Scroll(Scroll::Down) => String::from("wheel down"),
         MouseKind::Scroll(Scroll::Left) => String::from("wheel left"),
         MouseKind::Scroll(Scroll::Right) => String::from("wheel right"),
+        _ => String::from("other"),
     };
     let unit = match mouse.unit {
         MouseUnit::Cells => "",
@@ -139,6 +143,7 @@ fn button_name(button: MouseButton) -> String {
         MouseButton::Middle => String::from("middle"),
         MouseButton::Right => String::from("right"),
         MouseButton::Extra(number) => format!("button {number}"),
+        _ => String::from("other"),
     }
 }
 
