@@ -284,15 +284,118 @@ pub fn cluster_display_width(cluster: &str) -> usize {
 }
 
 /// Sums [`cluster_display_width`] over the extended grapheme clusters of `text`.
+///
+/// A pure ASCII run longer than 32 bytes is counted with the printable-ASCII kernel
+/// (bytes `0x20`..=`0x7e` are one column; every other ASCII byte is zero). That count
+/// matches the cluster sum, including controls.
 #[must_use]
 pub fn text_display_width(text: &str) -> usize {
     if text.is_ascii() {
-        crate::simd::ascii_display_width(text)
-    } else {
-        UnicodeSegmentation::graphemes(text, true)
-            .map(cluster_display_width)
-            .sum()
+        return crate::simd::ascii_display_width(text);
     }
+    let bytes = text.as_bytes();
+    let mut width = 0usize;
+    let mut cursor = 0usize;
+    while cursor < bytes.len() {
+        let Some(run) = next_long_ascii_run(bytes, cursor) else {
+            width += grapheme_display_width(&text[cursor..]);
+            break;
+        };
+        let (measure_start, measure_end) = ascii_run_measure(bytes, run.start, run.end);
+        if cursor < measure_start {
+            width += grapheme_display_width(&text[cursor..measure_start]);
+        }
+        if measure_start < measure_end {
+            width += crate::simd::ascii_display_width(&text[measure_start..measure_end]);
+        }
+        cursor = measure_end;
+    }
+    width
+}
+
+fn grapheme_display_width(text: &str) -> usize {
+    UnicodeSegmentation::graphemes(text, true)
+        .map(cluster_display_width)
+        .sum()
+}
+
+struct LongAsciiRun {
+    start: usize,
+    end: usize,
+}
+
+fn next_long_ascii_run(bytes: &[u8], from: usize) -> Option<LongAsciiRun> {
+    let mut index = from;
+    while let Some(start) = next_ascii_byte(bytes, index) {
+        let end = ascii_run_end(bytes, start);
+        if end - start > crate::simd::LONG_ASCII_RUN {
+            return Some(LongAsciiRun { start, end });
+        }
+        index = end;
+    }
+    None
+}
+
+fn next_ascii_byte(bytes: &[u8], mut index: usize) -> Option<usize> {
+    let end = bytes.len();
+    while index + 8 <= end {
+        if ascii_word(bytes, index) & ASCII_HIGH_BIT != ASCII_HIGH_BIT {
+            for offset in 0..8 {
+                if bytes[index + offset].is_ascii() {
+                    return Some(index + offset);
+                }
+            }
+        }
+        index += 8;
+    }
+    while index < end {
+        if bytes[index].is_ascii() {
+            return Some(index);
+        }
+        index += 1;
+    }
+    None
+}
+
+fn ascii_run_end(bytes: &[u8], mut index: usize) -> usize {
+    let end = bytes.len();
+    while index + 8 <= end {
+        if ascii_word(bytes, index) & ASCII_HIGH_BIT != 0 {
+            break;
+        }
+        index += 8;
+    }
+    while index < end && bytes[index].is_ascii() {
+        index += 1;
+    }
+    index
+}
+
+const ASCII_HIGH_BIT: u64 = 0x8080_8080_8080_8080;
+
+fn ascii_word(bytes: &[u8], index: usize) -> u64 {
+    let mut word = [0u8; 8];
+    word.copy_from_slice(&bytes[index..index + 8]);
+    u64::from_le_bytes(word)
+}
+
+fn ascii_run_measure(bytes: &[u8], start: usize, end: usize) -> (usize, usize) {
+    let mut measure_start = start;
+    let mut measure_end = end;
+    if start > 0 {
+        measure_start = start + 1;
+    }
+    if end < bytes.len()
+        && measure_end > measure_start
+        && is_printable_ascii(bytes[measure_end - 1])
+    {
+        measure_end -= 1;
+    }
+    (measure_start, measure_end)
+}
+
+fn is_printable_ascii(byte: u8) -> bool {
+    (b' '..=b'~').contains(&byte)
 }
 
 /// Prefix of `text` whose [`text_display_width`] is at most `max_cols`.
@@ -330,7 +433,20 @@ impl fmt::Display for ClusterId {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+    use alloc::string::String;
+
+    use proptest::prelude::*;
+
     use super::*;
+
+    fn reference_display_width(text: &str) -> usize {
+        if text.is_ascii() {
+            crate::simd::ascii_display_width_scalar(text)
+        } else {
+            grapheme_display_width(text)
+        }
+    }
 
     #[test]
     fn overflow_reinterns_and_still_resolves() {
@@ -346,6 +462,92 @@ mod tests {
         }
         if let Some(id1) = ClusterId::from_index(1) {
             assert_eq!(table.cluster_text(id1), Some("cd"));
+        }
+    }
+
+    #[test]
+    fn ascii_scalar_matches_cluster_sum_around_the_simd_boundary() {
+        for length in [0usize, 1, 31, 32, 33, 48, 64] {
+            let printable = "A".repeat(length);
+            assert_eq!(
+                crate::simd::ascii_display_width_scalar(&printable),
+                grapheme_display_width(&printable)
+            );
+            let mut mixed_controls = String::new();
+            for index in 0..length {
+                mixed_controls.push(char::from(u8::try_from(index % 128).unwrap_or(0)));
+            }
+            assert_eq!(
+                crate::simd::ascii_display_width_scalar(&mixed_controls),
+                grapheme_display_width(&mixed_controls)
+            );
+        }
+    }
+
+    #[test]
+    fn long_ascii_runs_match_the_cluster_sum() {
+        let cases = [
+            "a".repeat(32),
+            "a".repeat(33),
+            "\n".repeat(64),
+            format!("{}{}", "a".repeat(16), "\t\r\n\u{7f}".repeat(8)),
+            format!("{}日", "a".repeat(40)),
+            format!("{}日{}", "a".repeat(40), "b".repeat(40)),
+            format!("{}🦀{}", "a".repeat(50), "b".repeat(50)),
+            format!("{}e\u{301}", "a".repeat(40)),
+            format!("{}1\u{FE0F}\u{20E3}", "x".repeat(40)),
+            format!("\u{0605}{}", "5".repeat(40)),
+            format!("\u{0605}{}1\u{FE0F}\u{20E3}", "5".repeat(39)),
+            format!("ab\u{0605}{}", "5".repeat(40)),
+            format!("{}👩‍💻{}", "log ".repeat(20), " tail"),
+            format!("{}🇺🇸", "a".repeat(48)),
+            format!("{}❤️", "a".repeat(48)),
+            format!("日{}日", " ".repeat(33)),
+            format!("{}a\u{200D}b{}", "c".repeat(40), "d".repeat(10)),
+        ];
+        for text in cases {
+            assert_eq!(
+                text_display_width(&text),
+                reference_display_width(&text),
+                "{text:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn clip_keeps_the_same_prefix_when_a_wide_cluster_follows_ascii() {
+        let text = format!("{}日{}", "a".repeat(40), "b".repeat(10));
+        assert_eq!(clip_display_prefix(&text, 40), "a".repeat(40));
+        assert_eq!(clip_display_prefix(&text, 41), "a".repeat(40));
+        assert_eq!(
+            clip_display_prefix(&text, 42),
+            format!("{}日", "a".repeat(40))
+        );
+    }
+
+    proptest! {
+        #[test]
+        fn display_width_matches_the_scalar_or_cluster_reference(text in "\\PC{0,160}") {
+            prop_assert_eq!(text_display_width(&text), reference_display_width(&text));
+            if text.is_ascii() {
+                prop_assert_eq!(
+                    crate::simd::ascii_display_width_scalar(&text),
+                    grapheme_display_width(&text)
+                );
+            }
+        }
+
+        #[test]
+        fn ascii_runs_around_one_scalar_match_the_reference(
+            head in prop::collection::vec(0u8..=127, 0..96),
+            mark in prop::char::any(),
+            tail in prop::collection::vec(0u8..=127, 0..96),
+        ) {
+            let mut text = String::new();
+            text.extend(head.into_iter().map(char::from));
+            text.push(mark);
+            text.extend(tail.into_iter().map(char::from));
+            prop_assert_eq!(text_display_width(&text), reference_display_width(&text));
         }
     }
 }

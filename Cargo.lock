@@ -1078,6 +1078,7 @@ dependencies = [
  "tui-popup",
  "tui-scrollview",
  "tui-widget-list",
+ "unicode-segmentation",
 ]
 
 [[package]]

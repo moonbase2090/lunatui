@@ -36,6 +36,19 @@ fn printable_run_width_equals_len() {
     assert!(ascii_display_width_levels_agree(text));
 }
 
+#[test]
+fn long_ascii_with_controls_matches_scalar_at_every_level() {
+    let text: String = (0u8..=127).chain(0u8..=127).map(char::from).collect();
+    let reference = ascii_display_width_scalar(&text);
+    assert!(text.len() > 32);
+    assert_eq!(ascii_display_width(&text), reference);
+    assert_eq!(text_display_width(&text), reference);
+    assert!(ascii_display_width_levels_agree(&text));
+    for &level in differential_levels() {
+        assert_eq!(ascii_display_width_for_level(level)(&text), reference);
+    }
+}
+
 proptest! {
     #[test]
     fn all_levels_match_scalar_on_ascii(
