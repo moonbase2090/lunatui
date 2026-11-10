@@ -129,12 +129,14 @@ unsafe fn ascii_display_width_neon_impl(text: &str) -> usize {
     width + scalar_tail(bytes, index)
 }
 
+#[cfg(target_arch = "x86_64")]
 #[inline]
 fn mask_ones(mask: i32) -> usize {
     let ones = u16::try_from(mask.count_ones()).unwrap_or(u16::MAX);
     usize::from(ones)
 }
 
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
 fn scalar_tail(bytes: &[u8], mut index: usize) -> usize {
     let mut width = 0;
     while index < bytes.len() {
