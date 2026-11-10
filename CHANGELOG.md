@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.28] - 2026-11-10
+
 ### Changed
 
 - Display width counts pure ASCII runs longer than 32 bytes with the runtime SIMD kernel (SSE2 or AVX2 on x86_64, NEON on aarch64) and uses the scalar kernel otherwise. Widths are unchanged, including controls.
