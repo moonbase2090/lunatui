@@ -83,20 +83,20 @@ all-widgets = ["widget-list", "layout-debug", "native-alpha", "native-subcell", 
 
 [dependencies]
 vt100 = { version = "=0.16.2", optional = true }
-lunatui-term = { version = "0.1.26", path = "../lunatui-term", optional = true }
-lunatui-core = { version = "0.1.26", path = "../lunatui-core" }
-lunatui-layout = { version = "0.1.26", path = "../lunatui-layout" }
-lunatui-image = { version = "0.1.26", path = "../lunatui-image", optional = true }
-lunatui-text = { version = "0.1.26", path = "../lunatui-text" }
-lunatui-theme = { version = "0.1.26", path = "../lunatui-theme" }
-lunatui-runtime = { version = "0.1.26", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
+lunatui-term = { version = "0.1.27", path = "../lunatui-term", optional = true }
+lunatui-core = { version = "0.1.27", path = "../lunatui-core" }
+lunatui-layout = { version = "0.1.27", path = "../lunatui-layout" }
+lunatui-image = { version = "0.1.27", path = "../lunatui-image", optional = true }
+lunatui-text = { version = "0.1.27", path = "../lunatui-text" }
+lunatui-theme = { version = "0.1.27", path = "../lunatui-theme" }
+lunatui-runtime = { version = "0.1.27", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
 unicode-segmentation = "=1.13.3"
 
 tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"] }
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.26", path = "../lunatui-test" }
-lunatui-term = { version = "0.1.26", path = "../lunatui-term" }
+lunatui-test = { version = "0.1.27", path = "../lunatui-test" }
+lunatui-term = { version = "0.1.27", path = "../lunatui-term" }
 ratatui = "=0.30.2"
 tui-menu = "=0.3.1"
 proptest = "=1.9.0"

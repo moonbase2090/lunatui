@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.27] - 2026-11-09
+
 ### Added
 
 - `docs/latency.md`: library frame time for the scripted dashboard at 80×24 and 200×60, with median, p95, and p99 from a release run. Terminal parse time and input-to-photon time are listed as not measured.
