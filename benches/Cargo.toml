@@ -49,6 +49,7 @@ tui-nodes = { version = "=0.10.0", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+unicode-segmentation = "=1.13.3"
 
 [[bench]]
 name = "metrics"

@@ -16,6 +16,10 @@ Every PR adds its entry under **Unreleased**.
 - Breaking: these enums are now `#[non_exhaustive]`: `Ease` (`lunatui-runtime`), `Profile` (`lunatui-theme`), `NativeDiscovery` (`lunatui-prismattyc`), `RampOutput` and `GlyphSet` (`lunatui-core`), `Face` (`lunatui-widgets`), and the markdown tree nodes `Block`, `Inline` and `Alignment` (`lunatui-text`). A `match` on any of them outside its crate needs a wildcard arm (`_ => ...`); an implementation of `TextMetrics` or `HostFontMetrics` that maps `Face` needs one too.
 - Breaking: the open enums in `lunatui-term` are now `#[non_exhaustive]`: `Event`, `KeyCode`, `KeyKind`, `MouseKind`, `MouseButton`, `Scroll`, `Paste`, `ColorDepth`, `PrivateMode`, `KeyboardProtocol`, `GraphicsProtocol`, `Hyperlinks`, `WidthPolicy`, `Multiplexer` and `RecordedTerminal`, so a new input kind, key or capability value is no longer a breaking change. A `match` on any of them outside `lunatui-term` needs a wildcard arm (`_ => ...`); the `caps` and `keys` examples show it.
 
+### Added
+
+- `text_display_width` measures ASCII runs longer than 32 bytes with the runtime-dispatched vectorized width kernel (`core::arch`, with the scalar kernel for shorter runs and for hosts without the detected instruction set). Widths stay equal to the grapheme-cluster sum, including when a run ends on a combining mark, variation selector, or ZWJ.
+
 ## [0.1.26] - 2026-11-08
 
 ### Changed

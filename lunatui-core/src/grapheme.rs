@@ -283,16 +283,81 @@ pub fn cluster_display_width(cluster: &str) -> usize {
     widths.sum()
 }
 
+const ASCII_SIMD_RUN: usize = 32;
+
 /// Sums [`cluster_display_width`] over the extended grapheme clusters of `text`.
+///
+/// ASCII runs longer than 32 bytes are measured with the runtime-dispatched
+/// `core::arch` kernel ([`crate::simd::ascii_display_width`]). Shorter ASCII
+/// runs use [`crate::simd::ascii_display_width_scalar`]. Other clusters use
+/// [`cluster_display_width`]. The three paths count the same columns.
 #[must_use]
 pub fn text_display_width(text: &str) -> usize {
     if text.is_ascii() {
+        return ascii_span_width(text);
+    }
+    width_with_ascii_runs(text)
+}
+
+fn ascii_span_width(text: &str) -> usize {
+    debug_assert!(text.is_ascii());
+    if text.len() > ASCII_SIMD_RUN {
         crate::simd::ascii_display_width(text)
     } else {
-        UnicodeSegmentation::graphemes(text, true)
-            .map(cluster_display_width)
-            .sum()
+        crate::simd::ascii_display_width_scalar(text)
     }
+}
+
+fn width_with_ascii_runs(text: &str) -> usize {
+    let bytes = text.as_bytes();
+    let mut index = 0;
+    let mut total = 0usize;
+    while index < bytes.len() {
+        if bytes[index] >= 0x80 {
+            index = add_non_ascii_graphemes(text, index, &mut total);
+            continue;
+        }
+        let start = index;
+        let mut end = index + 1;
+        while end < bytes.len() && bytes[end] < 0x80 {
+            end += 1;
+        }
+        let safe_end = grapheme_safe_ascii_end(text, end);
+        if safe_end > start {
+            total += ascii_span_width(&text[start..safe_end]);
+        }
+        if safe_end < end {
+            index = add_non_ascii_graphemes(text, safe_end, &mut total);
+        } else if end < bytes.len() {
+            index = add_non_ascii_graphemes(text, end, &mut total);
+        } else {
+            index = end;
+        }
+    }
+    total
+}
+
+fn grapheme_safe_ascii_end(text: &str, ascii_end: usize) -> usize {
+    if ascii_end == 0 || ascii_end >= text.len() {
+        return ascii_end;
+    }
+    let tail = &text[ascii_end - 1..];
+    match UnicodeSegmentation::graphemes(tail, true).next() {
+        Some(grapheme) if grapheme.len() > 1 => ascii_end - 1,
+        _ => ascii_end,
+    }
+}
+
+fn add_non_ascii_graphemes(text: &str, start: usize, total: &mut usize) -> usize {
+    let mut offset = start;
+    for grapheme in UnicodeSegmentation::graphemes(&text[start..], true) {
+        if grapheme.is_ascii() {
+            break;
+        }
+        *total += cluster_display_width(grapheme);
+        offset += grapheme.len();
+    }
+    offset
 }
 
 /// Prefix of `text` whose [`text_display_width`] is at most `max_cols`.

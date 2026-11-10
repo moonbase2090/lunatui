@@ -25,11 +25,11 @@ Why this order:
 
 East Asian Width `A` (ambiguous) is **narrow**, the Unicode default. Per-terminal overrides are chosen by the capability probe (PR 12) and listed under [Probe fallback](#probe-fallback-pr-12).
 
-`width(text)` is the sum of `char_width` over the characters of `text`, with a fast path for ASCII.
+`width(text)` is the sum of `char_width` over the characters of `text`, with a fast path for ASCII runs. Runs longer than 32 bytes use the runtime-dispatched vectorized kernel; shorter runs and every non-ASCII cluster stay on the scalar path. Both paths return the same column count.
 
 ## Grapheme clusters (PR 05)
 
-`width` and `lunatui_core::text_display_width` segment with Unicode extended grapheme rules, then measure each cluster with `cluster_display_width`. ZWJ emoji, VS16 sequences and regional-indicator flags take the width terminals usually draw:
+`width` and `lunatui_core::text_display_width` measure ASCII runs directly and segment the rest with Unicode extended grapheme rules, then measure each remaining cluster with `cluster_display_width`. ZWJ emoji, VS16 sequences and regional-indicator flags take the width terminals usually draw:
 
 | Text | `width` |
 |---|---|
