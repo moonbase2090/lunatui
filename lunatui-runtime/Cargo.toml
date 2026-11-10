@@ -38,9 +38,9 @@ path = "../examples/accessibility_roles.rs"
 required-features = ["accessibility"]
 
 [dependencies]
-lunatui-core = { version = "0.1.27", path = "../lunatui-core" }
-lunatui-image = { version = "0.1.27", path = "../lunatui-image", optional = true }
-lunatui-term = { version = "0.1.27", path = "../lunatui-term" }
+lunatui-core = { version = "0.1.28", path = "../lunatui-core" }
+lunatui-image = { version = "0.1.28", path = "../lunatui-image", optional = true }
+lunatui-term = { version = "0.1.28", path = "../lunatui-term" }
 
 [dev-dependencies]
 lunatui-test = { path = "../lunatui-test" }
