@@ -25,7 +25,7 @@ Why this order:
 
 East Asian Width `A` (ambiguous) is **narrow**, the Unicode default. Per-terminal overrides are chosen by the capability probe (PR 12) and listed under [Probe fallback](#probe-fallback-pr-12).
 
-`width(text)` is the sum of `char_width` over the characters of `text`, with a fast path for ASCII.
+`width(text)` is the sum of `char_width` over the characters of `text`, with a fast path for pure ASCII runs longer than 32 bytes. Shorter ASCII uses the same printable-column count.
 
 ## Grapheme clusters (PR 05)
 

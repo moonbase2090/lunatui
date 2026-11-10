@@ -22,6 +22,8 @@ pub type FirstMismatchFn = fn(&[u128], &[u128]) -> Option<usize>;
 /// Counts printable ASCII terminal columns (`0x20`..=`0x7e`); `text` must be ASCII.
 pub type AsciiDisplayWidthFn = fn(&str) -> usize;
 
+pub(crate) const LONG_ASCII_RUN: usize = 32;
+
 struct KernelTable {
     level: DispatchLevel,
     first_mismatch: FirstMismatchFn,
@@ -116,10 +118,16 @@ pub fn first_mismatch(a: &[u128], b: &[u128]) -> Option<usize> {
     (table.first_mismatch)(a, b)
 }
 
-/// Dispatched printable-ASCII width; `text` must be ASCII.
+/// Printable-ASCII width; `text` must be ASCII.
+///
+/// Inputs longer than 32 bytes use the runtime-selected kernel (`SSE2` or `AVX2` on `x86_64`,
+/// `NEON` on `aarch64`, scalar otherwise). Shorter inputs always use the scalar kernel.
 #[must_use]
 pub fn ascii_display_width(text: &str) -> usize {
     debug_assert!(text.is_ascii());
+    if text.len() <= LONG_ASCII_RUN {
+        return ascii_display_width_scalar(text);
+    }
     let table = kernel_table();
     (table.ascii_display_width)(text)
 }
