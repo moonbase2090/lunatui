@@ -34,4 +34,5 @@ A change that only compiles on Unix, such as an import used by a `cfg(unix)` fun
 ## Known gaps
 
 - The pull-request check set does not run macOS or Windows jobs. Dispatch the `CI` workflow on a branch that touches platform code.
-- No automated check drives a real Windows Terminal. The release checklist includes a manual run of an example there.
+- No automated check drives a real Windows Terminal. Someone has to run an example there by hand before a release.
+- Two checkbox parity tests in `benches/tests/widget_suite_parity.rs` fail under `--all-features` on all three platforms today. Until they are fixed, the `--all-features` run is not green on any tier 1 platform.
