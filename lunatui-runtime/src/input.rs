@@ -55,7 +55,7 @@ impl Input {
         }
         #[cfg(not(unix))]
         {
-            let _bytes = bytes;
+            drop(bytes);
             Self::open()
         }
     }
