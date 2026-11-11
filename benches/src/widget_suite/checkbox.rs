@@ -208,7 +208,7 @@ pub fn baseline_themed(buffer: &mut Buffer, area: RatRect, theme: &Theme, tick: 
                 "[x]"
             })
             .unchecked_symbol("[ ]")
-            .style(rat_style(card))
+            .style(rat_style(label_style))
             .checkbox_style(rat_style(mark))
             .label_style(rat_style(label_style))
             .render(row, buffer);
