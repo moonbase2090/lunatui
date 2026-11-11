@@ -29,6 +29,15 @@ jobs:
           components: clippy
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
+  clippy-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+
   test:
     strategy:
       fail-fast: false
@@ -38,8 +47,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --workspace
-      - run: cargo test --workspace
+      - run: cargo build --locked --workspace --all-features
+      - run: cargo test --locked --workspace --all-features --no-fail-fast
       - run: cargo test --locked --workspace --all-features
       - run: cargo test --locked -p lunatui-bench --features graphite-tokens --test graphite_token_allocs
       - run: cargo test --locked -p lunatui-core --features subcell
