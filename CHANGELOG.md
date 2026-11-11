@@ -8,6 +8,11 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Fixed
+
+- `Cargo.lock` moves `rustix` from 1.1.5 to 1.1.6, which fixes the advisory RUSTSEC-2026-0486 that `cargo deny` reported.
+- The checkbox parity tests in `lunatui-bench` no longer fail when the workspace is tested with `--all-features`. The ratatui reference drew the disabled label's gap cells in the foreground colour instead of the muted label colour, which only differs once the `graphite` token mapping is on.
+
 ## [0.1.28] - 2026-11-10
 
 ### Changed
