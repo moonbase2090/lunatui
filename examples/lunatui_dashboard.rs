@@ -5,6 +5,7 @@
 
 use std::env;
 use std::io::{self, Write};
+#[cfg(unix)]
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -18,6 +19,7 @@ use lunatui_term::{Session, SessionOptions, SyncOutput};
 
 const SHORT_FRAMES: u32 = 240;
 const DEMO_FRAMES: u32 = 1_500;
+#[cfg(unix)]
 const FRAME_INTERVAL: Duration = Duration::from_micros(16_667);
 const DEFAULT_WIDTH: u16 = 80;
 const DEFAULT_HEIGHT: u16 = 24;
