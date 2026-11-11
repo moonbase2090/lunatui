@@ -14,6 +14,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
+- `Cargo.lock` moves `rustix` from 1.1.5 to 1.1.6, which fixes the advisory RUSTSEC-2026-0486 that `cargo deny` reported.
 - The Windows build: the Windows-only `lunatui-term` tests build `MouseEvent` with `MouseEvent::new`, and the `live_dashboard` and `lunatui_dashboard` examples no longer have unused imports on Windows. `cargo clippy` no longer fails on `lunatui-runtime`'s input module on Windows.
 - `Cargo.lock` moves `rustix` from 1.1.5 to 1.1.6, which fixes the advisory RUSTSEC-2026-0486 that `cargo deny` reported.
 - The checkbox parity tests in `lunatui-bench` no longer fail when the workspace is tested with `--all-features`. The ratatui reference drew the disabled label's gap cells in the foreground colour instead of the muted label colour, which only differs once the `graphite` token mapping is on.
