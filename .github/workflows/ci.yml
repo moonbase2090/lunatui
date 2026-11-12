@@ -29,6 +29,15 @@ jobs:
           components: clippy
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
+  clippy-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+
   test:
     strategy:
       fail-fast: false

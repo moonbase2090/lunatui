@@ -13,7 +13,7 @@ mod smoke {
     use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
     use lunatui_term::{
         ColorMode, Encoder, Event, Focus, KeyCode, KeyEvent, Modifiers, MouseButton, MouseEvent,
-        MouseKind, MouseUnit, Parser, Paste, Scroll, sys::windows::map_event,
+        MouseKind, Parser, Paste, Scroll, sys::windows::map_event,
     };
 
     fn parse(bytes: &[u8]) -> Vec<Event> {
@@ -171,13 +171,10 @@ mod smoke {
                 row: 4,
                 modifiers: KeyModifiers::SHIFT,
             })),
-            Some(Event::Mouse(MouseEvent {
-                kind: MouseKind::Down(MouseButton::Left),
-                column: 3,
-                row: 4,
-                modifiers: Modifiers::new().shift(),
-                unit: MouseUnit::Cells,
-            }))
+            Some(Event::Mouse(
+                MouseEvent::new(MouseKind::Down(MouseButton::Left), 3, 4)
+                    .modifiers(Modifiers::new().shift())
+            ))
         );
         assert_eq!(
             map_event(CrosstermEvent::Mouse(CrosstermMouseEvent {
@@ -186,13 +183,11 @@ mod smoke {
                 row: 2,
                 modifiers: KeyModifiers::empty(),
             })),
-            Some(Event::Mouse(MouseEvent {
-                kind: MouseKind::Up(MouseButton::Right),
-                column: 1,
-                row: 2,
-                modifiers: Modifiers::new(),
-                unit: MouseUnit::Cells,
-            }))
+            Some(Event::Mouse(MouseEvent::new(
+                MouseKind::Up(MouseButton::Right),
+                1,
+                2
+            )))
         );
         assert_eq!(
             map_event(CrosstermEvent::Mouse(CrosstermMouseEvent {
@@ -201,13 +196,11 @@ mod smoke {
                 row: 0,
                 modifiers: KeyModifiers::empty(),
             })),
-            Some(Event::Mouse(MouseEvent {
-                kind: MouseKind::Drag(MouseButton::Middle),
-                column: 0,
-                row: 0,
-                modifiers: Modifiers::new(),
-                unit: MouseUnit::Cells,
-            }))
+            Some(Event::Mouse(MouseEvent::new(
+                MouseKind::Drag(MouseButton::Middle),
+                0,
+                0
+            )))
         );
     }
 
@@ -231,13 +224,7 @@ mod smoke {
                     row: 1,
                     modifiers: KeyModifiers::empty(),
                 })),
-                Some(Event::Mouse(MouseEvent {
-                    kind,
-                    column: 8,
-                    row: 1,
-                    modifiers: Modifiers::new(),
-                    unit: MouseUnit::Cells,
-                }))
+                Some(Event::Mouse(MouseEvent::new(kind, 8, 1)))
             );
         }
     }

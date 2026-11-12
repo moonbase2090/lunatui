@@ -5,12 +5,14 @@
 
 use std::env;
 use std::io::{self, IsTerminal, Write};
+#[cfg(unix)]
 use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_bench::ceiling::{FRAME_TARGET, FrameTimes, Verdict};
 use lunatui_bench::{AllocStats, CountingAllocator, CountingWriter, WriteStats};
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style, width as display_width};
+#[cfg(unix)]
 use lunatui_runtime::{SchedulePoll, Scheduler};
 use lunatui_term::{ColorMode, Encoder};
 #[cfg(unix)]
@@ -22,6 +24,7 @@ use ratatui::style::{Color as RatatuiColor, Modifier, Style as RatatuiStyle};
 use ratatui::{Terminal, TerminalOptions, Viewport};
 
 const FRAMES: u32 = 240;
+#[cfg(unix)]
 const FRAME_INTERVAL: Duration = Duration::from_micros(16_667);
 const LOG_LINES: usize = 200;
 const DEFAULT_WIDTH: u16 = 200;
