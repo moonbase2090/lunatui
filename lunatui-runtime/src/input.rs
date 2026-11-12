@@ -29,7 +29,12 @@ fn lock(shared: &Shared) -> MutexGuard<'_, Held> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-fn watch_escape(shared: &Shared, sender: &Sender<io::Result<Vec<Event>>>) {
+fn close(shared: &Shared) {
+    lock(shared).closed = true;
+    shared.changed.notify_all();
+}
+
+fn watch_escape(shared: &Shared, sender: &Sender<io::Result<Vec<Event>>>, timeout: Duration) {
     let mut held = lock(shared);
     loop {
         while !held.closed && !held.parser.holds_escape() {
@@ -44,7 +49,7 @@ fn watch_escape(shared: &Shared, sender: &Sender<io::Result<Vec<Event>>>) {
         let seen = held.generation;
         let (next, timeout) = shared
             .changed
-            .wait_timeout_while(held, ESCAPE_TIMEOUT, |held| {
+            .wait_timeout_while(held, timeout, |held| {
                 !held.closed && held.generation == seen
             })
             .unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -121,7 +126,14 @@ impl Input {
     /// # Errors
     ///
     /// Returns an error if the worker thread cannot be started.
-    pub fn from_reader<R>(mut reader: R) -> io::Result<Self>
+    pub fn from_reader<R>(reader: R) -> io::Result<Self>
+    where
+        R: Read + Send + 'static,
+    {
+        Self::from_reader_with(reader, ESCAPE_TIMEOUT)
+    }
+
+    fn from_reader_with<R>(mut reader: R, escape_timeout: Duration) -> io::Result<Self>
     where
         R: Read + Send + 'static,
     {
@@ -138,7 +150,8 @@ impl Input {
         let watcher_sender = sender.clone();
         thread::Builder::new()
             .name(String::from("lunatui-input-escape"))
-            .spawn(move || watch_escape(&watcher_shared, &watcher_sender))?;
+            .spawn(move || watch_escape(&watcher_shared, &watcher_sender, escape_timeout))?;
+        let failed_shared = Arc::clone(&shared);
         thread::Builder::new()
             .name(String::from("lunatui-input"))
             .spawn(move || {
@@ -176,7 +189,8 @@ impl Input {
                         }
                     }
                 }
-            })?;
+            })
+            .inspect_err(|_| close(&failed_shared))?;
         Ok(Self {
             receiver,
             pending_error: None,
@@ -290,8 +304,10 @@ mod tests {
 
     use lunatui_term::{Event, KeyCode, KeyEvent, Modifiers, Paste};
 
-    use super::ESCAPE_TIMEOUT;
+    use super::{Condvar, ESCAPE_TIMEOUT, Held, Mutex, Shared, close, lock, watch_escape};
     use crate::Input;
+    use lunatui_term::Parser;
+    use std::sync::Arc;
 
     struct FakeSource {
         reads: VecDeque<Vec<u8>>,
@@ -375,8 +391,12 @@ mod tests {
     type Checked = Result<(), Box<dyn std::error::Error>>;
 
     fn live_input() -> Result<(Input, Sender<Vec<u8>>), io::Error> {
+        live_input_with(ESCAPE_TIMEOUT)
+    }
+
+    fn live_input_with(timeout: Duration) -> Result<(Input, Sender<Vec<u8>>), io::Error> {
         let (sender, bytes) = mpsc::channel();
-        let input = Input::from_reader(ChannelSource { bytes })?;
+        let input = Input::from_reader_with(ChannelSource { bytes }, timeout)?;
         Ok((input, sender))
     }
 
@@ -416,12 +436,13 @@ mod tests {
 
     #[test]
     fn the_escape_waits_out_the_timeout_instead_of_firing_at_once() -> Checked {
-        let (input, sender) = live_input()?;
+        let timeout = Duration::from_millis(200);
+        let (input, sender) = live_input_with(timeout)?;
         let sent = Instant::now();
         sender.send(b"\x1b".to_vec())?;
         let (_input, frame, _) = frame_within(input, LIMIT)?;
         assert_eq!(frame, Some(vec![key(KeyCode::Esc)]));
-        assert!(sent.elapsed() >= ESCAPE_TIMEOUT, "{:?}", sent.elapsed());
+        assert!(sent.elapsed() >= timeout, "{:?}", sent.elapsed());
         Ok(())
     }
 
@@ -449,7 +470,7 @@ mod tests {
 
     #[test]
     fn a_sequence_split_inside_the_timeout_is_one_key_not_escape_plus_text() -> Checked {
-        let (input, sender) = live_input()?;
+        let (input, sender) = live_input_with(Duration::from_secs(30))?;
         sender.send(b"\x1b".to_vec())?;
         thread::sleep(Duration::from_millis(10));
         sender.send(b"[".to_vec())?;
@@ -457,23 +478,22 @@ mod tests {
         sender.send(b"A".to_vec())?;
         let (mut input, frame, _) = frame_within(input, LIMIT)?;
         assert_eq!(frame, Some(vec![key(KeyCode::Up)]));
-        thread::sleep(ESCAPE_TIMEOUT * 4);
         assert_eq!(input.try_next_frame()?, None);
         Ok(())
     }
 
     #[test]
     fn every_arriving_chunk_restarts_the_escape_timeout() -> Checked {
-        let (input, sender) = live_input()?;
-        let gap = ESCAPE_TIMEOUT * 7 / 10;
+        let timeout = Duration::from_secs(1);
+        let (input, sender) = live_input_with(timeout)?;
+        let gap = Duration::from_millis(600);
         sender.send(b"\x1b".to_vec())?;
         thread::sleep(gap);
         sender.send(b"[".to_vec())?;
         thread::sleep(gap);
         sender.send(b"A".to_vec())?;
-        let (mut input, frame, _) = frame_within(input, LIMIT)?;
+        let (mut input, frame, _) = frame_within(input, Duration::from_secs(10))?;
         assert_eq!(frame, Some(vec![key(KeyCode::Up)]));
-        thread::sleep(ESCAPE_TIMEOUT * 4);
         assert_eq!(input.try_next_frame()?, None);
         Ok(())
     }
@@ -549,5 +569,61 @@ mod tests {
         assert_eq!(frame, Some(vec![key(KeyCode::Esc)]));
         assert_eq!(input.next_frame()?, None);
         Ok(())
+    }
+
+    #[test]
+    fn closing_the_shared_state_stops_a_watcher_that_is_waiting_for_an_escape() {
+        let shared = Arc::new(Shared {
+            state: Mutex::new(Held {
+                parser: Parser::new(),
+                generation: 0,
+                closed: false,
+            }),
+            changed: Condvar::new(),
+        });
+        let (sender, _receiver) = mpsc::channel();
+        let watcher = {
+            let shared = Arc::clone(&shared);
+            thread::spawn(move || watch_escape(&shared, &sender, Duration::from_secs(60)))
+        };
+        {
+            let mut held = lock(&shared);
+            let _ = held.parser.push(b"\x1b");
+            held.generation += 1;
+        }
+        shared.changed.notify_all();
+        thread::sleep(Duration::from_millis(50));
+        assert!(!watcher.is_finished());
+        close(&shared);
+        let deadline = Instant::now() + LIMIT;
+        while !watcher.is_finished() && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(5));
+        }
+        assert!(watcher.is_finished());
+    }
+
+    #[test]
+    fn closing_wakes_a_watcher_that_has_no_escape_to_wait_for() {
+        let shared = Arc::new(Shared {
+            state: Mutex::new(Held {
+                parser: Parser::new(),
+                generation: 0,
+                closed: false,
+            }),
+            changed: Condvar::new(),
+        });
+        let (sender, _receiver) = mpsc::channel();
+        let watcher = {
+            let shared = Arc::clone(&shared);
+            thread::spawn(move || watch_escape(&shared, &sender, ESCAPE_TIMEOUT))
+        };
+        thread::sleep(Duration::from_millis(50));
+        assert!(!watcher.is_finished());
+        close(&shared);
+        let deadline = Instant::now() + LIMIT;
+        while !watcher.is_finished() && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(5));
+        }
+        assert!(watcher.is_finished());
     }
 }
