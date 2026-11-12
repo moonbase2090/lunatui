@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `benches/tests/dashboard_tick_bytes.rs` fails when the lunatui dashboard tick at 200×60 encodes to more than the PRD's 160 B target without colour (now 157 B, against 209 B for ratatui), and pins the exact byte counts without colour and in truecolor (157 B and 382 B).
 - `docs/platforms.md`: what tier 1 means and how Linux, macOS and Windows are checked. The `CI` workflow gains a Windows clippy job.
 
 ### Changed
