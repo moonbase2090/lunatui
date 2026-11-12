@@ -21,6 +21,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Fixed
 
+- The `keymap_pty` tests find the example binary from cargo's own build report instead of assuming the test executable sits two directories below `target/debug`, which is not true with the newer cargo build layout and made all five tests fail with a missing file.
 - The native pie chart rasteriser iterates the slice colours directly instead of indexing them by a counter, which newer clippy releases flag as `clippy::needless_range_loop`. The output is unchanged.
 - A lone Esc key press is now delivered. The input thread held a trailing `ESC` byte until more input arrived, so Esc did nothing until the next key (which then acted as Alt+key or was swallowed). `Parser::holds_escape` and `Parser::expire` are new; the runtime input reader gives a held escape 50 ms to be completed by a following byte and then reports it as `KeyCode::Esc`. Whole CSI and SS3 sequences, Alt+key pairs and open pastes are unaffected. The sandbox WASM artifact is regenerated.
 - `Cargo.lock` moves `rustix` from 1.1.5 to 1.1.6, which fixes the advisory RUSTSEC-2026-0486 that `cargo deny` reported.
