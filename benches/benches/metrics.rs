@@ -5,6 +5,7 @@
 
 use std::hint::black_box;
 use std::io;
+use std::process::Command;
 
 use lunatui_bench::calibration::{LARGE_FRAME_BYTES, frame, grow_buffer, write_frame};
 use lunatui_bench::report::{Metrics, table};
@@ -51,6 +52,55 @@ fn main() -> io::Result<()> {
         )?,
     ];
     print!("{}", table(&ratatui_rows));
+    dashboard_timing_gate()?;
+    Ok(())
+}
+
+fn dashboard_timing_gate() -> io::Result<()> {
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let build = Command::new(&cargo)
+        .args([
+            "build",
+            "--release",
+            "--locked",
+            "-p",
+            "lunatui",
+            "--example",
+            "dashboard_fair_lunatui",
+            "--example",
+            "dashboard_fair_ratatui",
+            "--example",
+            "dashboard_fair_report",
+        ])
+        .status()?;
+    if !build.success() {
+        return Err(io::Error::other("dashboard timing gate: build failed"));
+    }
+    for (width, height) in [("80", "24"), ("200", "60")] {
+        let status = Command::new(&cargo)
+            .args([
+                "run",
+                "--quiet",
+                "--release",
+                "--locked",
+                "-p",
+                "lunatui",
+                "--example",
+                "dashboard_fair_report",
+                "--",
+                "--width",
+                width,
+                "--height",
+                height,
+                "--gate",
+            ])
+            .status()?;
+        if !status.success() {
+            return Err(io::Error::other(format!(
+                "dashboard timing gate: {width}x{height} failed with {status}"
+            )));
+        }
+    }
     Ok(())
 }
 

@@ -4,6 +4,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${DASHBOARD_FAIR_OUT:-$ROOT/target/dashboard-fair}"
 FRAMES="${FRAMES:-240}"
 RUNS="${RUNS:-5}"
+REPORT_ARGS=("$@")
 mkdir -p "$OUT"
 cd "$ROOT"
 cargo build --release -p lunatui \
@@ -19,5 +20,5 @@ for size in "80 24" "200 60"; do
   log="$OUT/dashboard_fair_${w}x${h}.log"
   echo "=== dashboard_fair ${w}x${h} ===" | tee "$log"
   cargo run -q --release -p lunatui --example dashboard_fair_report -- \
-    --width "$w" --height "$h" --frames "$FRAMES" --runs "$RUNS" 2>&1 | tee -a "$log"
+    --width "$w" --height "$h" --frames "$FRAMES" --runs "$RUNS" "${REPORT_ARGS[@]}" 2>&1 | tee -a "$log"
 done
