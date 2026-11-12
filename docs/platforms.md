@@ -24,7 +24,7 @@ The Windows-only code is the `lunatui-term` Windows session, the event mapping i
 
 ## Checks
 
-The `CI` workflow (`.github/workflows/ci.yml`) runs on a manual dispatch and covers all three platforms:
+The `CI` workflow (`.github/workflows/ci.yml`) runs on every pull request and on a manual dispatch. A pull request runs `test` and `clippy-windows`; the Linux-only jobs that the `Rookrunner` workflow already runs are skipped there and run on dispatch.
 
 - `test` builds and runs the workspace tests on Linux, macOS and Windows, then runs the same tests with `--all-features`.
 - `clippy` and `clippy-windows` run the lint on Linux and Windows.
@@ -33,5 +33,4 @@ A change that only compiles on Unix, such as an import used by a `cfg(unix)` fun
 
 ## Known gaps
 
-- The pull-request check set does not run macOS or Windows jobs. Dispatch the `CI` workflow on a branch that touches platform code.
 - No automated check drives a real Windows Terminal. Someone has to run an example there by hand before a release.

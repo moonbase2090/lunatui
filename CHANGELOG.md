@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `docs/platforms.md`: what tier 1 means and how Linux, macOS and Windows are checked. The `CI` workflow gains a Windows clippy job.
 
+### Changed
+
+- The `CI` workflow now also runs on pull requests, with the macOS and Windows test jobs, the Windows clippy job and the `--all-features` suite. The Linux-only jobs that `Rookrunner` already runs stay dispatch-only.
+
 ### Fixed
 
 - `Cargo.lock` moves `rustix` from 1.1.5 to 1.1.6, which fixes the advisory RUSTSEC-2026-0486 that `cargo deny` reported.
