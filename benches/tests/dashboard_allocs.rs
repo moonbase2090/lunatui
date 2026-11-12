@@ -16,8 +16,8 @@ const WIDTH: u16 = 200;
 const HEIGHT: u16 = 60;
 const WARM_UP: u32 = 240;
 const FRAMES: u32 = 240;
-const MAX_RENDER_TOTAL: usize = 23_740;
-const MAX_RENDER_FRAME: usize = 114;
+const MAX_RENDER_TOTAL: usize = 25_120;
+const MAX_RENDER_FRAME: usize = 120;
 
 fn per_frame() -> (usize, usize, usize) {
     let mut model = Model::new();
@@ -38,9 +38,10 @@ fn per_frame() -> (usize, usize, usize) {
                 .len()
         });
         if tick >= WARM_UP {
-            render += drawn.allocations;
-            worst = worst.max(drawn.allocations);
-            encode += diffed.allocations;
+            let drawn_calls = drawn.allocations + drawn.reallocations;
+            render += drawn_calls;
+            worst = worst.max(drawn_calls);
+            encode += diffed.allocations + diffed.reallocations;
         }
         std::mem::swap(&mut previous, &mut next);
     }

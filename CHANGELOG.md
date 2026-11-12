@@ -11,7 +11,7 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `benches/tests/dashboard_tick_bytes.rs` fails when the lunatui dashboard tick at 200×60 encodes to more than the PRD's 160 B target without colour (now 157 B, against 209 B for ratatui), and pins the exact byte counts without colour and in truecolor (157 B and 382 B).
-- `benches/tests/dashboard_allocs.rs` fails when the lunatui dashboard at 200×60 allocates more than today while rendering (23,740 allocations over 240 steady-state frames, at most 114 in one frame) or allocates at all while diffing and encoding.
+- `benches/tests/dashboard_allocs.rs` fails when the lunatui dashboard at 200×60 allocates more than today while rendering (25,120 allocations and reallocations over 240 steady-state frames, at most 120 in one frame) or allocates or reallocates at all while diffing and encoding.
 - `docs/platforms.md`: what tier 1 means and how Linux, macOS and Windows are checked. The `CI` workflow gains a Windows clippy job.
 
 ### Changed
