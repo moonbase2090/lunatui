@@ -15,6 +15,11 @@ The benchmark harness for lunatui (PRD §6 and §8 PR 02). It provides the count
 
 The bench targets live in `benches/` and the tests in `tests/`. Run everything with `cargo xtask bench`. The ratatui wall-clock baseline is `cargo bench -p lunatui-bench --bench criterion_ratatui`.
 
+The `metrics` step also runs the `dashboard_fair` timing gate at 80×24 and 200×60.
+It compares the median frame times across five paired release runs, with a 1.05×
+lunatui/Ratatui limit. See [verification commands and failure proof](../docs/verify-dashboard-fair.md)
+for its scope and tolerance.
+
 ## Widget parity suite
 
 `widget_suite` compares each lunatui widget with its ratatui 0.30.2 equivalent on identical data. A case is one entry in `widget_suite::CASES`: a lunatui drawing function, the equivalent ratatui drawing function, and a flag saying whether the performance gate applies. Every case runs at 80×24 and 200×60 with a `tick` that changes the content a little each frame (scroll offset, ratio, selected tab), so the full-frame scope has a real diff to do.
