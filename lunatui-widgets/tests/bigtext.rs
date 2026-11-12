@@ -317,6 +317,73 @@ fn lookalike_pairs_do_not_share_a_bitmap() {
 }
 
 #[test]
+fn drawn_glyphs_use_a_seven_pixel_grid() {
+    let drawn = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ:.-%";
+    for ch in drawn.chars() {
+        let glyph = ch.to_string();
+        let mut ink = false;
+        for row in 0..8 {
+            let line = row_string(&glyph, PixelSize::Full, row);
+            let cells: Vec<char> = line.chars().collect();
+            assert_eq!(cells.len(), 16, "{ch} row {row}");
+            assert_eq!(cells[14], ' ', "{ch} keeps the right column blank");
+            assert_eq!(cells[15], ' ', "{ch} keeps the right column blank");
+            if row == 7 {
+                assert!(
+                    cells.iter().all(|cell| *cell == ' '),
+                    "{ch} keeps the bottom row blank"
+                );
+            } else if cells.iter().any(|cell| *cell != ' ') {
+                ink = true;
+            }
+        }
+        assert!(ink, "{ch} has ink");
+    }
+    assert_eq!(
+        face("%", PixelSize::Full),
+        [
+            "████            ",
+            "████            ",
+            "    ██          ",
+            "      ██        ",
+            "        ██      ",
+            "          ████  ",
+            "          ████  ",
+            "                ",
+        ]
+        .join("\n")
+    );
+    assert_eq!(
+        face("8", PixelSize::Full),
+        [
+            "  ██████████    ",
+            "████      ████  ",
+            "████      ████  ",
+            "  ██████████    ",
+            "████      ████  ",
+            "████      ████  ",
+            "  ██████████    ",
+            "                ",
+        ]
+        .join("\n")
+    );
+    assert_eq!(
+        face("A", PixelSize::Full),
+        [
+            "  ██████████    ",
+            "████      ████  ",
+            "████      ████  ",
+            "██████████████  ",
+            "████      ████  ",
+            "████      ████  ",
+            "████      ████  ",
+            "                ",
+        ]
+        .join("\n")
+    );
+}
+
+#[test]
 fn sextant_and_octant_fall_back_until_the_font_is_reported() {
     let quadrant = face("#", PixelSize::Quadrant);
     assert_eq!(

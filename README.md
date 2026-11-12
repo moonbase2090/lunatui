@@ -505,7 +505,7 @@ A cutover board: a live clock, a countdown that reaches zero, and ticking metric
 
 <img src="docs/media/bigtext.webp" alt="BigText widget: a cutover board in the dark theme" width="1028">
 
-Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36 at 2x scale, `FRAMES=330`, dark, lossless animated WebP, about 13 seconds).
+Screenshot: [docs/media/bigtext.png](docs/media/bigtext.png). Recorded with `scripts/record-showcase.sh` (`CASE=bigtext`, 120×36 at 2x scale, `FRAMES=330`, dark, lossless animated WebP, about 11 seconds).
 
 ### Image
 

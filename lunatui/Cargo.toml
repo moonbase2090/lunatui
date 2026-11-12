@@ -177,6 +177,11 @@ path = "../examples/bigtext.rs"
 test = true
 
 [[example]]
+name = "bigtext_glyphs"
+path = "../examples/bigtext_glyphs.rs"
+test = false
+
+[[example]]
 name = "calendar"
 path = "../examples/calendar.rs"
 test = true

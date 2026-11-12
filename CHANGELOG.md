@@ -16,6 +16,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
+- BigText digits, capitals, and `:.-%` sit on a 7×7 grid inside the 8×8 cell, with one-pixel strokes and a blank bottom row and rightmost column. The bitmap remains derived from Press Start 2P by `CodeMan38` under OFL-1.1 (`lunatui-widgets/assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII stays a hollow box.
 - The `CI` workflow now also runs on pull requests, with the macOS and Windows test jobs, the Windows clippy job and the `--all-features` suite. The Linux-only jobs that `Rookrunner` already runs stay dispatch-only.
 
 ### Fixed
