@@ -15,6 +15,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
+- BigText digits, capitals, and `:.-%` sit on a 7×7 grid inside the 8×8 cell, with one-pixel strokes and a blank bottom row and rightmost column. Other printable ASCII stays a hollow box.
 - The `CI` workflow now also runs on pull requests, with the macOS and Windows test jobs, the Windows clippy job and the `--all-features` suite. The Linux-only jobs that `Rookrunner` already runs stay dispatch-only.
 
 ### Fixed
