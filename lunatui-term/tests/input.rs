@@ -423,3 +423,73 @@ fn pasted(events: &[Event]) -> String {
     }
     text
 }
+
+#[test]
+fn a_held_lone_escape_expires_into_an_esc_key() {
+    let mut parser = Parser::new();
+    assert!(!parser.holds_escape());
+    assert_eq!(parser.push(b"\x1b"), vec![]);
+    assert!(parser.holds_escape());
+    assert_eq!(parser.expire(), vec![key(KeyCode::Esc)]);
+    assert!(!parser.holds_escape());
+    assert_eq!(parser.pending(), 0);
+    assert_eq!(parser.expire(), vec![]);
+}
+
+#[test]
+fn expiring_a_partial_sequence_reports_esc_then_the_rest() {
+    let mut parser = Parser::new();
+    assert_eq!(parser.push(b"\x1b["), vec![]);
+    assert!(parser.holds_escape());
+    assert_eq!(
+        parser.expire(),
+        vec![key(KeyCode::Esc), key(KeyCode::Char('['))]
+    );
+    assert!(!parser.holds_escape());
+}
+
+#[test]
+fn expire_does_nothing_without_a_held_escape() {
+    let mut parser = Parser::new();
+    assert_eq!(parser.expire(), vec![]);
+    assert_eq!(parser.push(b"a"), vec![key(KeyCode::Char('a'))]);
+    assert_eq!(parser.expire(), vec![]);
+    assert_eq!(parser.push(b"\x1b[A"), vec![key(KeyCode::Up)]);
+    assert!(!parser.holds_escape());
+    assert_eq!(parser.expire(), vec![]);
+}
+
+#[test]
+fn expire_leaves_an_open_paste_alone() {
+    let mut parser = Parser::new();
+    let started = parser.push(b"\x1b[200~\x1b");
+    assert!(started.contains(&Event::Paste(Paste::Start)));
+    assert!(!parser.holds_escape());
+    assert_eq!(parser.expire(), vec![]);
+    let mut rest = parser.push(b"[201~");
+    rest.extend(parser.flush());
+    assert_eq!(rest.last(), Some(&Event::Paste(Paste::End)));
+    assert_eq!(
+        rest.iter()
+            .filter(|event| matches!(event, Event::Paste(Paste::End)))
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn whole_csi_and_ss3_sequences_are_never_held_or_expired() {
+    for (bytes, expected) in [
+        (&b"\x1b[A"[..], key(KeyCode::Up)),
+        (&b"\x1bOP"[..], key(KeyCode::F(1))),
+        (
+            &b"\x1b[1;5C"[..],
+            modified(KeyCode::Right, Modifiers::new().control()),
+        ),
+    ] {
+        let mut parser = Parser::new();
+        assert_eq!(parser.push(bytes), vec![expected]);
+        assert!(!parser.holds_escape(), "{bytes:?}");
+        assert_eq!(parser.expire(), vec![], "{bytes:?}");
+    }
+}
