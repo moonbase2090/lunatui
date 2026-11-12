@@ -35,6 +35,7 @@ const GLYPH_COLUMNS: usize = 16;
 #[non_exhaustive]
 pub enum BigTextFont {
     /// Digits, capitals, and `:.-%` on a 7×7 grid inside an 8×8 cell.
+    /// The bitmap remains derived from Press Start 2P by `CodeMan38` under OFL-1.1.
     #[default]
     Modified8x8,
     /// A compact 5×7 clock font for the digits `0`–`9` and `:` made from full-cell blocks.
@@ -110,6 +111,8 @@ impl PixelSize {
 ///
 /// Glyph bitmaps for digits, capitals, and `:.-%` sit on a 7×7 grid inside the 8×8 cell.
 /// The bottom row and the rightmost column are blank, and the strokes are one pixel.
+/// The bitmap remains derived from Press Start 2P by `CodeMan38` under OFL-1.1.
+/// The copyright and license notice is included in `assets/fonts/PressStart2P-OFL.txt`.
 /// Other printable ASCII is a hollow box.
 /// The opt-in [`BigTextFont::FiveBySeven`] font is a compact clock face for the digits and `:`.
 ///
