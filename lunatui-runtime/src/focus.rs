@@ -35,6 +35,10 @@ struct Group {
 /// [`restore`](Self::restore). When the focused control goes away or is disabled, focus moves to
 /// the nearest enabled control before it in the old order, then the nearest one after it. A
 /// roving subgroup is one Tab stop: arrows move inside it, and Tab leaves it.
+///
+/// As a [`Handle`](crate::Handle), it takes Tab and Shift+Tab through [`tab`](Self::tab) and the
+/// arrow keys through [`arrow`](Self::arrow), so disabled controls and roving subgroups behave the
+/// same from either entry point.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FocusManager {
     entries: Vec<(HitId, Rect)>,

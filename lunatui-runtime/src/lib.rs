@@ -29,6 +29,8 @@ mod frame;
 #[cfg(feature = "app")]
 mod hit;
 mod input;
+#[cfg(feature = "app")]
+mod interact;
 /// Command registry for keyboard shortcuts. The shortcut overlay and command palette render from it.
 #[cfg(feature = "keymap")]
 pub mod keymap;
@@ -54,6 +56,11 @@ pub use frame::RenderFrame;
 #[cfg(feature = "app")]
 pub use hit::{AccessibilityRole, AmbiguousControl, Control, ControlMetadata, HitId, HitMap};
 pub use input::Input;
+#[cfg(feature = "app")]
+pub use interact::{
+    Dismissal, Handle, Orientation, Outcome, RovingFocus, Selection, SelectionMode,
+    TYPEAHEAD_TIMEOUT, Typeahead, Typed, starts_with_ignoring_case,
+};
 #[cfg(feature = "app")]
 pub use layer::{Layer, LayerEvent, LayerId, LayerSlot, LayerStack, PressRoute};
 #[cfg(all(feature = "app", any(unix, windows)))]

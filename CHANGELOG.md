@@ -8,6 +8,15 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `lunatui_runtime::Handle` is the widget input contract: `state.handle(&event)` returns an `Outcome`, so app loops pass keys on instead of rewriting arrows, type-ahead and Esc. Shared primitives build the states: `RovingFocus` (one step function, with wrap or stop, skipping disabled items), `Typeahead` (one query buffer with a `TYPEAHEAD_TIMEOUT` read from the time the app passes, such as a virtual `Clock`), `Selection` (single or multiple) and `Dismissal` (an overlay's layer in the `LayerStack`). `FocusManager` handles Tab, Shift+Tab and the arrows as a `Handle`.
+- `ListState`, `TabsState`, `RadioState`, `SelectState` and `FilePickerState` handle their widgets' keys. `RadioGroup::is_enabled` and `FileEntry::name` are new. The states are behind the new default `input` feature of `lunatui-widgets`, which `radio`, `select`, `file-picker`, `search-box` and `accordion` now turn on.
+
+### Changed
+
+- Breaking: `Select::type_ahead` and `FilePicker::type_ahead` are removed; `SelectState` and `FilePickerState` type ahead with the shared `Typeahead`. The `step` functions of `RadioGroup`, `Select`, `SearchBox`, `Accordion` and `FilePicker` now call `RovingFocus::step`; `FilePicker::step` still stops at the ends and lands on the first row from nothing.
+
 ## [0.1.30] - 2026-11-13
 
 ### Added

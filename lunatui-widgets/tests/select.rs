@@ -3,11 +3,17 @@
 
 #![doc = include_str!("../README.md")]
 
+use std::time::Duration;
+
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
-use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
+use lunatui_runtime::{
+    Clock, FocusManager, Handle, HitId, LayerEvent, LayerStack, Outcome, TYPEAHEAD_TIMEOUT,
+    Typeahead, Typed,
+};
+use lunatui_term::{Event, KeyCode, KeyEvent, Modifiers, MouseButton, MouseKind};
 use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{RenderCx, Select, Widget, WidgetState};
+use lunatui_widgets::{RenderCx, Select, SelectState, Widget, WidgetState};
 
 const FRUIT: [&str; 5] = ["apple", "apricot", "banana", "blueberry", "cherry"];
 
@@ -184,6 +190,92 @@ fn measure_is_the_field_plus_the_visible_rows() {
     assert_eq!(closed.measure(Size::new(20, 0)), Size::new(0, 0));
 }
 
+fn press(code: KeyCode) -> Event {
+    Event::Key(KeyEvent::press(code))
+}
+
+fn typed(state: &mut SelectState, clock: &Clock, ch: char) -> Outcome {
+    state.set_time(clock.now());
+    state.handle(&press(KeyCode::Char(ch)))
+}
+
+#[test]
+fn typing_on_the_closed_field_chooses_the_matching_option() {
+    let mut clock = Clock::new();
+    let mut state = SelectState::new();
+    state.sync(&FRUIT);
+    assert_eq!(typed(&mut state, &clock, 'b'), Outcome::Changed);
+    assert_eq!(state.chosen(), Some(2));
+    assert_eq!(typed(&mut state, &clock, 'b'), Outcome::Changed);
+    assert_eq!(state.chosen(), Some(3), "the same letter moves on");
+    clock.advance(Duration::from_millis(200));
+    assert_eq!(typed(&mut state, &clock, 'B'), Outcome::Changed);
+    assert_eq!(state.chosen(), Some(2), "case is ignored and it wraps");
+    clock.advance(TYPEAHEAD_TIMEOUT);
+    assert_eq!(typed(&mut state, &clock, 'a'), Outcome::Changed);
+    assert_eq!(typed(&mut state, &clock, 'p'), Outcome::Handled);
+    assert_eq!(typed(&mut state, &clock, 'r'), Outcome::Changed);
+    assert_eq!(state.chosen(), Some(1), "apr picks apricot");
+    assert_eq!(typed(&mut state, &clock, 'z'), Outcome::Handled);
+    assert_eq!(state.chosen(), Some(1));
+}
+
+#[test]
+fn arrows_on_the_closed_field_step_and_stop_at_the_ends() {
+    let mut state = SelectState::new();
+    state.sync(&FRUIT);
+    assert_eq!(state.handle(&press(KeyCode::Down)), Outcome::Changed);
+    assert_eq!(state.chosen(), Some(0));
+    assert_eq!(state.handle(&press(KeyCode::Up)), Outcome::Handled);
+    assert_eq!(state.handle(&press(KeyCode::Tab)), Outcome::Ignored);
+}
+
+#[test]
+fn the_list_opens_on_enter_moves_with_typing_and_esc_closes_it_through_the_stack() {
+    let area = Rect::new(0, 0, 20, 8);
+    let field_id = HitId(1);
+    let mut layers = LayerStack::new();
+    let mut focus = FocusManager::new();
+    focus.sync(vec![(field_id, Rect::new(0, 0, 20, 1))]);
+    let mut state = SelectState::new();
+    state.sync(&FRUIT);
+    let select = Select::new(&FRUIT, state.chosen());
+    assert_eq!(state.handle(&press(KeyCode::Enter)), Outcome::Activated(0));
+    state.open(&mut layers, select.layer(area, Some(field_id)));
+    assert!(state.is_open());
+    assert_eq!(state.active(), Some(0));
+    assert_eq!(state.handle(&press(KeyCode::Char('c'))), Outcome::Changed);
+    assert_eq!(state.active(), Some(4));
+    assert_eq!(state.chosen(), None, "moving in the list does not choose");
+    assert!(matches!(
+        layers.handle(&press(KeyCode::Esc), &mut focus),
+        LayerEvent::Dismissed { deliver: false, .. }
+    ));
+    assert_eq!(state.sync_layer(&layers), Outcome::Dismissed);
+    assert!(!state.is_open());
+    assert_eq!(state.chosen(), None);
+    assert_eq!(focus.focused(), Some(field_id));
+}
+
+#[test]
+fn enter_in_the_open_list_chooses_the_active_row() {
+    let mut layers = LayerStack::new();
+    let mut focus = FocusManager::new();
+    let mut state = SelectState::new();
+    state.sync(&FRUIT);
+    let alt_down = Event::Key(KeyEvent::press(KeyCode::Down).modifiers(Modifiers::new().alt()));
+    assert_eq!(state.handle(&alt_down), Outcome::Activated(0));
+    state.open(
+        &mut layers,
+        Select::new(&FRUIT, None).layer(Rect::new(0, 0, 20, 8), None),
+    );
+    assert_eq!(state.handle(&press(KeyCode::Down)), Outcome::Changed);
+    assert_eq!(state.handle(&press(KeyCode::Enter)), Outcome::Toggled(1));
+    assert_eq!(state.chosen(), Some(1));
+    state.close(&mut layers, &mut focus);
+    assert!(layers.is_empty());
+}
+
 #[test]
 fn zero_sized_areas_draw_nothing() {
     let select = Select::new(&FRUIT, Some(0)).open(true);
@@ -196,7 +288,8 @@ struct SelectApp {
     selected: Option<usize>,
     open: bool,
     active: Option<usize>,
-    typed: String,
+    typeahead: Typeahead,
+    now: Duration,
     max_rows: u16,
     area: Rect,
 }
@@ -208,7 +301,8 @@ impl SelectApp {
             selected,
             open: false,
             active: None,
-            typed: String::new(),
+            typeahead: Typeahead::new(),
+            now: Duration::ZERO,
             max_rows: 6,
             area: Rect::new(0, 0, 0, 0),
         }
@@ -230,7 +324,7 @@ impl SelectApp {
 
     fn close(&mut self) {
         self.open = false;
-        self.typed.clear();
+        self.typeahead.clear();
     }
 
     fn choose_active(&mut self) {
@@ -240,14 +334,19 @@ impl SelectApp {
         self.close();
     }
 
-    fn type_char(&mut self, ch: char) {
-        self.typed.push(ch);
-        let mut found = Select::type_ahead(self.options, self.active, &self.typed);
-        if found.is_none() {
-            self.typed = ch.to_string();
-            found = Select::type_ahead(self.options, self.active, &self.typed);
-        }
-        if let Some(index) = found {
+    fn type_key(&mut self, key: &KeyEvent) {
+        let current = if self.open {
+            self.active
+        } else {
+            self.selected
+        };
+        let options = self.options;
+        let typed = self
+            .typeahead
+            .handle_key(key, self.now, current, options.len(), |index| {
+                options[index]
+            });
+        if let Typed::Found(index) = typed {
             self.active = Some(index);
             if !self.open {
                 self.selected = Some(index);
@@ -284,7 +383,7 @@ impl Component for SelectApp {
                     let forward = key.code == KeyCode::Down;
                     self.active = Select::<&str>::step(self.active, self.options.len(), forward);
                 }
-                KeyCode::Char(ch) => self.type_char(ch),
+                KeyCode::Char(_) => self.type_key(key),
                 _ => {}
             },
             Event::Mouse(mouse) if mouse.kind == MouseKind::Down(MouseButton::Left) => {
@@ -292,6 +391,10 @@ impl Component for SelectApp {
             }
             _ => {}
         }
+    }
+
+    fn tick(&mut self, now: Duration) {
+        self.now = now;
     }
 
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
@@ -400,11 +503,14 @@ fn typing_jumps_to_the_next_option_with_the_prefix_and_repeats_cycle_through_the
 }
 
 #[test]
-fn typing_a_longer_prefix_narrows_the_match() {
-    let mut select = mounted(Some(0));
+fn typing_a_longer_prefix_narrows_the_match_and_a_pause_starts_over() {
+    let mut select = mounted(None);
     select.type_text("ap");
+    select.assert_value("apple");
+    select.type_text("r");
     select.assert_value("apricot");
-    select.type_text("p");
+    select.advance(TYPEAHEAD_TIMEOUT);
+    select.type_text("a");
     select.assert_value("apple");
 }
 
@@ -423,6 +529,7 @@ fn type_ahead_matches_accented_letters_case_insensitively() {
     let mut select = Harness::mount(SelectApp::new(&WORDS, None), 20, 3);
     select.type_text("é");
     select.assert_value("Éclair");
+    select.advance(TYPEAHEAD_TIMEOUT);
     select.type_text("e");
     select.assert_value("eclair");
 }

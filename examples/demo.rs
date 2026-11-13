@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use lunatui_bench::ceiling::{FRAME_TARGET, FrameTimes, Verdict};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs};
 use lunatui_runtime::{
-    App, ControlFlow, Ease, FocusDirection, FocusManager, HitId, HitMap, RunOptions, SchedulePoll,
+    App, ControlFlow, Ease, FocusManager, Handle, HitId, HitMap, RunOptions, SchedulePoll,
     Scheduler, Spring, Tween, is_quit, render_once, run,
 };
 use lunatui_term::{ColorMode, Encoder, Event, KeyCode, KeyEvent, MouseButton, MouseKind};
@@ -257,7 +257,7 @@ impl App for Counter {
             return ControlFlow::Break;
         }
         match event {
-            Event::Key(key) => self.on_key(key),
+            Event::Key(key) if !self.focus.handle(event).is_taken() => self.on_key(key),
             Event::Mouse(mouse) => self.on_mouse(mouse),
             _ => {}
         }
@@ -336,11 +336,6 @@ impl App for Counter {
 impl Counter {
     fn on_key(&mut self, key: &KeyEvent) {
         match key.code {
-            KeyCode::Tab => self.focus.tab(key.modifiers.is_shift()),
-            KeyCode::Up => self.focus.arrow(FocusDirection::Up),
-            KeyCode::Down => self.focus.arrow(FocusDirection::Down),
-            KeyCode::Left => self.focus.arrow(FocusDirection::Left),
-            KeyCode::Right => self.focus.arrow(FocusDirection::Right),
             KeyCode::Enter | KeyCode::Char(' ') => {
                 if let Some(id) = self.focus.focused() {
                     self.activate(id);
