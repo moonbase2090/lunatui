@@ -352,6 +352,10 @@ A release console with live checks and a deploy history. Enter presses Run check
 
 Screenshot: [docs/media/button.png](docs/media/button.png). Recorded with `scripts/record-widget.sh` (`CASE=button`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 118 KB).
 
+Hover, pressed, invalid, and open are the shared `WidgetState` paints. The still is the dark-theme cells from `cargo run -p lunatui-widgets --example button_states --features button`.
+
+<img src="docs/media/button-states.png" alt="Button states: hover, pressed, invalid, and open in the dark theme" width="440">
+
 ### UI button
 
 The `lunatui-button` crate in a deploy console. The run is scripted, not interactive: focus steps across the five variants (Deploy, Rollback, Promote, Diff, Logs) and then the four option toggles, and the script presses each one as it goes. The size row shows Small, Medium and Large, and the Disabled button is muted text with no fill.
