@@ -23,6 +23,7 @@ pub enum FocusDirection {
 pub struct FocusManager {
     entries: Vec<(HitId, Rect)>,
     index: Option<usize>,
+    pending: Option<HitId>,
 }
 
 impl FocusManager {
@@ -36,6 +37,7 @@ impl FocusManager {
     pub fn clear(&mut self) {
         self.entries.clear();
         self.index = None;
+        self.pending = None;
     }
 
     /// Appends `id` in document order for Tab traversal.
@@ -43,9 +45,14 @@ impl FocusManager {
         self.entries.push((id, area));
     }
 
-    /// Replaces entries and keeps focus on `id` when it is still present.
+    /// Replaces entries and keeps focus on `id` when it is still present. An id given to
+    /// [`restore`](Self::restore) since the last sync takes focus instead when it is present.
     pub fn sync(&mut self, entries: Vec<(HitId, Rect)>) {
-        let previous = self.focused();
+        let previous = self
+            .pending
+            .take()
+            .filter(|id| entries.iter().any(|(hit, _)| hit == id));
+        let previous = previous.or_else(|| self.focused());
         self.entries = entries;
         self.index = previous.and_then(|id| self.entries.iter().position(|(hit, _)| *hit == id));
         if self.index.is_none() && !self.entries.is_empty() {
@@ -63,6 +70,19 @@ impl FocusManager {
     /// Moves focus to `id` when it is registered.
     pub fn focus(&mut self, id: HitId) {
         self.index = self.entries.iter().position(|(hit, _)| *hit == id);
+    }
+
+    /// Gives focus back to `id`, such as the control that opened a closing layer. Focus moves now
+    /// when `id` is registered, and otherwise at the next [`sync`](Self::sync) that registers it,
+    /// since the screen under a modal layer only registers again once the layer is gone.
+    pub fn restore(&mut self, id: HitId) {
+        match self.entries.iter().position(|(hit, _)| *hit == id) {
+            Some(index) => {
+                self.index = Some(index);
+                self.pending = None;
+            }
+            None => self.pending = Some(id),
+        }
     }
 
     /// Tab or Shift-Tab focus.
