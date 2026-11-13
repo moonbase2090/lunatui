@@ -142,7 +142,7 @@ A widget state handles its own keys through `lunatui_runtime::Handle`: `state.ha
 | `SelectState` | closed: Up, Down and typing change the choice, Enter, Space or Alt+Down ask to open; open: arrows and typing move the active row, Enter chooses | `Select::new(options, state.chosen()).open(state.is_open()).active(state.active())` |
 | `FilePickerState` | as `ListState`, plus typing jumps to a name and Space marks | `FilePicker::new(path, entries).active(state.focused()).marked(state.marked())` |
 
-`FocusManager` is a `Handle` too: Tab, Shift+Tab and the arrows move between regions. Each state's `sync` records its items (and visible rows) after they change.
+`FocusManager` is a `Handle` too: Tab, Shift+Tab and the arrows move between regions. `lunatui_field::FormState` moves between a `Form`'s fields with Tab and Shift+Tab, skipping disabled fields and wrapping, and leaves the arrows to the focused control; draw with `Form::focus(state.focused())`. Each state's `sync` records its items (and visible rows) after they change.
 
 The pieces are shared, not copied per widget: `RovingFocus` (one step function with wrap or stop and disabled items skipped), `Typeahead` (one query buffer whose timeout runs on the time the app passes in, usually a `Clock`, so tests are exact), `Selection` (single or multiple) and `Dismissal` (an overlay's layer in the app's `LayerStack`, so Esc has one path). `SelectState` and `FilePickerState` take the time with `set_time`.
 
