@@ -30,12 +30,16 @@ required-features = ["effects"]
 
 [[test]]
 name = "accessibility"
-required-features = ["accessibility"]
+required-features = ["app"]
+
+[[test]]
+name = "controls"
+required-features = ["app"]
 
 [[example]]
 name = "accessibility_roles"
 path = "../examples/accessibility_roles.rs"
-required-features = ["accessibility"]
+required-features = ["app"]
 
 [dependencies]
 lunatui-core = { version = "0.1.29", path = "../lunatui-core" }

@@ -294,11 +294,13 @@ footer nav a:hover{color:var(--lav)}
                                               
                                               
 <span class="x">Updates</span>  <span class="a x">━━━</span><span class="o x">●</span> <span class="x">Product news</span>                    
-                                              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">let form = Form::new([
-    FormField::new(&quot;Name&quot;).required().hint(&quot;As it appears on invoices&quot;),
-    FormField::new(&quot;Email&quot;).required().error(&quot;Enter a full email address&quot;),
-    FormField::new(&quot;Plan&quot;),
-    FormField::new(&quot;Updates&quot;),
+                                              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">use lunatui_field::{Field, Form};
+
+let form = Form::new([
+    Field::new(&quot;Name&quot;).required().help(&quot;As it appears on invoices&quot;),
+    Field::new(&quot;Email&quot;).required().error(&quot;Enter a full email address&quot;),
+    Field::new(&quot;Plan&quot;),
+    Field::new(&quot;Updates&quot;),
 ])
 .focus(Some(0));
 form.render(area, &amp;mut cx);

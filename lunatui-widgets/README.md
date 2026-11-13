@@ -52,7 +52,24 @@ Labels remain real terminal text, with their complete visible spans clearing the
 
 `RadioGroup` is behind the `radio` feature. It draws a group of options of which at most one is selected (`◉` and `○`), one per row or side by side with a gap, with the focused option in the focus ring color with a bold label, per-option and whole-group disabling, and `option_areas` for hit testing. `RadioGroup::step` moves the selection with the keyboard, wrapping around and skipping disabled options.
 
-`Form` is behind the `form` feature. It lays out labelled fields (a label column, an input area for your own widget, and a message row) and draws the labels, `*` markers for required fields, dim hints, and fail-colored validation messages. `FormField` sets a label, required, disabled, hint, error, and input height; `Form::layout` returns each part's cells for drawing inputs and for hit testing; `Form::step` moves focus in tab order, wrapping and skipping disabled fields; and `check_required` fills "Required" for empty required fields.
+`Field`, `Form` and `FieldArea` now live together in `lunatui-field`. The old
+`FormField` descriptor is removed. The `form` feature remains a compatibility
+feature name; use `lunatui_field::{Field, Form}` for the shared field model.
+See the [migration and registration guide](../docs/named-controls.md).
+
+`NamedControl` registers any labeled widget with the active `RenderCx::hit_map`
+without adding visual chrome. Names, roles, disabled state, depth and optional
+layer identity are queryable on the same map used for pointer routing. An
+unlabeled control requires a nonblank `.name()`. Rendering `NamedControl` with a
+blank selected name panics in every build profile, even without a hit map.
+Explicit names override labels. Input values are not exported.
+
+![Real named Field controls](../docs/media/named-controls.gif)
+
+[Validation still](../docs/media/named-controls.png).
+
+Reproduce this actual-widget recording with `python3 scripts/record-named-controls.py`.
+
 
 `Tooltip` is behind the `tooltip` feature. It draws a short hint beside an anchor rectangle and never covers it: it opens on its side (below by default), flips to the opposite side and then to the other two when there is no room, slides along the side to stay inside the area, and is not drawn when no side fits. The text wraps at spaces to `max_width`, padding included, and the tooltip is as wide as its widest row; rendering does not allocate. `Tooltip::area` gives the covered cells for `HitMap`. `TooltipState` shows it after the pointer rests on the anchor for a delay (half a second by default), hides it when the pointer leaves, and `dismiss` hides it until the pointer comes back, with time passed in by the caller.
 

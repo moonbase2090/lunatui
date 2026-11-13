@@ -374,12 +374,13 @@ use std::env;
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_field::{Field, Form};
 use lunatui_runtime::{App, ControlFlow, is_quit};
 #[cfg(any(unix, windows))]
 use lunatui_runtime::{RunOptions, render_once, run};
 use lunatui_term::{Event, KeyCode};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{Block, Form, FormField, RenderCx, TextInput, Widget};
+use lunatui_widgets::{Block, RenderCx, TextInput, Widget};
 
 #[cfg(any(unix, windows))]
 const WIDTH: u16 = 56;
@@ -405,10 +406,10 @@ impl Screen {
         }
     }
 
-    fn form(&amp;self) -&gt; Form {
+    fn form(&amp;self) -&gt; Form&lt;&#x27;static&gt; {
         Form::new([
-            FormField::new(&quot;Name&quot;).required(),
-            FormField::new(&quot;Role&quot;).hint(&quot;shown on the card&quot;),
+            Field::new(&quot;Name&quot;).required(),
+            Field::new(&quot;Role&quot;).help(&quot;shown on the card&quot;),
         ])
         .focus(Some(self.focus))
     }

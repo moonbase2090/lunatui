@@ -159,6 +159,18 @@ impl<'a> Checkbox<'a> {
 }
 
 impl Widget for Checkbox<'_> {
+    fn control_role(&self) -> Option<lunatui_widgets::AccessibilityRole> {
+        Some(lunatui_widgets::AccessibilityRole::Checkbox)
+    }
+
+    fn control_name(&self) -> Option<&str> {
+        Some(self.label)
+    }
+
+    fn control_disabled(&self) -> bool {
+        matches!(self.state, WidgetState::Disabled)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let active = !matches!(self.checked, CheckState::Unchecked);
         let style = styles(cx, self.state, active, self.on);
@@ -228,6 +240,18 @@ impl<'a> Switch<'a> {
 }
 
 impl Widget for Switch<'_> {
+    fn control_role(&self) -> Option<lunatui_widgets::AccessibilityRole> {
+        Some(lunatui_widgets::AccessibilityRole::Checkbox)
+    }
+
+    fn control_name(&self) -> Option<&str> {
+        Some(self.label)
+    }
+
+    fn control_disabled(&self) -> bool {
+        matches!(self.state, WidgetState::Disabled)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let glyph = if self.on { "━━●" } else { "●━━" };
         let style = styles(cx, self.state, self.on, self.surface);

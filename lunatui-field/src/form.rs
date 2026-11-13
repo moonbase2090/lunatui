@@ -1,87 +1,22 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+use crate::Field;
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
-use lunatui_theme::Token;
-
-use crate::{RenderCx, Widget};
+use lunatui_runtime::HitId;
+use lunatui_ui_tokens::Role;
+use lunatui_widgets::{RenderCx, Widget};
+use std::borrow::Cow;
 
 const MARKER: &str = " *";
 const COLUMN_GAP: u16 = 2;
-
-/// One labelled row of a [`Form`].
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FormField {
-    label: String,
-    required: bool,
-    disabled: bool,
-    hint: Option<String>,
-    error: Option<String>,
-    input_rows: u16,
-}
-
-impl FormField {
-    /// A field with this label, one input row, and no hint or error.
-    #[must_use]
-    pub fn new(label: impl Into<String>) -> Self {
-        Self {
-            label: label.into(),
-            required: false,
-            disabled: false,
-            hint: None,
-            error: None,
-            input_rows: 1,
-        }
-    }
-
-    /// Marks the field as required: its label gets a `*`.
-    #[must_use]
-    pub const fn required(mut self) -> Self {
-        self.required = true;
-        self
-    }
-
-    /// Dims the field and takes it out of the tab order.
-    #[must_use]
-    pub const fn disabled(mut self) -> Self {
-        self.disabled = true;
-        self
-    }
-
-    /// Dim help text under the input, shown while there is no error.
-    #[must_use]
-    pub fn hint(mut self, hint: impl Into<String>) -> Self {
-        self.hint = Some(hint.into());
-        self
-    }
-
-    /// A validation message under the input, in the fail color. It replaces the hint.
-    #[must_use]
-    pub fn error(mut self, error: impl Into<String>) -> Self {
-        self.error = Some(error.into());
-        self
-    }
-
-    /// Rows the input needs, at least one.
-    #[must_use]
-    pub fn input_rows(mut self, rows: u16) -> Self {
-        self.input_rows = rows.max(1);
-        self
-    }
-
-    /// The validation message, if there is one.
-    #[must_use]
-    pub fn error_message(&self) -> Option<&str> {
-        self.error.as_deref()
-    }
-}
 
 /// Where one field's parts sit in a [`Form::layout`].
 ///
 /// Downstream code cannot list every field without `..`, because fields can be added:
 ///
 /// ```compile_fail,E0638
-/// use lunatui_widgets::FieldArea;
+/// use lunatui_field::FieldArea;
 ///
 /// fn destructures(value: FieldArea) {
 ///     let FieldArea { index: _, row: _, label: _, input: _, message: _ } = value;
@@ -104,29 +39,58 @@ pub struct FieldArea {
 
 /// Labelled fields with a tab order, required markers, hints, and validation messages.
 ///
-/// The form lays the fields out and draws everything except the inputs: each field's label, its
-/// `*` when required, and the hint or error under it. The caller draws its own widgets (a text
-/// input, a toggle, a radio group) into the [`FieldArea::input`] rectangles from
-/// [`Form::layout`]. [`Form::step`] moves focus through the fields in tab order, wrapping around
-/// and skipping disabled fields.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Form {
-    fields: Vec<FormField>,
+/// Each field's [`Field::body`] is rendered into its input rectangle. Callers
+/// can instead draw their own inputs into the rectangles from [`Form::layout`].
+/// [`Form::step`] moves focus through the fields, wrapping and skipping disabled
+/// fields.
+///
+/// # Panics
+///
+/// [`Form::new`] panics if a field's selected accessible name is empty or
+/// whitespace, even when the form will be drawn without a hit map. Set a
+/// nonblank [`Field::name`] for blank labels before constructing the form.
+/// Rendering with a hit map also requires each field to have an ID, supplied by
+/// [`Field::id`] or [`Form::first_id`]. Rendering panics if the base ID plus a
+/// field index overflows `u32`.
+#[derive(Clone)]
+pub struct Form<'a> {
+    fields: Vec<Field<'a>>,
+    first_id: Option<HitId>,
     focus: Option<usize>,
     gap: u16,
     label_width: Option<u16>,
 }
 
-impl Form {
+impl<'a> Form<'a> {
     /// A form with these fields.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a field's selected accessible name is empty or whitespace.
+    /// An explicit [`Field::name`] overrides the label. This validation happens
+    /// at construction in every build profile, including forms that will be
+    /// drawn without an attached hit map.
     #[must_use]
-    pub fn new(fields: impl IntoIterator<Item = FormField>) -> Self {
+    pub fn new(fields: impl IntoIterator<Item = Field<'a>>) -> Self {
+        let fields: Vec<_> = fields.into_iter().collect();
+        for field in &fields {
+            let _ = field.accessible_name();
+        }
         Self {
-            fields: fields.into_iter().collect(),
+            fields,
+            first_id: None,
             focus: None,
             gap: 1,
             label_width: None,
         }
+    }
+
+    /// Base identity for fields that do not supply their own ID. Each field's
+    /// index is added to this value, independent of clipping and disabled state.
+    #[must_use]
+    pub const fn first_id(mut self, first: HitId) -> Self {
+        self.first_id = Some(first);
+        self
     }
 
     /// The field that has input focus.
@@ -168,7 +132,7 @@ impl Form {
     pub fn check_required(mut self, values: &[&str]) -> Self {
         for (field, value) in self.fields.iter_mut().zip(values) {
             if field.required && value.trim().is_empty() && field.error.is_none() {
-                field.error = Some(String::from("Required"));
+                field.error = Some(Cow::Borrowed("Required"));
             }
         }
         self
@@ -209,7 +173,7 @@ impl Form {
                     (start + count - offset) % count
                 }
             })
-            .find(|index| !self.fields[*index].disabled)
+            .find(|index| !self.fields[*index].is_disabled())
     }
 
     fn label_column(&self) -> u16 {
@@ -232,7 +196,11 @@ impl Form {
         let mut areas = Vec::new();
         let end_y = area.y.saturating_add(area.height);
         let label_w = self.label_column().min(area.width.saturating_sub(1));
-        let input_x = area.x.saturating_add(label_w).saturating_add(COLUMN_GAP);
+        let input_x = area
+            .x
+            .saturating_add(label_w)
+            .saturating_add(COLUMN_GAP)
+            .min(area.x.saturating_add(area.width.saturating_sub(1)));
         let input_w = area
             .x
             .saturating_add(area.width)
@@ -240,7 +208,8 @@ impl Form {
             .max(1);
         let mut y = area.y;
         for (index, field) in self.fields.iter().enumerate() {
-            let rows = field.input_rows.saturating_add(1);
+            let input_rows = field.input_rows;
+            let rows = input_rows.saturating_add(1);
             if area.width == 0 || y.saturating_add(rows) > end_y {
                 break;
             }
@@ -248,8 +217,8 @@ impl Form {
                 index,
                 row: Rect::new(area.x, y, area.width, rows),
                 label: Rect::new(area.x, y, label_w, 1),
-                input: Rect::new(input_x, y, input_w, field.input_rows),
-                message: Rect::new(input_x, y + field.input_rows, input_w, 1),
+                input: Rect::new(input_x, y, input_w, input_rows),
+                message: Rect::new(input_x, y + input_rows, input_w, 1),
             });
             y = y.saturating_add(rows).saturating_add(self.gap);
         }
@@ -258,23 +227,23 @@ impl Form {
 
     fn field_styles(&self, cx: &RenderCx<'_>, index: usize) -> (Style, Style) {
         let field = &self.fields[index];
-        let focused = self.focus == Some(index) && !field.disabled;
-        let attrs = Attrs::new().set_dim(field.disabled).set_bold(focused);
+        let focused = self.focus == Some(index) && !field.is_disabled();
+        let attrs = Attrs::new().set_dim(field.is_disabled()).set_bold(focused);
         let color = if focused {
-            cx.token(Token::Accent)
+            cx.token(Role::Accent.token())
         } else {
-            cx.token(Token::TextPrimary)
+            cx.token(Role::Foreground.token())
         };
         (
             Style::new().fg(color).with_attrs(attrs),
             Style::new()
-                .fg(cx.token(Token::Fail))
-                .with_attrs(Attrs::new().set_dim(field.disabled)),
+                .fg(cx.token(Role::Destructive.token()))
+                .with_attrs(Attrs::new().set_dim(field.is_disabled())),
         )
     }
 }
 
-impl Widget for Form {
+impl Widget for Form<'_> {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         for field_area in self.layout(area) {
             let field = &self.fields[field_area.index];
@@ -299,16 +268,28 @@ impl Widget for Form {
                     error_style,
                 );
             }
+            let fallback = self.first_id.and_then(|first| {
+                u32::try_from(field_area.index)
+                    .ok()
+                    .and_then(|offset| first.0.checked_add(offset))
+                    .map(HitId)
+            });
+            assert!(
+                self.first_id.is_none() || fallback.is_some(),
+                "form control IDs overflow"
+            );
+            field.register(field_area.input, cx, fallback);
+            field.render_body(field_area.input, cx);
             let message = field_area.message;
-            let (text, style) = match (&field.error, &field.hint) {
+            let (text, style) = match (&field.error, field.help.as_ref()) {
                 (Some(error), _) => (format!("✖ {error}"), error_style),
-                (None, Some(hint)) => (
-                    hint.clone(),
+                (None, hint) if !hint.is_empty() => (
+                    hint.to_owned(),
                     Style::new()
-                        .fg(cx.token(Token::TextPrimary))
+                        .fg(cx.token(Role::Foreground.token()))
                         .with_attrs(Attrs::new().set_dim(true)),
                 ),
-                (None, None) => continue,
+                (None, _) => continue,
             };
             cx.put_str(
                 message.x,

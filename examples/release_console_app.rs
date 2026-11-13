@@ -3,6 +3,7 @@
 
 #![doc = include_str!("README.md")]
 
+use lunatui_field::{Field, Form};
 use std::env;
 use std::io::{self, Write};
 
@@ -12,10 +13,10 @@ use lunatui_runtime::{App, ControlFlow, RunOptions, is_quit, render_once, run};
 use lunatui_term::Event;
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Accordion, AccordionSection, Alignment, Bar, BarChart, BigText, Block, BorderType, Date, Form,
-    FormField, LineGauge, LogBuffer, LogEntry, LogLevel, LogView, Monthly, Paragraph, PixelSize,
-    ProgressBar, ProgressTone, RadioFlow, RadioGroup, RenderCx, Sparkline, StatusBar, Table, Tabs,
-    Toggle, VecSource, Widget, WidgetState,
+    Accordion, AccordionSection, Alignment, Bar, BarChart, BigText, Block, BorderType, Date,
+    LineGauge, LogBuffer, LogEntry, LogLevel, LogView, Monthly, Paragraph, PixelSize, ProgressBar,
+    ProgressTone, RadioFlow, RadioGroup, RenderCx, Sparkline, StatusBar, Table, Tabs, Toggle,
+    VecSource, Widget, WidgetState,
 };
 
 const WIDE: u16 = 112;
@@ -399,14 +400,14 @@ fn logs() -> LogBuffer {
 
 fn form(cx: &mut RenderCx<'_>, area: Rect) {
     let form = Form::new([
-        FormField::new("Name")
+        Field::new("Name")
             .required()
-            .hint("As it appears on invoices"),
-        FormField::new("Email")
+            .help("As it appears on invoices"),
+        Field::new("Email")
             .required()
             .error("Enter a full email address"),
-        FormField::new("Plan"),
-        FormField::new("Updates"),
+        Field::new("Plan"),
+        Field::new("Updates"),
     ])
     .focus(Some(0));
     form.render(area, cx);

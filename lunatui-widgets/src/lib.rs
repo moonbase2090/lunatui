@@ -39,8 +39,6 @@ mod dialog;
 mod diff_view;
 #[cfg(feature = "file-picker")]
 mod file_picker;
-#[cfg(feature = "form")]
-mod form;
 mod gauge;
 #[cfg(feature = "graphite-render")]
 pub mod graphite;
@@ -64,6 +62,7 @@ mod log_view;
 mod markdown_view;
 #[cfg(feature = "mermaid")]
 mod mermaid;
+mod named_control;
 #[cfg(feature = "nested-menu")]
 mod nested_menu;
 #[cfg(feature = "node-graph")]
@@ -127,6 +126,8 @@ mod tooltip;
 #[cfg(feature = "tree")]
 mod tree;
 mod widget;
+pub use lunatui_runtime::AccessibilityRole;
+pub use named_control::NamedControl;
 #[cfg(feature = "widget-list")]
 mod widget_list;
 
@@ -165,8 +166,6 @@ pub use dialog::{Dialog, DialogClosed, DialogFocus, DialogKind, DialogOutcome, D
 pub use diff_view::{Diff, DiffHunk, DiffKind, DiffLayout, DiffLine, DiffView};
 #[cfg(feature = "file-picker")]
 pub use file_picker::{FileEntry, FileKind, FilePicker};
-#[cfg(feature = "form")]
-pub use form::{FieldArea, Form, FormField};
 pub use gauge::Gauge;
 #[cfg(feature = "heatmap")]
 pub use heatmap::{Heatmap, HeatmapCell, HeatmapRow};

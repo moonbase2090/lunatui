@@ -45,4 +45,20 @@ pub trait Widget {
 
     /// Intrinsic size before layout clamping.
     fn measure(&self, avail: Size) -> Size;
+
+    /// A visible control label that can supply an accessible name. Input
+    /// widgets must not return their editable value here.
+    fn control_name(&self) -> Option<&str> {
+        None
+    }
+
+    /// Role of a control body when used in a labeled Field.
+    fn control_role(&self) -> Option<lunatui_runtime::AccessibilityRole> {
+        None
+    }
+
+    /// Whether a named wrapper should reject activation of this widget.
+    fn control_disabled(&self) -> bool {
+        false
+    }
 }
