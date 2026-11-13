@@ -199,20 +199,29 @@ fn toasts_sit_in_a_layer_that_leaves_esc_and_outside_presses_alone_until_they_ex
     assert!(slot.is_open());
 
     screen.event(&press(5, 2));
-    assert!(screen.select.is_open(), "the select opens under the toast");
+    assert!(
+        screen.select.is_open(),
+        "the select opens while a toast shows"
+    );
     screen.event(&esc());
     assert!(
         !screen.select.is_open(),
         "Esc closes the select, not the toast"
     );
-    assert!(slot.is_open());
+    screen.event(&esc());
+    assert!(!slot.sync(&screen.layers), "Esc leaves the toast");
     screen.event(&press(40, 15));
-    assert!(slot.is_open());
+    assert!(
+        !slot.sync(&screen.layers),
+        "an outside press leaves the toast"
+    );
+    assert_eq!(screen.layers.len(), 1);
     assert_eq!(screen.delivered, vec![(40, 15)]);
 
     clock.advance(ttl - Duration::from_millis(1));
     sync_toasts(&mut screen, &mut slot, clock.now());
     assert!(slot.is_open());
+    assert_eq!(screen.layers.len(), 1);
     clock.advance(Duration::from_millis(1));
     sync_toasts(&mut screen, &mut slot, clock.now());
     assert!(!slot.is_open());
