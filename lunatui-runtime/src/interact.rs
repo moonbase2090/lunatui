@@ -311,7 +311,7 @@ impl Typeahead {
     ) -> Option<usize> {
         let mut letters = self.query.chars();
         let first = letters.next()?;
-        let repeated = letters.all(|ch| ch.eq_ignore_ascii_case(&first));
+        let repeated = letters.all(|ch| ch.to_lowercase().eq(first.to_lowercase()));
         let mut buffer = [0_u8; 4];
         let prefix: &str = if repeated {
             first.encode_utf8(&mut buffer)
@@ -689,6 +689,20 @@ mod tests {
         assert_eq!(second, Typed::Found(3));
         let third = typed.handle_key(&key(KeyCode::Char('b')), now, Some(3), 5, label);
         assert_eq!(third, Typed::Found(2));
+    }
+
+    #[test]
+    fn repeating_an_accented_letter_in_either_case_cycles_through_its_items() {
+        const WORDS: [&str; 3] = ["Éclair", "apple", "École"];
+        let mut typed = Typeahead::new();
+        let now = Duration::ZERO;
+        let label = |index: usize| WORDS[index];
+        let first = typed.handle_key(&key(KeyCode::Char('É')), now, None, 3, label);
+        assert_eq!(first, Typed::Found(0));
+        let second = typed.handle_key(&key(KeyCode::Char('é')), now, Some(0), 3, label);
+        assert_eq!(second, Typed::Found(2));
+        let third = typed.handle_key(&key(KeyCode::Char('É')), now, Some(2), 3, label);
+        assert_eq!(third, Typed::Found(0));
     }
 
     #[test]

@@ -95,9 +95,9 @@ impl<'a> FileEntry<'a> {
 /// filter, a header, one row per entry with its size and modified time, and a count line. The
 /// list scrolls to keep the active row in view and shows a scroll thumb when it overflows.
 /// Narrow areas drop the modified column, then the size column. [`step`](FilePicker::step),
-/// [`type_ahead`](FilePicker::type_ahead), [`toggle`](FilePicker::toggle),
-/// [`parent`](FilePicker::parent) and [`matches`](FilePicker::matches) are the pure helpers for
-/// the app's key handling, and [`list_area`](FilePicker::list_area) and
+/// [`toggle`](FilePicker::toggle), [`parent`](FilePicker::parent) and
+/// [`matches`](FilePicker::matches) are the pure helpers for the app's key handling,
+/// [`FilePickerState`](crate::FilePickerState) handles the keys, type-ahead included, and [`list_area`](FilePicker::list_area) and
 /// [`entry_at`](FilePicker::entry_at) are for hit testing. Drawing allocates nothing.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FilePicker<'a> {

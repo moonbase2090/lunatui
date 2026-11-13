@@ -20,8 +20,8 @@ const DEFAULT_ROWS: u16 = 6;
 ///
 /// The app owns which option is chosen, whether the list is [`open`](Select::open), and which
 /// row is [`active`](Select::active) while it is open. The field is not edited like a text box:
-/// [`step`](Select::step) moves the active row for the arrow keys and
-/// [`type_ahead`](Select::type_ahead) jumps to the next option starting with what was typed.
+/// [`step`](Select::step) moves the active row for the arrow keys, and
+/// [`SelectState`](crate::SelectState) handles the keys, type-ahead included.
 /// The chosen option carries a check in the list. The list shows at most
 /// [`max_rows`](Select::max_rows) rows, scrolled to keep the active one in view, and says
 /// "No options" when there are none. [`field_area`](Select::field_area),
