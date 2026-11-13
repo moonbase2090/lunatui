@@ -22,7 +22,8 @@ const MARKER: &str = " *";
 /// Rendering panics when the selected accessible name is empty or whitespace,
 /// in every build profile and even without an attached hit map. An explicit
 /// [`name`](Self::name) overrides the label. Give blank labels a nonblank name
-/// before rendering or passing the field to [`Form::new`].
+/// before rendering or passing the field to [`Form::new`]. Rendering with an
+/// attached hit map also requires an explicit [`HitId`].
 #[derive(Clone)]
 pub struct Field<'a> {
     pub(crate) label: Cow<'a, str>,
@@ -230,10 +231,6 @@ impl<'a> Field<'a> {
 }
 
 impl Widget for Field<'_> {
-    /// # Panics
-    ///
-    /// Panics if the selected accessible name is empty or whitespace, even
-    /// without a hit map. With a hit map, an explicit [`HitId`] is also required.
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let _ = self.accessible_name();
         if area.width == 0 || area.height == 0 {

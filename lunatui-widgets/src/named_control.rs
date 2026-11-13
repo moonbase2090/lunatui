@@ -75,9 +75,6 @@ impl<'a> NamedControl<'a> {
 }
 
 impl Widget for NamedControl<'_> {
-    /// # Panics
-    ///
-    /// Panics if the selected name is empty or whitespace, even without a hit map.
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let name = self.name.or_else(|| self.body.control_name()).unwrap_or("");
         assert!(
