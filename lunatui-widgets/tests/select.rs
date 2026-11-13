@@ -4,6 +4,8 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
+use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{RenderCx, Select, Widget, WidgetState};
 
@@ -171,29 +173,6 @@ fn field_and_list_areas_split_the_area() {
 }
 
 #[test]
-fn option_at_maps_a_click_to_the_option_under_it() {
-    let area = Rect::new(2, 4, 30, 6);
-    let select = Select::new(&FRUIT, Some(0)).open(true);
-    assert_eq!(select.option_at(area, 2, 5), Some(0));
-    assert_eq!(select.option_at(area, 31, 7), Some(2));
-    assert_eq!(select.option_at(area, 10, 4), None);
-    assert_eq!(select.option_at(area, 1, 5), None);
-    assert_eq!(select.option_at(area, 32, 5), None);
-    assert_eq!(Select::new(&FRUIT, Some(0)).option_at(area, 3, 5), None);
-}
-
-#[test]
-fn option_at_accounts_for_scrolling() {
-    let area = Rect::new(0, 0, 20, 3);
-    let select = Select::new(&FRUIT, Some(0))
-        .open(true)
-        .active(Some(4))
-        .max_rows(2);
-    assert_eq!(select.option_at(area, 3, 1), Some(3));
-    assert_eq!(select.option_at(area, 3, 2), Some(4));
-}
-
-#[test]
 fn measure_is_the_field_plus_the_visible_rows() {
     let closed = Select::new(&FRUIT, Some(0));
     assert_eq!(closed.measure(Size::new(20, 9)), Size::new(20, 1));
@@ -206,39 +185,309 @@ fn measure_is_the_field_plus_the_visible_rows() {
 }
 
 #[test]
-fn step_moves_and_wraps() {
-    assert_eq!(Select::<&str>::step(Some(1), 5, true), Some(2));
-    assert_eq!(Select::<&str>::step(Some(4), 5, true), Some(0));
-    assert_eq!(Select::<&str>::step(Some(0), 5, false), Some(4));
-    assert_eq!(Select::<&str>::step(None, 5, true), Some(0));
-    assert_eq!(Select::<&str>::step(None, 5, false), Some(4));
-    assert_eq!(Select::<&str>::step(Some(9), 5, true), Some(0));
-    assert_eq!(Select::<&str>::step(Some(0), 0, true), None);
-}
-
-#[test]
-fn type_ahead_finds_the_next_option_with_the_prefix() {
-    assert_eq!(Select::type_ahead(&FRUIT, None, "b"), Some(2));
-    assert_eq!(Select::type_ahead(&FRUIT, Some(2), "b"), Some(3));
-    assert_eq!(Select::type_ahead(&FRUIT, Some(3), "b"), Some(2));
-    assert_eq!(Select::type_ahead(&FRUIT, Some(0), "ap"), Some(1));
-    assert_eq!(Select::type_ahead(&FRUIT, Some(1), "ap"), Some(0));
-}
-
-#[test]
-fn type_ahead_ignores_case_and_misses_cleanly() {
-    assert_eq!(Select::type_ahead(&FRUIT, None, "CH"), Some(4));
-    assert_eq!(Select::type_ahead(&FRUIT, None, "z"), None);
-    assert_eq!(Select::type_ahead(&FRUIT, Some(2), ""), None);
-    let words = ["Éclair", "eclair"];
-    assert_eq!(Select::type_ahead(&words, None, "é"), Some(0));
-    assert_eq!(Select::type_ahead(&words, Some(0), "e"), Some(1));
-}
-
-#[test]
 fn zero_sized_areas_draw_nothing() {
     let select = Select::new(&FRUIT, Some(0)).open(true);
     assert_eq!(rows(&select, 0, 3), ["", "", ""]);
     assert_eq!(rows(&select, 20, 0), Vec::<String>::new());
-    assert_eq!(select.option_at(Rect::new(0, 0, 0, 3), 0, 1), None);
+}
+
+/// A drop-down the way an application drives it: keys open, move and choose,
+/// typing jumps to a match, and a click on the field or a list row opens or
+/// chooses. The widget draws; this holds the state the events change.
+struct SelectApp {
+    options: &'static [&'static str],
+    selected: Option<usize>,
+    open: bool,
+    active: Option<usize>,
+    typed: String,
+    max_rows: u16,
+    area: Rect,
+}
+
+impl SelectApp {
+    fn new(options: &'static [&'static str], selected: Option<usize>) -> Self {
+        Self {
+            options,
+            selected,
+            open: false,
+            active: None,
+            typed: String::new(),
+            max_rows: 6,
+            area: Rect::new(0, 0, 0, 0),
+        }
+    }
+
+    fn widget(&self) -> Select<'static> {
+        Select::new(self.options, self.selected)
+            .placeholder("Pick one")
+            .open(self.open)
+            .active(self.active)
+            .max_rows(self.max_rows)
+            .state(WidgetState::Focused)
+    }
+
+    fn open_list(&mut self) {
+        self.open = true;
+        self.active = self.selected.filter(|index| *index < self.options.len());
+    }
+
+    fn close(&mut self) {
+        self.open = false;
+        self.typed.clear();
+    }
+
+    fn choose_active(&mut self) {
+        if let Some(index) = self.active {
+            self.selected = Some(index);
+        }
+        self.close();
+    }
+
+    fn type_char(&mut self, ch: char) {
+        self.typed.push(ch);
+        let mut found = Select::type_ahead(self.options, self.active, &self.typed);
+        if found.is_none() {
+            self.typed = ch.to_string();
+            found = Select::type_ahead(self.options, self.active, &self.typed);
+        }
+        if let Some(index) = found {
+            self.active = Some(index);
+            if !self.open {
+                self.selected = Some(index);
+            }
+        }
+    }
+
+    fn click(&mut self, x: u16, y: u16) {
+        let field = self.widget().field_area(self.area);
+        if y == field.y && x >= field.x && x - field.x < field.width {
+            if self.open {
+                self.close();
+            } else {
+                self.open_list();
+            }
+        } else if self.open {
+            if let Some(index) = self.widget().option_at(self.area, x, y) {
+                self.selected = Some(index);
+            }
+            self.close();
+        }
+    }
+}
+
+impl Component for SelectApp {
+    fn update(&mut self, event: &Event) {
+        match event {
+            Event::Key(key) => match key.code {
+                KeyCode::Esc => self.close(),
+                KeyCode::Enter | KeyCode::Char(' ') if self.open => self.choose_active(),
+                KeyCode::Enter | KeyCode::Char(' ') => self.open_list(),
+                KeyCode::Down | KeyCode::Up if !self.open => self.open_list(),
+                KeyCode::Down | KeyCode::Up => {
+                    let forward = key.code == KeyCode::Down;
+                    self.active = Select::<&str>::step(self.active, self.options.len(), forward);
+                }
+                KeyCode::Char(ch) => self.type_char(ch),
+                _ => {}
+            },
+            Event::Mouse(mouse) if mouse.kind == MouseKind::Down(MouseButton::Left) => {
+                self.click(mouse.column, mouse.row);
+            }
+            _ => {}
+        }
+    }
+
+    fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
+        self.area = area;
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &theme);
+        self.widget().render(area, &mut cx);
+    }
+
+    fn focus(&self) -> Option<usize> {
+        self.active
+    }
+
+    fn value(&self) -> Option<String> {
+        self.selected
+            .and_then(|index| self.options.get(index))
+            .map(|option| (*option).to_owned())
+    }
+}
+
+fn mounted(selected: Option<usize>) -> Harness<SelectApp> {
+    Harness::mount(SelectApp::new(&FRUIT, selected), 20, 6)
+}
+
+#[test]
+fn down_opens_the_list_on_the_chosen_option_and_arrows_move_the_highlight() {
+    let mut select = mounted(Some(2));
+    select.key("Down");
+    select.assert_focus(Some(2));
+    select.assert_rows(&[
+        " banana           ▴",
+        "   apple",
+        "   apricot",
+        " ✓ banana",
+        "   blueberry",
+        "   cherry",
+    ]);
+    select.key("Down");
+    select.assert_focus(Some(3));
+    let highlighted = style_at(select.grid(), 3, 4);
+    assert_eq!(highlighted.bg, color(Token::Accent));
+    assert_ne!(style_at(select.grid(), 3, 3).bg, color(Token::Accent));
+}
+
+#[test]
+fn arrows_wrap_around_the_ends_of_the_list() {
+    let mut select = mounted(Some(4));
+    select.keys("Down Down");
+    select.assert_focus(Some(0));
+    select.keys("Up");
+    select.assert_focus(Some(4));
+}
+
+#[test]
+fn from_no_choice_down_starts_at_the_first_option_and_up_at_the_last() {
+    let mut select = mounted(None);
+    select.keys("Down Down");
+    select.assert_focus(Some(0));
+    let mut select = mounted(None);
+    select.keys("Up Up");
+    select.assert_focus(Some(4));
+}
+
+#[test]
+fn a_stale_choice_past_the_options_opens_with_nothing_highlighted() {
+    let mut select = mounted(Some(9));
+    select.key("Down");
+    select.assert_focus(None);
+    select.key("Down");
+    select.assert_focus(Some(0));
+}
+
+#[test]
+fn arrows_do_nothing_when_there_are_no_options() {
+    let mut select = Harness::mount(SelectApp::new(&[], None), 20, 3);
+    select.keys("Down Down Up");
+    select.assert_focus(None);
+    select.assert_rows(&[" Pick one         ▴", " No options", ""]);
+}
+
+#[test]
+fn enter_chooses_the_highlighted_option_and_closes_the_list() {
+    let mut select = mounted(Some(0));
+    select.keys("Down Down Down Enter");
+    select.assert_value("banana");
+    select.assert_rows(&[" banana           ▾", "", "", "", "", ""]);
+}
+
+#[test]
+fn escape_closes_the_list_and_keeps_the_choice() {
+    let mut select = mounted(Some(0));
+    select.keys("Down Down Esc");
+    select.assert_value("apple");
+    select.assert_rows(&[" apple            ▾", "", "", "", "", ""]);
+}
+
+#[test]
+fn typing_jumps_to_the_next_option_with_the_prefix_and_repeats_cycle_through_them() {
+    let mut select = mounted(None);
+    select.type_text("b");
+    select.assert_value("banana");
+    select.type_text("b");
+    select.assert_value("blueberry");
+    select.type_text("b");
+    select.assert_value("banana");
+}
+
+#[test]
+fn typing_a_longer_prefix_narrows_the_match() {
+    let mut select = mounted(Some(0));
+    select.type_text("ap");
+    select.assert_value("apricot");
+    select.type_text("p");
+    select.assert_value("apple");
+}
+
+#[test]
+fn type_ahead_ignores_case_and_a_miss_keeps_the_choice() {
+    let mut select = mounted(None);
+    select.type_text("CH");
+    select.assert_value("cherry");
+    select.type_text("z");
+    select.assert_value("cherry");
+}
+
+#[test]
+fn type_ahead_matches_accented_letters_case_insensitively() {
+    const WORDS: [&str; 2] = ["Éclair", "eclair"];
+    let mut select = Harness::mount(SelectApp::new(&WORDS, None), 20, 3);
+    select.type_text("é");
+    select.assert_value("Éclair");
+    select.type_text("e");
+    select.assert_value("eclair");
+}
+
+#[test]
+fn clicking_the_field_opens_the_list_and_clicking_it_again_closes_it() {
+    let mut select = mounted(Some(0));
+    select.click(5, 0);
+    select.assert_focus(Some(0));
+    assert_eq!(select.rows()[1], " ✓ apple");
+    select.click(5, 0);
+    select.assert_rows(&[" apple            ▾", "", "", "", "", ""]);
+}
+
+#[test]
+fn clicking_a_row_chooses_that_option() {
+    let mut select = mounted(Some(0));
+    select.click(5, 0);
+    select.click(19, 2);
+    select.assert_value("apricot");
+    select.assert_rows(&[" apricot          ▾", "", "", "", "", ""]);
+}
+
+#[test]
+fn clicking_outside_the_list_closes_it_without_choosing() {
+    let mut select = Harness::mount(SelectApp::new(&FRUIT, Some(0)), 20, 8);
+    select.click(5, 0);
+    assert_eq!(select.rows()[5], "   cherry");
+    select.click(5, 7);
+    select.assert_value("apple");
+    assert_eq!(select.rows()[1], "");
+    select.click(5, 0);
+    select.click(25, 2);
+    select.assert_value("apple");
+    assert_eq!(select.rows()[1], "");
+}
+
+#[test]
+fn clicking_where_the_list_would_be_does_nothing_while_it_is_closed() {
+    let mut select = mounted(Some(0));
+    select.click(5, 2);
+    select.assert_value("apple");
+    select.assert_rows(&[" apple            ▾", "", "", "", "", ""]);
+}
+
+#[test]
+fn a_click_on_a_scrolled_list_chooses_the_option_drawn_under_it() {
+    let mut app = SelectApp::new(&FRUIT, Some(0));
+    app.max_rows = 2;
+    let mut select = Harness::mount(app, 20, 3);
+    select.click(5, 0);
+    select.keys("Up");
+    select.assert_focus(Some(4));
+    select.assert_rows(&[" apple            ▴", "   blueberry", "   cherry"]);
+    select.click(3, 1);
+    select.assert_value("blueberry");
+}
+
+#[test]
+fn a_zero_width_window_ignores_clicks() {
+    let mut select = Harness::mount(SelectApp::new(&FRUIT, Some(0)), 0, 3);
+    select.click(0, 0);
+    select.click(0, 1);
+    select.assert_value("apple");
 }
