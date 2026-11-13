@@ -199,10 +199,6 @@ fn measure_is_the_bounding_box_of_the_options() {
     );
 }
 
-/// A radio group the way an application drives it: arrows move the focus and
-/// choose that option, space chooses the focused one, and a click on an
-/// option's cells focuses and chooses it. Disabled options are skipped by the
-/// arrows and ignore clicks.
 struct RadioApp {
     labels: &'static [&'static str],
     disabled: Vec<usize>,

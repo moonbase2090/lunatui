@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! The interaction harness delivers real, decoded events, keeps virtual time
-//! and fails loudly when an assertion is wrong.
+#![doc = include_str!("../README.md")]
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
@@ -13,7 +12,6 @@ use lunatui_term::{
 };
 use lunatui_test::{Component, Harness, parse_key};
 
-/// Draws the last typed text on row 0 and the tick time on row 1.
 #[derive(Default)]
 struct Probe {
     typed: String,
@@ -191,7 +189,6 @@ fn focus_and_value_assertions_follow_the_component() {
     harness.assert_focus(Some(1));
 }
 
-/// The panic message of `run`, or an empty string when it did not panic.
 fn panic_message(run: impl FnOnce()) -> String {
     match catch_unwind(AssertUnwindSafe(run)) {
         Ok(()) => String::new(),

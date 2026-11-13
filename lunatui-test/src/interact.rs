@@ -1,18 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Interaction harness: mount a component, inject real key and pointer events,
-//! and assert focus, value and the drawn frame.
-//!
-//! Every event passes through the terminal encoding before the component sees
-//! it: the harness encodes the event to the bytes a terminal would send, feeds
-//! them to the real input [`Parser`], and delivers what comes out. A test can
-//! therefore only inject input a terminal can produce, and the component gets
-//! the same decoded events it gets from the runtime.
-//!
-//! Time is the virtual [`Clock`]. The harness never reads the wall clock,
-//! sleeps or spawns a thread, so a run is the same on every machine.
-
 use std::fmt::Write as _;
 use std::time::Duration;
 

@@ -1,6 +1,6 @@
 [package]
 name = "lunatui-test"
-description = "Testing kit for lunatui: styled snapshots, virtual clock and vt100 oracle helpers."
+description = "Testing kit for lunatui: styled snapshots, virtual clock, an interaction harness and vt100 oracle helpers."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

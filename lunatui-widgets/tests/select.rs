@@ -191,9 +191,6 @@ fn zero_sized_areas_draw_nothing() {
     assert_eq!(rows(&select, 20, 0), Vec::<String>::new());
 }
 
-/// A drop-down the way an application drives it: keys open, move and choose,
-/// typing jumps to a match, and a click on the field or a list row opens or
-/// chooses. The widget draws; this holds the state the events change.
 struct SelectApp {
     options: &'static [&'static str],
     selected: Option<usize>,

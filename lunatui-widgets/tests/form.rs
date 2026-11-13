@@ -288,10 +288,6 @@ fn nothing_is_drawn_outside_the_area_or_for_empty_areas() {
     assert_eq!(grid.row_display(0, &clusters).trim(), "");
 }
 
-/// A form the way an application drives it: Tab and Shift-Tab walk the
-/// fields, typing edits the focused field, Enter checks the required fields
-/// and jumps to the first problem, and a click on a field focuses it. The
-/// form draws labels and messages; the application draws each input.
 struct FormApp {
     fields: Vec<FormField>,
     values: Vec<String>,
