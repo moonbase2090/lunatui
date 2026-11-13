@@ -4,12 +4,12 @@
 #![doc = include_str!("../README.md")]
 
 #[cfg(any(unix, windows))]
-use lunatui_field::{Field, Form};
 use std::env;
 #[cfg(any(unix, windows))]
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
+use lunatui_field::{Field, Form};
 use lunatui_runtime::{App, ControlFlow, is_quit};
 #[cfg(any(unix, windows))]
 use lunatui_runtime::{RunOptions, render_once, run};

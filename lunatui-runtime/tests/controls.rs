@@ -105,3 +105,61 @@ fn a_new_frame_removes_control_names_and_disabled_shields_do_not_click_through()
 fn whitespace_is_not_a_control_name() {
     let _ = ControlMetadata::new(" \t\n", Role::TextInput);
 }
+
+#[test]
+fn named_controls_respect_modal_floor_and_disabled_shields_with_real_events()
+-> Result<(), Box<dyn std::error::Error>> {
+    use lunatui_runtime::{FocusManager, Layer, LayerEvent, LayerStack};
+    use lunatui_term::{Event, KeyCode, KeyEvent, MouseButton, MouseEvent, MouseKind};
+
+    let mut layers = LayerStack::new();
+    let modal = layers.push(Layer::modal(Rect::new(1, 1, 6, 4)));
+    let z = layers.z(modal).ok_or("expected modal depth")?;
+    let mut focus = FocusManager::new();
+    let mut hits = HitMap::new();
+    hits.push_control(
+        HitId(1),
+        Rect::new(0, 0, 10, 6),
+        0,
+        ControlMetadata::new("Save", Role::Button),
+    );
+    hits.push_control(
+        HitId(2),
+        Rect::new(2, 2, 1, 1),
+        z,
+        ControlMetadata::new("Save", Role::Button).layer(Some(modal)),
+    );
+    hits.push_control(
+        HitId(3),
+        Rect::new(3, 2, 1, 1),
+        z,
+        ControlMetadata::new("Delete", Role::Button)
+            .layer(Some(modal))
+            .disabled(true),
+    );
+    for (column, expected) in [(2, Some(HitId(2))), (3, None), (4, None)] {
+        let event = Event::Mouse(MouseEvent::new(
+            MouseKind::Down(MouseButton::Left),
+            column,
+            2,
+        ));
+        assert_eq!(layers.handle(&event, &mut focus), LayerEvent::Pass);
+        assert_eq!(layers.pick(&hits, column, 2), expected);
+    }
+    let control = hits
+        .find_control(Role::Button, "Save", Some(modal))?
+        .ok_or("expected named modal control")?;
+    assert_eq!(
+        (control.id, control.layer, control.z),
+        (HitId(2), Some(modal), z)
+    );
+    assert_eq!(
+        layers.handle(&Event::Key(KeyEvent::press(KeyCode::Esc)), &mut focus),
+        LayerEvent::Dismissed {
+            layer: modal,
+            deliver: false
+        }
+    );
+    assert_eq!(layers.pick(&hits, 4, 2), Some(HitId(1)));
+    Ok(())
+}
