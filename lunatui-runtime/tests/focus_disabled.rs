@@ -266,3 +266,29 @@ fn an_arrow_from_outside_enters_the_group_and_tab_returns_to_that_member() {
     harness.keys("Tab Tab");
     harness.assert_focus(Some(3));
 }
+
+#[test]
+fn a_group_with_other_controls_between_its_members_keeps_one_place_in_the_tab_order() {
+    let mut harness = mount(Row::new(&[1, 2, 3, 4, 5]).group(&[2, 4]).focused_on(4));
+    for expected in [3, 5, 1, 4] {
+        harness.key("Tab");
+        harness.assert_focus(Some(expected));
+    }
+    for expected in [1, 5, 3, 4] {
+        harness.key("S-Tab");
+        harness.assert_focus(Some(expected));
+    }
+}
+
+#[test]
+fn forward_and_backward_tab_visit_an_interleaved_group_in_the_same_order() {
+    let mut harness = mount(Row::new(&[1, 2, 3, 4, 5]).group(&[2, 4]).focused_on(1));
+    for expected in [2, 3, 5] {
+        harness.key("Tab");
+        harness.assert_focus(Some(expected));
+    }
+    for expected in [3, 2, 1] {
+        harness.key("S-Tab");
+        harness.assert_focus(Some(expected));
+    }
+}

@@ -88,8 +88,9 @@ impl FocusManager {
     }
 
     /// Registers or replaces a roving subgroup. Arrows pressed on a member move only among the
-    /// members, and the group is one Tab stop: its last focused enabled member, or its first
-    /// enabled member before it was ever focused.
+    /// members, and the group is one Tab stop at its first enabled member in document order. Tab
+    /// into the group lands on its last focused enabled member, or that first member before any
+    /// has had focus.
     pub fn set_group(&mut self, group: FocusGroup, members: &[HitId]) {
         let last = self
             .groups
@@ -167,14 +168,19 @@ impl FocusManager {
     }
 
     /// Tab or Shift-Tab focus. Disabled controls are skipped, and a roving subgroup counts as
-    /// one stop, so Tab from inside a group moves to the next control outside it.
+    /// one stop at its first enabled member in document order, so Tab from inside a group moves to
+    /// the next control outside it, and Tab into the group lands on the member that last had focus.
     pub fn tab(&mut self, reverse: bool) {
         let len = self.entries.len();
         let Some(index) = self.index else {
-            let first = (0..len).find(|position| self.is_stop(*position));
-            self.set_index(first);
+            let first = (0..len).find(|position| self.is_stop(*position, None));
+            self.set_index(first.map(|position| self.entry(position)));
             return;
         };
+        let leaving = self.group_at(index);
+        let index = leaving
+            .and_then(|group| self.anchor(&self.groups[group]))
+            .unwrap_or(index);
         let next = (1..=len)
             .map(|step| {
                 if reverse {
@@ -183,9 +189,9 @@ impl FocusManager {
                     (index + step) % len
                 }
             })
-            .find(|position| self.is_stop(*position));
-        if next.is_some() {
-            self.set_index(next);
+            .find(|position| self.is_stop(*position, leaving));
+        if let Some(position) = next {
+            self.set_index(Some(self.entry(position)));
         }
     }
 
@@ -245,32 +251,40 @@ impl FocusManager {
             .is_some_and(|(id, _)| !self.disabled.contains(id))
     }
 
-    fn is_stop(&self, position: usize) -> bool {
-        let Some((id, _)) = self.entries.get(position) else {
-            return false;
-        };
+    fn group_at(&self, position: usize) -> Option<usize> {
+        let (id, _) = self.entries.get(position)?;
+        self.groups
+            .iter()
+            .position(|group| group.members.contains(id))
+    }
+
+    fn is_stop(&self, position: usize, leaving: Option<usize>) -> bool {
         if !self.enabled(position) {
             return false;
         }
-        match self.groups.iter().find(|group| group.members.contains(id)) {
+        match self.group_at(position) {
             None => true,
-            Some(group) => self.group_stop(group) == Some(*id),
+            Some(group) => {
+                leaving != Some(group) && self.anchor(&self.groups[group]) == Some(position)
+            }
         }
     }
 
-    fn group_stop(&self, group: &Group) -> Option<HitId> {
-        let usable = |id: &HitId| {
-            self.entries
-                .iter()
-                .position(|(hit, _)| hit == id)
-                .is_some_and(|position| self.enabled(position))
-        };
-        group.last.filter(|id| usable(id)).or_else(|| {
-            self.entries
-                .iter()
-                .map(|(id, _)| *id)
-                .find(|id| group.members.contains(id) && usable(id))
+    fn anchor(&self, group: &Group) -> Option<usize> {
+        (0..self.entries.len()).find(|position| {
+            self.enabled(*position) && group.members.contains(&self.entries[*position].0)
         })
+    }
+
+    fn entry(&self, position: usize) -> usize {
+        let Some(group) = self.group_at(position).map(|group| &self.groups[group]) else {
+            return position;
+        };
+        group
+            .last
+            .and_then(|id| self.entries.iter().position(|(hit, _)| *hit == id))
+            .filter(|last| self.enabled(*last))
+            .unwrap_or(position)
     }
 
     fn set_index(&mut self, index: Option<usize>) {
