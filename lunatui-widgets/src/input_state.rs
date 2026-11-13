@@ -1,14 +1,15 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+#[cfg(any(feature = "select", feature = "file-picker"))]
 use std::time::Duration;
 
-use lunatui_runtime::{
-    Handle, Orientation, Outcome, RovingFocus, Selection, SelectionMode, Typeahead, Typed,
-};
+use lunatui_runtime::{Handle, Orientation, Outcome, RovingFocus, Selection, SelectionMode};
+#[cfg(any(feature = "select", feature = "file-picker"))]
+use lunatui_runtime::{Typeahead, Typed};
 use lunatui_term::{Event, KeyCode, KeyEvent, KeyKind, Modifiers};
 
-#[cfg(any(feature = "select", feature = "file-picker"))]
+#[cfg(feature = "select")]
 use lunatui_runtime::{Dismissal, FocusManager, Layer, LayerStack};
 
 fn key_of(event: &Event) -> Option<&KeyEvent> {
