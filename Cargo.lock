@@ -1021,6 +1021,7 @@ dependencies = [
  "libc",
  "lunatui-bench",
  "lunatui-core",
+ "lunatui-field",
  "lunatui-image",
  "lunatui-layout",
  "lunatui-prismattyc",
@@ -1060,6 +1061,7 @@ dependencies = [
  "libc",
  "lunatui-choice",
  "lunatui-core",
+ "lunatui-field",
  "lunatui-layout",
  "lunatui-prismattyc",
  "lunatui-runtime",
@@ -1165,7 +1167,9 @@ dependencies = [
  "lunatui-button",
  "lunatui-card",
  "lunatui-core",
+ "lunatui-runtime",
  "lunatui-term",
+ "lunatui-test",
  "lunatui-theme",
  "lunatui-ui-tokens",
  "lunatui-widgets",
@@ -1281,6 +1285,7 @@ name = "lunatui-web"
 version = "0.0.0"
 dependencies = [
  "lunatui-core",
+ "lunatui-field",
  "lunatui-runtime",
  "lunatui-term",
  "lunatui-theme",

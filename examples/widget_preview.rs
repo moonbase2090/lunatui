@@ -3,6 +3,7 @@
 
 #![doc = include_str!("README.md")]
 
+use lunatui_field::{Field, FieldArea, Form};
 use std::collections::HashMap;
 use std::env;
 use std::io::{self, Write};
@@ -20,14 +21,14 @@ use lunatui_term::{ColorMode, Encoder, KeyCode, Modifiers};
 use lunatui_theme::{Profile, Theme, Token, Variant};
 use lunatui_widgets::{
     Accordion, AccordionSection, Alignment, BigText, Block, BorderType, Breadcrumbs, ComboBox,
-    Constraint, Date, DatePicker, DateStyle, Diff, DiffLayout, DiffView, DividerId, FieldArea,
-    FileEntry, FileKind, FilePicker, Form, FormField, Gauge, HexViewer, HexViewerState, KeyHintBar,
-    List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Menu, MenuItem, MenuState, Monthly,
-    NotificationCenter, NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize,
-    RadioFlow, RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Select, Slider, Sparkline,
-    SplitAxis, SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput,
-    TextInput, ToastKind, ToastScope, ToastStack, Toggle, Tree, TreeItem, TreeState, VecSource,
-    Widget, WidgetState,
+    Constraint, Date, DatePicker, DateStyle, Diff, DiffLayout, DiffView, DividerId, FileEntry,
+    FileKind, FilePicker, Gauge, HexViewer, HexViewerState, KeyHintBar, List, LogBuffer, LogEntry,
+    LogLevel, LogView, MarkdownView, Menu, MenuItem, MenuState, Monthly, NotificationCenter,
+    NotificationId, NotificationLog, NumberInput, PaneId, Paragraph, PixelSize, RadioFlow,
+    RadioGroup, RenderCx, Scrollbar, SearchBox, SearchMatch, Select, Slider, Sparkline, SplitAxis,
+    SplitDrag, SplitTree, StatusBar, TabMove, Table, Tabs, TabsDrag, TagInput, TextInput,
+    ToastKind, ToastScope, ToastStack, Toggle, Tree, TreeItem, TreeState, VecSource, Widget,
+    WidgetState,
 };
 
 #[cfg(feature = "text-area")]
@@ -4635,11 +4636,11 @@ fn fm_state(tick: u32) -> FmState {
     }
 }
 
-fn fm_form(state: &FmState) -> Form {
-    let mut email = FormField::new("Email").required().hint("Used to sign in");
-    let mut password = FormField::new("Password")
+fn fm_form(state: &FmState) -> Form<'static> {
+    let mut email = Field::new("Email").required().help("Used to sign in");
+    let mut password = Field::new("Password")
         .required()
-        .hint("At least 8 characters");
+        .help("At least 8 characters");
     if state.checked && state.email.is_empty() {
         email = email.error("Required");
     }
@@ -4647,14 +4648,14 @@ fn fm_form(state: &FmState) -> Form {
         password = password.error("Use at least 8 characters");
     }
     Form::new([
-        FormField::new("Name")
+        Field::new("Name")
             .required()
-            .hint("As it appears on invoices"),
+            .help("As it appears on invoices"),
         email,
         password,
-        FormField::new("Plan"),
-        FormField::new("Updates"),
-        FormField::new("Notes").hint("Optional"),
+        Field::new("Plan"),
+        Field::new("Updates"),
+        Field::new("Notes").help("Optional"),
     ])
     .focus(state.focus)
 }

@@ -4,20 +4,21 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_field::{Field, FieldArea, Form};
 use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
 use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{FieldArea, Form, FormField, RenderCx, Widget};
+use lunatui_widgets::{RenderCx, Widget};
 
-fn fields() -> Vec<FormField> {
+fn fields() -> Vec<Field<'static>> {
     vec![
-        FormField::new("Name").required(),
-        FormField::new("Email").required().hint("We never share it"),
-        FormField::new("Notes"),
+        Field::new("Name").required(),
+        Field::new("Email").required().help("We never share it"),
+        Field::new("Notes"),
     ]
 }
 
-fn form() -> Form {
+fn form() -> Form<'static> {
     Form::new(fields())
 }
 
@@ -91,25 +92,25 @@ fn the_gap_and_taller_inputs_change_the_rows() {
     assert_eq!(parts(&tight[2])[0].y, 4);
     let loose = form().gap(2).layout(Rect::new(0, 0, 30, 12));
     assert_eq!(parts(&loose[1])[0].y, 4);
-    let tall = Form::new([FormField::new("Bio").input_rows(3), FormField::new("Name")]);
+    let tall = Form::new([Field::new("Bio").input_rows(3), Field::new("Name")]);
     let areas = tall.layout(Rect::new(0, 0, 30, 12));
     assert_eq!(parts(&areas[0])[2], Rect::new(6, 0, 24, 3));
     assert_eq!(parts(&areas[0])[3], Rect::new(6, 3, 24, 1));
     assert_eq!(parts(&areas[0])[0], Rect::new(0, 0, 30, 4));
     assert_eq!(parts(&areas[1])[0].y, 5);
-    let zero = Form::new([FormField::new("A").input_rows(0)]);
+    let zero = Form::new([Field::new("A").input_rows(0)]);
     assert_eq!(parts(&zero.layout(Rect::new(0, 0, 20, 5))[0])[2].height, 1);
 }
 
 #[test]
 fn the_label_column_fits_the_longest_label_or_the_chosen_width() {
-    let plain = Form::new([FormField::new("Name"), FormField::new("Nickname")]);
+    let plain = Form::new([Field::new("Name"), Field::new("Nickname")]);
     assert_eq!(plain.layout(Rect::new(0, 0, 30, 6))[0].input.x, 10);
     assert_eq!(parts(&plain.layout(Rect::new(0, 0, 30, 6))[0])[1].width, 8);
     let wide = plain.clone().label_width(12);
     assert_eq!(wide.layout(Rect::new(0, 0, 30, 6))[0].input.x, 14);
     assert_eq!(wide.layout(Rect::new(0, 0, 30, 6))[0].label.width, 12);
-    let none = Form::new([FormField::new("日本")]);
+    let none = Form::new([Field::new("日本")]);
     assert_eq!(none.layout(Rect::new(0, 0, 30, 6))[0].input.x, 6);
 }
 
@@ -120,7 +121,7 @@ fn narrow_areas_keep_one_input_cell_and_clip_the_label_column() {
     assert_eq!(narrow[0].input.width, 1);
     let tiny = form().layout(Rect::new(0, 0, 4, 12));
     assert_eq!(tiny[0].label.width, 3);
-    assert_eq!(tiny[0].input.x, 5);
+    assert_eq!(tiny[0].input.x, 3);
     assert_eq!(tiny[0].input.width, 1);
     let single = form().layout(Rect::new(0, 0, 1, 12));
     assert_eq!(single[0].label.width, 0);
@@ -137,7 +138,7 @@ fn fields_that_do_not_fit_the_height_are_left_out() {
     assert_eq!(form().layout(Rect::new(0, 0, 30, 7)).len(), 2);
     assert_eq!(form().layout(Rect::new(0, 0, 30, 8)).len(), 3);
     assert_eq!(
-        Form::new(Vec::<FormField>::new()).layout(Rect::new(0, 0, 9, 9)),
+        Form::new(Vec::<Field>::new()).layout(Rect::new(0, 0, 9, 9)),
         []
     );
 }
@@ -145,9 +146,9 @@ fn fields_that_do_not_fit_the_height_are_left_out() {
 #[test]
 fn labels_markers_hints_and_errors_are_drawn_where_the_layout_says() {
     let with_error = Form::new([
-        FormField::new("Name").required().error("Too short"),
-        FormField::new("Email").required().hint("We never share it"),
-        FormField::new("Notes"),
+        Field::new("Name").required().error("Too short"),
+        Field::new("Email").required().help("We never share it"),
+        Field::new("Notes"),
     ]);
     assert_eq!(
         rows(&with_error, 30, 8),
@@ -166,27 +167,25 @@ fn labels_markers_hints_and_errors_are_drawn_where_the_layout_says() {
 
 #[test]
 fn an_error_replaces_the_hint_and_long_messages_are_clipped() {
-    let form = Form::new([FormField::new("A")
-        .hint("a long hint")
-        .error("a long error")]);
+    let form = Form::new([Field::new("A").help("a long hint").error("a long error")]);
     assert_eq!(rows(&form, 14, 2), ["A             ", "   ✖ a long er"]);
-    let hint = Form::new([FormField::new("A").hint("a long hint")]);
+    let hint = Form::new([Field::new("A").help("a long hint")]);
     assert_eq!(rows(&hint, 12, 2), ["A           ", "   a long hi"]);
 }
 
 #[test]
 fn the_marker_is_clipped_with_the_label_column() {
-    let form = Form::new([FormField::new("Name").required()]).label_width(5);
+    let form = Form::new([Field::new("Name").required()]).label_width(5);
     assert_eq!(rows(&form, 12, 2)[0], "Name        ");
-    let wider = Form::new([FormField::new("Name").required()]).label_width(6);
+    let wider = Form::new([Field::new("Name").required()]).label_width(6);
     assert_eq!(rows(&wider, 12, 2)[0], "Name *      ");
-    let long = Form::new([FormField::new("Username").required()]).label_width(6);
+    let long = Form::new([Field::new("Username").required()]).label_width(6);
     assert_eq!(rows(&long, 12, 2)[0], "Userna      ");
 }
 
 #[test]
 fn label_marker_and_message_colors_follow_the_theme() {
-    let form = Form::new([FormField::new("Name").required().error("Bad")]).focus(Some(0));
+    let form = Form::new([Field::new("Name").required().error("Bad")]).focus(Some(0));
     let (grid, _) = draw(&form, Rect::new(0, 0, 20, 3), 20, 3);
     assert_eq!(style_at(&grid, 0, 0).fg, color(Token::Accent));
     assert!(style_at(&grid, 0, 0).attrs.bold());
@@ -195,7 +194,7 @@ fn label_marker_and_message_colors_follow_the_theme() {
     assert_eq!(style_at(&grid, 9, 1).fg, color(Token::Fail));
     assert!(!style_at(&grid, 9, 1).attrs.dim());
 
-    let calm = Form::new([FormField::new("Name").hint("Help")]);
+    let calm = Form::new([Field::new("Name").help("Help")]);
     let (grid, _) = draw(&calm, Rect::new(0, 0, 20, 3), 20, 3);
     assert_eq!(style_at(&grid, 0, 0).fg, color(Token::TextPrimary));
     assert!(!style_at(&grid, 0, 0).attrs.bold());
@@ -216,8 +215,8 @@ fn only_the_focused_field_is_highlighted() {
 #[test]
 fn disabled_fields_are_dimmed_and_never_highlighted() {
     let form = Form::new([
-        FormField::new("Name").required().error("Bad").disabled(),
-        FormField::new("Email"),
+        Field::new("Name").required().error("Bad").disabled(true),
+        Field::new("Email"),
     ])
     .focus(Some(0));
     let (grid, _) = draw(&form, Rect::new(0, 0, 20, 6), 20, 6);
@@ -232,37 +231,28 @@ fn disabled_fields_are_dimmed_and_never_highlighted() {
 #[test]
 fn check_required_keeps_an_existing_error_and_ignores_extra_or_missing_values() {
     let form = Form::new([
-        FormField::new("Name").required().error("Too short"),
-        FormField::new("Email").required(),
+        Field::new("Name").required().error("Too short"),
+        Field::new("Email").required(),
     ])
     .check_required(&["", ""]);
     assert_eq!(rows(&form, 30, 5)[1], "         ✖ Too short          ");
     assert_eq!(rows(&form, 30, 5)[4], "         ✖ Required           ");
-    let short = Form::new([
-        FormField::new("A").required(),
-        FormField::new("B").required(),
-    ])
-    .check_required(&[""]);
+    let short =
+        Form::new([Field::new("A").required(), Field::new("B").required()]).check_required(&[""]);
     assert_eq!(short.first_error(), Some(0));
     assert!(!short.is_valid());
-    let one = Form::new([
-        FormField::new("A").required(),
-        FormField::new("B").required(),
-    ])
-    .check_required(&["x"]);
+    let one =
+        Form::new([Field::new("A").required(), Field::new("B").required()]).check_required(&["x"]);
     assert!(one.is_valid());
 }
 
 #[test]
 fn fields_report_their_message_and_the_form_its_size() {
-    assert_eq!(FormField::new("A").error_message(), None);
-    assert_eq!(
-        FormField::new("A").error("Bad").error_message(),
-        Some("Bad")
-    );
+    assert_eq!(Field::new("A").error_message(), None);
+    assert_eq!(Field::new("A").error("Bad").error_message(), Some("Bad"));
     assert_eq!(form().len(), 3);
     assert!(!form().is_empty());
-    assert!(Form::new(Vec::<FormField>::new()).is_empty());
+    assert!(Form::new(Vec::<Field>::new()).is_empty());
 }
 
 #[test]
@@ -273,7 +263,7 @@ fn measure_is_the_width_and_the_rows_the_fields_use() {
     assert_eq!(form().measure(Size::new(30, 1)), Size::new(0, 0));
     assert_eq!(form().measure(Size::new(0, 9)), Size::new(0, 0));
     assert_eq!(
-        Form::new(Vec::<FormField>::new()).measure(Size::new(9, 9)),
+        Form::new(Vec::<Field>::new()).measure(Size::new(9, 9)),
         Size::new(0, 0)
     );
 }
@@ -289,7 +279,7 @@ fn nothing_is_drawn_outside_the_area_or_for_empty_areas() {
 }
 
 struct FormApp {
-    fields: Vec<FormField>,
+    fields: Vec<Field<'static>>,
     values: Vec<String>,
     disabled: Vec<usize>,
     focus: Option<usize>,
@@ -299,7 +289,7 @@ struct FormApp {
 }
 
 impl FormApp {
-    fn new(fields: Vec<FormField>) -> Self {
+    fn new(fields: Vec<Field<'static>>) -> Self {
         let values = vec![String::new(); fields.len()];
         Self {
             fields,
@@ -312,7 +302,7 @@ impl FormApp {
         }
     }
 
-    fn form(&self) -> Form {
+    fn form(&self) -> Form<'static> {
         let form = Form::new(self.fields.clone()).focus(self.focus);
         if self.submitted {
             let values: Vec<&str> = self.values.iter().map(String::as_str).collect();
@@ -442,9 +432,9 @@ fn a_focus_past_the_last_field_restarts_the_order() {
 #[test]
 fn tab_skips_disabled_fields() {
     let app = FormApp::new(vec![
-        FormField::new("A"),
-        FormField::new("B").disabled(),
-        FormField::new("C"),
+        Field::new("A"),
+        Field::new("B").disabled(true),
+        Field::new("C"),
     ]);
     let mut form = Harness::mount(app, 20, 8);
     form.keys("Tab Tab");
@@ -455,7 +445,7 @@ fn tab_skips_disabled_fields() {
 
 #[test]
 fn tab_does_nothing_when_no_field_can_take_focus() {
-    let mut form = Harness::mount(FormApp::new(vec![FormField::new("A").disabled()]), 20, 4);
+    let mut form = Harness::mount(FormApp::new(vec![Field::new("A").disabled(true)]), 20, 4);
     form.keys("Tab S-Tab");
     form.assert_focus(None);
     let mut form = Harness::mount(FormApp::new(Vec::new()), 20, 4);
@@ -541,7 +531,7 @@ fn a_click_on_the_gap_between_fields_does_nothing() {
 
 #[test]
 fn a_click_on_a_disabled_field_does_not_focus_it() {
-    let mut app = FormApp::new(vec![FormField::new("A").disabled(), FormField::new("B")]);
+    let mut app = FormApp::new(vec![Field::new("A").disabled(true), Field::new("B")]);
     app.disabled = vec![0];
     let mut form = Harness::mount(app, 20, 6);
     form.click(3, 0);

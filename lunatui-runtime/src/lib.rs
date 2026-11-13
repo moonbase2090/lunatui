@@ -48,13 +48,11 @@ pub use anim::{
 #[cfg(feature = "app")]
 pub use app::{App, ControlFlow, is_quit};
 #[cfg(feature = "app")]
-pub use focus::{FocusDirection, FocusManager};
+pub use focus::{FocusDirection, FocusGroup, FocusManager};
 #[cfg(feature = "image-presenter")]
 pub use frame::RenderFrame;
-#[cfg(feature = "accessibility")]
-pub use hit::AccessibilityRole;
 #[cfg(feature = "app")]
-pub use hit::{HitId, HitMap};
+pub use hit::{AccessibilityRole, AmbiguousControl, Control, ControlMetadata, HitId, HitMap};
 pub use input::Input;
 #[cfg(feature = "app")]
 pub use layer::{Layer, LayerEvent, LayerId, LayerSlot, LayerStack, PressRoute};

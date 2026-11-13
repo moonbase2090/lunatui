@@ -35,6 +35,18 @@ Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). C
 
 Still frames and short recordings of real widget output, in the dark theme. Native pixel demos use the real terminal recorder; cell demos use `scripts/record-showcase.sh`.
 
+### Named fields and controls
+
+One `Field` descriptor supports stacked fields and `Form` rows. Rendered controls
+register accessible names, roles and disabled state on the pointer hit map;
+input values stay out of the export. [Usage and migration](docs/named-controls.md).
+
+<img src="docs/media/named-controls.gif" alt="Profile edits with typing, email validation, a moving switch, disabled field and saved confirmation" width="1028">
+
+Recorded from real widgets with an injected virtual clock. Reproduce with
+`python3 scripts/record-named-controls.py`, which also checks every frame's
+names, roles, disabled state and value-free export. [Still](docs/media/named-controls.png).
+
 ### TextArea
 
 A notes editor with line numbers, selection, incremental search and an undoable checklist edit. TextArea also supports Vim and Emacs keymaps and cursor-following scroll. Enable the off-by-default `text-area` feature.
@@ -421,11 +433,16 @@ Screenshot: [docs/media/ui-dialog.png](docs/media/ui-dialog.png). Recorded from 
 
 ### UI field
 
-The `lunatui-field` crate in a profile settings form. The run is scripted, not interactive: the email is typed out, its error message ("Enter a full address") gives way to the help line once the address is complete, the toggle flips, and focus moves between fields. A required field marks its label with `*`, the focused label takes the ring color, and the Workspace ID field is disabled and dim. Each field wraps a real control: a text input or a toggle.
+A profile edit moves from name and email entry to saved settings. An incomplete email shows
+its validation error, notifications switch on and off, and focus skips the disabled workspace
+field before reaching Save. All labels, fields, switch positions and confirmations come from
+the widgets.
 
-<img src="docs/media/ui-field.gif" alt="lunatui-field: labelled text inputs and a toggle with help text, a required marker, an error message and a disabled field in a profile form in the dark theme" width="1028">
+<img src="docs/media/named-controls.gif" alt="Profile settings with progressive typing, validation, notifications and a saved confirmation in the dark theme" width="1028">
 
-Screenshot: [docs/media/ui-field.png](docs/media/ui-field.png). Recorded from `cargo run --release -p lunatui-field --example ui_field` (120×36, 270 frames at 30 fps, truecolor, dark, about 7 seconds) with the pinned agg.
+[Still](docs/media/named-controls.png). Recorded with `scripts/record-named-controls.py`
+at 120×36, dark theme, using the pinned agg renderer. The script checks the decoded duration,
+distinct frames and switch pixels as well as every frame's named controls.
 
 ### Mermaid diagrams
 

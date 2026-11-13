@@ -160,6 +160,18 @@ impl<'a> Button<'a> {
 }
 
 impl Widget for Button<'_> {
+    fn control_role(&self) -> Option<crate::AccessibilityRole> {
+        Some(crate::AccessibilityRole::Button)
+    }
+
+    fn control_name(&self) -> Option<&str> {
+        Some(self.label.as_ref())
+    }
+
+    fn control_disabled(&self) -> bool {
+        matches!(self.state, WidgetState::Disabled)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let area = clip_to_coordinates(area);
         if area.width == 0 || area.height == 0 {

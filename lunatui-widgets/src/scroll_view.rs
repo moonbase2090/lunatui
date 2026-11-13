@@ -327,9 +327,10 @@ impl<W: Widget> Widget for ScrollView<W> {
                 y.saturating_add(viewport.height),
             );
             let full = Rect::new(0, 0, self.size.width, self.size.height);
-            cx.offscreen(&mut canvas, |inner| self.content.render(full, inner));
+            let hits = cx.offscreen(&mut canvas, |inner| self.content.render(full, inner));
             let shown = Rect::new(x, y, viewport.width, viewport.height);
             cx.blit(&canvas, shown, area.x, area.y);
+            cx.blit_controls(hits.as_ref(), shown, area.x, area.y);
         }
         let (track, thumb) = self.bar_styles(
             cx,

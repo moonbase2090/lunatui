@@ -6,15 +6,25 @@
 use std::io;
 
 use lunatui_core::Rect;
-use lunatui_runtime::{AccessibilityRole, FocusManager, HitId, HitMap};
+use lunatui_runtime::{AccessibilityRole, ControlMetadata, FocusManager, HitId, HitMap};
 
 fn main() -> io::Result<()> {
     let mut hits = HitMap::new();
     let mut focus = FocusManager::new();
     let button = Rect::new(1, 1, 8, 1);
     let input = Rect::new(1, 3, 20, 1);
-    hits.push_with_role(HitId(1), button, 0, AccessibilityRole::Button);
-    hits.push_with_role(HitId(2), input, 0, AccessibilityRole::TextInput);
+    hits.push_control(
+        HitId(1),
+        button,
+        0,
+        ControlMetadata::new("Save", AccessibilityRole::Button),
+    );
+    hits.push_control(
+        HitId(2),
+        input,
+        0,
+        ControlMetadata::new("Email", AccessibilityRole::TextInput),
+    );
     hits.push(HitId(99), Rect::new(0, 5, 24, 1), 0);
     focus.register(HitId(1), button);
     focus.register(HitId(2), input);

@@ -4,17 +4,17 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::Rect;
+use lunatui_field::{Field, Form};
 use lunatui_runtime::{HitId, HitMap};
-use lunatui_widgets::{Form, FormField};
 
 const FIRST: HitId = HitId(50);
 const AREA: Rect = Rect::new(2, 1, 40, 20);
 
-fn form() -> Form {
+fn form() -> Form<'static> {
     Form::new([
-        FormField::new("Name").required(),
-        FormField::new("Email").required().error("Required"),
-        FormField::new("Notes").disabled(),
+        Field::new("Name").required(),
+        Field::new("Email").required().error("Required"),
+        Field::new("Notes").disabled(true),
     ])
 }
 
