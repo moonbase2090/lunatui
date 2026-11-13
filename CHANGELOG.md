@@ -12,6 +12,15 @@ Every PR adds its entry under **Unreleased**.
 
 - `lunatui_runtime::Handle` is the widget input contract: `state.handle(&event)` returns an `Outcome`, so app loops pass keys on instead of rewriting arrows, type-ahead and Esc. Shared primitives build the states: `RovingFocus` (one step function, with wrap or stop, skipping disabled items), `Typeahead` (one query buffer with a `TYPEAHEAD_TIMEOUT` read from the time the app passes, such as a virtual `Clock`), `Selection` (single or multiple) and `Dismissal` (an overlay's layer in the `LayerStack`). `FocusManager` handles Tab, Shift+Tab and the arrows as a `Handle`.
 - `ListState`, `TabsState`, `RadioState`, `SelectState` and `FilePickerState` handle their widgets' keys. `RadioGroup::is_enabled` and `FileEntry::name` are new. The states are behind the new default `input` feature of `lunatui-widgets`, which `radio`, `select`, `file-picker`, `search-box` and `accordion` now turn on.
+
+### Changed
+
+- Breaking: `Select::type_ahead` and `FilePicker::type_ahead` are removed; `SelectState` and `FilePickerState` type ahead with the shared `Typeahead`. The `step` functions of `RadioGroup`, `Select`, `SearchBox`, `Accordion` and `FilePicker` now call `RovingFocus::step`; `FilePicker::step` still stops at the ends and lands on the first row from nothing.
+
+## [0.1.30] - 2026-11-13
+
+### Added
+
 - `Event::Resize(columns, rows)` reports a terminal size change, and `lunatui_runtime::run` follows it: the loop reallocates both frame grids, hands the app the new area on the next render and repaints every cell, so a window that is tiled, floated or dragged to another size after start is drawn at its new size. The event reaches `App::update` too. On Unix a thread checks the size every 100 ms and sends the first size at start, so a resize that happened before input opened is not missed; on Windows the console's own resize event is used (it was dropped before). `lunatui_term::terminal_size` and `lunatui_term::watch_size` are the reading and polling pieces, and `Input::from_reader_sized` starts an input worker with a size source.
 - `LayerStack::handle(&event, &mut focus)` is the one place that turns Esc and pointer presses into dismissals. Esc closes the top layer that Esc dismisses; a press outside a popover or drop-down closes it and is still handled; a press outside a modal layer such as a dialog or the command palette is dropped and the modal stays open. A closed layer gives focus back to its opener through the new `FocusManager::restore`, which applies at the next `sync` when the opener is not registered yet. `LayerSlot` tracks one overlay's layer, and `Layer::anchor` and `Layer::outside_press` set a layer's anchor rectangle and whether outside presses dismiss it. `LayerStack::pick` hit tests a delivered press without reaching regions under an open modal, through the new `HitMap::pick_from`.
 - `Select::layer`, `CommandPalette::layer` and `ToastStack::layer` give each overlay's layer for the app's `LayerStack`. Toasts sit in a layer that Esc and outside presses leave alone.
@@ -21,7 +30,6 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
-- Breaking: `Select::type_ahead` and `FilePicker::type_ahead` are removed; `SelectState` and `FilePickerState` type ahead with the shared `Typeahead`. The `step` functions of `RadioGroup`, `Select`, `SearchBox`, `Accordion` and `FilePicker` now call `RovingFocus::step`; `FilePicker::step` still stops at the ends and lands on the first row from nothing.
 - Breaking: dialogs and popovers open and close through the app's `LayerStack`. `DialogState::open` takes the stack and the opener's `HitId`, `activate` and `click` take the stack and the `FocusManager`, and `sync` reports a dialog that Esc cancelled. `DialogState::cancel`, `DialogState::focus_trap` and `DialogClosed::restore` are gone: Esc and focus return belong to the stack. `PopoverState::click` and `PopoverClick` are replaced by `toggle`, `close`, `sync` and `place`, and outside presses are the stack's. The `popup`, `select` and `toast` features now turn on `lunatui-runtime`.
 - Breaking: `FocusTrap`, `Overlay::focus_trap`, `Overlay::traps_focus`, `Popup::focus_trap` and `Popup::traps_focus` are removed. `LayerStack::focus_entries` keeps Tab inside the topmost modal layer instead, so there is no second id space for focus.
 - Breaking: `Layer::modal` is no longer dismissed by a press outside it; Esc still dismisses it, and `outside_press(true)` brings the old behaviour back. `LayerStack::route_press` now looks past layers that ignore outside presses, such as toasts, so a popover under a toast still closes on an outside press.
