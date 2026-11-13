@@ -95,7 +95,7 @@ impl Screen {
             }
         };
         if deliver && let Event::Mouse(mouse) = event {
-            let hit = self.map().pick(mouse.column, mouse.row);
+            let hit = self.layers.pick(&self.map(), mouse.column, mouse.row);
             self.pressed.extend(hit);
             if hit == Some(BUTTON) {
                 self.view

@@ -4,7 +4,7 @@
 use lunatui_core::Rect;
 use lunatui_term::{Event, KeyCode, KeyKind, Modifiers, MouseKind};
 
-use crate::{FocusManager, HitId};
+use crate::{FocusManager, HitId, HitMap};
 
 const Z_STEP: u16 = 100;
 
@@ -123,12 +123,13 @@ pub enum PressRoute {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LayerEvent {
     /// The layers had nothing to do with it: handle the event as usual, hit testing a press with
-    /// the layers' `z`.
+    /// [`LayerStack::pick`] so it cannot reach regions under an open modal.
     Pass,
     /// A press outside a modal layer: drop the event.
     Consumed,
     /// Esc or a press dismissed `layer`, which is gone and has given focus back to its opener.
-    /// Handle the event as usual only when `deliver` is set.
+    /// Handle the event as usual only when `deliver` is set, hit testing with
+    /// [`LayerStack::pick`].
     Dismissed {
         /// The layer that closed.
         layer: LayerId,
@@ -316,6 +317,26 @@ impl LayerStack {
         let at = self.layers.iter().position(|entry| entry.id == id)?;
         let rank = u16::try_from(at + 1).unwrap_or(u16::MAX);
         Some(rank.saturating_mul(Z_STEP))
+    }
+
+    /// The lowest `z` a press can reach: the [`z`](Self::z) of the topmost modal layer, or `0`
+    /// when no modal layer is open.
+    #[must_use]
+    pub fn floor(&self) -> u16 {
+        self.layers
+            .iter()
+            .rposition(|entry| entry.layer.modal)
+            .and_then(|at| u16::try_from(at + 1).ok())
+            .map_or(0, |rank| rank.saturating_mul(Z_STEP))
+    }
+
+    /// Hit tests a delivered press: the topmost region of `map` at `(column, row)` that sits in
+    /// the topmost modal layer or above it. Regions under an open modal are never picked, even
+    /// when the press lands in a layer above the modal, such as a toast, at a spot where that
+    /// layer registered no region.
+    #[must_use]
+    pub fn pick(&self, map: &HitMap, column: u16, row: u16) -> Option<HitId> {
+        map.pick_from(column, row, self.floor())
     }
 
     /// Filters the base screen's Tab entries and appends the layers' own, in stack order.
@@ -637,6 +658,44 @@ mod tests {
                 deliver: true
             }
         );
+    }
+
+    #[test]
+    fn a_press_on_a_toast_over_a_modal_never_reaches_the_screen_behind_the_modal() {
+        let toast_area = Rect::new(40, 0, 10, 2);
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let dialog = layers.push(Layer::modal(AREA));
+        let toasts = layers.push(Layer::popover(toast_area).dismissable(false));
+        let mut map = HitMap::new();
+        map.push(OPENER, Rect::new(0, 0, 60, 20), 0);
+        map.push(
+            HitId(7),
+            Rect::new(12, 6, 4, 1),
+            layers.z(dialog).unwrap_or(0),
+        );
+        map.push(
+            HitId(9),
+            Rect::new(40, 0, 10, 1),
+            layers.z(toasts).unwrap_or(0),
+        );
+
+        assert_eq!(layers.handle(&press(45, 1), &mut focus), LayerEvent::Pass);
+        assert_eq!(
+            map.pick(45, 1),
+            Some(OPENER),
+            "the plain pick reaches behind the modal"
+        );
+        assert_eq!(layers.pick(&map, 45, 1), None);
+        assert_eq!(layers.pick(&map, 45, 0), Some(HitId(9)));
+        assert_eq!(layers.pick(&map, 13, 6), Some(HitId(7)));
+        assert_eq!(
+            layers.handle(&press(2, 15), &mut focus),
+            LayerEvent::Consumed
+        );
+        layers.remove(dialog);
+        assert_eq!(layers.floor(), 0);
+        assert_eq!(layers.pick(&map, 45, 1), Some(OPENER));
     }
 
     #[test]

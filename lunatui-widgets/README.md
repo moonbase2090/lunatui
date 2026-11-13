@@ -119,7 +119,7 @@ Dialogs, popovers, select drop-downs, command palettes and toasts open as layers
 
 - `LayerStack::handle(&event, &mut focus)` closes the top layer that Esc dismisses, and for a press it closes a popover or drop-down the press is outside of. A press outside a modal layer such as a dialog or the palette is dropped, and the modal stays open. Toasts ignore both.
 - Layers close top first, and a closed layer gives focus back to the control that opened it on the next `FocusManager::sync`.
-- `LayerStack::focus_entries` keeps Tab inside the topmost modal, and `LayerStack::z` gives each layer's `HitMap` regions a `z` above the ones below.
+- `LayerStack::focus_entries` keeps Tab inside the topmost modal, and `LayerStack::z` gives each layer's `HitMap` regions a `z` above the ones below. Hit test a delivered press with `LayerStack::pick`, which never picks a region under an open modal, even when the press lands in a toast above it.
 
 Each overlay keeps a `LayerSlot` (or a state that holds one, such as `DialogState` and `PopoverState`) and calls its `sync` after `handle` to learn that it closed. A layer's `anchor`, such as a drop-down's field, takes presses instead of closing the layer, so the field can close the list itself.
 
@@ -133,7 +133,7 @@ match layers.handle(&event, &mut focus) {
     }
     LayerEvent::Pass => {}
 }
-// Handle the event as usual, hit testing presses with the layers' z.
+// Handle the event as usual; for a press, `layers.pick(&hit_map, column, row)`.
 ```
 
 `Popup` is behind the `popup` feature. It draws a titled, bordered panel over an `Overlay` backdrop, centred, at a point, or anchored beside a rectangle, and `PopupState` tracks dragging and moving. Content cells drawn without colors take the panel's.

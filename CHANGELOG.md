@@ -10,7 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
-- `LayerStack::handle(&event, &mut focus)` is the one place that turns Esc and pointer presses into dismissals. Esc closes the top layer that Esc dismisses; a press outside a popover or drop-down closes it and is still handled; a press outside a modal layer such as a dialog or the command palette is dropped and the modal stays open. A closed layer gives focus back to its opener through the new `FocusManager::restore`, which applies at the next `sync` when the opener is not registered yet. `LayerSlot` tracks one overlay's layer, and `Layer::anchor` and `Layer::outside_press` set a layer's anchor rectangle and whether outside presses dismiss it.
+- `LayerStack::handle(&event, &mut focus)` is the one place that turns Esc and pointer presses into dismissals. Esc closes the top layer that Esc dismisses; a press outside a popover or drop-down closes it and is still handled; a press outside a modal layer such as a dialog or the command palette is dropped and the modal stays open. A closed layer gives focus back to its opener through the new `FocusManager::restore`, which applies at the next `sync` when the opener is not registered yet. `LayerSlot` tracks one overlay's layer, and `Layer::anchor` and `Layer::outside_press` set a layer's anchor rectangle and whether outside presses dismiss it. `LayerStack::pick` hit tests a delivered press without reaching regions under an open modal, through the new `HitMap::pick_from`.
 - `Select::layer`, `CommandPalette::layer` and `ToastStack::layer` give each overlay's layer for the app's `LayerStack`. Toasts sit in a layer that Esc and outside presses leave alone.
 
 ### Changed
