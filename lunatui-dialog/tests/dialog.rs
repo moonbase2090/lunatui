@@ -5,6 +5,7 @@
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
 use lunatui_dialog::{AlertDialog, Dialog, DialogFocus, DialogKind, DialogOutcome, DialogState};
+use lunatui_runtime::{FocusManager, HitId, LayerStack};
 use lunatui_theme::{Theme, Variant};
 use lunatui_ui_tokens::Role;
 use lunatui_widgets::{RenderCx, Widget};
@@ -109,7 +110,7 @@ fn a_non_destructive_alert_dialog_uses_the_ring() -> Result<(), &'static str> {
 #[test]
 fn state_moves_focus_between_the_buttons() -> Result<(), &'static str> {
     let mut state = DialogState::new();
-    state.open(DialogKind::Confirm, None);
+    state.open(DialogKind::Confirm, &mut LayerStack::new(), None);
     let widget = AlertDialog::new("Delete?", "Sure?").state(&state);
     let (grid, clusters, theme) = draw(&widget);
     let ring = theme.resolve(Role::Destructive.token());
@@ -134,14 +135,26 @@ fn clicks_find_the_button_and_close_the_dialog() -> Result<(), &'static str> {
     let (x, y) = find(&grid, &clusters, "Cancel")?;
     assert_eq!(widget.control_at(area, x, y), Some(DialogFocus::Cancel));
     assert_eq!(widget.control_at(area, 0, 0), None);
+    let opener = HitId(7);
+    let mut layers = LayerStack::new();
+    let mut focus = FocusManager::new();
+    focus.sync(vec![(opener, Rect::new(0, 0, 4, 1))]);
     let mut state = DialogState::new();
-    state.open(DialogKind::Confirm, Some(7));
+    state.open(DialogKind::Confirm, &mut layers, Some(opener));
+    focus.sync(layers.focus_entries(vec![(opener, Rect::new(0, 0, 4, 1))]));
+    assert_eq!(
+        focus.focused(),
+        None,
+        "the dialog traps focus away from the opener"
+    );
     let closed = state
-        .click(widget.control_at(area, x, y))
+        .click(widget.control_at(area, x, y), &mut layers, &mut focus)
         .ok_or("did not close")?;
     assert_eq!(closed.outcome(), DialogOutcome::Cancelled);
-    assert_eq!(closed.restore(), Some(7));
     assert!(!state.is_open());
+    assert!(layers.is_empty());
+    focus.sync(layers.focus_entries(vec![(opener, Rect::new(0, 0, 4, 1))]));
+    assert_eq!(focus.focused(), Some(opener));
     Ok(())
 }
 

@@ -7,6 +7,7 @@ use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
+use lunatui_runtime::{HitId, Layer};
 use lunatui_theme::Token;
 
 use crate::{BorderType, Popup, RenderCx, SearchBox, SearchMatch, Widget};
@@ -174,6 +175,18 @@ impl<'a> CommandPalette<'a> {
     #[must_use]
     pub fn area(&self, area: Rect) -> Rect {
         self.popup().area(area)
+    }
+
+    /// The palette's layer for the app's [`LayerStack`](lunatui_runtime::LayerStack): a modal
+    /// layer over the panel it draws in `area`. Esc closes it, a press outside it is dropped, and
+    /// focus goes back to `opener`.
+    #[must_use]
+    pub fn layer(&self, area: Rect, opener: Option<HitId>) -> Layer {
+        let layer = Layer::modal(self.area(area));
+        match opener {
+            Some(opener) => layer.return_focus(opener),
+            None => layer,
+        }
     }
 
     /// The position among [`matches`](Self::matches) of the row drawn at `(column, row)` inside

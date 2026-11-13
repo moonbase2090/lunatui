@@ -5,45 +5,6 @@ use lunatui_core::{Color, Rect, Size};
 
 use crate::{RenderCx, Widget};
 
-/// Limits Tab focus to a modal scope while active (for runtime focus managers).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct FocusTrap {
-    active: bool,
-}
-
-impl FocusTrap {
-    /// Trap enabled: only `scope` ids receive focus.
-    #[must_use]
-    pub fn enabled() -> Self {
-        Self { active: true }
-    }
-
-    /// Trap disabled.
-    #[must_use]
-    pub fn disabled() -> Self {
-        Self { active: false }
-    }
-
-    /// Whether focus should stay inside the modal scope.
-    #[must_use]
-    pub fn is_active(&self) -> bool {
-        self.active
-    }
-
-    /// Filters `tab_order` to `scope` when the trap is active.
-    #[must_use]
-    pub fn filter_tab_order(&self, scope: &[u32], tab_order: &[u32]) -> Vec<u32> {
-        if !self.active {
-            return tab_order.to_vec();
-        }
-        tab_order
-            .iter()
-            .filter(|id| scope.contains(id))
-            .copied()
-            .collect()
-    }
-}
-
 /// Dimmed full-area backdrop plus a centered modal child.
 #[derive(Clone, Debug)]
 pub struct Overlay<W> {
@@ -51,7 +12,6 @@ pub struct Overlay<W> {
     modal: Rect,
     backdrop_alpha: f32,
     backdrop_tint: Color,
-    trap: FocusTrap,
 }
 
 impl<W> Overlay<W> {
@@ -63,7 +23,6 @@ impl<W> Overlay<W> {
             modal,
             backdrop_alpha: 0.55,
             backdrop_tint: Color::Rgb(0, 0, 0),
-            trap: FocusTrap::enabled(),
         }
     }
 
@@ -73,19 +32,6 @@ impl<W> Overlay<W> {
         self.backdrop_alpha = alpha.clamp(0.0, 1.0);
         self.backdrop_tint = tint;
         self
-    }
-
-    /// Focus confinement policy for the modal.
-    #[must_use]
-    pub fn focus_trap(mut self, trap: FocusTrap) -> Self {
-        self.trap = trap;
-        self
-    }
-
-    /// Access focus trap state for runtime wiring.
-    #[must_use]
-    pub fn traps_focus(&self) -> bool {
-        self.trap.is_active()
     }
 }
 

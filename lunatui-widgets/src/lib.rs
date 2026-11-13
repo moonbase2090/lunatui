@@ -199,7 +199,7 @@ pub use nested_menu::{Menu, MenuEvent, MenuItem, MenuState};
 pub use notification_center::{Notification, NotificationCenter, NotificationId, NotificationLog};
 #[cfg(feature = "number-input")]
 pub use number_input::NumberInput;
-pub use overlay::{FocusTrap, Overlay, blend_rgb};
+pub use overlay::{Overlay, blend_rgb};
 pub use padding::Padding;
 pub use paragraph::{Paragraph, TextView, TextWrap};
 #[cfg(feature = "pixel-pie-chart")]
@@ -207,7 +207,7 @@ pub use pie_chart::PixelPieChart;
 #[cfg(feature = "pie-chart")]
 pub use pie_chart::{PieChart, PieLayout, PieSlice};
 #[cfg(feature = "popover")]
-pub use popover::{Popover, PopoverClick, PopoverState};
+pub use popover::{Popover, PopoverState};
 #[cfg(feature = "popup")]
 pub use popup::{Placement, Popup, PopupState};
 #[cfg(feature = "progress")]

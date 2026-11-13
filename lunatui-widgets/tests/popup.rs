@@ -5,9 +5,7 @@
 
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{
-    BorderType, FocusTrap, Placement, Popup, PopupState, RenderCx, Widget, WidgetState,
-};
+use lunatui_widgets::{BorderType, Placement, Popup, PopupState, RenderCx, Widget, WidgetState};
 
 struct Text(&'static str);
 
@@ -318,12 +316,6 @@ fn no_backdrop_leaves_what_is_behind_alone() {
     grid.put_str(0, 0, ink, "x", &mut clusters);
     draw_on(&plain("abc"), &mut grid, &mut clusters, &theme);
     assert_eq!(grid.get(0, 0).map(lunatui_core::Cell::style), Some(ink));
-}
-
-#[test]
-fn the_popup_traps_focus_unless_told_not_to() {
-    assert!(plain("abc").traps_focus());
-    assert!(!plain("abc").focus_trap(FocusTrap::disabled()).traps_focus());
 }
 
 #[test]

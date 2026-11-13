@@ -4,9 +4,11 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_runtime::{FocusManager, HitId, LayerEvent, LayerStack};
+use lunatui_term::{Event, KeyCode, KeyEvent, MouseButton, MouseEvent, MouseKind};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    AnchorSide, Paragraph, Popover, PopoverClick, PopoverState, RenderCx, Widget, WidgetState,
+    AnchorSide, Paragraph, Popover, PopoverState, RenderCx, Widget, WidgetState,
 };
 
 const ZOOM: Rect = Rect::new(2, 1, 4, 1);
@@ -190,63 +192,119 @@ fn never_covers_its_anchor_and_stays_inside_the_area() {
     assert!(drawn > 1500, "only {drawn} placements fit");
 }
 
-#[test]
-fn a_click_on_the_anchor_opens_and_closes_it() {
-    let mut state = PopoverState::new();
-    assert_eq!(state, PopoverState::default());
-    assert!(!state.is_open());
-    let panel = Some(Rect::new(2, 2, 8, 4));
-    assert_eq!(state.click(3, 1, ZOOM, None), PopoverClick::Anchor);
-    assert!(state.is_open());
-    assert_eq!(state.click(5, 1, ZOOM, panel), PopoverClick::Anchor);
-    assert!(!state.is_open());
+const SCREEN: Rect = Rect::new(0, 0, 20, 8);
+const ANCHOR_ID: HitId = HitId(1);
+const SAVE_ID: HitId = HitId(2);
+const SAVE: Rect = Rect::new(14, 7, 4, 1);
+
+struct Screen {
+    layers: LayerStack,
+    focus: FocusManager,
+    state: PopoverState,
+    saved: u32,
+}
+
+impl Screen {
+    fn new() -> Self {
+        let mut screen = Self {
+            layers: LayerStack::new(),
+            focus: FocusManager::new(),
+            state: PopoverState::new(),
+            saved: 0,
+        };
+        screen.frame();
+        screen
+    }
+
+    fn frame(&mut self) {
+        let panel = self
+            .state
+            .is_open()
+            .then(|| zoom(ZOOM).area(SCREEN))
+            .flatten();
+        self.state.place(&mut self.layers, panel);
+        let base = vec![(ANCHOR_ID, ZOOM), (SAVE_ID, SAVE)];
+        self.focus.sync(self.layers.focus_entries(base));
+    }
+
+    fn event(&mut self, event: &Event) {
+        match self.layers.handle(event, &mut self.focus) {
+            LayerEvent::Consumed | LayerEvent::Dismissed { deliver: false, .. } => {
+                self.state.sync(&self.layers);
+                self.frame();
+                return;
+            }
+            LayerEvent::Dismissed { deliver: true, .. } => {
+                self.state.sync(&self.layers);
+            }
+            LayerEvent::Pass => {}
+        }
+        if let Event::Mouse(mouse) = event {
+            let at = (mouse.column, mouse.row);
+            if contains(ZOOM, at) {
+                self.state
+                    .toggle(&mut self.layers, &mut self.focus, ZOOM, Some(ANCHOR_ID));
+            } else if contains(SAVE, at) {
+                self.saved += 1;
+            }
+        }
+        self.frame();
+    }
+
+    fn press(&mut self, column: u16, row: u16) {
+        self.event(&Event::Mouse(MouseEvent::new(
+            MouseKind::Down(MouseButton::Left),
+            column,
+            row,
+        )));
+    }
+}
+
+fn contains(area: Rect, (column, row): (u16, u16)) -> bool {
+    column >= area.x && column - area.x < area.width && row >= area.y && row - area.y < area.height
 }
 
 #[test]
-fn a_click_inside_keeps_it_open_and_one_outside_closes_it() {
-    let mut state = PopoverState::new();
-    state.open();
-    let panel = Some(Rect::new(2, 2, 8, 4));
-    assert_eq!(state.click(9, 5, ZOOM, panel), PopoverClick::Inside);
-    assert!(state.is_open());
-    assert_eq!(state.click(10, 5, ZOOM, panel), PopoverClick::Outside);
-    assert!(!state.is_open());
-    assert_eq!(
-        state.click(9, 5, ZOOM, panel),
-        PopoverClick::Outside,
-        "closed: nothing inside"
+fn a_press_on_the_anchor_opens_it_and_a_second_closes_it() {
+    assert_eq!(PopoverState::new(), PopoverState::default());
+    let mut screen = Screen::new();
+    assert!(!screen.state.is_open());
+    screen.press(3, 1);
+    assert!(screen.state.is_open());
+    assert_eq!(screen.layers.len(), 1);
+    screen.press(5, 1);
+    assert!(
+        !screen.state.is_open(),
+        "the anchor closes it rather than reopening it"
     );
-    assert!(!state.is_open());
-    assert_eq!(
-        state.click(1, 1, ZOOM, panel),
-        PopoverClick::Outside,
-        "left of the anchor"
-    );
-    assert_eq!(
-        state.click(6, 1, ZOOM, panel),
-        PopoverClick::Outside,
-        "right of the anchor"
-    );
-    assert_eq!(
-        state.click(3, 2, ZOOM, None),
-        PopoverClick::Outside,
-        "under the anchor"
-    );
-    assert_eq!(
-        state.click(3, 0, ZOOM, None),
-        PopoverClick::Outside,
-        "over the anchor"
-    );
+    assert!(screen.layers.is_empty());
 }
 
 #[test]
-fn close_and_toggle_work_without_a_click() {
-    let mut state = PopoverState::new();
-    state.toggle();
-    assert!(state.is_open());
-    state.close();
-    assert!(!state.is_open());
-    state.toggle();
-    state.toggle();
-    assert!(!state.is_open());
+fn a_press_inside_keeps_it_open_and_one_outside_closes_it_and_still_lands()
+-> Result<(), &'static str> {
+    let mut screen = Screen::new();
+    screen.press(3, 1);
+    let panel = zoom(ZOOM).area(SCREEN).ok_or("the popover fits")?;
+    screen.press(panel.x + 1, panel.y + 1);
+    assert!(screen.state.is_open());
+    screen.press(15, 7);
+    assert!(!screen.state.is_open());
+    assert_eq!(
+        screen.saved, 1,
+        "the press that closed it also pressed Save"
+    );
+    Ok(())
+}
+
+#[test]
+fn esc_closes_it_and_gives_focus_back_to_the_anchor() {
+    let mut screen = Screen::new();
+    screen.focus.focus(SAVE_ID);
+    screen.press(3, 1);
+    assert!(screen.state.is_open());
+    screen.event(&Event::Key(KeyEvent::press(KeyCode::Esc)));
+    assert!(!screen.state.is_open());
+    assert!(screen.layers.is_empty());
+    assert_eq!(screen.focus.focused(), Some(ANCHOR_ID));
 }

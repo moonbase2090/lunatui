@@ -19,6 +19,7 @@ lunatui-widgets = { version = "0.1.29", path = "../lunatui-widgets", features = 
 lunatui-badge = { version = "0.1.29", path = "../lunatui-badge" }
 lunatui-button = { version = "0.1.29", path = "../lunatui-button" }
 lunatui-card = { version = "0.1.29", path = "../lunatui-card" }
+lunatui-runtime = { version = "0.1.29", path = "../lunatui-runtime" }
 lunatui-term = { version = "0.1.29", path = "../lunatui-term" }
 lunatui-theme = { version = "0.1.29", path = "../lunatui-theme" }
 

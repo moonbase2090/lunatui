@@ -336,40 +336,38 @@ impl LayerStack {
         entries
     }
 
-    /// Decides what a pointer press at `(column, row)` does. A press inside the topmost layer or
-    /// on its anchor is delivered. Outside it, a topmost layer that outside presses dismiss is
-    /// dismissed. While any modal layer is open nothing below the top is reachable: the press is
-    /// delivered only when it falls inside the topmost modal, and otherwise it is consumed or
-    /// blocked.
+    /// Decides what a pointer press at `(column, row)` does, looking down from the top layer. A
+    /// press inside a layer or on its anchor is delivered. Above that, the first layer that
+    /// outside presses dismiss is dismissed. A layer that ignores outside presses, such as a toast
+    /// stack, lets the press fall through to the layers below it. While a modal layer is open
+    /// nothing below it is reachable: a press outside it is consumed or blocked.
     #[must_use]
     pub fn route_press(&self, column: u16, row: u16) -> PressRoute {
-        let Some(top) = self.layers.last() else {
-            return PressRoute::Deliver;
-        };
-        let on_anchor = top
-            .layer
-            .anchor
-            .is_some_and(|anchor| contains(anchor, column, row));
-        if on_anchor || contains(top.layer.area, column, row) {
-            return PressRoute::Deliver;
-        }
         let in_modal = self
             .layers
             .iter()
             .rfind(|entry| entry.layer.modal)
             .map(|entry| contains(entry.layer.area, column, row));
         let reachable = in_modal.unwrap_or(true);
-        if top.layer.outside {
-            return PressRoute::Dismiss {
-                layer: top.id,
-                deliver: reachable,
-            };
+        for entry in self.layers.iter().rev() {
+            let layer = &entry.layer;
+            let on_anchor = layer
+                .anchor
+                .is_some_and(|anchor| contains(anchor, column, row));
+            if on_anchor || contains(layer.area, column, row) {
+                return PressRoute::Deliver;
+            }
+            if layer.outside {
+                return PressRoute::Dismiss {
+                    layer: entry.id,
+                    deliver: reachable,
+                };
+            }
+            if layer.modal {
+                return PressRoute::Block;
+            }
         }
-        if reachable {
-            PressRoute::Deliver
-        } else {
-            PressRoute::Block
-        }
+        PressRoute::Deliver
     }
 
     /// The layer an Esc press dismisses: the topmost layer Esc dismisses, unless a modal layer
@@ -622,6 +620,23 @@ mod tests {
         assert!(!slot.close(&mut layers, &mut focus));
         assert!(layers.is_empty());
         assert_eq!(focus.focused(), Some(OTHER));
+    }
+
+    #[test]
+    fn a_toast_layer_above_a_popover_lets_outside_presses_close_the_popover() {
+        let toast_area = Rect::new(40, 0, 10, 2);
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let menu = layers.push(Layer::popover(AREA));
+        layers.push(Layer::popover(toast_area).dismissable(false));
+        assert_eq!(layers.handle(&press(41, 1), &mut focus), LayerEvent::Pass);
+        assert_eq!(
+            layers.handle(&press(0, 0), &mut focus),
+            LayerEvent::Dismissed {
+                layer: menu,
+                deliver: true
+            }
+        );
     }
 
     #[test]
