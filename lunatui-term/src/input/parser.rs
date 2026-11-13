@@ -31,10 +31,12 @@ pub enum Event {
     Paste(Paste),
     /// Focus in or out.
     Focus(Focus),
+    /// The terminal changed size to this many columns and rows.
+    Resize(u16, u16),
 }
 
 impl Event {
-    /// Bytes that [`Parser`] decodes back to this event.
+    /// Bytes that [`Parser`] decodes back to this event. A [`Event::Resize`] has no byte form and encodes to nothing.
     #[must_use]
     pub fn encode(&self) -> Vec<u8> {
         match self {
@@ -43,6 +45,7 @@ impl Event {
             Self::Paste(paste) => encode_paste(paste),
             Self::Focus(Focus::In) => b"\x1b[I".to_vec(),
             Self::Focus(Focus::Out) => b"\x1b[O".to_vec(),
+            Self::Resize(..) => Vec::new(),
         }
     }
 }
@@ -169,7 +172,7 @@ fn bounded(events: &[Event]) -> bool {
             .text
             .as_ref()
             .is_none_or(|text| text.len() <= MAX_PENDING),
-        Event::Mouse(_) | Event::Paste(_) | Event::Focus(_) => true,
+        Event::Mouse(_) | Event::Paste(_) | Event::Focus(_) | Event::Resize(..) => true,
     })
 }
 

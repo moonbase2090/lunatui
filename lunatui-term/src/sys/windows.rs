@@ -56,7 +56,7 @@ pub fn map_event(raw: CrosstermEvent) -> Option<Event> {
         CrosstermEvent::Paste(text) => Some(Event::Paste(crate::input::Paste::Chunk(text))),
         CrosstermEvent::FocusGained => Some(Event::Focus(Focus::In)),
         CrosstermEvent::FocusLost => Some(Event::Focus(Focus::Out)),
-        CrosstermEvent::Resize(_, _) => None,
+        CrosstermEvent::Resize(columns, rows) => Some(Event::Resize(columns, rows)),
     }
 }
 

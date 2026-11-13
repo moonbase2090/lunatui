@@ -61,6 +61,7 @@ fn switching_saturation_to_latency_finishes_upload_before_the_new_title_and_reti
         clusters: ClusterTable::new(),
         encoder: Encoder::new(),
         last_palette: None,
+        repaint: false,
         images: PixelLayer::from_caps(&caps),
     };
     let mut app = ChartSwitch {
@@ -188,6 +189,7 @@ fn immediate_image_repaints_blank_cells(
         clusters: ClusterTable::new(),
         encoder: Encoder::new(),
         last_palette: None,
+        repaint: false,
         images: PixelLayer::from_caps(&caps),
     };
     let mut app = ImageSwitch {
