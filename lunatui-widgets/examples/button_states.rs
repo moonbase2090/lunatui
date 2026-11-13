@@ -1,12 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Writes a PPM of four buttons: hover, pressed, invalid, and open.
-//!
-//! ```text
-//! cargo run -p lunatui-widgets --example button_states --features button > button-states.ppm
-//! ```
-
 use std::io::{self, Write};
 
 use lunatui_core::{Cell, Color, Grid, Rect, Style};
