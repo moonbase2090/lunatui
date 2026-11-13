@@ -4,9 +4,11 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Style};
+use lunatui_runtime::{FocusManager, HitId, LayerEvent, LayerStack};
+use lunatui_term::{Event, KeyCode, KeyEvent, MouseButton, MouseEvent, MouseKind};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
-    Dialog, DialogFocus, DialogKind, DialogOutcome, DialogState, FocusTrap, RenderCx, Widget,
+    Dialog, DialogClosed, DialogFocus, DialogKind, DialogOutcome, DialogState, RenderCx, Widget,
 };
 
 const DELETE: &str = "Delete feature/login? Its 3 unmerged commits will be lost.";
@@ -46,10 +48,85 @@ fn delete() -> Dialog<'static> {
         .destructive(true)
 }
 
-fn opened(kind: DialogKind, restore: Option<u32>) -> DialogState {
+fn opened(kind: DialogKind) -> DialogState {
     let mut state = DialogState::new();
-    state.open(kind, restore);
+    state.open(kind, &mut LayerStack::new(), None);
     state
+}
+
+const SCREEN: Rect = Rect::new(0, 0, 44, 12);
+const OPENER: HitId = HitId(1);
+const LIST: HitId = HitId(2);
+
+struct Screen {
+    layers: LayerStack,
+    focus: FocusManager,
+    state: DialogState,
+    answers: Vec<DialogOutcome>,
+    list_presses: u32,
+}
+
+impl Screen {
+    fn with_open(kind: DialogKind) -> Self {
+        let mut screen = Self {
+            layers: LayerStack::new(),
+            focus: FocusManager::new(),
+            state: DialogState::new(),
+            answers: Vec::new(),
+            list_presses: 0,
+        };
+        screen.frame();
+        screen.focus.focus(LIST);
+        screen
+            .state
+            .open(kind, &mut screen.layers, screen.focus.focused());
+        screen.frame();
+        screen
+    }
+
+    fn frame(&mut self) {
+        if self.state.is_open() {
+            self.state.place(&mut self.layers, delete().area(SCREEN));
+        }
+        let base = vec![
+            (OPENER, Rect::new(0, 0, 4, 1)),
+            (LIST, Rect::new(0, 1, 44, 10)),
+        ];
+        self.focus.sync(self.layers.focus_entries(base));
+    }
+
+    fn answered(&mut self, closed: Option<DialogClosed>) {
+        self.answers.extend(closed.map(|closed| closed.outcome()));
+    }
+
+    fn event(&mut self, event: &Event) {
+        let route = self.layers.handle(event, &mut self.focus);
+        let closed = self.state.sync(&self.layers);
+        self.answered(closed);
+        let deliver = match route {
+            LayerEvent::Pass => true,
+            LayerEvent::Consumed => false,
+            LayerEvent::Dismissed { deliver, .. } => deliver,
+        };
+        if deliver && let Event::Mouse(mouse) = event {
+            if self.state.is_open() {
+                let target = delete().control_at(SCREEN, mouse.column, mouse.row);
+                let closed = self.state.click(target, &mut self.layers, &mut self.focus);
+                self.answered(closed);
+            } else if mouse.row >= 1 {
+                self.list_presses += 1;
+            }
+        }
+        self.frame();
+    }
+
+    fn press(&mut self, column: u16, row: u16) {
+        self.event(&Event::Mouse(MouseEvent::new(
+            MouseKind::Down(MouseButton::Left),
+            column,
+            row,
+        )));
+    }
 }
 
 #[test]
@@ -79,7 +156,7 @@ fn confirm_wraps_the_message_and_right_aligns_its_buttons() {
 
 #[test]
 fn prompt_shows_its_field_between_the_message_and_buttons() {
-    let state = opened(DialogKind::Prompt, None);
+    let state = opened(DialogKind::Prompt);
     let prompt = Dialog::prompt("Rename", "New name for the branch:", "login-form", 10)
         .width(30)
         .state(&state);
@@ -142,7 +219,7 @@ fn focused_and_destructive_buttons_take_their_tokens() {
     assert_eq!(style_at(&grid, 27, 7).bg, token(Token::Fail));
     assert_eq!(style_at(&grid, 26, 7).bg, token(Token::Surface1));
 
-    let mut state = opened(DialogKind::Confirm, None);
+    let mut state = opened(DialogKind::Confirm);
     state.previous();
     let (grid, _) = draw(&delete().state(&state), 44, 12);
     assert_eq!(style_at(&grid, 17, 7).bg, token(Token::FocusRing));
@@ -162,7 +239,7 @@ fn focused_and_destructive_buttons_take_their_tokens() {
 
 #[test]
 fn prompt_field_draws_its_caret_placeholder_and_scrolls_to_the_caret() {
-    let state = opened(DialogKind::Prompt, None);
+    let state = opened(DialogKind::Prompt);
     let field = |text: &'static str, caret: usize| {
         Dialog::prompt("Rename", "Name:", text, caret)
             .placeholder("branch name")
@@ -190,7 +267,7 @@ fn prompt_field_draws_its_caret_placeholder_and_scrolls_to_the_caret() {
     let end = style_at(&grid, 15, 4);
     assert_eq!(end.bg, token(Token::FocusRing));
 
-    let mut away = opened(DialogKind::Prompt, None);
+    let mut away = opened(DialogKind::Prompt);
     away.next();
     let unfocused = Dialog::prompt("Rename", "Name:", "login", 2)
         .width(20)
@@ -245,19 +322,10 @@ fn control_at_finds_buttons_and_the_field() {
 
 #[test]
 fn open_focuses_the_field_or_the_confirm_button() {
-    assert_eq!(opened(DialogKind::Prompt, None).focus(), DialogFocus::Input);
-    assert_eq!(
-        opened(DialogKind::Confirm, None).focus(),
-        DialogFocus::Confirm
-    );
-    assert_eq!(
-        opened(DialogKind::Alert, None).focus(),
-        DialogFocus::Confirm
-    );
-    assert_eq!(
-        opened(DialogKind::Prompt, None).kind(),
-        Some(DialogKind::Prompt)
-    );
+    assert_eq!(opened(DialogKind::Prompt).focus(), DialogFocus::Input);
+    assert_eq!(opened(DialogKind::Confirm).focus(), DialogFocus::Confirm);
+    assert_eq!(opened(DialogKind::Alert).focus(), DialogFocus::Confirm);
+    assert_eq!(opened(DialogKind::Prompt).kind(), Some(DialogKind::Prompt));
     let closed = DialogState::new();
     assert!(!closed.is_open());
     assert_eq!(closed.kind(), None);
@@ -265,7 +333,7 @@ fn open_focuses_the_field_or_the_confirm_button() {
 
 #[test]
 fn tab_cycles_inside_the_dialog_in_both_directions() {
-    let mut state = opened(DialogKind::Prompt, None);
+    let mut state = opened(DialogKind::Prompt);
     let mut forward = Vec::new();
     for _ in 0..4 {
         state.next();
@@ -294,13 +362,13 @@ fn tab_cycles_inside_the_dialog_in_both_directions() {
         ]
     );
 
-    let mut confirm = opened(DialogKind::Confirm, None);
+    let mut confirm = opened(DialogKind::Confirm);
     confirm.next();
     assert_eq!(confirm.focus(), DialogFocus::Cancel);
     confirm.next();
     assert_eq!(confirm.focus(), DialogFocus::Confirm);
 
-    let mut alert = opened(DialogKind::Alert, None);
+    let mut alert = opened(DialogKind::Alert);
     alert.previous();
     assert_eq!(alert.focus(), DialogFocus::Confirm);
 
@@ -311,7 +379,7 @@ fn tab_cycles_inside_the_dialog_in_both_directions() {
 
 #[test]
 fn set_focus_only_reaches_controls_the_dialog_has() {
-    let mut confirm = opened(DialogKind::Confirm, None);
+    let mut confirm = opened(DialogKind::Confirm);
     assert!(!confirm.set_focus(DialogFocus::Input));
     assert_eq!(confirm.focus(), DialogFocus::Confirm);
     assert!(confirm.set_focus(DialogFocus::Cancel));
@@ -320,72 +388,118 @@ fn set_focus_only_reaches_controls_the_dialog_has() {
 }
 
 #[test]
-fn answering_closes_and_hands_back_the_focus_to_restore() -> Result<(), Box<dyn std::error::Error>>
-{
-    let mut state = opened(DialogKind::Confirm, Some(7));
-    assert_eq!(state.focus_trap(), FocusTrap::enabled());
-    let closed = state.activate().ok_or("open dialog closes")?;
+fn answering_reports_the_outcome_once() -> Result<(), Box<dyn std::error::Error>> {
+    let (mut layers, mut focus) = (LayerStack::new(), FocusManager::new());
+    let mut state = opened(DialogKind::Confirm);
+    let closed = state
+        .activate(&mut layers, &mut focus)
+        .ok_or("open dialog closes")?;
     assert_eq!(closed.outcome(), DialogOutcome::Confirmed);
-    assert_eq!(closed.restore(), Some(7));
     assert!(!state.is_open());
-    assert_eq!(state.focus_trap(), FocusTrap::disabled());
-    assert_eq!(state.activate(), None);
-    assert_eq!(state.cancel(), None);
+    assert_eq!(state.activate(&mut layers, &mut focus), None);
 
-    let mut cancel = opened(DialogKind::Confirm, Some(3));
+    let mut cancel = opened(DialogKind::Confirm);
     cancel.next();
-    let closed = cancel.activate().ok_or("open dialog closes")?;
+    let closed = cancel
+        .activate(&mut layers, &mut focus)
+        .ok_or("open dialog closes")?;
     assert_eq!(closed.outcome(), DialogOutcome::Cancelled);
-    assert_eq!(closed.restore(), Some(3));
 
-    let mut field = opened(DialogKind::Prompt, None);
-    let closed = field.activate().ok_or("enter in the field confirms")?;
+    let mut field = opened(DialogKind::Prompt);
+    let closed = field
+        .activate(&mut layers, &mut focus)
+        .ok_or("enter in the field confirms")?;
     assert_eq!(closed.outcome(), DialogOutcome::Confirmed);
-    assert_eq!(closed.restore(), None);
+    Ok(())
+}
 
-    let mut escape = opened(DialogKind::Prompt, Some(9));
-    let closed = escape.cancel().ok_or("escape closes")?;
-    assert_eq!(closed.outcome(), DialogOutcome::Cancelled);
-    assert_eq!(closed.restore(), Some(9));
+#[test]
+fn esc_cancels_through_the_layer_stack_and_focus_returns_to_the_opener() {
+    let mut screen = Screen::with_open(DialogKind::Confirm);
+    assert_eq!(screen.layers.len(), 1);
+    assert_ne!(
+        screen.focus.focused(),
+        Some(LIST),
+        "Tab stays inside the dialog"
+    );
+    screen.event(&Event::Key(KeyEvent::press(KeyCode::Esc)));
+    assert!(!screen.state.is_open());
+    assert!(screen.layers.is_empty());
+    assert_eq!(screen.answers, vec![DialogOutcome::Cancelled]);
+    assert_eq!(screen.focus.focused(), Some(LIST));
+    screen.event(&Event::Key(KeyEvent::press(KeyCode::Esc)));
+    assert_eq!(
+        screen.answers.len(),
+        1,
+        "a second Esc has nothing to cancel"
+    );
+}
 
-    let mut reopened = opened(DialogKind::Alert, Some(1));
-    let _ = reopened.cancel();
-    reopened.open(DialogKind::Alert, None);
-    assert_eq!(reopened.cancel().and_then(|closed| closed.restore()), None);
+#[test]
+fn a_press_outside_leaves_the_dialog_open_and_never_reaches_the_screen() {
+    let mut screen = Screen::with_open(DialogKind::Confirm);
+    screen.press(1, 11);
+    assert!(screen.state.is_open());
+    assert_eq!(screen.list_presses, 0);
+    assert_eq!(screen.answers, Vec::new());
+}
+
+#[test]
+fn a_press_on_a_button_answers_and_gives_focus_back() -> Result<(), &'static str> {
+    let mut screen = Screen::with_open(DialogKind::Confirm);
+    let panel = delete().area(SCREEN);
+    let (column, row) = (panel.y..panel.y + panel.height)
+        .flat_map(|row| (panel.x..panel.x + panel.width).map(move |column| (column, row)))
+        .find(|(column, row)| {
+            delete().control_at(SCREEN, *column, *row) == Some(DialogFocus::Confirm)
+        })
+        .ok_or("the confirm button is drawn")?;
+    screen.press(column, row);
+    assert_eq!(screen.answers, vec![DialogOutcome::Confirmed]);
+    assert!(screen.layers.is_empty());
+    assert_eq!(screen.focus.focused(), Some(LIST));
+    screen.press(1, 5);
+    assert_eq!(screen.list_presses, 1, "the screen takes presses again");
     Ok(())
 }
 
 #[test]
 fn clicks_answer_with_buttons_focus_the_field_and_ignore_the_outside()
 -> Result<(), Box<dyn std::error::Error>> {
-    let mut state = opened(DialogKind::Prompt, Some(2));
+    let (mut layers, mut focus) = (LayerStack::new(), FocusManager::new());
+    let mut state = opened(DialogKind::Prompt);
     state.next();
-    assert_eq!(state.click(None), None);
+    assert_eq!(state.click(None, &mut layers, &mut focus), None);
     assert!(state.is_open());
-    assert_eq!(state.click(Some(DialogFocus::Input)), None);
+    assert_eq!(
+        state.click(Some(DialogFocus::Input), &mut layers, &mut focus),
+        None
+    );
     assert_eq!(state.focus(), DialogFocus::Input);
     let closed = state
-        .click(Some(DialogFocus::Cancel))
+        .click(Some(DialogFocus::Cancel), &mut layers, &mut focus)
         .ok_or("cancel closes")?;
     assert_eq!(closed.outcome(), DialogOutcome::Cancelled);
-    assert_eq!(closed.restore(), Some(2));
 
-    let mut confirm = opened(DialogKind::Confirm, None);
+    let mut confirm = opened(DialogKind::Confirm);
     confirm.next();
     let closed = confirm
-        .click(Some(DialogFocus::Confirm))
+        .click(Some(DialogFocus::Confirm), &mut layers, &mut focus)
         .ok_or("confirm closes")?;
     assert_eq!(closed.outcome(), DialogOutcome::Confirmed);
 
-    let mut alert = opened(DialogKind::Alert, None);
-    assert_eq!(alert.click(Some(DialogFocus::Cancel)), None);
+    let mut alert = opened(DialogKind::Alert);
+    assert_eq!(
+        alert.click(Some(DialogFocus::Cancel), &mut layers, &mut focus),
+        None
+    );
     assert!(alert.is_open());
     Ok(())
 }
 
 #[test]
 fn state_shows_only_focus_the_dialog_has() {
-    let confirm = opened(DialogKind::Prompt, None);
+    let confirm = opened(DialogKind::Prompt);
     let (grid, _) = draw(&delete().state(&confirm), 44, 12);
     assert_eq!(style_at(&grid, 29, 7).bg, token(Token::Fail));
     assert_eq!(style_at(&grid, 17, 7).bg, token(Token::Surface0));
@@ -431,7 +545,7 @@ fn clips_a_button_label_inside_its_padding() {
 
 #[test]
 fn caret_inside_a_character_moves_to_its_start() {
-    let state = opened(DialogKind::Prompt, None);
+    let state = opened(DialogKind::Prompt);
     let prompt = Dialog::prompt("Rename", "Name:", "née", 2)
         .width(20)
         .state(&state);

@@ -6,15 +6,7 @@
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_test::styled_snapshot;
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{Block, FocusTrap, Overlay, RenderCx, Widget, blend_rgb};
-
-#[test]
-fn focus_trap_filters_tab_order() {
-    let trap = FocusTrap::enabled();
-    let scope = [2_u32, 3];
-    let order = [1, 2, 3, 4];
-    assert_eq!(trap.filter_tab_order(&scope, &order), vec![2, 3]);
-}
+use lunatui_widgets::{Block, Overlay, RenderCx, Widget, blend_rgb};
 
 #[test]
 fn blend_rgb_midpoint() {

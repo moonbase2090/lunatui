@@ -2290,12 +2290,16 @@ const DIALOG_BEHIND: &str = "main\nfeature/login\nfeature/search\nfix/cache-head
 const DIALOG_MESSAGE: &str = "Delete feature/login? Its 3 unmerged commits will be lost.";
 
 fn dialog_state(tick: u32) -> DialogState {
-    let mut state = DialogState::new();
-    state.open(DialogKind::Confirm, None);
-    if (tick / 30) % 2 == 1 {
-        state.next();
-    }
-    state
+    static STATES: OnceLock<[DialogState; 2]> = OnceLock::new();
+    let states = STATES.get_or_init(|| {
+        let mut layers = lunatui_runtime::LayerStack::new();
+        let mut confirm = DialogState::new();
+        confirm.open(DialogKind::Confirm, &mut layers, None);
+        let mut cancel = confirm;
+        cancel.next();
+        [confirm, cancel]
+    });
+    states[usize::from((tick / 30) % 2 == 1)]
 }
 
 fn dialog_widget(state: &DialogState) -> Dialog<'static> {

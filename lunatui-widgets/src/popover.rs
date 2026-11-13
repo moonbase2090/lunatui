@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Rect, Size, Style};
+use lunatui_runtime::{FocusManager, HitId, Layer, LayerId, LayerSlot, LayerStack};
 
 use crate::anchor::{AnchorSide, place};
-use crate::overlay::FocusTrap;
 use crate::render_cx::clip_to_coordinates;
 use crate::{BorderType, Popup, RenderCx, Widget, WidgetState};
 
@@ -33,9 +33,7 @@ impl<W> Popover<W> {
     #[must_use]
     pub fn new(content: W, anchor: Rect) -> Self {
         Self {
-            popup: Popup::new(content)
-                .backdrop(0.0)
-                .focus_trap(FocusTrap::disabled()),
+            popup: Popup::new(content).backdrop(0.0),
             anchor,
             side: AnchorSide::Below,
         }
@@ -129,76 +127,78 @@ impl<W: Widget> Widget for Popover<W> {
     }
 }
 
-/// Where a click landed, as [`PopoverState::click`] saw it.
-#[non_exhaustive]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PopoverClick {
-    /// On the anchor: the popover opened or closed.
-    Anchor,
-    /// Inside the open popover: it stays open and the click belongs to its content.
-    Inside,
-    /// Anywhere else: an open popover closed.
-    Outside,
-}
-
 /// Whether a [`Popover`] is open, kept by the app between frames.
 ///
-/// A click on the anchor opens or closes it, a click inside keeps it open, and a click anywhere
-/// else closes it, as does [`close`](Self::close) for Escape.
+/// The popover is a non-modal layer in the app's [`LayerStack`]: [`toggle`](Self::toggle) opens
+/// it from its anchor and closes it again, and the stack's [`handle`](LayerStack::handle)
+/// closes it on Esc or a press outside it and gives focus back to the anchor. Call
+/// [`sync`](Self::sync) after `handle` to learn that it closed, and [`place`](Self::place) each
+/// frame with the panel from [`Popover::area`] so presses inside it reach its content.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PopoverState {
-    open: bool,
+    slot: LayerSlot,
 }
 
 impl PopoverState {
     /// A closed popover.
     #[must_use]
     pub const fn new() -> Self {
-        Self { open: false }
+        Self {
+            slot: LayerSlot::new(),
+        }
     }
 
     /// Whether the popover is open.
     #[must_use]
     pub const fn is_open(&self) -> bool {
-        self.open
+        self.slot.is_open()
     }
 
-    /// Opens the popover.
-    pub fn open(&mut self) {
-        self.open = true;
+    /// The popover's layer while it is open.
+    #[must_use]
+    pub const fn layer(&self) -> Option<LayerId> {
+        self.slot.id()
     }
 
-    /// Closes the popover.
-    pub fn close(&mut self) {
-        self.open = false;
+    /// Opens the popover above every other layer. A press on `anchor` reaches the anchor
+    /// instead of closing the popover, and `opener`, the anchor's id, gets focus back when it
+    /// closes.
+    pub fn open(&mut self, layers: &mut LayerStack, anchor: Rect, opener: Option<HitId>) {
+        let mut layer = Layer::popover(Rect::new(0, 0, 0, 0)).anchor(anchor);
+        if let Some(opener) = opener {
+            layer = layer.return_focus(opener);
+        }
+        self.slot.open(layers, layer);
     }
 
-    /// Opens a closed popover and closes an open one.
-    pub fn toggle(&mut self) {
-        self.open = !self.open;
+    /// Closes the popover and gives focus back to its opener.
+    pub fn close(&mut self, layers: &mut LayerStack, focus: &mut FocusManager) {
+        self.slot.close(layers, focus);
     }
 
-    /// Handles a click at `(column, row)`, given the `anchor` and, while it is drawn, the
-    /// `panel` from [`Popover::area`].
-    pub fn click(
+    /// Opens a closed popover and closes an open one, as a press on its anchor does.
+    pub fn toggle(
         &mut self,
-        column: u16,
-        row: u16,
+        layers: &mut LayerStack,
+        focus: &mut FocusManager,
         anchor: Rect,
-        panel: Option<Rect>,
-    ) -> PopoverClick {
-        if contains(anchor, column, row) {
-            self.toggle();
-            return PopoverClick::Anchor;
+        opener: Option<HitId>,
+    ) {
+        if self.slot.sync(layers) || !self.is_open() {
+            self.open(layers, anchor, opener);
+        } else {
+            self.close(layers, focus);
         }
-        if self.open && panel.is_some_and(|panel| contains(panel, column, row)) {
-            return PopoverClick::Inside;
-        }
-        self.close();
-        PopoverClick::Outside
     }
-}
 
-fn contains(area: Rect, column: u16, row: u16) -> bool {
-    column >= area.x && column - area.x < area.width && row >= area.y && row - area.y < area.height
+    /// Whether the stack closed the popover since the last call, on Esc or an outside press.
+    pub fn sync(&mut self, layers: &LayerStack) -> bool {
+        self.slot.sync(layers)
+    }
+
+    /// Records the cells the panel covers this frame, from [`Popover::area`].
+    pub fn place(&self, layers: &mut LayerStack, panel: Option<Rect>) {
+        self.slot
+            .place(layers, panel.unwrap_or(Rect::new(0, 0, 0, 0)));
+    }
 }

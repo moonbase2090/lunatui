@@ -81,9 +81,17 @@ impl HitMap {
     /// Returns the topmost hit at `(column, row)`, if any.
     #[must_use]
     pub fn pick(&self, column: u16, row: u16) -> Option<HitId> {
+        self.pick_from(column, row, 0)
+    }
+
+    /// Returns the topmost hit at `(column, row)` among regions with `z` of at least `floor`.
+    /// [`LayerStack::pick`](crate::LayerStack::pick) uses it to keep presses inside an open modal
+    /// and the layers above it.
+    #[must_use]
+    pub fn pick_from(&self, column: u16, row: u16, floor: u16) -> Option<HitId> {
         let mut best: Option<&HitRegion> = None;
         for region in &self.regions {
-            if !contains(region.area, column, row) {
+            if region.z < floor || !contains(region.area, column, row) {
                 continue;
             }
             best = Some(match best {

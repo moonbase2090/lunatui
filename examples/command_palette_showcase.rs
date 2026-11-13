@@ -3,7 +3,8 @@
 
 use lunatui_core::{Attrs, ClusterTable, Grid, Rect, Style};
 use lunatui_runtime::keymap::{Command, KeyChord};
-use lunatui_term::{KeyCode, Modifiers};
+use lunatui_runtime::{FocusManager, HitId, Layer, LayerEvent, LayerSlot, LayerStack};
+use lunatui_term::{Event, KeyCode, KeyEvent, Modifiers};
 use lunatui_theme::{Theme, Token};
 use lunatui_widgets::{
     Block, BorderType, CommandPalette, PaletteEntry, Paragraph, RenderCx, SearchBox, Widget,
@@ -64,8 +65,12 @@ const SCRIPT: [(u32, Key); 14] = [
     (299, Key::Escape),
 ];
 
+const EDITOR: HitId = HitId(1);
+
 struct App {
-    open: bool,
+    palette: LayerSlot,
+    layers: LayerStack,
+    focus: FocusManager,
     query: String,
     selected: Option<usize>,
     file: &'static str,
@@ -74,24 +79,40 @@ struct App {
 }
 impl App {
     fn new() -> Self {
-        Self {
-            open: true,
+        let mut app = Self {
+            palette: LayerSlot::new(),
+            layers: LayerStack::new(),
+            focus: FocusManager::new(),
             query: String::new(),
             selected: Some(0),
             file: "src/main.rs",
             split: false,
             note: "Palette has focus · type a command",
-        }
+        };
+        app.focus.sync(vec![(EDITOR, Rect::new(0, 0, 1, 1))]);
+        app.palette.open(
+            &mut app.layers,
+            Layer::modal(Rect::new(0, 0, 0, 0)).return_focus(EDITOR),
+        );
+        app
     }
+
+    fn is_open(&self) -> bool {
+        self.palette.is_open()
+    }
+
     fn press(&mut self, key: Key) {
         if let Key::Open = key {
-            self.open = true;
+            self.palette.open(
+                &mut self.layers,
+                Layer::modal(Rect::new(0, 0, 0, 0)).return_focus(EDITOR),
+            );
             self.query.clear();
             self.selected = Some(0);
             self.note = "Palette has focus · type a command";
             return;
         }
-        if !self.open {
+        if !self.is_open() {
             return;
         }
         match key {
@@ -128,12 +149,16 @@ impl App {
                         }
                         _ => self.note = "Command completed · focus back on editor",
                     }
-                    self.open = false;
+                    self.palette.close(&mut self.layers, &mut self.focus);
                 }
             }
             Key::Escape => {
-                self.open = false;
-                self.note = "Cancelled palette · focus back on editor";
+                let esc = Event::Key(KeyEvent::press(KeyCode::Esc));
+                if let LayerEvent::Dismissed { .. } = self.layers.handle(&esc, &mut self.focus)
+                    && self.palette.sync(&self.layers)
+                {
+                    self.note = "Cancelled palette · focus back on editor";
+                }
             }
             Key::Open => {}
         }
@@ -191,7 +216,7 @@ pub(super) fn render(
         Rect::new(area.x + 2, area.y + area.height - 2, area.width - 4, 1),
         &mut cx,
     );
-    if app.open {
+    if app.is_open() {
         let hints: Vec<String> = COMMANDS
             .iter()
             .map(|command| {

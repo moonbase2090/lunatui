@@ -8,6 +8,17 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `LayerStack::handle(&event, &mut focus)` is the one place that turns Esc and pointer presses into dismissals. Esc closes the top layer that Esc dismisses; a press outside a popover or drop-down closes it and is still handled; a press outside a modal layer such as a dialog or the command palette is dropped and the modal stays open. A closed layer gives focus back to its opener through the new `FocusManager::restore`, which applies at the next `sync` when the opener is not registered yet. `LayerSlot` tracks one overlay's layer, and `Layer::anchor` and `Layer::outside_press` set a layer's anchor rectangle and whether outside presses dismiss it. `LayerStack::pick` hit tests a delivered press without reaching regions under an open modal, through the new `HitMap::pick_from`.
+- `Select::layer`, `CommandPalette::layer` and `ToastStack::layer` give each overlay's layer for the app's `LayerStack`. Toasts sit in a layer that Esc and outside presses leave alone.
+
+### Changed
+
+- Breaking: dialogs and popovers open and close through the app's `LayerStack`. `DialogState::open` takes the stack and the opener's `HitId`, `activate` and `click` take the stack and the `FocusManager`, and `sync` reports a dialog that Esc cancelled. `DialogState::cancel`, `DialogState::focus_trap` and `DialogClosed::restore` are gone: Esc and focus return belong to the stack. `PopoverState::click` and `PopoverClick` are replaced by `toggle`, `close`, `sync` and `place`, and outside presses are the stack's. The `popup`, `select` and `toast` features now turn on `lunatui-runtime`.
+- Breaking: `FocusTrap`, `Overlay::focus_trap`, `Overlay::traps_focus`, `Popup::focus_trap` and `Popup::traps_focus` are removed. `LayerStack::focus_entries` keeps Tab inside the topmost modal layer instead, so there is no second id space for focus.
+- Breaking: `Layer::modal` is no longer dismissed by a press outside it; Esc still dismisses it, and `outside_press(true)` brings the old behaviour back. `LayerStack::route_press` now looks past layers that ignore outside presses, such as toasts, so a popover under a toast still closes on an outside press.
+
 ## [0.1.29] - 2026-11-12
 
 ### Added
