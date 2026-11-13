@@ -108,11 +108,6 @@ time = { version = "=0.3.55", default-features = false }
 name = "symbol_fonts"
 required-features = ["symbol-font-fallback"]
 
-[[example]]
-name = "button_states"
-required-features = ["button"]
-test = false
-
 [[test]]
 name = "layout_debug"
 path = "tests/layout_debug.rs"
