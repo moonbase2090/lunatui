@@ -48,7 +48,7 @@ pub use anim::{
 #[cfg(feature = "app")]
 pub use app::{App, ControlFlow, is_quit};
 #[cfg(feature = "app")]
-pub use focus::{FocusDirection, FocusManager};
+pub use focus::{FocusDirection, FocusGroup, FocusManager};
 #[cfg(feature = "image-presenter")]
 pub use frame::RenderFrame;
 #[cfg(feature = "accessibility")]
