@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.31] - 2026-11-13
+
 ### Added
 
 - `WidgetState` adds `Hover`, `Pressed`, `Invalid`, and `Open`. Each maps to an existing theme token (`focus.ring`, `surface.0`, `fail`, and `accent`). A button paints those states from the shared enum, and pointer and key events move it between hover and pressed.
