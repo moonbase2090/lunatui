@@ -16,6 +16,13 @@ pub use form::{FieldArea, Form};
 const MARKER: &str = " *";
 
 /// A label, a control widget, and a help or error line under it.
+///
+/// # Panics
+///
+/// Rendering panics when the selected accessible name is empty or whitespace,
+/// in every build profile and even without an attached hit map. An explicit
+/// [`name`](Self::name) overrides the label. Give blank labels a nonblank name
+/// before rendering or passing the field to [`Form::new`].
 #[derive(Clone)]
 pub struct Field<'a> {
     pub(crate) label: Cow<'a, str>,
@@ -36,6 +43,14 @@ pub struct Field<'a> {
 
 impl<'a> Field<'a> {
     /// A field with this label and no control, help or error.
+    /// Name validation is deferred so [`name`](Self::name) can follow this call.
+    ///
+    /// # Panics
+    ///
+    /// Rendering the returned field or passing it to [`Form::new`] panics if
+    /// its selected accessible name is empty or whitespace. This applies in
+    /// every build profile, including rendering without an attached hit map.
+    /// For a blank label, set a nonblank `.name()` before either operation.
     #[must_use]
     pub fn new(label: impl Into<Cow<'a, str>>) -> Self {
         Self {
@@ -64,6 +79,7 @@ impl<'a> Field<'a> {
     }
 
     /// A validation message under the control in the destructive color. It replaces the help.
+    /// An empty string clears the optional error and shows the help again.
     #[must_use]
     pub fn error(mut self, error: impl Into<Cow<'a, str>>) -> Self {
         let error = error.into();
@@ -164,7 +180,8 @@ impl<'a> Field<'a> {
     ///
     /// # Panics
     ///
-    /// Panics when neither a visible label nor an explicit name is nonempty.
+    /// Panics when the selected name is empty or whitespace. An explicit
+    /// [`name`](Self::name) overrides the label, even when that name is blank.
     #[must_use]
     pub fn accessible_name(&self) -> &str {
         let name = self.name.as_deref().unwrap_or(&self.label);
@@ -213,6 +230,10 @@ impl<'a> Field<'a> {
 }
 
 impl Widget for Field<'_> {
+    /// # Panics
+    ///
+    /// Panics if the selected accessible name is empty or whitespace, even
+    /// without a hit map. With a hit map, an explicit [`HitId`] is also required.
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let _ = self.accessible_name();
         if area.width == 0 || area.height == 0 {

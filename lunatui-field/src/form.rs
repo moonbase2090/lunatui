@@ -39,11 +39,19 @@ pub struct FieldArea {
 
 /// Labelled fields with a tab order, required markers, hints, and validation messages.
 ///
-/// The form lays the fields out and draws everything except the inputs: each field's label, its
-/// `*` when required, and the hint or error under it. The caller draws its own widgets (a text
-/// input, a toggle, a radio group) into the [`FieldArea::input`] rectangles from
-/// [`Form::layout`]. [`Form::step`] moves focus through the fields in tab order, wrapping around
-/// and skipping disabled fields.
+/// Each field's [`Field::body`] is rendered into its input rectangle. Callers
+/// can instead draw their own inputs into the rectangles from [`Form::layout`].
+/// [`Form::step`] moves focus through the fields, wrapping and skipping disabled
+/// fields.
+///
+/// # Panics
+///
+/// [`Form::new`] panics if a field's selected accessible name is empty or
+/// whitespace, even when the form will be drawn without a hit map. Set a
+/// nonblank [`Field::name`] for blank labels before constructing the form.
+/// Rendering with a hit map also requires each field to have an ID, supplied by
+/// [`Field::id`] or [`Form::first_id`]. Rendering panics if the base ID plus a
+/// field index overflows `u32`.
 #[derive(Clone)]
 pub struct Form<'a> {
     fields: Vec<Field<'a>>,
@@ -58,7 +66,10 @@ impl<'a> Form<'a> {
     ///
     /// # Panics
     ///
-    /// Panics if a field has neither a nonempty label nor an explicit name.
+    /// Panics if a field's selected accessible name is empty or whitespace.
+    /// An explicit [`Field::name`] overrides the label. This validation happens
+    /// at construction in every build profile, including forms that will be
+    /// drawn without an attached hit map.
     #[must_use]
     pub fn new(fields: impl IntoIterator<Item = Field<'a>>) -> Self {
         let fields: Vec<_> = fields.into_iter().collect();

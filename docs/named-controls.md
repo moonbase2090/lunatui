@@ -33,7 +33,11 @@ control.render(area, &mut cx);
 
 `NamedControl` uses the widget's visible control label and disabled state.
 For an icon or an unlabeled input, add `.name("Search")`. A text input's value
-never supplies its name. Empty names are hard errors in all build profiles.
+never supplies its name. Empty or whitespace-only names are hard errors in all
+build profiles, including plain rendering without an attached `HitMap`.
+`Field::new` defers validation so `.name()` can follow it; `Form::new` validates
+at construction, and standalone `Field` and `NamedControl` validate at render.
+An explicit name overrides the visible label and must itself be nonblank.
 The wrapper paints the same widget without additional chrome.
 
 Read `hits.controls()` for borrowed records with `id`, `name`, `role`, `disabled`,
@@ -57,7 +61,9 @@ Import `Field`, `Form` and `FieldArea` from `lunatui-field`. The old
 `Form<'a>` now borrows any body widgets held by its fields. Use `Form<'static>`
 for owned or static labels without borrowed bodies. `Field` remains cloneable
 and accepts borrowed or owned label/message strings; it is no longer `Copy`
-and its generic constructor is no longer a const function. `Form` remains
+and `new`, `help` and `error` are no longer const functions. Construct fields at
+runtime and clone them when reuse is needed. Empty `.error("")` clears the
+optional error and restores help. `Form` remains
 cloneable; its former structural equality derives do not apply to widget bodies.
 
 Pass each input with `.body(&input)` to have the form render it. Existing callers

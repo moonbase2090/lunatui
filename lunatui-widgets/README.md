@@ -60,7 +60,9 @@ See the [migration and registration guide](../docs/named-controls.md).
 `NamedControl` registers any labeled widget with the active `RenderCx::hit_map`
 without adding visual chrome. Names, roles, disabled state, depth and optional
 layer identity are queryable on the same map used for pointer routing. An
-unlabeled control requires `.name()`. Input values are not exported.
+unlabeled control requires a nonblank `.name()`. Rendering `NamedControl` with a
+blank selected name panics in every build profile, even without a hit map.
+Explicit names override labels. Input values are not exported.
 
 ![Real named Field controls](../docs/media/named-controls.gif)
 

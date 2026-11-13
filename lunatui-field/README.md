@@ -12,7 +12,10 @@ button sit in a field alike. All colors come from `lunatui-ui-tokens`.
 `Field` is the shared descriptor for a standalone stacked field and a row in
 `Form`. Add `.id(HitId(...))`, or set `Form::first_id`, and render through
 `RenderCx::hit_map` to register its accessible name, body role and disabled state.
-An empty visual label requires `.name()`. Input values are never exported.
+A blank visual label requires a nonblank `.name()`. This is a breaking hard
+error in every build profile, including plain rendering without a hit map.
+`Form::new` validates names at construction; standalone `Field` validates at
+render. Explicit names override labels. Input values are never exported.
 
 ![Real Field controls with changing focus, validation and a disabled field](../docs/media/named-controls.gif)
 

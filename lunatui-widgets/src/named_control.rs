@@ -8,6 +8,12 @@ use crate::{RenderCx, Widget};
 
 /// Registers an existing widget as a named control without drawing extra chrome.
 /// A widget's visible label supplies the name; otherwise `.name()` is required.
+///
+/// # Panics
+///
+/// Rendering panics if the selected name is empty or whitespace, in every build
+/// profile and even without an attached hit map. An explicit [`name`](Self::name)
+/// overrides the widget's label, so it must also be nonblank.
 pub struct NamedControl<'a> {
     body: &'a dyn Widget,
     id: HitId,
@@ -20,6 +26,12 @@ pub struct NamedControl<'a> {
 
 impl<'a> NamedControl<'a> {
     /// Wraps the exact widget whose cells and geometry will be registered.
+    ///
+    /// # Panics
+    ///
+    /// Rendering the returned control panics if its selected name is empty or
+    /// whitespace, even without an attached hit map. Set a nonblank `.name()`
+    /// before rendering when the body has no label.
     #[must_use]
     pub const fn new(id: HitId, role: AccessibilityRole, body: &'a dyn Widget) -> Self {
         Self {
@@ -63,6 +75,9 @@ impl<'a> NamedControl<'a> {
 }
 
 impl Widget for NamedControl<'_> {
+    /// # Panics
+    ///
+    /// Panics if the selected name is empty or whitespace, even without a hit map.
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let name = self.name.or_else(|| self.body.control_name()).unwrap_or("");
         assert!(
