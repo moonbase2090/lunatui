@@ -86,9 +86,15 @@ The tests render mixed real controls and drive pointer and Tab `Event`s. They
 check disabled nonactivation, focus, scoped duplicate names, missing-name errors,
 scroll/list clipping and exclusion of actual rendered values from exports.
 There is no time-dependent behavior or sleeping in those tests. The recording
-uses the example's injected virtual `Clock` to render sixty fixed frames, then
+uses the example's injected virtual `Clock` to render 300 fixed frames, then
 checks names, roles, disabled state, focus checkpoints and value exclusion in
-the actual JSON snapshots. The GIF rasterizes those real widget bytes.
+the actual JSON snapshots. It verifies partial typing, the invalid-email pause,
+the completed email, a disabled-field focus skip and saved copy in actual text
+output. The GIF rasterizes those real widget bytes with the pinned agg renderer.
+The decoded file must last 6 to 12 seconds, remain under 2 MB, contain at least 40
+distinct RGB frames, and show each off/on/off/on switch transition. A PNG still
+is extracted from the GIF during validation. Set `AGG` to the pinned renderer
+when another agg is first on your path.
 
 From a clean committed checkout, `check-named-controls.py` archives HEAD and
 verifies that the real assertions reject eight deliberate regressions: dropped

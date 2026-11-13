@@ -9,7 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_badge::Badge;
-use lunatui_button::{Button, Toggle, Variant, WidgetState};
+use lunatui_button::{Button, Variant, WidgetState};
 use lunatui_card::Card;
 use lunatui_core::{Attrs, ClusterTable, Grid, Rect, Size, Style};
 use lunatui_field::Field;
@@ -17,19 +17,23 @@ use lunatui_runtime::{AccessibilityRole, Clock, HitId, HitMap};
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Variant as ThemeVariant};
 use lunatui_ui_tokens::{Role, Tone, surface};
-use lunatui_widgets::{Block, NamedControl, Paragraph, RenderCx, TextInput, Widget};
+use lunatui_widgets::{Block, NamedControl, Paragraph, RenderCx, TextInput, Toggle, Widget};
 
 const NAME: &str = "Example user";
 const EMAIL: &str = "user@example.com";
-const SLOT: u32 = 90;
 
-fn typed(full: &str, tick: u32, from: usize, every: u32) -> &str {
-    let count = from + (tick / every) as usize;
+fn typed(full: &str, tick: u32, start: u32, every: u32) -> &str {
+    let count = (tick.saturating_sub(start) / every) as usize;
     &full[..count.min(full.len())]
 }
 
 fn focus_at(tick: u32) -> u32 {
-    [1, 2, 0][((tick / SLOT) % 3) as usize]
+    match tick {
+        0..75 => 0,
+        75..188 => 1,
+        188..264 => 2,
+        _ => 4,
+    }
 }
 
 struct Fixed<'a>(&'a dyn Widget, u16);
@@ -66,20 +70,26 @@ impl Widget for Profile {
         let tick = u32::try_from(self.clock.now().as_millis() / 33).unwrap_or(u32::MAX);
         let focus = focus_at(tick);
         let fill = surface(cx, Role::Background);
-        let name = NAME;
-        let email = typed(EMAIL, tick, 12, 4);
+        let name = typed(NAME, tick, 12, 4);
+        let email_chars = (tick.saturating_sub(90) / 4).min(5) + tick.saturating_sub(132) / 4;
+        let email = &EMAIL[..(email_chars as usize).min(EMAIL.len())];
         let email_done = email.len() == EMAIL.len();
-        let name_input = Self::input(fill, name, focus == 0);
-        let email_input = Self::input(fill, email, focus == 1);
-        let workspace = Self::input(fill, "ws-7f3a91", false);
-        let toggle = Toggle::new("Email me about deploys", tick >= SLOT + 40)
+        let cursor = tick % 24 < 15;
+        let name_input = Self::input(fill, name, focus == 0 && cursor);
+        let email_input = Self::input(fill, email, focus == 1 && cursor);
+        let workspace = Self::input(fill, "ws-7f3a91", false).style(
+            Style::new()
+                .fg(cx.token(Role::Muted.token()))
+                .with_attrs(Attrs::new().set_dim(true)),
+        );
+        let toggle = Toggle::new((205..228).contains(&tick) || tick >= 248)
+            .label("Email me about deploys")
             .state(if focus == 2 {
                 WidgetState::Focused
             } else {
                 WidgetState::Normal
-            })
-            .on(Role::Card);
-        let toggle = Fixed(&toggle, 26);
+            });
+        let toggle = Fixed(&toggle, 27);
         let mut email_field = Field::new("Email")
             .id(HitId(2))
             .required()
@@ -88,8 +98,8 @@ impl Widget for Profile {
             .body(&email_input);
         email_field = if email_done {
             email_field.help("Receipts and alerts go here")
-        } else if email.len() > 4 {
-            email_field.error("Enter a full address, like user@example.com")
+        } else if !email.is_empty() {
+            email_field.error("Enter a complete email address.")
         } else {
             email_field.help("Receipts and alerts go here")
         };
@@ -122,10 +132,16 @@ impl Widget for Profile {
             if y + h > area.y + area.height {
                 break;
             }
-            field.render(Rect::new(area.x, y, area.width.min(60), h), cx);
+            field.render(Rect::new(area.x, y, area.width, h), cx);
             y += h + 1;
         }
-        let save = Button::new("Save changes").on(Role::Card);
+        let save = Button::new("Save changes")
+            .on(Role::Card)
+            .state(if focus == 4 {
+                WidgetState::Focused
+            } else {
+                WidgetState::Normal
+            });
         let cancel = Button::new("Cancel")
             .variant(Variant::Outline)
             .on(Role::Card);
@@ -159,19 +175,26 @@ fn draw(
     Paragraph::new("LUNATUI  /  Account settings")
         .style(title)
         .render(Rect::new(2, 0, 40, 1), &mut cx);
-    Badge::new("Free plan")
-        .tone(Tone::Neutral)
-        .render(Rect::new(106, 0, 12, 1), &mut cx);
+    let saved = tick >= 282;
+    Badge::new(if saved { "Changes saved" } else { "Free plan" })
+        .tone(if saved { Tone::Success } else { Tone::Neutral })
+        .render(Rect::new(area.width.saturating_sub(17), 0, 15, 1), &mut cx);
     let profile = Profile {
         clock: Clock::at(Duration::from_millis(u64::from(tick) * 33)),
     };
+    let card_width = area.width.saturating_sub(4).min(92);
+    let card_x = area.x + (area.width - card_width) / 2;
     Card::new("Profile")
-        .description("A scripted run: the fields fill in and focus moves down the form")
+        .description("Manage your profile and notification preferences.")
         .body(&profile)
-        .render(Rect::new(1, 2, 118, 32), &mut cx);
-    Paragraph::new("Required fields are marked with *. Errors replace the help line.")
-        .style(backdrop)
-        .render(Rect::new(3, 35, 114, 1), &mut cx);
+        .render(Rect::new(card_x, 2, card_width, 32), &mut cx);
+    Paragraph::new(if saved {
+        "Your profile is up to date. Notifications are enabled."
+    } else {
+        "Your workspace ID is managed by your administrator."
+    })
+    .style(backdrop)
+    .render(Rect::new(3, 35, 114, 1), &mut cx);
     hits
 }
 
@@ -211,7 +234,7 @@ fn main() -> io::Result<()> {
         }
         return Ok(());
     }
-    let frames = flag("--frames", 270);
+    let frames = flag("--frames", 300);
     let fps = flag("--fps", 30).max(1);
     let period = Duration::from_secs(1) / fps;
     let mut previous = Grid::new(width, height);

@@ -19,6 +19,8 @@ render. Explicit names override labels. Input values are never exported.
 
 ![Real Field controls with changing focus, validation and a disabled field](../docs/media/named-controls.gif)
 
+[Validation still](../docs/media/named-controls.png).
+
 This recording uses the real `ui_field` widgets with an injected virtual clock.
 Reproduce it with `python3 scripts/record-named-controls.py`. Each frame checks
 all six named controls against their real accessibility JSON; the displayed

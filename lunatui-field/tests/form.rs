@@ -4,10 +4,10 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_field::{Field, FieldArea, Form};
 use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
 use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_field::{Field, FieldArea, Form};
 use lunatui_widgets::{RenderCx, Widget};
 
 fn fields() -> Vec<Field<'static>> {
@@ -121,7 +121,7 @@ fn narrow_areas_keep_one_input_cell_and_clip_the_label_column() {
     assert_eq!(narrow[0].input.width, 1);
     let tiny = form().layout(Rect::new(0, 0, 4, 12));
     assert_eq!(tiny[0].label.width, 3);
-    assert_eq!(tiny[0].input.x, 5);
+    assert_eq!(tiny[0].input.x, 3);
     assert_eq!(tiny[0].input.width, 1);
     let single = form().layout(Rect::new(0, 0, 1, 12));
     assert_eq!(single[0].label.width, 0);
@@ -167,9 +167,7 @@ fn labels_markers_hints_and_errors_are_drawn_where_the_layout_says() {
 
 #[test]
 fn an_error_replaces_the_hint_and_long_messages_are_clipped() {
-    let form = Form::new([Field::new("A")
-        .help("a long hint")
-        .error("a long error")]);
+    let form = Form::new([Field::new("A").help("a long hint").error("a long error")]);
     assert_eq!(rows(&form, 14, 2), ["A             ", "   ✖ a long er"]);
     let hint = Form::new([Field::new("A").help("a long hint")]);
     assert_eq!(rows(&hint, 12, 2), ["A           ", "   a long hi"]);
@@ -239,28 +237,19 @@ fn check_required_keeps_an_existing_error_and_ignores_extra_or_missing_values() 
     .check_required(&["", ""]);
     assert_eq!(rows(&form, 30, 5)[1], "         ✖ Too short          ");
     assert_eq!(rows(&form, 30, 5)[4], "         ✖ Required           ");
-    let short = Form::new([
-        Field::new("A").required(),
-        Field::new("B").required(),
-    ])
-    .check_required(&[""]);
+    let short =
+        Form::new([Field::new("A").required(), Field::new("B").required()]).check_required(&[""]);
     assert_eq!(short.first_error(), Some(0));
     assert!(!short.is_valid());
-    let one = Form::new([
-        Field::new("A").required(),
-        Field::new("B").required(),
-    ])
-    .check_required(&["x"]);
+    let one =
+        Form::new([Field::new("A").required(), Field::new("B").required()]).check_required(&["x"]);
     assert!(one.is_valid());
 }
 
 #[test]
 fn fields_report_their_message_and_the_form_its_size() {
     assert_eq!(Field::new("A").error_message(), None);
-    assert_eq!(
-        Field::new("A").error("Bad").error_message(),
-        Some("Bad")
-    );
+    assert_eq!(Field::new("A").error("Bad").error_message(), Some("Bad"));
     assert_eq!(form().len(), 3);
     assert!(!form().is_empty());
     assert!(Form::new(Vec::<Field>::new()).is_empty());

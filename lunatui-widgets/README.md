@@ -66,6 +66,8 @@ Explicit names override labels. Input values are not exported.
 
 ![Real named Field controls](../docs/media/named-controls.gif)
 
+[Validation still](../docs/media/named-controls.png).
+
 Reproduce this actual-widget recording with `python3 scripts/record-named-controls.py`.
 
 
