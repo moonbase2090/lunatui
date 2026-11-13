@@ -303,13 +303,17 @@ impl<'a> BigText<'a> {
             return self.style;
         }
         match self.state {
-            WidgetState::Normal => Style::new().fg(cx.token(Token::TextPrimary)),
             WidgetState::Focused => Style::new()
                 .fg(cx.token(Token::Accent))
                 .with_attrs(Attrs::default().set_bold(true)),
             WidgetState::Disabled => Style::new()
                 .fg(cx.token(Token::TextPrimary))
                 .with_attrs(Attrs::default().set_dim(true)),
+            WidgetState::Normal
+            | WidgetState::Hover
+            | WidgetState::Pressed
+            | WidgetState::Invalid
+            | WidgetState::Open => Style::new().fg(cx.token(Token::TextPrimary)),
         }
     }
 

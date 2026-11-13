@@ -10,9 +10,15 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `lunatui_field::FormState` moves focus between a `Form`'s fields as a `Handle`: Tab and Shift+Tab skip disabled fields and wrap, `sync` keeps focus on the same field (known by its `id`, else its accessible name) when fields are added, removed or reordered and moves it to the nearest earlier enabled field when that one is gone or disabled, `step` moves focus for other keys an app chooses, and `focus_first_error` follows `check_required`. `Form::step` now calls `RovingFocus::step`, and the form template moves between its fields through `FormState`: Tab and Shift+Tab, and Up and Down through `FormState::step` for phone keyboards.
+
+## [0.1.31] - 2026-11-13
+
+### Added
+
+- `WidgetState` adds `Hover`, `Pressed`, `Invalid`, and `Open`. Each maps to an existing theme token (`focus.ring`, `surface.0`, `fail`, and `accent`). A button paints those states from the shared enum, and pointer and key events move it between hover and pressed.
 - `lunatui_runtime::Handle` is the widget input contract: `state.handle(&event)` returns an `Outcome`, so app loops pass keys on instead of rewriting arrows, type-ahead and Esc. Shared primitives build the states: `RovingFocus` (one step function, with wrap or stop, skipping disabled items), `Typeahead` (one query buffer with a `TYPEAHEAD_TIMEOUT` read from the time the app passes, such as a virtual `Clock`), `Selection` (single or multiple) and `Dismissal` (an overlay's layer in the `LayerStack`). `FocusManager` handles Tab, Shift+Tab and the arrows as a `Handle`.
 - `ListState`, `TabsState`, `RadioState`, `SelectState` and `FilePickerState` handle their widgets' keys. `RadioGroup::is_enabled` and `FileEntry::name` are new. The states are behind the new default `input` feature of `lunatui-widgets`, which `radio`, `select`, `file-picker`, `search-box` and `accordion` now turn on.
-- `lunatui_field::FormState` moves focus between a `Form`'s fields as a `Handle`: Tab and Shift+Tab skip disabled fields and wrap, `sync` moves focus off a field that is gone or disabled, `step` moves focus for other keys an app chooses, and `focus_first_error` follows `check_required`. `Form::step` now calls `RovingFocus::step`, and the form template moves between its fields through `FormState`: Tab and Shift+Tab, and Up and Down through `FormState::step` for phone keyboards.
 
 ### Changed
 
