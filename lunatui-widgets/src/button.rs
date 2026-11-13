@@ -4,6 +4,7 @@
 use std::borrow::Cow;
 
 use lunatui_core::{Attrs, Color, Rect, Size, Style, clip_display_prefix, width};
+use lunatui_term::{Event, KeyCode, KeyKind, MouseButton, MouseKind};
 use lunatui_theme::Token;
 
 use crate::render_cx::clip_to_coordinates;
@@ -31,8 +32,12 @@ pub enum ButtonVariant {
 ///
 /// - at rest, a normal or destructive button is `surface.1` with `text.primary` or `fail` text,
 ///   and a primary one is `accent` with `surface.0` text, bold;
-/// - focused, it is filled with `focus.ring` (`fail` when destructive) with bold `surface.0` text;
-/// - pressed, it sinks to `surface.0` with its color as bold text;
+/// - focused or hovered, it is filled or edged with `focus.ring` (`fail` when destructive and
+///   focused) with bold `surface.0` text when focused;
+/// - pressed, including [`WidgetState::Pressed`], it sinks to `surface.0` with its color as bold
+///   text;
+/// - invalid, the label is `fail` on `surface.1`;
+/// - open, it is filled with `accent` and bold `surface.0` text;
 /// - disabled, it is `surface.1` with dimmed text whatever its variant.
 ///
 /// The button fills the area it is given, with the label on the middle row, centred, and cut to
@@ -133,7 +138,7 @@ impl<'a> Button<'a> {
         if matches!(self.state, WidgetState::Disabled) {
             return Style::new()
                 .fg(text)
-                .bg(raised)
+                .bg(cx.token(WidgetState::Disabled.token()))
                 .with_attrs(Attrs::new().set_dim(true));
         }
         let tone = match self.variant {
@@ -141,8 +146,27 @@ impl<'a> Button<'a> {
             ButtonVariant::Primary => cx.token(Token::Accent),
             ButtonVariant::Destructive => cx.token(Token::Fail),
         };
-        if self.pressed {
-            return Style::new().fg(tone).bg(surface).with_attrs(bold);
+        if self.pressed || matches!(self.state, WidgetState::Pressed) {
+            return Style::new()
+                .fg(tone)
+                .bg(cx.token(WidgetState::Pressed.token()))
+                .with_attrs(bold);
+        }
+        if matches!(self.state, WidgetState::Invalid) {
+            return Style::new()
+                .fg(cx.token(WidgetState::Invalid.token()))
+                .bg(raised);
+        }
+        if matches!(self.state, WidgetState::Open) {
+            return Style::new()
+                .fg(surface)
+                .bg(cx.token(WidgetState::Open.token()))
+                .with_attrs(bold);
+        }
+        if matches!(self.state, WidgetState::Hover) {
+            return Style::new()
+                .fg(cx.token(WidgetState::Hover.token()))
+                .bg(raised);
         }
         if matches!(self.state, WidgetState::Focused) {
             let fill = match self.variant {
@@ -203,13 +227,68 @@ impl Widget for Button<'_> {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ButtonState {
     pressed: bool,
+    hover: bool,
 }
 
 impl ButtonState {
     /// A button that is not held down.
     #[must_use]
     pub const fn new() -> Self {
-        Self { pressed: false }
+        Self {
+            pressed: false,
+            hover: false,
+        }
+    }
+
+    /// Paint state for the pointer and keyboard: pressed wins over hover.
+    #[must_use]
+    pub const fn widget_state(self) -> WidgetState {
+        if self.pressed {
+            WidgetState::Pressed
+        } else if self.hover {
+            WidgetState::Hover
+        } else {
+            WidgetState::Normal
+        }
+    }
+
+    /// Applies one decoded terminal event inside `hit`.
+    ///
+    /// A move over `hit` is [`WidgetState::Hover`]. The left button, Enter, or Space holds
+    /// [`WidgetState::Pressed`]. Releasing returns to hover when the pointer is still inside,
+    /// otherwise to rest. Escape drops a press.
+    pub fn on_event(&mut self, event: &Event, hit: Rect) -> WidgetState {
+        match event {
+            Event::Mouse(mouse) => {
+                let inside = contains(hit, mouse.column, mouse.row);
+                match mouse.kind {
+                    MouseKind::Move => self.hover = inside,
+                    MouseKind::Down(MouseButton::Left) | MouseKind::Drag(MouseButton::Left) => {
+                        self.hover = inside;
+                        if matches!(mouse.kind, MouseKind::Down(MouseButton::Left)) {
+                            self.pressed = inside;
+                        }
+                    }
+                    MouseKind::Up(MouseButton::Left) => {
+                        self.pressed = false;
+                        self.hover = inside;
+                    }
+                    _ => {}
+                }
+            }
+            Event::Key(key) => {
+                let activate = matches!(key.code, KeyCode::Enter | KeyCode::Char(' '));
+                if activate && matches!(key.kind, KeyKind::Press | KeyKind::Repeat) {
+                    self.pressed = true;
+                } else if activate && matches!(key.kind, KeyKind::Release) {
+                    self.pressed = false;
+                } else if matches!((key.code, key.kind), (KeyCode::Esc, KeyKind::Press)) {
+                    self.cancel();
+                }
+            }
+            _ => {}
+        }
+        self.widget_state()
     }
 
     /// Whether the button is held down.

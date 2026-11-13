@@ -121,9 +121,21 @@ fn state_style(
     }
     let ring = cx.token(Role::Ring.token());
     let bold = Attrs::new().set_bold(true);
-    if pressed {
+    if pressed || matches!(state, WidgetState::Pressed) {
         let fg = if tone_text { base.bg } else { ring };
         return stand_out(Style::new().fg(fg).bg(page).with_attrs(bold), base);
+    }
+    if matches!(state, WidgetState::Hover) {
+        return stand_out(Style::new().fg(ring).bg(page), base);
+    }
+    if matches!(state, WidgetState::Invalid) {
+        return Style::new()
+            .fg(cx.token(Role::Destructive.token()))
+            .bg(page);
+    }
+    if matches!(state, WidgetState::Open) {
+        let accent = cx.token(Role::Accent.token());
+        return stand_out(Style::new().fg(page).bg(accent).with_attrs(bold), base);
     }
     if matches!(state, WidgetState::Focused) {
         return stand_out(Style::new().fg(page).bg(ring).with_attrs(bold), base);

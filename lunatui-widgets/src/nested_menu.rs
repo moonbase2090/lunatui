@@ -551,7 +551,11 @@ impl MenuColors {
                 .fg(cx.token(Token::TextMutedOnFocus))
                 .bg(cx.token(Token::FocusFill)),
             WidgetState::Disabled => disabled,
-            WidgetState::Normal => Style::new()
+            WidgetState::Normal
+            | WidgetState::Hover
+            | WidgetState::Pressed
+            | WidgetState::Invalid
+            | WidgetState::Open => Style::new()
                 .fg(cx.token(Token::Accent))
                 .bg(cx.token(Token::SurfaceRaised))
                 .with_attrs(lunatui_core::Attrs::new().set_bold(true)),

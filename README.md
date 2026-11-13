@@ -346,11 +346,11 @@ Screenshot: [docs/media/code-view.png](docs/media/code-view.png). Recorded with 
 
 ### Button
 
-A release console with live checks and a deploy history. Enter presses Run checks and the four checks start. Tab moves focus to Roll back, then Cancel, then back, and skips the disabled Deploy to prod button until the checks pass. A pointer then presses Deploy to prod and the rollout starts. The buttons show the normal, primary and destructive variants and the focused, pressed and disabled states.
+A release console with live checks and a deploy history. Enter presses Run checks and the four checks start. Tab moves focus to Roll back, then Cancel, then back, and skips the disabled Deploy to prod button until the checks pass. A pointer then presses Deploy to prod and the rollout starts. The buttons show the normal, primary and destructive variants and the focused, pressed, disabled, hover, invalid and open states. The pointer rests on Deploy to prod (hover) before it clicks (pressed), Enter on Deploy while the checks run marks it invalid, and Enter on Roll back opens its list of releases (open).
 
-<img src="docs/media/button.gif" alt="Button: focused, pressed, disabled, primary and destructive buttons in a release console in the dark theme" width="1028">
+<img src="docs/media/button.gif" alt="Button: focused, hover, pressed, invalid, open, disabled, primary and destructive buttons in a release console in the dark theme" width="1028">
 
-Screenshot: [docs/media/button.png](docs/media/button.png). Recorded with `scripts/record-widget.sh` (`CASE=button`, 120×36, `FRAMES=250` at 30 fps, truecolor, dark, about 8 seconds plus a 3-second hold, 118 KB).
+Screenshot: [docs/media/button.png](docs/media/button.png). Recorded with `scripts/record-widget.sh` (`CASE=button`, 120×36, `FRAMES=270` at 30 fps, truecolor, dark, about 9 seconds plus a 2-second hold, 131 KB).
 
 ### UI button
 

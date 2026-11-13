@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `WidgetState` adds `Hover`, `Pressed`, `Invalid`, and `Open`. Each maps to an existing theme token (`focus.ring`, `surface.0`, `fail`, and `accent`). A button paints those states from the shared enum, and pointer and key events move it between hover and pressed.
 - `lunatui_runtime::Handle` is the widget input contract: `state.handle(&event)` returns an `Outcome`, so app loops pass keys on instead of rewriting arrows, type-ahead and Esc. Shared primitives build the states: `RovingFocus` (one step function, with wrap or stop, skipping disabled items), `Typeahead` (one query buffer with a `TYPEAHEAD_TIMEOUT` read from the time the app passes, such as a virtual `Clock`), `Selection` (single or multiple) and `Dismissal` (an overlay's layer in the `LayerStack`). `FocusManager` handles Tab, Shift+Tab and the arrows as a `Handle`.
 - `ListState`, `TabsState`, `RadioState`, `SelectState` and `FilePickerState` handle their widgets' keys. `RadioGroup::is_enabled` and `FileEntry::name` are new. The states are behind the new default `input` feature of `lunatui-widgets`, which `radio`, `select`, `file-picker`, `search-box` and `accordion` now turn on.
 

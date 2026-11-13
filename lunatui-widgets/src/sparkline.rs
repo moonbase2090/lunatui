@@ -472,8 +472,20 @@ impl<T: SparklineValue> Sparkline<'_, T> {
             WidgetState::Disabled => (Token::TextPrimary, false, true),
             WidgetState::Focused if last => (Token::FocusRing, true, false),
             WidgetState::Focused => (Token::Accent, false, false),
-            WidgetState::Normal if last => (Token::Accent, false, false),
-            WidgetState::Normal => (Token::TextPrimary, false, false),
+            WidgetState::Normal
+            | WidgetState::Hover
+            | WidgetState::Pressed
+            | WidgetState::Invalid
+            | WidgetState::Open
+                if last =>
+            {
+                (Token::Accent, false, false)
+            }
+            WidgetState::Normal
+            | WidgetState::Hover
+            | WidgetState::Pressed
+            | WidgetState::Invalid
+            | WidgetState::Open => (Token::TextPrimary, false, false),
         };
         Style::new()
             .fg(cx.token(token))

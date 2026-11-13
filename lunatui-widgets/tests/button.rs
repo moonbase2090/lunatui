@@ -4,6 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Attrs, Cell, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_term::{Event, KeyCode, KeyEvent, KeyKind, MouseButton, MouseEvent, MouseKind};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{Button, ButtonState, ButtonVariant, RenderCx, Widget, WidgetState};
 
@@ -278,4 +279,55 @@ fn padding_cells_carry_the_label_attributes() {
     let disabled = Button::new("Save").state(WidgetState::Disabled);
     let (grid, _) = draw(&disabled, Rect::new(0, 0, 8, 1), 8, 1);
     assert!(style_at(&grid, 0, 0).attrs.dim());
+}
+
+#[test]
+fn each_widget_state_maps_to_an_existing_token() {
+    assert_eq!(WidgetState::Normal.token(), Token::TextPrimary);
+    assert_eq!(WidgetState::Focused.token(), Token::FocusRing);
+    assert_eq!(WidgetState::Disabled.token(), Token::Surface1);
+    assert_eq!(WidgetState::Hover.token(), Token::FocusRing);
+    assert_eq!(WidgetState::Pressed.token(), Token::Surface0);
+    assert_eq!(WidgetState::Invalid.token(), Token::Fail);
+    assert_eq!(WidgetState::Open.token(), Token::Accent);
+}
+
+#[test]
+fn button_paints_the_token_for_hover_pressed_invalid_and_open() {
+    let area = Rect::new(0, 0, 8, 1);
+    let cases = [
+        (WidgetState::Hover, true),
+        (WidgetState::Invalid, true),
+        (WidgetState::Pressed, false),
+        (WidgetState::Open, false),
+    ];
+    for (state, foreground) in cases {
+        let button = Button::new("Save").state(state);
+        let (grid, _) = draw(&button, area, 8, 1);
+        let style = style_at(&grid, 2, 0);
+        let color = if foreground { style.fg } else { style.bg };
+        assert_eq!(color, token(state.token()), "{state:?}");
+    }
+}
+
+#[test]
+fn pointer_and_key_events_set_hover_and_pressed() {
+    let hit = Rect::new(4, 2, 8, 1);
+    let mut state = ButtonState::new();
+    let hover = Event::Mouse(MouseEvent::new(MouseKind::Move, 5, 2));
+    assert_eq!(state.on_event(&hover, hit), WidgetState::Hover);
+    let outside = Event::Mouse(MouseEvent::new(MouseKind::Move, 1, 2));
+    assert_eq!(state.on_event(&outside, hit), WidgetState::Normal);
+
+    let down = Event::Mouse(MouseEvent::new(MouseKind::Down(MouseButton::Left), 6, 2));
+    assert_eq!(state.on_event(&down, hit), WidgetState::Pressed);
+    let up = Event::Mouse(MouseEvent::new(MouseKind::Up(MouseButton::Left), 6, 2));
+    assert_eq!(state.on_event(&up, hit), WidgetState::Hover);
+
+    let space = Event::Key(KeyEvent::press(KeyCode::Char(' ')));
+    assert_eq!(state.on_event(&space, hit), WidgetState::Pressed);
+    let release = Event::Key(KeyEvent::press(KeyCode::Char(' ')).kind(KeyKind::Release));
+    assert_eq!(state.on_event(&release, hit), WidgetState::Hover);
+    let enter = Event::Key(KeyEvent::press(KeyCode::Enter));
+    assert_eq!(state.on_event(&enter, hit), WidgetState::Pressed);
 }

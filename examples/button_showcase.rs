@@ -59,18 +59,31 @@ enum Step {
     Point(u32, usize),
     Down(u32),
     Up(u32),
+    Blocked(u32),
+    Open(u32),
 }
 
-const STEPS: [Step; 9] = [
+const BLOCKED: u32 = 96;
+const BLOCKED_SPAN: u32 = 20;
+const OPEN: u32 = 235;
+const RELEASES: [(&str, &str); 3] = [
+    ("2.3.2", "Mon 16:02"),
+    ("2.3.1", "Fri 11:20"),
+    ("2.3.0", "Thu 17:31"),
+];
+
+const STEPS: [Step; 11] = [
     Step::Press(9),
     Step::Release(21),
     Step::Key(45, "Tab", Some(ROLL_BACK)),
     Step::Key(65, "Tab", Some(CANCEL)),
     Step::Key(85, "Tab", Some(RUN)),
-    Step::Point(DOWN, DEPLOY),
+    Step::Blocked(BLOCKED),
+    Step::Point(DOWN - 24, DEPLOY),
     Step::Down(DOWN),
     Step::Up(DEPLOY_START),
     Step::Key(225, "Tab", Some(ROLL_BACK)),
+    Step::Open(OPEN),
 ];
 
 struct App {
@@ -79,6 +92,9 @@ struct App {
     key: &'static str,
     note: &'static str,
     pointer: Option<(usize, u32)>,
+    hover: Option<usize>,
+    blocked: bool,
+    open: bool,
 }
 
 fn replay(tick: u32) -> App {
@@ -88,6 +104,9 @@ fn replay(tick: u32) -> App {
         key: "",
         note: "Release 2.4.0 is ready to check",
         pointer: None,
+        hover: None,
+        blocked: false,
+        open: false,
     };
     for step in STEPS {
         match step {
@@ -107,9 +126,25 @@ fn replay(tick: u32) -> App {
             Step::Release(at) if tick >= at && app.held.release() => {
                 app.note = "Running 4 checks";
             }
-            Step::Point(at, button) if tick + 30 >= at => app.pointer = Some((button, at)),
+            Step::Point(at, button) if tick + 30 >= at => {
+                app.pointer = Some((button, at));
+                if tick >= at {
+                    app.hover = Some(button);
+                }
+            }
+            Step::Blocked(at) if (at..at + BLOCKED_SPAN).contains(&tick) => {
+                app.key = "Enter";
+                app.blocked = true;
+                app.note = "Deploy is blocked until the checks pass";
+            }
+            Step::Open(at) if tick >= at => {
+                app.key = "Enter";
+                app.open = true;
+                app.note = "Choose the release to roll back to";
+            }
             Step::Down(at) if tick >= at => {
                 app.key = "click";
+                app.hover = None;
                 app.held.press();
                 app.focus = DEPLOY;
             }
@@ -122,7 +157,7 @@ fn replay(tick: u32) -> App {
     if (CHECKS_DONE..150).contains(&tick) {
         app.note = "All checks passed; Deploy is enabled";
     }
-    if tick >= DEPLOY_START + DEPLOY_SPAN {
+    if tick >= DEPLOY_START + DEPLOY_SPAN && !app.open {
         app.note = "2.4.0 is live on prod";
     }
     app
@@ -368,8 +403,14 @@ fn actions(cx: &mut RenderCx<'_>, app: &App, bar: Rect, fill: Style, theme: &The
             _ => ButtonVariant::Normal,
         };
         let disabled = index == DEPLOY && tick < CHECKS_DONE;
-        let state = if disabled {
+        let state = if disabled && app.blocked {
+            WidgetState::Invalid
+        } else if disabled {
             WidgetState::Disabled
+        } else if app.open && index == ROLL_BACK {
+            WidgetState::Open
+        } else if app.hover == Some(index) && !app.held.is_pressed() {
+            WidgetState::Hover
         } else if index == app.focus {
             WidgetState::Focused
         } else {
@@ -380,5 +421,25 @@ fn actions(cx: &mut RenderCx<'_>, app: &App, bar: Rect, fill: Style, theme: &The
             .state(state)
             .pressed(index == app.focus && app.held.is_pressed())
             .render(slot, cx);
+    }
+    if app.open {
+        let last = slots(inner)[CANCEL];
+        let x = last.x + last.width + 3;
+        for (row, (version, when)) in (0_u16..).zip(RELEASES) {
+            let style = if row == 0 {
+                fill.fg(theme.resolve(Token::Accent))
+            } else {
+                fill
+            };
+            Paragraph::new(format!(
+                "{} roll back to {version}",
+                if row == 0 { "›" } else { " " }
+            ))
+            .style(style)
+            .render(Rect::new(x, inner.y + row, 24, 1), cx);
+            Paragraph::new(when)
+                .style(dim)
+                .render(Rect::new(x + 25, inner.y + row, 12, 1), cx);
+        }
     }
 }
