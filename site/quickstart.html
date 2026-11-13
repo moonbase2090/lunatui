@@ -424,6 +424,9 @@ impl App for Screen {
         }
         if let Event::Key(key) = event {
             match key.code {
+                KeyCode::Down | KeyCode::Up =&gt; {
+                    self.focus.step(key.code == KeyCode::Down);
+                }
                 KeyCode::Backspace =&gt; {
                     self.field_mut().pop();
                 }

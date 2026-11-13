@@ -29,7 +29,8 @@ values and help/error messages remain absent from that export.
 `FormState` moves focus between a form's fields: `state.handle(&event)` takes Tab and
 Shift+Tab, skips disabled fields and wraps, and leaves other keys to the focused control. Call
 `sync` with the form after building it, `focus_first_error` after `check_required`, and draw with
-`Form::focus(state.focused())`.
+`Form::focus(state.focused())`. `step` moves focus for other keys the app picks, such as Up and
+Down where a phone keyboard has no Shift+Tab.
 
 For composition, registration and the former `FormField` API, see
 [the named-control migration guide](../docs/named-controls.md).

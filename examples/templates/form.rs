@@ -71,6 +71,9 @@ impl App for Screen {
         }
         if let Event::Key(key) = event {
             match key.code {
+                KeyCode::Down | KeyCode::Up => {
+                    self.focus.step(key.code == KeyCode::Down);
+                }
                 KeyCode::Backspace => {
                     self.field_mut().pop();
                 }

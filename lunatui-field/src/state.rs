@@ -52,6 +52,22 @@ impl FormState {
         ok
     }
 
+    /// Moves focus to the next enabled field, or the one before, wrapping around, as Tab and
+    /// Shift+Tab do. Apps call it for other keys that should move between fields, such as Up and
+    /// Down on a phone keyboard with no Shift+Tab.
+    pub fn step(&mut self, forward: bool) -> Outcome {
+        let enabled = &self.enabled;
+        let delta = if forward { 1 } else { -1 };
+        if self
+            .roving
+            .move_by(enabled.len(), delta, |index| enabled[index])
+        {
+            Outcome::Changed
+        } else {
+            Outcome::Handled
+        }
+    }
+
     /// Focuses the first field with a validation message, such as after
     /// [`Form::check_required`]. Returns whether one took focus.
     pub fn focus_first_error(&mut self, form: &Form<'_>) -> bool {
@@ -67,21 +83,12 @@ impl Handle for FormState {
         if !matches!(key.kind, KeyKind::Press | KeyKind::Repeat) || key.code != KeyCode::Tab {
             return Outcome::Ignored;
         }
-        let delta = if key.modifiers == Modifiers::new() {
-            1
+        if key.modifiers == Modifiers::new() {
+            self.step(true)
         } else if key.modifiers == Modifiers::new().shift() {
-            -1
+            self.step(false)
         } else {
-            return Outcome::Ignored;
-        };
-        let enabled = &self.enabled;
-        if self
-            .roving
-            .move_by(enabled.len(), delta, |index| enabled[index])
-        {
-            Outcome::Changed
-        } else {
-            Outcome::Handled
+            Outcome::Ignored
         }
     }
 }
