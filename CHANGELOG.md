@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.29] - 2026-11-12
+
 ### Added
 
 - `benches/tests/dashboard_tick_bytes.rs` fails when the lunatui dashboard tick at 200×60 encodes to more than the PRD's 160 B target without colour (now 157 B, against 209 B for ratatui), and pins the exact byte counts without colour and in truecolor (157 B and 382 B).
@@ -17,7 +19,7 @@ Every PR adds its entry under **Unreleased**.
 ### Changed
 
 - BigText digits, capitals, and `:.-%` sit on a 7×7 grid inside the 8×8 cell, with one-pixel strokes and a blank bottom row and rightmost column. The bitmap remains derived from Press Start 2P by `CodeMan38` under OFL-1.1 (`lunatui-widgets/assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII stays a hollow box.
-- The `CI` workflow now also runs on pull requests, with the macOS and Windows test jobs, the Windows clippy job and the `--all-features` suite. The Linux-only jobs that `Rookrunner` already runs stay dispatch-only.
+- The `CI` workflow now also runs on pull requests, with the macOS and Windows test jobs, the Windows clippy job and the `--all-features` suite. The Linux-only jobs that already run on the project's self-hosted runners stay dispatch-only.
 
 ### Fixed
 
