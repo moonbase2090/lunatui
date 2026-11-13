@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 lunatui-runtime = { version = "0.1.30", path = "../lunatui-runtime", default-features = false, features = ["app"] }
 lunatui-core = { version = "0.1.30", path = "../lunatui-core" }
+lunatui-term = { version = "0.1.30", path = "../lunatui-term" }
 lunatui-ui-tokens = { version = "0.1.30", path = "../lunatui-ui-tokens" }
 lunatui-widgets = { version = "0.1.30", path = "../lunatui-widgets", features = ["widget-state"] }
 
@@ -22,7 +23,6 @@ lunatui-widgets = { version = "0.1.30", path = "../lunatui-widgets", features = 
 lunatui-badge = { version = "0.1.30", path = "../lunatui-badge" }
 lunatui-button = { version = "0.1.30", path = "../lunatui-button" }
 lunatui-card = { version = "0.1.30", path = "../lunatui-card" }
-lunatui-term = { version = "0.1.30", path = "../lunatui-term" }
 lunatui-theme = { version = "0.1.30", path = "../lunatui-theme" }
 
 [[example]]

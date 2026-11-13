@@ -11,7 +11,9 @@ use lunatui_ui_tokens::{Role, surface, text};
 use lunatui_widgets::{RenderCx, Widget};
 
 mod form;
+mod state;
 pub use form::{FieldArea, Form};
+pub use state::FormState;
 
 const MARKER: &str = " *";
 
