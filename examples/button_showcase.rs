@@ -421,35 +421,25 @@ fn actions(cx: &mut RenderCx<'_>, app: &App, bar: Rect, fill: Style, theme: &The
             .state(state)
             .pressed(index == app.focus && app.held.is_pressed())
             .render(slot, cx);
-        if app.open && index == ROLL_BACK {
-            release_menu(cx, slot, fill, theme);
-        }
     }
-}
-
-fn release_menu(cx: &mut RenderCx<'_>, slot: Rect, fill: Style, theme: &Theme) {
-    let dim = fill.with_attrs(Attrs::new().set_dim(true));
-    let menu = Rect::new(slot.x, slot.y - 6, 34, 5);
-    cx.fill(menu, fill, ' ');
-    let block = Block::bordered()
-        .border_type(BorderType::Rounded)
-        .title(" Roll back to ")
-        .style(fill)
-        .border_style(fill.fg(theme.resolve(WidgetState::Open.token())))
-        .title_style(fill.fg(theme.resolve(Token::Accent)));
-    block.render(menu, cx);
-    let inner = block.inner(menu);
-    for (row, (version, when)) in (0_u16..).zip(RELEASES) {
-        let style = if row == 0 {
-            fill.fg(theme.resolve(Token::Accent))
-        } else {
-            fill
-        };
-        Paragraph::new(format!("{} {version}", if row == 0 { "›" } else { " " }))
+    if app.open {
+        let last = slots(inner)[CANCEL];
+        let x = last.x + last.width + 3;
+        for (row, (version, when)) in (0_u16..).zip(RELEASES) {
+            let style = if row == 0 {
+                fill.fg(theme.resolve(Token::Accent))
+            } else {
+                fill
+            };
+            Paragraph::new(format!(
+                "{} roll back to {version}",
+                if row == 0 { "›" } else { " " }
+            ))
             .style(style)
-            .render(Rect::new(inner.x + 1, inner.y + row, 12, 1), cx);
-        Paragraph::new(when)
-            .style(dim)
-            .render(Rect::new(inner.x + 14, inner.y + row, 12, 1), cx);
+            .render(Rect::new(x, inner.y + row, 24, 1), cx);
+            Paragraph::new(when)
+                .style(dim)
+                .render(Rect::new(x + 25, inner.y + row, 12, 1), cx);
+        }
     }
 }
