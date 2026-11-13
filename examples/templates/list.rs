@@ -9,12 +9,12 @@ use std::env;
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
-use lunatui_runtime::{App, ControlFlow, is_quit};
+use lunatui_runtime::{App, ControlFlow, Handle, SelectionMode, is_quit};
 #[cfg(any(unix, windows))]
 use lunatui_runtime::{RunOptions, render_once, run};
-use lunatui_term::{Event, KeyCode};
+use lunatui_term::Event;
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{Block, List, Paragraph, RenderCx, VecSource, Widget};
+use lunatui_widgets::{Block, List, ListState, Paragraph, RenderCx, VecSource, Widget};
 
 #[cfg(any(unix, windows))]
 const WIDTH: u16 = 42;
@@ -23,7 +23,7 @@ const HEIGHT: u16 = 14;
 const ITEMS: [&str; 5] = ["Calendar", "Gauge", "Table", "Sparkline", "Form"];
 
 struct Screen {
-    selected: usize,
+    list: ListState,
 }
 
 pub(crate) fn app() -> impl App {
@@ -32,18 +32,10 @@ pub(crate) fn app() -> impl App {
 
 impl Screen {
     fn new() -> Self {
-        Self { selected: 1 }
-    }
-
-    fn move_selection(&mut self, later: bool) {
-        if later {
-            self.selected = self
-                .selected
-                .saturating_add(1)
-                .min(ITEMS.len().saturating_sub(1));
-        } else {
-            self.selected = self.selected.saturating_sub(1);
-        }
+        let mut list = ListState::new(SelectionMode::Single);
+        list.sync(ITEMS.len(), ITEMS.len());
+        list.focus(Some(1));
+        Self { list }
     }
 
     fn source() -> VecSource {
@@ -60,13 +52,7 @@ impl App for Screen {
         if is_quit(event) {
             return ControlFlow::Break;
         }
-        if let Event::Key(key) = event {
-            match key.code {
-                KeyCode::Up | KeyCode::Char('k') => self.move_selection(false),
-                KeyCode::Down | KeyCode::Char('j') => self.move_selection(true),
-                _ => {}
-            }
-        }
+        self.list.handle(event);
         ControlFlow::Continue
     }
 
@@ -90,8 +76,10 @@ impl App for Screen {
             .border_style(accent)
             .title_style(accent);
         block.render(list_area, &mut cx);
+        let rows = block.inner(list_area).height;
+        self.list.sync(ITEMS.len(), usize::from(rows));
         List::new(Self::source())
-            .selected(Some(self.selected))
+            .selected(self.list.focused())
             .style(text)
             .highlight_style(raised)
             .highlight_symbol("> ", accent)

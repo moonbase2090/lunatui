@@ -129,15 +129,7 @@ impl<'a> SearchBox<'a> {
     /// gives the first match and backward the last; `None` when there are no matches.
     #[must_use]
     pub fn step(current: Option<usize>, total: usize, forward: bool) -> Option<usize> {
-        if total == 0 {
-            return None;
-        }
-        Some(match (current.filter(|index| *index < total), forward) {
-            (Some(index), true) => (index + 1) % total,
-            (Some(index), false) => (index + total - 1) % total,
-            (None, true) => 0,
-            (None, false) => total - 1,
-        })
+        lunatui_runtime::RovingFocus::step(current, total, forward, true, |_| true)
     }
 
     /// Draws `text` at (`x`, `y`) in `base` with the byte `ranges` in `hit`, cut to `max_width`

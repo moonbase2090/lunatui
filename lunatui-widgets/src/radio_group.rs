@@ -115,30 +115,23 @@ impl RadioGroup {
         self.options.is_empty()
     }
 
+    /// Whether `index` is an option that can be focused and selected: it exists, and neither it
+    /// nor the whole group is disabled.
+    #[must_use]
+    pub fn is_enabled(&self, index: usize) -> bool {
+        index < self.options.len()
+            && !matches!(self.state, WidgetState::Disabled)
+            && !self.disabled.contains(&index)
+    }
+
     /// The option after (or before) `from`, wrapping around and skipping disabled options.
     /// Starting from `None`, forward gives the first enabled option and backward the last.
     /// `None` when no option can be chosen.
     #[must_use]
     pub fn step(&self, from: Option<usize>, forward: bool) -> Option<usize> {
-        let count = self.options.len();
-        if count == 0 {
-            return None;
-        }
-        let start = match (from.filter(|index| *index < count), forward) {
-            (Some(index), true) => index + 1,
-            (Some(index), false) => index + count - 1,
-            (None, true) => 0,
-            (None, false) => count - 1,
-        };
-        (0..count)
-            .map(|offset| {
-                if forward {
-                    (start + offset) % count
-                } else {
-                    (start + count - offset) % count
-                }
-            })
-            .find(|index| !self.disabled.contains(index))
+        lunatui_runtime::RovingFocus::step(from, self.options.len(), forward, true, |index| {
+            !self.disabled.contains(&index)
+        })
     }
 
     /// Where each option sits when rendered into `area`, as `(index, rect)` pairs in order, for

@@ -175,25 +175,9 @@ impl Accordion {
     /// section can take focus.
     #[must_use]
     pub fn step(&self, from: Option<usize>, forward: bool) -> Option<usize> {
-        let count = self.sections.len();
-        if count == 0 {
-            return None;
-        }
-        let start = match (from.filter(|index| *index < count), forward) {
-            (Some(index), true) => index + 1,
-            (Some(index), false) => index + count - 1,
-            (None, true) => 0,
-            (None, false) => count - 1,
-        };
-        (0..count)
-            .map(|offset| {
-                if forward {
-                    (start + offset) % count
-                } else {
-                    (start + count - offset) % count
-                }
-            })
-            .find(|index| !self.sections[*index].disabled)
+        lunatui_runtime::RovingFocus::step(from, self.sections.len(), forward, true, |index| {
+            !self.sections[index].disabled
+        })
     }
 
     /// Where each section's header and body sit when the accordion fills `area`. Sections whose

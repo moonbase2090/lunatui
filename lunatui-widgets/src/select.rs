@@ -94,31 +94,7 @@ impl<'a, S: AsRef<str>> Select<'a, S> {
     /// forward gives the first option and backward the last; `None` when there are no options.
     #[must_use]
     pub fn step(current: Option<usize>, total: usize, forward: bool) -> Option<usize> {
-        if total == 0 {
-            return None;
-        }
-        Some(match (current.filter(|index| *index < total), forward) {
-            (Some(index), true) => (index + 1) % total,
-            (Some(index), false) => (index + total - 1) % total,
-            (None, true) => 0,
-            (None, false) => total - 1,
-        })
-    }
-
-    /// The next option after `current`, wrapping around, whose text starts with `prefix`
-    /// (ignoring case), for type-ahead. `None` for an empty prefix or when nothing starts
-    /// with it.
-    #[must_use]
-    pub fn type_ahead(options: &[S], current: Option<usize>, prefix: &str) -> Option<usize> {
-        if prefix.is_empty() || options.is_empty() {
-            return None;
-        }
-        let start = current
-            .filter(|index| *index < options.len())
-            .map_or(0, |index| index + 1);
-        (0..options.len())
-            .map(|offset| (start + offset) % options.len())
-            .find(|index| starts_with_ignoring_case(options[*index].as_ref(), prefix))
+        lunatui_runtime::RovingFocus::step(current, total, forward, true, |_| true)
     }
 
     fn chosen(&self) -> Option<usize> {
@@ -264,15 +240,6 @@ impl<'a, S: AsRef<str>> Select<'a, S> {
             cx.put_str(list.x + 3.min(list.width), y, shown, row_base);
         }
     }
-}
-
-fn starts_with_ignoring_case(text: &str, prefix: &str) -> bool {
-    let mut chars = text.chars();
-    prefix.chars().all(|wanted| {
-        chars
-            .next()
-            .is_some_and(|got| got.to_lowercase().eq(wanted.to_lowercase()))
-    })
 }
 
 impl<S: AsRef<str>> Widget for Select<'_, S> {

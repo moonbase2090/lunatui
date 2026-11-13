@@ -59,7 +59,7 @@ pub use input::Input;
 #[cfg(feature = "app")]
 pub use interact::{
     Dismissal, Handle, Orientation, Outcome, RovingFocus, Selection, SelectionMode,
-    TYPEAHEAD_TIMEOUT, Typeahead, starts_with_ignoring_case,
+    TYPEAHEAD_TIMEOUT, Typeahead, Typed, starts_with_ignoring_case,
 };
 #[cfg(feature = "app")]
 pub use layer::{Layer, LayerEvent, LayerId, LayerSlot, LayerStack, PressRoute};

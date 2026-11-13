@@ -156,37 +156,11 @@ impl<'a> FilePicker<'a> {
     /// From `None`, any step lands on the first row. `None` when there are no rows.
     #[must_use]
     pub fn step(current: Option<usize>, total: usize, delta: isize) -> Option<usize> {
-        if total == 0 {
-            return None;
+        let from = current.filter(|index| *index < total);
+        if from.is_none() {
+            return (total > 0).then_some(0);
         }
-        let last = total - 1;
-        let Some(index) = current.filter(|index| *index < total) else {
-            return Some(0);
-        };
-        Some(if delta.is_negative() {
-            index.saturating_sub(delta.unsigned_abs())
-        } else {
-            index.saturating_add(delta.unsigned_abs()).min(last)
-        })
-    }
-
-    /// The next entry after `current`, wrapping around, whose name starts with `prefix`
-    /// (ignoring case). `None` for an empty prefix or when nothing starts with it.
-    #[must_use]
-    pub fn type_ahead(
-        entries: &[FileEntry<'_>],
-        current: Option<usize>,
-        prefix: &str,
-    ) -> Option<usize> {
-        if prefix.is_empty() || entries.is_empty() {
-            return None;
-        }
-        let start = current
-            .filter(|index| *index < entries.len())
-            .map_or(0, |index| index + 1);
-        (0..entries.len())
-            .map(|offset| (start + offset) % entries.len())
-            .find(|index| starts_with_ignoring_case(entries[*index].name, prefix))
+        lunatui_runtime::RovingFocus::step_by(from, total, delta, false, |_| true)
     }
 
     /// Adds `index` to the sorted `marked` rows, or removes it when it is already there.
@@ -487,15 +461,6 @@ impl<'a> FilePicker<'a> {
         let shown = clip_display_prefix(text.as_str(), area.width.saturating_sub(2));
         cx.put_str(area.x + 1.min(area.width), y, shown, style);
     }
-}
-
-fn starts_with_ignoring_case(text: &str, prefix: &str) -> bool {
-    let mut chars = text.chars();
-    prefix.chars().all(|wanted| {
-        chars
-            .next()
-            .is_some_and(|got| got.to_lowercase().eq(wanted.to_lowercase()))
-    })
 }
 
 fn clip_display_suffix(text: &str, max_cols: u16) -> (&str, bool) {

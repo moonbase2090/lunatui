@@ -228,6 +228,17 @@ impl RovingFocus {
     }
 }
 
+/// What [`Typeahead::handle_key`] made of a key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Typed {
+    /// Not a printable key: the query is unchanged.
+    Ignored,
+    /// The query now picks this item.
+    Found(usize),
+    /// The key joined the query, but no item starts with it.
+    NotFound,
+}
+
 /// Jumps to the item whose label starts with what was just typed.
 ///
 /// Keys typed within [`TYPEAHEAD_TIMEOUT`] of each other build one query; a longer pause starts a
@@ -319,7 +330,7 @@ impl Typeahead {
     }
 
     /// Takes a printable key typed at `now` and returns the item it picks among `count`. Other
-    /// keys return `None` and leave the query alone.
+    /// keys are [`Typed::Ignored`] and leave the query alone.
     pub fn handle_key<L: AsRef<str>>(
         &mut self,
         key: &KeyEvent,
@@ -327,9 +338,9 @@ impl Typeahead {
         current: Option<usize>,
         count: usize,
         label: impl Fn(usize) -> L,
-    ) -> Option<Option<usize>> {
+    ) -> Typed {
         let KeyCode::Char(ch) = key.code else {
-            return None;
+            return Typed::Ignored;
         };
         let shifted_only =
             key.modifiers == Modifiers::new() || key.modifiers == Modifiers::new().shift();
@@ -338,10 +349,11 @@ impl Typeahead {
             || ch.is_control()
             || (ch == ' ' && self.query.is_empty())
         {
-            return None;
+            return Typed::Ignored;
         }
         self.push(ch, now);
-        Some(self.find(current, count, label))
+        self.find(current, count, label)
+            .map_or(Typed::NotFound, Typed::Found)
     }
 }
 
@@ -540,7 +552,7 @@ mod tests {
 
     use super::{
         Dismissal, Handle, Orientation, Outcome, RovingFocus, Selection, SelectionMode,
-        TYPEAHEAD_TIMEOUT, Typeahead,
+        TYPEAHEAD_TIMEOUT, Typeahead, Typed,
     };
     use crate::{Clock, FocusManager, HitId, Layer, LayerStack};
 
@@ -654,18 +666,18 @@ mod tests {
         let pick = |typed: &mut Typeahead, ch: char, now, current| {
             typed.handle_key(&key(KeyCode::Char(ch)), now, current, FRUIT.len(), label)
         };
-        assert_eq!(pick(&mut typed, 'b', clock.now(), None), Some(Some(2)));
+        assert_eq!(pick(&mut typed, 'b', clock.now(), None), Typed::Found(2));
         clock.advance(Duration::from_millis(300));
-        assert_eq!(pick(&mut typed, 'l', clock.now(), Some(2)), Some(Some(3)));
+        assert_eq!(pick(&mut typed, 'l', clock.now(), Some(2)), Typed::Found(3));
         assert_eq!(typed.query(), "bl");
         clock.advance(TYPEAHEAD_TIMEOUT);
-        assert_eq!(pick(&mut typed, 'a', clock.now(), Some(3)), Some(Some(0)));
+        assert_eq!(pick(&mut typed, 'a', clock.now(), Some(3)), Typed::Found(0));
         assert_eq!(typed.query(), "a", "a pause starts a new query");
         clock.advance(TYPEAHEAD_TIMEOUT.saturating_sub(Duration::from_millis(1)));
-        assert_eq!(pick(&mut typed, 'p', clock.now(), Some(0)), Some(Some(0)));
+        assert_eq!(pick(&mut typed, 'p', clock.now(), Some(0)), Typed::Found(0));
         assert_eq!(typed.query(), "ap");
-        assert_eq!(pick(&mut typed, 'r', clock.now(), Some(0)), Some(Some(1)));
-        assert_eq!(pick(&mut typed, 'z', clock.now(), Some(1)), Some(None));
+        assert_eq!(pick(&mut typed, 'r', clock.now(), Some(0)), Typed::Found(1));
+        assert_eq!(pick(&mut typed, 'z', clock.now(), Some(1)), Typed::NotFound);
     }
 
     #[test]
@@ -674,11 +686,11 @@ mod tests {
         let now = Duration::ZERO;
         let label = |index: usize| FRUIT[index];
         let first = typed.handle_key(&key(KeyCode::Char('B')), now, Some(0), 5, label);
-        assert_eq!(first, Some(Some(2)), "case is ignored");
+        assert_eq!(first, Typed::Found(2), "case is ignored");
         let second = typed.handle_key(&key(KeyCode::Char('b')), now, Some(2), 5, label);
-        assert_eq!(second, Some(Some(3)));
+        assert_eq!(second, Typed::Found(3));
         let third = typed.handle_key(&key(KeyCode::Char('b')), now, Some(3), 5, label);
-        assert_eq!(third, Some(Some(2)));
+        assert_eq!(third, Typed::Found(2));
     }
 
     #[test]
@@ -688,16 +700,16 @@ mod tests {
         let ctrl = key(KeyCode::Char('a')).modifiers(Modifiers::new().control());
         assert_eq!(
             typed.handle_key(&ctrl, Duration::ZERO, None, 5, label),
-            None
+            Typed::Ignored
         );
         let space = key(KeyCode::Char(' '));
         assert_eq!(
             typed.handle_key(&space, Duration::ZERO, None, 5, label),
-            None
+            Typed::Ignored
         );
         assert_eq!(
             typed.handle_key(&key(KeyCode::Down), Duration::ZERO, None, 5, label),
-            None
+            Typed::Ignored
         );
         assert_eq!(typed.query(), "");
     }

@@ -4,8 +4,10 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_runtime::{Clock, Handle, Outcome, TYPEAHEAD_TIMEOUT};
+use lunatui_term::{Event, KeyCode, KeyEvent};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{FileEntry, FilePicker, RenderCx, Widget, WidgetState};
+use lunatui_widgets::{FileEntry, FilePicker, FilePickerState, RenderCx, Widget, WidgetState};
 
 const FILES: [FileEntry<'static>; 5] = [
     FileEntry::directory("docs").modified("Oct 30 09:12"),
@@ -235,16 +237,54 @@ fn step_moves_by_delta_and_stops_at_the_ends() {
     assert_eq!(FilePicker::step(Some(0), 0, 1), None);
 }
 
+fn key(code: KeyCode) -> Event {
+    Event::Key(KeyEvent::press(code))
+}
+
 #[test]
-fn type_ahead_finds_the_next_name_with_the_prefix_and_wraps() {
-    assert_eq!(FilePicker::type_ahead(&FILES, None, "c"), Some(2));
-    assert_eq!(FilePicker::type_ahead(&FILES, Some(2), "R"), Some(3));
-    assert_eq!(FilePicker::type_ahead(&FILES, Some(3), "r"), Some(4));
-    assert_eq!(FilePicker::type_ahead(&FILES, Some(4), "r"), Some(3));
-    assert_eq!(FilePicker::type_ahead(&FILES, Some(2), "cargo"), Some(2));
-    assert_eq!(FilePicker::type_ahead(&FILES, None, "zzz"), None);
-    assert_eq!(FilePicker::type_ahead(&FILES, None, ""), None);
-    assert_eq!(FilePicker::type_ahead(&[], None, "a"), None);
+fn typing_jumps_to_names_and_shares_the_type_ahead_timeout() {
+    let mut clock = Clock::new();
+    let mut state = FilePickerState::new();
+    state.sync(&FILES, 3);
+    let typed = |state: &mut FilePickerState, clock: &Clock, ch| {
+        state.set_time(clock.now());
+        state.handle(&key(KeyCode::Char(ch)))
+    };
+    assert_eq!(typed(&mut state, &clock, 'c'), Outcome::Changed);
+    assert_eq!(state.focused(), Some(2));
+    clock.advance(TYPEAHEAD_TIMEOUT);
+    assert_eq!(typed(&mut state, &clock, 'R'), Outcome::Changed);
+    assert_eq!(state.focused(), Some(3));
+    assert_eq!(typed(&mut state, &clock, 'r'), Outcome::Changed);
+    assert_eq!(state.focused(), Some(4), "the same letter moves on");
+    assert_eq!(typed(&mut state, &clock, 'r'), Outcome::Changed);
+    assert_eq!(state.focused(), Some(3), "and wraps");
+    clock.advance(TYPEAHEAD_TIMEOUT);
+    for ch in "rel".chars() {
+        typed(&mut state, &clock, ch);
+    }
+    assert_eq!(state.focused(), Some(4), "a burst builds one query");
+    assert_eq!(typed(&mut state, &clock, 'z'), Outcome::Handled);
+}
+
+#[test]
+fn space_marks_rows_enter_opens_and_paging_stops_at_the_ends() {
+    let mut state = FilePickerState::new();
+    state.sync(&FILES, 2);
+    assert_eq!(state.handle(&key(KeyCode::Down)), Outcome::Changed);
+    assert_eq!(state.handle(&key(KeyCode::Char(' '))), Outcome::Toggled(0));
+    assert_eq!(state.handle(&key(KeyCode::PageDown)), Outcome::Changed);
+    assert_eq!(state.focused(), Some(2));
+    assert_eq!(state.handle(&key(KeyCode::Char(' '))), Outcome::Toggled(2));
+    assert_eq!(state.marked(), &[0, 2]);
+    assert_eq!(state.handle(&key(KeyCode::PageDown)), Outcome::Changed);
+    assert_eq!(state.handle(&key(KeyCode::PageDown)), Outcome::Handled);
+    assert_eq!(state.focused(), Some(4));
+    assert_eq!(state.handle(&key(KeyCode::Enter)), Outcome::Activated(4));
+    assert_eq!(state.handle(&key(KeyCode::Home)), Outcome::Changed);
+    assert_eq!(state.focused(), Some(0));
+    state.sync(&FILES[..1], 2);
+    assert_eq!(state.marked(), &[0], "marks past the end are dropped");
 }
 
 #[test]
