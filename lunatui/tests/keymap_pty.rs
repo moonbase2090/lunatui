@@ -8,8 +8,8 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use std::os::fd::FromRawFd;
 use std::os::unix::process::CommandExt;
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command, ExitStatus};
+use std::path::PathBuf;
+use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -62,17 +62,25 @@ fn example_path() -> io::Result<PathBuf> {
             "keymap",
             "--features",
             "keymap",
+            "--message-format=json",
         ])
-        .status()?;
-    if !built.success() {
+        .stderr(Stdio::inherit())
+        .output()?;
+    if !built.status.success() {
         return Err(io::Error::other("cargo build of the keymap example failed"));
     }
-    let exe = std::env::current_exe()?;
-    let debug = exe
-        .parent()
-        .and_then(Path::parent)
-        .ok_or_else(|| io::Error::other("no target/debug directory"))?;
-    Ok(debug.join("examples").join("keymap"))
+    let report = String::from_utf8_lossy(&built.stdout);
+    report
+        .lines()
+        .filter(|line| {
+            line.contains("\"kind\":[\"example\"]") && line.contains("\"name\":\"keymap\"")
+        })
+        .find_map(|line| {
+            let tail = line.split("\"executable\":\"").nth(1)?;
+            let path = tail.split('"').next()?;
+            (!path.is_empty()).then(|| PathBuf::from(path.replace("\\\\", "\\")))
+        })
+        .ok_or_else(|| io::Error::other("cargo did not report the keymap example executable"))
 }
 
 struct Pty {
