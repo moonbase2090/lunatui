@@ -4,6 +4,8 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
+use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{RadioFlow, RadioGroup, RenderCx, Widget, WidgetState};
 
@@ -89,47 +91,6 @@ fn options_that_do_not_fit_are_left_out_and_labels_are_clipped() {
 }
 
 #[test]
-fn option_areas_cover_the_glyph_the_blank_and_the_label() {
-    assert_eq!(
-        sizes().option_areas(Rect::new(2, 1, 20, 5)),
-        [
-            (0, Rect::new(2, 1, 7, 1)),
-            (1, Rect::new(2, 2, 8, 1)),
-            (2, Rect::new(2, 3, 7, 1)),
-        ]
-    );
-    let across = sizes().flow(RadioFlow::Horizontal).gap(3);
-    assert_eq!(
-        across.option_areas(Rect::new(0, 4, 40, 2)),
-        [
-            (0, Rect::new(0, 4, 7, 1)),
-            (1, Rect::new(10, 4, 8, 1)),
-            (2, Rect::new(21, 4, 7, 1)),
-        ]
-    );
-}
-
-#[test]
-fn option_areas_follow_the_gap_and_the_edges() {
-    let gapped = sizes().gap(1);
-    assert_eq!(
-        gapped.option_areas(Rect::new(0, 0, 20, 4)),
-        [(0, Rect::new(0, 0, 7, 1)), (1, Rect::new(0, 2, 8, 1))]
-    );
-    let across = sizes().flow(RadioFlow::Horizontal);
-    assert_eq!(
-        across.option_areas(Rect::new(0, 0, 10, 1)),
-        [(0, Rect::new(0, 0, 7, 1)), (1, Rect::new(7, 0, 3, 1))]
-    );
-    assert_eq!(sizes().option_areas(Rect::new(0, 0, 0, 3)), []);
-    assert_eq!(sizes().option_areas(Rect::new(0, 0, 5, 0)), []);
-    assert_eq!(
-        RadioGroup::new(Vec::<String>::new()).option_areas(Rect::new(0, 0, 5, 5)),
-        []
-    );
-}
-
-#[test]
 fn wide_labels_count_by_display_width() {
     let group = RadioGroup::new(["日本語", "ab"]);
     assert_eq!(
@@ -140,36 +101,6 @@ fn wide_labels_count_by_display_width() {
         rows(&group.select(Some(1)), 10, 2),
         ["○ 日本語  ", "◉ ab      "]
     );
-}
-
-#[test]
-fn step_moves_forward_and_back_and_wraps() {
-    let group = sizes();
-    assert_eq!(group.step(Some(0), true), Some(1));
-    assert_eq!(group.step(Some(1), true), Some(2));
-    assert_eq!(group.step(Some(2), true), Some(0));
-    assert_eq!(group.step(Some(2), false), Some(1));
-    assert_eq!(group.step(Some(0), false), Some(2));
-    assert_eq!(group.step(None, true), Some(0));
-    assert_eq!(group.step(None, false), Some(2));
-    assert_eq!(group.step(Some(3), true), Some(0));
-    assert_eq!(group.step(Some(3), false), Some(2));
-    assert_eq!(group.step(Some(9), true), Some(0));
-    assert_eq!(group.step(Some(9), false), Some(2));
-}
-
-#[test]
-fn step_skips_disabled_options_and_gives_none_when_nothing_can_be_chosen() {
-    let group = sizes().disabled_options([1]);
-    assert_eq!(group.step(Some(0), true), Some(2));
-    assert_eq!(group.step(Some(2), false), Some(0));
-    let only_one = sizes().disabled_options([0, 2]);
-    assert_eq!(only_one.step(Some(1), true), Some(1));
-    assert_eq!(only_one.step(None, false), Some(1));
-    let none = sizes().disabled_options([0, 1, 2]);
-    assert_eq!(none.step(Some(0), true), None);
-    assert_eq!(none.step(None, false), None);
-    assert_eq!(RadioGroup::new(Vec::<String>::new()).step(None, true), None);
 }
 
 #[test]
@@ -266,4 +197,275 @@ fn measure_is_the_bounding_box_of_the_options() {
         RadioGroup::new(Vec::<String>::new()).measure(Size::new(5, 5)),
         Size::new(0, 0)
     );
+}
+
+/// A radio group the way an application drives it: arrows move the focus and
+/// choose that option, space chooses the focused one, and a click on an
+/// option's cells focuses and chooses it. Disabled options are skipped by the
+/// arrows and ignore clicks.
+struct RadioApp {
+    labels: &'static [&'static str],
+    disabled: Vec<usize>,
+    flow: RadioFlow,
+    gap: u16,
+    focus: Option<usize>,
+    selected: Option<usize>,
+    area: Rect,
+}
+
+impl RadioApp {
+    fn new(labels: &'static [&'static str]) -> Self {
+        Self {
+            labels,
+            disabled: Vec::new(),
+            flow: RadioFlow::Vertical,
+            gap: 0,
+            focus: None,
+            selected: None,
+            area: Rect::new(0, 0, 0, 0),
+        }
+    }
+
+    fn group(&self) -> RadioGroup {
+        RadioGroup::new(self.labels.iter().copied())
+            .select(self.selected)
+            .focus(self.focus)
+            .disabled_options(self.disabled.iter().copied())
+            .flow(self.flow)
+            .gap(self.gap)
+    }
+
+    fn move_focus(&mut self, forward: bool) {
+        if let Some(next) = self.group().step(self.focus, forward) {
+            self.focus = Some(next);
+            self.selected = Some(next);
+        }
+    }
+}
+
+impl Component for RadioApp {
+    fn update(&mut self, event: &Event) {
+        match event {
+            Event::Key(key) => match key.code {
+                KeyCode::Down | KeyCode::Right => self.move_focus(true),
+                KeyCode::Up | KeyCode::Left => self.move_focus(false),
+                KeyCode::Char(' ') => self.selected = self.focus,
+                _ => {}
+            },
+            Event::Mouse(mouse) if mouse.kind == MouseKind::Down(MouseButton::Left) => {
+                let hit = self
+                    .group()
+                    .option_areas(self.area)
+                    .into_iter()
+                    .find(|(_, rect)| {
+                        mouse.column >= rect.x
+                            && mouse.column - rect.x < rect.width
+                            && mouse.row >= rect.y
+                            && mouse.row - rect.y < rect.height
+                    });
+                if let Some((index, _)) = hit.filter(|(index, _)| !self.disabled.contains(index)) {
+                    self.focus = Some(index);
+                    self.selected = Some(index);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
+        self.area = area;
+        let theme = Theme::builtin(Variant::Dark);
+        let mut cx = RenderCx::new(grid, clusters, &theme);
+        self.group().render(area, &mut cx);
+    }
+
+    fn focus(&self) -> Option<usize> {
+        self.focus
+    }
+
+    fn value(&self) -> Option<String> {
+        self.selected
+            .and_then(|index| self.labels.get(index))
+            .map(|label| (*label).to_owned())
+    }
+}
+
+const SIZES: [&str; 3] = ["Small", "Medium", "Large"];
+
+fn radio(app: RadioApp, width: u16, height: u16) -> Harness<RadioApp> {
+    Harness::mount(app, width, height)
+}
+
+#[test]
+fn down_and_up_move_the_choice_and_wrap_around_the_ends() {
+    let mut group = radio(RadioApp::new(&SIZES), 10, 3);
+    group.assert_rows(&["○ Small", "○ Medium", "○ Large"]);
+    group.keys("Down");
+    group.assert_focus(Some(0));
+    group.assert_value("Small");
+    group.keys("Down Down");
+    group.assert_value("Large");
+    group.assert_rows(&["○ Small", "○ Medium", "◉ Large"]);
+    group.keys("Down");
+    group.assert_value("Small");
+    group.keys("Up");
+    group.assert_value("Large");
+    group.keys("Up");
+    group.assert_value("Medium");
+}
+
+#[test]
+fn right_and_left_move_the_choice_like_down_and_up() {
+    let mut group = radio(RadioApp::new(&SIZES), 10, 3);
+    group.keys("Right Right Left");
+    group.assert_value("Small");
+}
+
+#[test]
+fn up_from_nothing_focused_starts_at_the_last_option() {
+    let mut group = radio(RadioApp::new(&SIZES), 10, 3);
+    group.keys("Up");
+    group.assert_value("Large");
+}
+
+#[test]
+fn a_focus_past_the_last_option_restarts_from_the_ends() {
+    let mut app = RadioApp::new(&SIZES);
+    app.focus = Some(9);
+    let mut group = radio(app, 10, 3);
+    group.keys("Down");
+    group.assert_value("Small");
+    let mut app = RadioApp::new(&SIZES);
+    app.focus = Some(3);
+    let mut group = radio(app, 10, 3);
+    group.keys("Up");
+    group.assert_value("Large");
+}
+
+#[test]
+fn space_chooses_the_focused_option_without_moving() {
+    let mut app = RadioApp::new(&SIZES);
+    app.focus = Some(1);
+    let mut group = radio(app, 10, 3);
+    group.keys("Space");
+    group.assert_value("Medium");
+    group.assert_focus(Some(1));
+}
+
+#[test]
+fn arrows_skip_disabled_options_in_both_directions() {
+    let mut app = RadioApp::new(&SIZES);
+    app.disabled = vec![1];
+    let mut group = radio(app, 10, 3);
+    group.keys("Down Down");
+    group.assert_value("Large");
+    group.keys("Up");
+    group.assert_value("Small");
+}
+
+#[test]
+fn with_one_enabled_option_the_arrows_stay_on_it() {
+    let mut app = RadioApp::new(&SIZES);
+    app.disabled = vec![0, 2];
+    let mut group = radio(app, 10, 3);
+    group.keys("Down Down Up");
+    group.assert_value("Medium");
+    group.assert_focus(Some(1));
+}
+
+#[test]
+fn arrows_do_nothing_when_no_option_can_be_chosen() {
+    let mut app = RadioApp::new(&SIZES);
+    app.disabled = vec![0, 1, 2];
+    let mut group = radio(app, 10, 3);
+    group.keys("Down Up");
+    group.assert_focus(None);
+    assert_eq!(group.component().value(), None);
+    let mut group = radio(RadioApp::new(&[]), 10, 3);
+    group.keys("Down Up");
+    group.assert_focus(None);
+}
+
+#[test]
+fn a_click_on_the_glyph_the_blank_or_the_label_chooses_that_option() {
+    for x in [0, 1, 2, 6] {
+        let mut group = radio(RadioApp::new(&SIZES), 20, 5);
+        group.click(x, 2);
+        group.assert_value("Large");
+        group.assert_focus(Some(2));
+    }
+}
+
+#[test]
+fn a_click_beside_an_option_chooses_nothing() {
+    let mut group = radio(RadioApp::new(&SIZES), 20, 5);
+    group.click(10, 1);
+    group.click(0, 4);
+    group.click(7, 0);
+    assert_eq!(group.component().value(), None);
+    group.click(6, 0);
+    group.assert_value("Small");
+    group.click(7, 1);
+    group.assert_value("Medium");
+    group.click(8, 1);
+    group.assert_value("Medium");
+    group.assert_focus(Some(1));
+}
+
+#[test]
+fn rows_left_blank_by_the_gap_do_not_take_clicks() {
+    let mut app = RadioApp::new(&SIZES);
+    app.gap = 1;
+    let mut group = radio(app, 20, 4);
+    group.assert_rows(&["○ Small", "", "○ Medium", ""]);
+    group.click(1, 1);
+    assert_eq!(group.component().value(), None);
+    group.click(1, 2);
+    group.assert_value("Medium");
+}
+
+#[test]
+fn side_by_side_options_take_clicks_on_their_own_cells_only() {
+    let mut app = RadioApp::new(&SIZES);
+    app.flow = RadioFlow::Horizontal;
+    app.gap = 3;
+    let mut group = radio(app, 40, 1);
+    group.assert_rows(&["○ Small   ○ Medium   ○ Large"]);
+    group.click(10, 0);
+    group.assert_value("Medium");
+    group.click(8, 0);
+    group.assert_value("Medium");
+    group.click(21, 0);
+    group.assert_value("Large");
+}
+
+#[test]
+fn an_option_cut_off_by_the_edge_takes_clicks_only_where_it_shows() {
+    let mut app = RadioApp::new(&SIZES);
+    app.flow = RadioFlow::Horizontal;
+    let mut group = radio(app, 10, 1);
+    group.assert_rows(&["○ Small○ M"]);
+    group.click(9, 0);
+    group.assert_value("Medium");
+}
+
+#[test]
+fn clicking_a_disabled_option_chooses_nothing() {
+    let mut app = RadioApp::new(&SIZES);
+    app.disabled = vec![1];
+    let mut group = radio(app, 20, 3);
+    group.click(2, 1);
+    assert_eq!(group.component().value(), None);
+    group.click(2, 2);
+    group.assert_value("Large");
+}
+
+#[test]
+fn a_window_with_no_room_ignores_clicks() {
+    let mut group = radio(RadioApp::new(&SIZES), 0, 3);
+    group.click(0, 0);
+    assert_eq!(group.component().value(), None);
+    let mut group = radio(RadioApp::new(&SIZES), 5, 0);
+    group.click(0, 0);
+    assert_eq!(group.component().value(), None);
 }
