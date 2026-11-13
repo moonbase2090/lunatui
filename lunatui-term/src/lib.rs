@@ -11,6 +11,7 @@ mod pixel;
 #[cfg(feature = "pty")]
 mod pty;
 mod session;
+mod size;
 
 /// Windows console VT output and crossterm input (PR 27).
 #[cfg(windows)]
@@ -31,6 +32,7 @@ pub use input::{
 #[cfg(feature = "pixel-layer")]
 pub use pixel::{PixelImage, PixelLayer, PixelMode};
 pub use session::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
+pub use size::{SIZE_POLL, terminal_size, watch_size};
 
 #[cfg(all(feature = "pty", unix))]
 pub use pty::PtyProcess;

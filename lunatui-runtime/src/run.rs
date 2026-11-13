@@ -6,7 +6,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs_visible_into};
-use lunatui_term::{ColorMode, Encoder, MouseTracking, Session, SessionOptions, SyncOutput};
+use lunatui_term::{ColorMode, Encoder, Event, MouseTracking, Session, SessionOptions, SyncOutput};
 
 #[cfg(feature = "image-presenter")]
 use lunatui_term::{PixelLayer, PixelMode};
@@ -22,8 +22,21 @@ struct FrameState {
     clusters: ClusterTable,
     encoder: Encoder,
     last_palette: Option<Vec<Color>>,
+    repaint: bool,
     #[cfg(feature = "image-presenter")]
     images: PixelLayer,
+}
+
+impl FrameState {
+    fn resize(&mut self, area: &mut Rect, width: u16, height: u16) {
+        if width == 0 || height == 0 || (area.width, area.height) == (width, height) {
+            return;
+        }
+        *area = Rect::new(0, 0, width, height);
+        self.prev = Grid::new(width, height);
+        self.next = Grid::new(width, height);
+        self.repaint = true;
+    }
 }
 
 /// Runs `app` in the alternate screen until it returns [`ControlFlow::Break`] or input ends.
@@ -57,13 +70,14 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
             .sync_output(SyncOutput::Enabled)
             .mouse_tracking(MouseTracking::Sgr),
     )?;
-    let area = Rect::new(0, 0, options.width, options.height);
+    let mut area = Rect::new(0, 0, options.width, options.height);
     let mut frames = FrameState {
         prev: Grid::new(options.width, options.height),
         next: Grid::new(options.width, options.height),
         clusters: ClusterTable::new(),
         encoder: Encoder::new(),
         last_palette: None,
+        repaint: false,
         #[cfg(feature = "image-presenter")]
         images,
     };
@@ -90,11 +104,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         }
 
         if let Some(events) = input.try_next_frame()? {
-            for event in events {
-                if app.update(&event) == ControlFlow::Break {
-                    quit = true;
-                }
-            }
+            quit |= dispatch(&mut app, events, &mut area, &mut frames);
             sched.on_input();
             continue;
         }
@@ -106,11 +116,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         match input.next_frame()? {
             None => break,
             Some(events) => {
-                for event in events {
-                    if app.update(&event) == ControlFlow::Break {
-                        quit = true;
-                    }
-                }
+                quit |= dispatch(&mut app, events, &mut area, &mut frames);
                 sched.on_input();
             }
         }
@@ -123,6 +129,24 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn dispatch<A: App>(
+    app: &mut A,
+    events: Vec<Event>,
+    area: &mut Rect,
+    frames: &mut FrameState,
+) -> bool {
+    let mut quit = false;
+    for event in events {
+        if let Event::Resize(width, height) = event {
+            frames.resize(area, width, height);
+        }
+        if app.update(&event) == ControlFlow::Break {
+            quit = true;
+        }
+    }
+    quit
 }
 
 fn sync_scheduler<A: App>(sched: &mut Scheduler, app: &A, now: Duration) {
@@ -169,7 +193,7 @@ fn render_present<A: App>(
     #[cfg(not(feature = "image-presenter"))]
     app.render(&mut frames.next, area, &mut frames.clusters);
     let palette = app.token_palette().map(<[Color]>::to_vec);
-    let repaint = palette != frames.last_palette;
+    let repaint = palette != frames.last_palette || std::mem::take(&mut frames.repaint);
     frames.last_palette = palette;
     #[cfg(feature = "image-presenter")]
     let repaint = repaint || frames.images.needs_cell_repaint();
@@ -337,6 +361,7 @@ mod tests {
             clusters: ClusterTable::new(),
             encoder: Encoder::new(),
             last_palette: None,
+            repaint: false,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
         };
@@ -416,6 +441,7 @@ mod tests {
             clusters: ClusterTable::new(),
             encoder: Encoder::new(),
             last_palette: None,
+            repaint: false,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
         };
@@ -430,6 +456,196 @@ mod tests {
             "equal attributes keep their table index across frames"
         );
         Ok(())
+    }
+
+    struct Frame {
+        areas: Vec<Rect>,
+        events: Vec<Event>,
+    }
+
+    impl App for Frame {
+        fn update(&mut self, event: &Event) -> ControlFlow {
+            self.events.push(event.clone());
+            ControlFlow::Continue
+        }
+
+        fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
+            self.areas.push(area);
+            grid.put_str(area.x, area.y, Style::new(), "top", clusters);
+            grid.put_str(
+                area.x,
+                area.y + area.height - 1,
+                Style::new(),
+                "[Q] Quit",
+                clusters,
+            );
+            let last = area.x + area.width - 1;
+            grid.put_str(last, area.y + 1, Style::new(), "|", clusters);
+        }
+    }
+
+    fn fresh_frames(width: u16, height: u16) -> FrameState {
+        FrameState {
+            prev: Grid::new(width, height),
+            next: Grid::new(width, height),
+            clusters: ClusterTable::new(),
+            encoder: Encoder::new(),
+            last_palette: None,
+            repaint: false,
+            #[cfg(feature = "image-presenter")]
+            images: super::PixelLayer::new(super::PixelMode::Cells),
+        }
+    }
+
+    fn present(
+        app: &mut Frame,
+        area: Rect,
+        frames: &mut FrameState,
+        screen: &mut lunatui_test::Oracle,
+    ) -> Result<(), String> {
+        render_present(app, area, frames, |parts| {
+            for part in parts {
+                screen.process(part);
+            }
+            Ok(())
+        })
+        .map_err(|error| error.to_string())
+    }
+
+    #[test]
+    fn a_resize_after_the_first_frame_relays_out_and_repaints_everything() -> Result<(), String> {
+        let mut area = Rect::new(0, 0, 20, 4);
+        let mut frames = fresh_frames(20, 4);
+        let mut app = Frame {
+            areas: Vec::new(),
+            events: Vec::new(),
+        };
+        let mut screen = lunatui_test::Oracle::new(10, 40);
+        present(&mut app, area, &mut frames, &mut screen)?;
+        assert_eq!(app.areas, vec![Rect::new(0, 0, 20, 4)]);
+
+        let quit = super::dispatch(
+            &mut app,
+            vec![Event::Resize(40, 10)],
+            &mut area,
+            &mut frames,
+        );
+        assert!(!quit);
+        assert_eq!(area, Rect::new(0, 0, 40, 10));
+        assert_eq!(app.events, vec![Event::Resize(40, 10)]);
+        present(&mut app, area, &mut frames, &mut screen)?;
+        assert_eq!(app.areas[1], Rect::new(0, 0, 40, 10));
+        let rows: Vec<String> = screen
+            .contents()
+            .lines()
+            .map(|row| row.trim_end().to_string())
+            .collect();
+        assert_eq!(rows[0], "top");
+        assert_eq!(rows[1], format!("{}|", " ".repeat(39)));
+        assert_eq!(rows[9], "[Q] Quit");
+        assert_eq!(
+            screen.mismatches(&frames.prev, &frames.clusters, true),
+            Vec::<String>::new()
+        );
+
+        let mut presents = 0;
+        render_present(&mut app, area, &mut frames, |_| {
+            presents += 1;
+            Ok(())
+        })
+        .map_err(|error| error.to_string())?;
+        assert_eq!(
+            presents, 0,
+            "an unchanged frame after the resize is skipped"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn shrinking_repaints_the_whole_smaller_grid() -> Result<(), String> {
+        let mut area = Rect::new(0, 0, 40, 10);
+        let mut frames = fresh_frames(40, 10);
+        let mut app = Frame {
+            areas: Vec::new(),
+            events: Vec::new(),
+        };
+        let mut screen = lunatui_test::Oracle::new(10, 40);
+        present(&mut app, area, &mut frames, &mut screen)?;
+        super::dispatch(&mut app, vec![Event::Resize(12, 3)], &mut area, &mut frames);
+        let mut fresh = lunatui_test::Oracle::new(3, 12);
+        present(&mut app, area, &mut frames, &mut fresh)?;
+        assert_eq!(app.areas[1], Rect::new(0, 0, 12, 3));
+        assert_eq!(fresh.contents(), "top         \n           |\n[Q] Quit    ");
+        assert_eq!(
+            fresh.mismatches(&frames.prev, &frames.clusters, true),
+            Vec::<String>::new()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn repeated_zero_and_unchanged_sizes_do_nothing() {
+        let mut area = Rect::new(0, 0, 20, 4);
+        let mut frames = fresh_frames(20, 4);
+        let mut app = Frame {
+            areas: Vec::new(),
+            events: Vec::new(),
+        };
+        let events = vec![
+            Event::Resize(20, 4),
+            Event::Resize(0, 9),
+            Event::Resize(9, 0),
+        ];
+        super::dispatch(&mut app, events, &mut area, &mut frames);
+        assert_eq!(area, Rect::new(0, 0, 20, 4));
+        assert!(!frames.repaint);
+        assert_eq!(app.events.len(), 3);
+    }
+
+    #[test]
+    fn several_resizes_in_one_frame_end_at_the_last() {
+        let mut area = Rect::new(0, 0, 20, 4);
+        let mut frames = fresh_frames(20, 4);
+        let mut app = Frame {
+            areas: Vec::new(),
+            events: Vec::new(),
+        };
+        super::dispatch(
+            &mut app,
+            vec![Event::Resize(30, 6), Event::Resize(50, 12)],
+            &mut area,
+            &mut frames,
+        );
+        assert_eq!(area, Rect::new(0, 0, 50, 12));
+        assert_eq!((frames.next.width(), frames.next.height()), (50, 12));
+        assert_eq!((frames.prev.width(), frames.prev.height()), (50, 12));
+        assert!(frames.repaint);
+    }
+
+    struct Quitter;
+
+    impl App for Quitter {
+        fn update(&mut self, event: &Event) -> ControlFlow {
+            if matches!(event, Event::Resize(..)) {
+                ControlFlow::Break
+            } else {
+                ControlFlow::Continue
+            }
+        }
+
+        fn render(&mut self, _: &mut Grid, _: Rect, _: &mut ClusterTable) {}
+    }
+
+    #[test]
+    fn the_app_can_quit_from_a_resize() {
+        let mut area = Rect::new(0, 0, 20, 4);
+        let mut frames = fresh_frames(20, 4);
+        assert!(super::dispatch(
+            &mut Quitter,
+            vec![Event::Resize(30, 8)],
+            &mut area,
+            &mut frames
+        ));
     }
 }
 
