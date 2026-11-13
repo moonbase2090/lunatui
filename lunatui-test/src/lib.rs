@@ -5,10 +5,12 @@
 
 mod clock;
 mod fuzz;
+mod interact;
 mod oracle;
 mod snapshot;
 
 pub use clock::Clock;
 pub use fuzz::{fuzz_bytes, fuzz_campaign};
+pub use interact::{Component, Harness, parse_key};
 pub use oracle::{Oracle, OracleFailure, apply_diff, diff_matches};
 pub use snapshot::styled_snapshot;
