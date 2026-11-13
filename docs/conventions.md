@@ -66,6 +66,7 @@ This section follows the PRD §3.2 sketch and is provisional until DD-3 (public 
 |---|---|
 | Test names are snake_case sentences describing the behavior, with no `test_` prefix: `pads_shorter_lines_to_the_widest`. | CI (planned): no `fn test_` |
 | One behavior per test. | Review |
+| A test of a widget or app that takes key or pointer input mounts it in `lunatui_test::Harness` and drives it with `key`, `keys`, `type_text`, `click`, `hover`, `drag` and `scroll`, then asserts focus, value and the drawn rows. It does not call a widget's `step`, `type_ahead` or hit-test helpers as a stand-in for input. Time comes from `Harness::advance`, never the wall clock. A PR that adds or changes an interactive widget without such tests is rejected. | Review |
 | Fallible tests return `Result` and use `?`. They don't call `unwrap` or `expect`. | Review |
 | A test whose assertions depend on process-wide state (the counting allocator) runs as a `harness = false` integration test. | Review |
 | Property tests are named for the invariant they check (M3). | Review |

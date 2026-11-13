@@ -4,6 +4,8 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
+use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{FieldArea, Form, FormField, RenderCx, Widget};
 
@@ -228,48 +230,6 @@ fn disabled_fields_are_dimmed_and_never_highlighted() {
 }
 
 #[test]
-fn step_moves_through_the_tab_order_and_wraps() {
-    let form = form();
-    assert_eq!(form.step(None, true), Some(0));
-    assert_eq!(form.step(None, false), Some(2));
-    assert_eq!(form.step(Some(0), true), Some(1));
-    assert_eq!(form.step(Some(2), true), Some(0));
-    assert_eq!(form.step(Some(0), false), Some(2));
-    assert_eq!(form.step(Some(2), false), Some(1));
-    assert_eq!(form.step(Some(3), true), Some(0));
-    assert_eq!(form.step(Some(3), false), Some(2));
-    assert_eq!(form.step(Some(9), true), Some(0));
-}
-
-#[test]
-fn step_skips_disabled_fields() {
-    let form = Form::new([
-        FormField::new("A"),
-        FormField::new("B").disabled(),
-        FormField::new("C"),
-    ]);
-    assert_eq!(form.step(Some(0), true), Some(2));
-    assert_eq!(form.step(Some(2), false), Some(0));
-    let all = Form::new([FormField::new("A").disabled()]);
-    assert_eq!(all.step(None, true), None);
-    assert_eq!(all.step(Some(0), false), None);
-    assert_eq!(Form::new(Vec::<FormField>::new()).step(None, true), None);
-}
-
-#[test]
-fn check_required_flags_empty_and_blank_required_fields_only() {
-    let checked = form().check_required(&["", "a@b.c", ""]);
-    assert!(!checked.is_valid());
-    assert_eq!(checked.first_error(), Some(0));
-    assert_eq!(rows(&checked, 30, 8)[1], "         ✖ Required           ");
-    let blank = form().check_required(&["   ", "  ", "x"]);
-    assert_eq!(blank.first_error(), Some(0));
-    let ok = form().check_required(&["Ada", "a@b.c", ""]);
-    assert!(ok.is_valid());
-    assert_eq!(ok.first_error(), None);
-}
-
-#[test]
 fn check_required_keeps_an_existing_error_and_ignores_extra_or_missing_values() {
     let form = Form::new([
         FormField::new("Name").required().error("Too short"),
@@ -326,4 +286,273 @@ fn nothing_is_drawn_outside_the_area_or_for_empty_areas() {
     assert_eq!(grid.row_display(3, &clusters).trim(), "");
     let (grid, clusters) = draw(&form(), Rect::new(0, 0, 0, 5), 10, 5);
     assert_eq!(grid.row_display(0, &clusters).trim(), "");
+}
+
+struct FormApp {
+    fields: Vec<FormField>,
+    values: Vec<String>,
+    disabled: Vec<usize>,
+    focus: Option<usize>,
+    submitted: bool,
+    valid: bool,
+    area: Rect,
+}
+
+impl FormApp {
+    fn new(fields: Vec<FormField>) -> Self {
+        let values = vec![String::new(); fields.len()];
+        Self {
+            fields,
+            values,
+            disabled: Vec::new(),
+            focus: None,
+            submitted: false,
+            valid: false,
+            area: Rect::new(0, 0, 0, 0),
+        }
+    }
+
+    fn form(&self) -> Form {
+        let form = Form::new(self.fields.clone()).focus(self.focus);
+        if self.submitted {
+            let values: Vec<&str> = self.values.iter().map(String::as_str).collect();
+            form.check_required(&values)
+        } else {
+            form
+        }
+    }
+
+    fn submit(&mut self) {
+        self.submitted = true;
+        let form = self.form();
+        self.valid = form.is_valid();
+        if let Some(index) = form.first_error() {
+            self.focus = Some(index);
+        }
+    }
+
+    fn click(&mut self, x: u16, y: u16) {
+        let form = self.form();
+        let hit = form.layout(self.area).into_iter().find(|field| {
+            x >= field.row.x
+                && x - field.row.x < field.row.width
+                && y >= field.row.y
+                && y - field.row.y < field.row.height
+        });
+        if let Some(field) = hit.filter(|field| !self.disabled.contains(&field.index)) {
+            self.focus = Some(field.index);
+        }
+    }
+}
+
+impl Component for FormApp {
+    fn update(&mut self, event: &Event) {
+        match event {
+            Event::Key(key) => match key.code {
+                KeyCode::Tab => {
+                    let forward = !key.modifiers.is_shift();
+                    self.focus = self.form().step(self.focus, forward).or(self.focus);
+                }
+                KeyCode::Enter => self.submit(),
+                KeyCode::Backspace => {
+                    if let Some(value) = self.focus.and_then(|index| self.values.get_mut(index)) {
+                        value.pop();
+                    }
+                }
+                KeyCode::Char(ch) => {
+                    if let Some(value) = self.focus.and_then(|index| self.values.get_mut(index)) {
+                        value.push(ch);
+                    }
+                }
+                _ => {}
+            },
+            Event::Mouse(mouse) if mouse.kind == MouseKind::Down(MouseButton::Left) => {
+                self.click(mouse.column, mouse.row);
+            }
+            _ => {}
+        }
+    }
+
+    fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
+        self.area = area;
+        let theme = Theme::builtin(Variant::Dark);
+        let form = self.form();
+        let mut cx = RenderCx::new(grid, clusters, &theme);
+        form.render(area, &mut cx);
+        for field in form.layout(area) {
+            grid.put_str(
+                field.input.x,
+                field.input.y,
+                Style::new(),
+                &self.values[field.index],
+                clusters,
+            );
+        }
+    }
+
+    fn focus(&self) -> Option<usize> {
+        self.focus
+    }
+
+    fn value(&self) -> Option<String> {
+        Some(self.values.join("|"))
+    }
+}
+
+fn signup() -> Harness<FormApp> {
+    Harness::mount(FormApp::new(fields()), 30, 8)
+}
+
+#[test]
+fn tab_walks_the_fields_in_order_and_wraps() {
+    let mut form = signup();
+    form.assert_focus(None);
+    let seen: Vec<Option<usize>> = (0..4)
+        .map(|_| {
+            form.key("Tab");
+            form.component().focus()
+        })
+        .collect();
+    assert_eq!(seen, [Some(0), Some(1), Some(2), Some(0)]);
+}
+
+#[test]
+fn shift_tab_walks_backward_and_starts_at_the_last_field() {
+    let mut form = signup();
+    form.key("S-Tab");
+    form.assert_focus(Some(2));
+    form.keys("S-Tab S-Tab S-Tab");
+    form.assert_focus(Some(2));
+}
+
+#[test]
+fn a_focus_past_the_last_field_restarts_the_order() {
+    let mut app = FormApp::new(fields());
+    app.focus = Some(9);
+    let mut form = Harness::mount(app, 30, 8);
+    form.key("Tab");
+    form.assert_focus(Some(0));
+    let mut app = FormApp::new(fields());
+    app.focus = Some(3);
+    let mut form = Harness::mount(app, 30, 8);
+    form.key("S-Tab");
+    form.assert_focus(Some(2));
+}
+
+#[test]
+fn tab_skips_disabled_fields() {
+    let app = FormApp::new(vec![
+        FormField::new("A"),
+        FormField::new("B").disabled(),
+        FormField::new("C"),
+    ]);
+    let mut form = Harness::mount(app, 20, 8);
+    form.keys("Tab Tab");
+    form.assert_focus(Some(2));
+    form.key("S-Tab");
+    form.assert_focus(Some(0));
+}
+
+#[test]
+fn tab_does_nothing_when_no_field_can_take_focus() {
+    let mut form = Harness::mount(FormApp::new(vec![FormField::new("A").disabled()]), 20, 4);
+    form.keys("Tab S-Tab");
+    form.assert_focus(None);
+    let mut form = Harness::mount(FormApp::new(Vec::new()), 20, 4);
+    form.keys("Tab S-Tab");
+    form.assert_focus(None);
+}
+
+#[test]
+fn typing_edits_only_the_focused_field() {
+    let mut form = signup();
+    form.keys("Tab");
+    form.type_text("Ada");
+    form.key("Tab");
+    form.type_text("a@b.c");
+    form.key("Backspace");
+    form.assert_value("Ada|a@b.|");
+    let rows = form.rows();
+    assert_eq!(rows[0], "Name *   Ada");
+    assert_eq!(rows[3], "Email *  a@b.");
+}
+
+#[test]
+fn enter_with_required_fields_empty_flags_each_and_jumps_to_the_first() {
+    let mut form = signup();
+    form.keys("Tab Tab Tab");
+    form.assert_focus(Some(2));
+    assert_eq!(form.rows()[4], "         We never share it");
+    form.key("Enter");
+    form.assert_focus(Some(0));
+    let rows = form.rows();
+    assert_eq!(rows[1], "         ✖ Required");
+    assert_eq!(rows[4], "         ✖ Required");
+    assert!(!form.component().valid);
+}
+
+#[test]
+fn a_required_field_holding_only_spaces_is_still_empty() {
+    let mut form = signup();
+    form.keys("Tab Space Space Enter");
+    form.assert_focus(Some(0));
+    assert_eq!(form.rows()[1], "         ✖ Required");
+}
+
+#[test]
+fn filling_the_required_fields_and_pressing_enter_clears_every_error() {
+    let mut form = signup();
+    form.key("Enter");
+    form.assert_focus(Some(0));
+    form.type_text("Ada");
+    form.key("Enter");
+    form.assert_focus(Some(1));
+    let rows = form.rows();
+    assert_eq!(rows[1], "");
+    assert_eq!(rows[4], "         ✖ Required");
+    form.type_text("a@b.c");
+    form.key("Enter");
+    assert!(form.component().valid);
+    let rows = form.rows();
+    assert_eq!(rows[1], "");
+    assert_eq!(rows[4], "         We never share it");
+    form.assert_value("Ada|a@b.c|");
+}
+
+#[test]
+fn a_click_on_a_field_focuses_it_wherever_its_rows_are_clicked() {
+    for (x, y) in [(0, 3), (12, 3), (12, 4)] {
+        let mut form = signup();
+        form.click(x, y);
+        form.assert_focus(Some(1));
+    }
+}
+
+#[test]
+fn a_click_on_the_gap_between_fields_does_nothing() {
+    let mut form = signup();
+    form.click(3, 2);
+    form.click(3, 5);
+    form.assert_focus(None);
+    form.click(3, 0);
+    form.click(3, 2);
+    form.assert_focus(Some(0));
+}
+
+#[test]
+fn a_click_on_a_disabled_field_does_not_focus_it() {
+    let mut app = FormApp::new(vec![FormField::new("A").disabled(), FormField::new("B")]);
+    app.disabled = vec![0];
+    let mut form = Harness::mount(app, 20, 6);
+    form.click(3, 0);
+    form.assert_focus(None);
+    form.click(3, 3);
+    form.assert_focus(Some(1));
+}
+
+#[test]
+fn a_form_with_no_room_ignores_clicks() {
+    let mut form = Harness::mount(FormApp::new(fields()), 0, 8);
+    form.click(0, 0);
+    form.assert_focus(None);
 }
