@@ -130,6 +130,22 @@ The default `pixel-sparkline` feature adds antialiased fills at native pixel pre
 
 Sparkline preserves both sample-reading passes and their order, including a callback panic's partial cell output. It finishes all sample callbacks before querying the image sink, reads final cell styles, and removes only verified generated ink after image acceptance. Unused columns and block borders stay outside the image. No image sink or `.pixels(false)` adds no recording allocation; an attached unsupported sink may allocate a bounded column record before support is known. Native targets are limited to 4096 pixels per side, one million pixels, 65,536 logical cells and 32 million estimated work units. The `pixel_sparkline` example shares the service-board scenes with equal-size Cells/Pixels views, including all ten lanes and the selected inspector.
 
+## Keyboard input
+
+A widget state handles its own keys through `lunatui_runtime::Handle`: `state.handle(&event)` returns an `Outcome` (`Ignored`, `Handled`, `Changed`, `Activated(row)`, `Toggled(row)` or `Dismissed`), so an app loop passes events on instead of rewriting arrows, type-ahead and Esc. Drawing stays immediate-mode: build the widget from the state each frame.
+
+| State | Keys | Draw with |
+|---|---|---|
+| `ListState` | Up, Down, Home, End, Page Up, Page Down (stops at the ends); Space chooses, Enter activates | `List::selected(state.focused())` |
+| `TabsState` | Left, Right (wraps), Home, End | `Tabs::select(state.selected())` |
+| `RadioState` | arrows move to the next enabled option and select it (wraps); Space selects | `group.select(state.selected()).focus(state.focused())` |
+| `SelectState` | closed: Up, Down and typing change the choice, Enter, Space or Alt+Down ask to open; open: arrows and typing move the active row, Enter chooses | `Select::new(options, state.chosen()).open(state.is_open()).active(state.active())` |
+| `FilePickerState` | as `ListState`, plus typing jumps to a name and Space marks | `FilePicker::new(path, entries).active(state.focused()).marked(state.marked())` |
+
+`FocusManager` is a `Handle` too: Tab, Shift+Tab and the arrows move between regions. Each state's `sync` records its items (and visible rows) after they change.
+
+The pieces are shared, not copied per widget: `RovingFocus` (one step function with wrap or stop and disabled items skipped), `Typeahead` (one query buffer whose timeout runs on the time the app passes in, usually a `Clock`, so tests are exact), `Selection` (single or multiple) and `Dismissal` (an overlay's layer in the app's `LayerStack`, so Esc has one path). `SelectState` and `FilePickerState` take the time with `set_time`.
+
 ## Overlays
 
 Dialogs, popovers, select drop-downs, command palettes and toasts open as layers in one `lunatui_runtime::LayerStack` that the app owns. The stack is the only place that turns Esc and pointer presses into dismissals:
