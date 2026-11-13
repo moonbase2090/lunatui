@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Style};
+use lunatui_runtime::{FocusManager, HitId, LayerStack};
 use lunatui_theme::{Theme, Token};
 use lunatui_widgets::{
     Block, BorderType, Dialog, DialogFocus, DialogKind, DialogOutcome, DialogState, LineGauge,
     Paragraph, RenderCx, StatusBar, Widget,
 };
 
-const BRANCH_LIST: u32 = 1;
+const BRANCH_LIST: HitId = HitId(1);
 
 const BRANCHES: [(&str, &str, u16, u16, &str); 7] = [
     ("main", "Bump the cache layer to v3", 0, 0, "Ana Ruiz"),
@@ -109,9 +110,10 @@ struct App {
     branches: Vec<(String, &'static str, u16, u16, &'static str)>,
     selected: usize,
     dialog: DialogState,
+    layers: LayerStack,
     ask: Option<Ask>,
     text: String,
-    focus: Option<u32>,
+    focus: FocusManager,
     key: &'static str,
     note: String,
 }
@@ -127,12 +129,28 @@ impl App {
                 .collect(),
             selected: 0,
             dialog: DialogState::new(),
+            layers: LayerStack::new(),
             ask: None,
             text: String::new(),
-            focus: Some(BRANCH_LIST),
+            focus: FocusManager::new(),
             key: "",
             note: String::from("Branches has focus"),
         }
+        .synced()
+    }
+
+    fn synced(mut self) -> Self {
+        self.sync();
+        self
+    }
+
+    fn sync(&mut self) {
+        let base = vec![(BRANCH_LIST, Rect::new(0, 0, 1, 1))];
+        self.focus.sync(self.layers.focus_entries(base));
+    }
+
+    fn has_focus(&self) -> bool {
+        self.focus.focused() == Some(BRANCH_LIST)
     }
 
     fn press(&mut self, key: Key) {
@@ -149,8 +167,9 @@ impl App {
             match key {
                 Key::Tab => self.dialog.next(),
                 Key::Enter => {
-                    if let Some(closed) = self.dialog.activate() {
-                        self.answer(closed.outcome(), closed.restore());
+                    if let Some(closed) = self.dialog.activate(&mut self.layers, &mut self.focus) {
+                        self.sync();
+                        self.answer(closed.outcome());
                     }
                 }
                 Key::Char(ch) => self.text.push(ch),
@@ -176,11 +195,13 @@ impl App {
 
     fn ask(&mut self, ask: Ask, kind: DialogKind) {
         self.ask = Some(ask);
-        self.dialog.open(kind, self.focus.take());
+        let opener = self.focus.focused();
+        self.dialog.open(kind, &mut self.layers, opener);
+        self.sync();
         self.note = String::from("Dialog has focus; Tab stays inside");
     }
 
-    fn answer(&mut self, outcome: DialogOutcome, restore: Option<u32>) {
+    fn answer(&mut self, outcome: DialogOutcome) {
         let name = self.branches[self.selected].0.clone();
         self.note = match (self.ask.take(), outcome) {
             (Some(Ask::Delete), DialogOutcome::Confirmed) => {
@@ -196,8 +217,7 @@ impl App {
             (Some(Ask::Protected), _) => format!("Kept {name}"),
             _ => String::from("Cancelled"),
         };
-        self.focus = restore;
-        if self.focus == Some(BRANCH_LIST) {
+        if self.has_focus() {
             self.note.push_str(", focus back on Branches");
         }
     }
@@ -310,7 +330,7 @@ pub(super) fn render(
 }
 
 fn branches(cx: &mut RenderCx<'_>, app: &App, pane: Rect, fill: Style, theme: &Theme) {
-    let focused = app.focus == Some(BRANCH_LIST);
+    let focused = app.has_focus();
     let dim = fill.with_attrs(Attrs::new().set_dim(true));
     let border = if focused {
         fill.fg(theme.resolve(Token::FocusRing))

@@ -4,7 +4,6 @@
 use lunatui_core::{Attrs, Color, Rect, Size, Style};
 use lunatui_theme::Token;
 
-use crate::overlay::FocusTrap;
 use crate::render_cx::clip_to_coordinates;
 use crate::{Block, BorderType, Overlay, RenderCx, Widget, WidgetState};
 
@@ -144,7 +143,6 @@ pub struct Popup<W> {
     state: WidgetState,
     border_type: BorderType,
     backdrop: f32,
-    trap: FocusTrap,
     style: Option<Style>,
     border_style: Option<Style>,
     title_style: Option<Style>,
@@ -163,7 +161,6 @@ impl<W> Popup<W> {
             state: WidgetState::Normal,
             border_type: BorderType::Rounded,
             backdrop: 0.5,
-            trap: FocusTrap::enabled(),
             style: None,
             border_style: None,
             title_style: None,
@@ -217,19 +214,6 @@ impl<W> Popup<W> {
     pub fn backdrop(mut self, alpha: f32) -> Self {
         self.backdrop = alpha.clamp(0.0, 1.0);
         self
-    }
-
-    /// Focus confinement while the popup is open.
-    #[must_use]
-    pub fn focus_trap(mut self, trap: FocusTrap) -> Self {
-        self.trap = trap;
-        self
-    }
-
-    /// Whether focus should stay inside the popup.
-    #[must_use]
-    pub fn traps_focus(&self) -> bool {
-        self.trap.is_active()
     }
 
     /// Panel style, in place of the theme's.
@@ -326,7 +310,6 @@ impl<W: Widget> Popup<W> {
             cx.fade_fg(area, self.backdrop, toward);
             Overlay::new(panel, modal)
                 .backdrop(self.backdrop, toward)
-                .focus_trap(self.trap)
                 .render(area, cx);
         } else {
             panel.render(modal, cx);

@@ -303,7 +303,7 @@ fn rasterize(key: &RasterKey, pie: Rect) -> Option<ImageSource> {
     let mut coverage = vec![[0_u32; 4]; count];
     let mut mask = Mask::new(size.width(), size.height())?;
     let transform = raster_transform(size, pie, key.chart.aspect);
-    for index in 0..=key.chart.slices.len() {
+    for (index, rgb) in key.colors.iter().copied().enumerate() {
         if sectors.pull.is_some_and(|pull| pull.0 == index) {
             continue;
         }
@@ -313,7 +313,7 @@ fn rasterize(key: &RasterKey, pie: Rect) -> Option<ImageSource> {
         mask.data_mut().fill(0);
         mask.fill_path(&path, FillRule::EvenOdd, true, transform);
         for (total, alpha) in coverage.iter_mut().zip(mask.data()) {
-            for (sum, color) in total[..3].iter_mut().zip(key.colors[index]) {
+            for (sum, color) in total[..3].iter_mut().zip(rgb) {
                 *sum += u32::from(color) * u32::from(*alpha);
             }
             total[3] += u32::from(*alpha);

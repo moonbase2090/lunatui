@@ -20,7 +20,11 @@ fn drawing_and_hit_testing_a_prompt_dialog_allocates_nothing() {
     let mut clusters = ClusterTable::new();
     let screen = Rect::new(0, 0, 60, 16);
     let mut dialog_state = DialogState::new();
-    dialog_state.open(DialogKind::Prompt, Some(3));
+    dialog_state.open(
+        DialogKind::Prompt,
+        &mut lunatui_runtime::LayerStack::new(),
+        None,
+    );
     let dialog = Dialog::prompt(
         "Rename branch",
         "Pick a new name for feature/login. Open pull requests keep their history.",

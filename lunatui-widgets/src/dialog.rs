@@ -4,9 +4,9 @@
 use std::borrow::Cow;
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
+use lunatui_runtime::{FocusManager, HitId, Layer, LayerId, LayerSlot, LayerStack};
 use lunatui_theme::Token;
 
-use crate::overlay::FocusTrap;
 use crate::{BorderType, Popup, RenderCx, Widget};
 
 const DEFAULT_WIDTH: u16 = 50;
@@ -67,7 +67,7 @@ pub enum DialogFocus {
 pub enum DialogOutcome {
     /// The confirm button, or Enter in the prompt's field.
     Confirmed,
-    /// The cancel button or Escape.
+    /// The cancel button, or Esc through the [`LayerStack`].
     Cancelled,
 }
 
@@ -75,7 +75,6 @@ pub enum DialogOutcome {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DialogClosed {
     outcome: DialogOutcome,
-    restore: Option<u32>,
 }
 
 impl DialogClosed {
@@ -84,27 +83,24 @@ impl DialogClosed {
     pub const fn outcome(&self) -> DialogOutcome {
         self.outcome
     }
-
-    /// The focus id passed to [`DialogState::open`], to give focus back to.
-    #[must_use]
-    pub const fn restore(&self) -> Option<u32> {
-        self.restore
-    }
 }
 
 /// Whether a [`Dialog`] is open and which of its controls has focus, kept by the app between
 /// frames.
 ///
-/// [`open`](Self::open) remembers the focus id to give back when the dialog closes. While it is
-/// open, [`next`](Self::next) and [`previous`](Self::previous) (Tab and Shift+Tab) cycle through
-/// the dialog's own controls and never leave it. [`activate`](Self::activate) (Enter),
-/// [`cancel`](Self::cancel) (Escape) and [`click`](Self::click) close it and report the outcome
-/// with the id to restore.
+/// The dialog is a modal layer in the app's [`LayerStack`]. [`open`](Self::open) pushes it and
+/// names the control to give focus back to. While it is open, [`next`](Self::next) and
+/// [`previous`](Self::previous) (Tab and Shift+Tab) cycle through the dialog's own controls and
+/// never leave it, and a press outside it is dropped. [`activate`](Self::activate) (Enter) and
+/// [`click`](Self::click) answer it. Esc belongs to the stack: its
+/// [`handle`](LayerStack::handle) closes the dialog, and [`sync`](Self::sync) then reports it as
+/// cancelled. However it closes, focus goes back to the opener. Call [`place`](Self::place) each
+/// frame with the panel from [`Dialog::area`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DialogState {
     kind: Option<DialogKind>,
     focus: DialogFocus,
-    restore: Option<u32>,
+    slot: LayerSlot,
 }
 
 impl DialogState {
@@ -114,16 +110,20 @@ impl DialogState {
         Self {
             kind: None,
             focus: DialogFocus::Confirm,
-            restore: None,
+            slot: LayerSlot::new(),
         }
     }
 
-    /// Opens a dialog of `kind`, focusing the prompt's field or else the confirm button, and
-    /// remembers `restore`, the focus id the app had before.
-    pub fn open(&mut self, kind: DialogKind, restore: Option<u32>) {
+    /// Opens a dialog of `kind` above every other layer, focusing the prompt's field or else the
+    /// confirm button. `opener`, the control that had focus, gets it back when the dialog closes.
+    pub fn open(&mut self, kind: DialogKind, layers: &mut LayerStack, opener: Option<HitId>) {
+        let mut layer = Layer::modal(Rect::new(0, 0, 0, 0));
+        if let Some(opener) = opener {
+            layer = layer.return_focus(opener);
+        }
+        self.slot.open(layers, layer);
         self.kind = Some(kind);
         self.focus = kind.first();
-        self.restore = restore;
     }
 
     /// Whether a dialog is open.
@@ -136,6 +136,12 @@ impl DialogState {
     #[must_use]
     pub const fn kind(&self) -> Option<DialogKind> {
         self.kind
+    }
+
+    /// The dialog's layer while it is open.
+    #[must_use]
+    pub const fn layer(&self) -> Option<LayerId> {
+        self.slot.id()
     }
 
     /// The control with focus.
@@ -163,41 +169,53 @@ impl DialogState {
         self.step(false);
     }
 
-    /// The focus trap to give the runtime focus manager: active while a dialog is open.
-    #[must_use]
-    pub fn focus_trap(&self) -> FocusTrap {
-        if self.kind.is_some() {
-            FocusTrap::enabled()
-        } else {
-            FocusTrap::disabled()
-        }
-    }
-
-    /// Answers with the focused control: cancel cancels, the field and confirm confirm.
-    pub fn activate(&mut self) -> Option<DialogClosed> {
+    /// Answers with the focused control: cancel cancels, the field and confirm confirm. The
+    /// dialog's layer closes and focus goes back to the opener.
+    pub fn activate(
+        &mut self,
+        layers: &mut LayerStack,
+        focus: &mut FocusManager,
+    ) -> Option<DialogClosed> {
         let outcome = match self.focus {
             DialogFocus::Cancel => DialogOutcome::Cancelled,
             DialogFocus::Input | DialogFocus::Confirm => DialogOutcome::Confirmed,
         };
-        self.close(outcome)
+        let closed = self.close(outcome)?;
+        self.slot.close(layers, focus);
+        Some(closed)
     }
 
-    /// Cancels the open dialog, as Escape does.
-    pub fn cancel(&mut self) -> Option<DialogClosed> {
-        self.close(DialogOutcome::Cancelled)
-    }
-
-    /// Handles a click on `target`, from [`Dialog::control_at`]. A button answers the dialog; the
-    /// field takes focus. A click outside the dialog (`None`) does nothing, since it is modal.
-    pub fn click(&mut self, target: Option<DialogFocus>) -> Option<DialogClosed> {
+    /// Handles a press on `target`, from [`Dialog::control_at`]. A button answers the dialog; the
+    /// field takes focus. A press elsewhere (`None`) does nothing.
+    pub fn click(
+        &mut self,
+        target: Option<DialogFocus>,
+        layers: &mut LayerStack,
+        focus: &mut FocusManager,
+    ) -> Option<DialogClosed> {
         let target = target?;
         if !self.set_focus(target) {
             return None;
         }
         match target {
             DialogFocus::Input => None,
-            DialogFocus::Cancel | DialogFocus::Confirm => self.activate(),
+            DialogFocus::Cancel | DialogFocus::Confirm => self.activate(layers, focus),
         }
+    }
+
+    /// Reports the dialog as cancelled when the stack closed its layer since the last call, as
+    /// Esc does.
+    pub fn sync(&mut self, layers: &LayerStack) -> Option<DialogClosed> {
+        if self.slot.sync(layers) {
+            return self.close(DialogOutcome::Cancelled);
+        }
+        None
+    }
+
+    /// Records the cells the panel covers this frame, from [`Dialog::area`], so presses inside it
+    /// reach its controls.
+    pub fn place(&self, layers: &mut LayerStack, panel: Rect) {
+        self.slot.place(layers, panel);
     }
 
     fn step(&mut self, forward: bool) {
@@ -219,10 +237,7 @@ impl DialogState {
 
     fn close(&mut self, outcome: DialogOutcome) -> Option<DialogClosed> {
         self.kind.take()?;
-        Some(DialogClosed {
-            outcome,
-            restore: self.restore.take(),
-        })
+        Some(DialogClosed { outcome })
     }
 }
 

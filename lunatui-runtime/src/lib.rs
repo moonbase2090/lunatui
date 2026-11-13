@@ -57,7 +57,7 @@ pub use hit::AccessibilityRole;
 pub use hit::{HitId, HitMap};
 pub use input::Input;
 #[cfg(feature = "app")]
-pub use layer::{Layer, LayerId, LayerStack, PressRoute};
+pub use layer::{Layer, LayerEvent, LayerId, LayerSlot, LayerStack, PressRoute};
 #[cfg(all(feature = "app", any(unix, windows)))]
 pub use options::RunOptions;
 #[cfg(all(feature = "app", any(unix, windows)))]

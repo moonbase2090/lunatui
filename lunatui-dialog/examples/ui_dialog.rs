@@ -13,6 +13,7 @@ use lunatui_button::Button;
 use lunatui_card::Card;
 use lunatui_core::{Attrs, ClusterTable, Grid, Rect, Size};
 use lunatui_dialog::{AlertDialog, Dialog, DialogKind, DialogOutcome, DialogState};
+use lunatui_runtime::{FocusManager, LayerStack};
 use lunatui_term::{ColorMode, Encoder};
 use lunatui_theme::{Theme, Variant as ThemeVariant};
 use lunatui_ui_tokens::{Role, Tone, surface};
@@ -43,9 +44,11 @@ struct Model {
 impl Model {
     fn at(tick: u32) -> Self {
         let mut state = DialogState::new();
+        let mut layers = LayerStack::new();
+        let mut focus = FocusManager::new();
         let at = |mark: u32| tick >= mark;
         if at(OPEN_PROMPT) {
-            state.open(DialogKind::Prompt, None);
+            state.open(DialogKind::Prompt, &mut layers, None);
         }
         let typed = if at(TYPE_FROM) {
             usize::try_from((tick - TYPE_FROM) / TYPE_EVERY + 1)
@@ -63,11 +66,11 @@ impl Model {
         let mut renamed = false;
         if at(RENAME) {
             renamed = state
-                .activate()
+                .activate(&mut layers, &mut focus)
                 .is_some_and(|closed| closed.outcome() == DialogOutcome::Confirmed);
         }
         if at(ASK) {
-            state.open(DialogKind::Confirm, None);
+            state.open(DialogKind::Confirm, &mut layers, None);
         }
         if at(HESITATE) {
             state.previous();
@@ -78,14 +81,14 @@ impl Model {
         let mut deleted = false;
         if at(DELETE) {
             deleted = state
-                .activate()
+                .activate(&mut layers, &mut focus)
                 .is_some_and(|closed| closed.outcome() == DialogOutcome::Confirmed);
         }
         if at(REPORT) {
-            state.open(DialogKind::Alert, None);
+            state.open(DialogKind::Alert, &mut layers, None);
         }
         if at(DISMISS) {
-            let _ = state.activate();
+            let _ = state.activate(&mut layers, &mut focus);
         }
         Self {
             state,

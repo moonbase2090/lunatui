@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::Rect;
+use lunatui_term::{Event, KeyCode, KeyKind, Modifiers, MouseKind};
 
-use crate::HitId;
+use crate::{FocusManager, HitId, HitMap};
 
 const Z_STEP: u16 = 100;
 
@@ -16,43 +17,66 @@ pub struct LayerId(
 
 /// What a layer is: its area, whether it blocks the layers below, and how it is dismissed.
 ///
-/// A modal layer traps focus and swallows pointer input outside its area. A non-modal layer, such
-/// as a popover or dropdown, lets focus and clicks reach the layers below, but a click outside it
-/// still dismisses it.
+/// A modal layer, such as a dialog or command palette, traps focus and swallows pointer input
+/// outside its area; Esc dismisses it and an outside press does not. A non-modal layer, such as a
+/// popover or dropdown, lets focus and clicks reach the layers below, and both Esc and a press
+/// outside it dismiss it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Layer {
     area: Rect,
+    anchor: Option<Rect>,
     modal: bool,
-    dismissable: bool,
+    escape: bool,
+    outside: bool,
     return_focus: Option<HitId>,
 }
 
 impl Layer {
-    /// A modal layer covering `area`, dismissed by Esc or an outside click.
+    /// A modal layer covering `area`, dismissed by Esc but not by an outside press.
     #[must_use]
     pub fn modal(area: Rect) -> Self {
         Self {
             area,
+            anchor: None,
             modal: true,
-            dismissable: true,
+            escape: true,
+            outside: false,
             return_focus: None,
         }
     }
 
-    /// A non-modal layer covering `area`, dismissed by Esc or an outside click.
+    /// A non-modal layer covering `area`, dismissed by Esc or an outside press.
     #[must_use]
     pub fn popover(area: Rect) -> Self {
         Self {
             modal: false,
+            outside: true,
             ..Self::modal(area)
         }
     }
 
-    /// Whether Esc and outside clicks dismiss the layer. On by default. A layer that is not
-    /// dismissable stays until the app removes it.
+    /// Whether Esc and outside presses dismiss the layer. A layer that is not dismissable stays
+    /// until the app closes it, as a toast does.
     #[must_use]
     pub fn dismissable(mut self, dismissable: bool) -> Self {
-        self.dismissable = dismissable;
+        self.escape = dismissable;
+        self.outside = dismissable;
+        self
+    }
+
+    /// Whether a press outside the layer dismisses it. On for a popover, off for a modal.
+    #[must_use]
+    pub fn outside_press(mut self, dismisses: bool) -> Self {
+        self.outside = dismisses;
+        self
+    }
+
+    /// The control that opened the layer, such as a dropdown's field. A press on it is delivered
+    /// instead of dismissing the layer, so the control can close the layer itself rather than
+    /// reopen it.
+    #[must_use]
+    pub fn anchor(mut self, anchor: Rect) -> Self {
+        self.anchor = Some(anchor);
         self
     }
 
@@ -82,16 +106,36 @@ pub enum PressRoute {
     /// Inside this layer, or on the base screen when no layer is open. Hit test as usual,
     /// with `z` from [`LayerStack::z`] so the topmost region wins.
     Deliver,
-    /// Outside a dismissable layer: remove it. The press is consumed when the layer is modal and
-    /// otherwise should also be delivered, so one click can close a popover and press a button.
+    /// Outside a layer that an outside press dismisses: remove it. The press is consumed when a
+    /// modal layer lies under it and otherwise should also be delivered, so one click can close a
+    /// popover and press a button.
     Dismiss {
         /// The layer to remove.
         layer: LayerId,
         /// Whether the press should also be delivered once the layer is gone.
         deliver: bool,
     },
-    /// Outside a modal layer that cannot be dismissed: ignore the press.
+    /// Outside a modal layer that an outside press does not dismiss: ignore the press.
     Block,
+}
+
+/// What [`LayerStack::handle`] did with an event.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LayerEvent {
+    /// The layers had nothing to do with it: handle the event as usual, hit testing a press with
+    /// [`LayerStack::pick`] so it cannot reach regions under an open modal.
+    Pass,
+    /// A press outside a modal layer: drop the event.
+    Consumed,
+    /// Esc or a press dismissed `layer`, which is gone and has given focus back to its opener.
+    /// Handle the event as usual only when `deliver` is set, hit testing with
+    /// [`LayerStack::pick`].
+    Dismissed {
+        /// The layer that closed.
+        layer: LayerId,
+        /// Whether the event should also be handled as usual.
+        deliver: bool,
+    },
 }
 
 /// Open overlays in z order, with modal focus trapping and dismissal routing.
@@ -112,10 +156,14 @@ pub enum PressRoute {
 /// let dialog = layers.push(Layer::modal(Rect::new(10, 5, 20, 8)).return_focus(HitId(1)));
 /// layers.assign(dialog, HitId(7), Rect::new(12, 10, 6, 1));
 ///
-/// assert_eq!(layers.route_press(0, 0), PressRoute::Dismiss { layer: dialog, deliver: false });
+/// assert_eq!(layers.route_press(0, 0), PressRoute::Block);
 /// assert_eq!(layers.route_press(12, 10), PressRoute::Deliver);
 /// assert_eq!(layers.remove(dialog), Some(HitId(1)));
 /// ```
+///
+/// [`handle`](Self::handle) is the one place that turns Esc and pointer presses into dismissals.
+/// Overlay state such as a dialog's or a popover's keeps a [`LayerSlot`] and learns that its layer
+/// closed from [`LayerSlot::sync`].
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LayerStack {
     layers: Vec<Entry>,
@@ -153,6 +201,51 @@ impl LayerStack {
     pub fn remove(&mut self, id: LayerId) -> Option<HitId> {
         let at = self.layers.iter().position(|entry| entry.id == id)?;
         self.layers.remove(at).layer.return_focus
+    }
+
+    /// Closes `id` and gives focus back to the control it names in
+    /// [`Layer::return_focus`]. Returns whether the layer was open.
+    pub fn close(&mut self, id: LayerId, focus: &mut FocusManager) -> bool {
+        let Some(at) = self.layers.iter().position(|entry| entry.id == id) else {
+            return false;
+        };
+        if let Some(opener) = self.layers.remove(at).layer.return_focus {
+            focus.restore(opener);
+        }
+        true
+    }
+
+    /// Applies `event` to the open layers: Esc closes the layer [`escape`](Self::escape) picks,
+    /// and a pointer press goes through [`route_press`](Self::route_press). A closed layer gives
+    /// focus back to its opener. Other events pass.
+    pub fn handle(&mut self, event: &Event, focus: &mut FocusManager) -> LayerEvent {
+        match event {
+            Event::Key(key)
+                if key.code == KeyCode::Esc
+                    && key.kind == KeyKind::Press
+                    && key.modifiers == Modifiers::new() =>
+            {
+                let Some(layer) = self.escape() else {
+                    return LayerEvent::Pass;
+                };
+                self.close(layer, focus);
+                LayerEvent::Dismissed {
+                    layer,
+                    deliver: false,
+                }
+            }
+            Event::Mouse(mouse) if matches!(mouse.kind, MouseKind::Down(_)) => {
+                match self.route_press(mouse.column, mouse.row) {
+                    PressRoute::Deliver => LayerEvent::Pass,
+                    PressRoute::Block => LayerEvent::Consumed,
+                    PressRoute::Dismiss { layer, deliver } => {
+                        self.close(layer, focus);
+                        LayerEvent::Dismissed { layer, deliver }
+                    }
+                }
+            }
+            _ => LayerEvent::Pass,
+        }
     }
 
     /// Closes the topmost layer. See [`remove`](Self::remove).
@@ -226,6 +319,26 @@ impl LayerStack {
         Some(rank.saturating_mul(Z_STEP))
     }
 
+    /// The lowest `z` a press can reach: the [`z`](Self::z) of the topmost modal layer, or `0`
+    /// when no modal layer is open.
+    #[must_use]
+    pub fn floor(&self) -> u16 {
+        self.layers
+            .iter()
+            .rposition(|entry| entry.layer.modal)
+            .and_then(|at| u16::try_from(at + 1).ok())
+            .map_or(0, |rank| rank.saturating_mul(Z_STEP))
+    }
+
+    /// Hit tests a delivered press: the topmost region of `map` at `(column, row)` that sits in
+    /// the topmost modal layer or above it. Regions under an open modal are never picked, even
+    /// when the press lands in a layer above the modal, such as a toast, at a spot where that
+    /// layer registered no region.
+    #[must_use]
+    pub fn pick(&self, map: &HitMap, column: u16, row: u16) -> Option<HitId> {
+        map.pick_from(column, row, self.floor())
+    }
+
     /// Filters the base screen's Tab entries and appends the layers' own, in stack order.
     ///
     /// With no modal layer, the base entries stay and every layer's entries follow. With a
@@ -244,43 +357,46 @@ impl LayerStack {
         entries
     }
 
-    /// Decides what a pointer press at `(column, row)` does. A press inside the topmost layer is
-    /// delivered. Outside it, a dismissable topmost layer is dismissed. While any modal layer is
-    /// open nothing below the top is reachable: the press is delivered only when it falls inside
-    /// the topmost modal, and otherwise it is consumed or blocked.
+    /// Decides what a pointer press at `(column, row)` does, looking down from the top layer. A
+    /// press inside a layer or on its anchor is delivered. Above that, the first layer that
+    /// outside presses dismiss is dismissed. A layer that ignores outside presses, such as a toast
+    /// stack, lets the press fall through to the layers below it. While a modal layer is open
+    /// nothing below it is reachable: a press outside it is consumed or blocked.
     #[must_use]
     pub fn route_press(&self, column: u16, row: u16) -> PressRoute {
-        let Some(top) = self.layers.last() else {
-            return PressRoute::Deliver;
-        };
-        if contains(top.layer.area, column, row) {
-            return PressRoute::Deliver;
-        }
         let in_modal = self
             .layers
             .iter()
             .rfind(|entry| entry.layer.modal)
             .map(|entry| contains(entry.layer.area, column, row));
         let reachable = in_modal.unwrap_or(true);
-        if top.layer.dismissable {
-            return PressRoute::Dismiss {
-                layer: top.id,
-                deliver: reachable,
-            };
+        for entry in self.layers.iter().rev() {
+            let layer = &entry.layer;
+            let on_anchor = layer
+                .anchor
+                .is_some_and(|anchor| contains(anchor, column, row));
+            if on_anchor || contains(layer.area, column, row) {
+                return PressRoute::Deliver;
+            }
+            if layer.outside {
+                return PressRoute::Dismiss {
+                    layer: entry.id,
+                    deliver: reachable,
+                };
+            }
+            if layer.modal {
+                return PressRoute::Block;
+            }
         }
-        if reachable {
-            PressRoute::Deliver
-        } else {
-            PressRoute::Block
-        }
+        PressRoute::Deliver
     }
 
-    /// The layer an Esc press dismisses: the topmost dismissable layer, unless a modal layer
-    /// that cannot be dismissed sits above it. `None` leaves Esc to the app.
+    /// The layer an Esc press dismisses: the topmost layer Esc dismisses, unless a modal layer
+    /// that Esc does not dismiss sits above it. `None` leaves Esc to the app.
     #[must_use]
     pub fn escape(&self) -> Option<LayerId> {
         for entry in self.layers.iter().rev() {
-            if entry.layer.dismissable {
+            if entry.layer.escape {
                 return Some(entry.id);
             }
             if entry.layer.modal {
@@ -295,6 +411,68 @@ impl LayerStack {
     }
 }
 
+/// One overlay's place in a [`LayerStack`]: open while its layer is on the stack.
+///
+/// A dialog, popover, dropdown, command palette or toast stack keeps one. [`open`](Self::open)
+/// pushes the layer and [`close`](Self::close) removes it. When the stack closes the layer
+/// itself, on Esc or an outside press, [`sync`](Self::sync) reports it once.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct LayerSlot {
+    id: Option<LayerId>,
+}
+
+impl LayerSlot {
+    /// A closed slot.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self { id: None }
+    }
+
+    /// Pushes `layer` above every other layer, unless the slot's layer is already open.
+    pub fn open(&mut self, layers: &mut LayerStack, layer: Layer) -> LayerId {
+        if let Some(id) = self.id.filter(|id| layers.get(*id).is_some()) {
+            return id;
+        }
+        let id = layers.push(layer);
+        self.id = Some(id);
+        id
+    }
+
+    /// Closes the slot's layer and gives focus back to its opener. Returns whether it was open.
+    pub fn close(&mut self, layers: &mut LayerStack, focus: &mut FocusManager) -> bool {
+        self.id.take().is_some_and(|id| layers.close(id, focus))
+    }
+
+    /// Notices a layer that the stack closed. Returns `true` once, on the first call after the
+    /// layer left the stack.
+    pub fn sync(&mut self, layers: &LayerStack) -> bool {
+        let gone = self.id.is_some_and(|id| layers.get(id).is_none());
+        if gone {
+            self.id = None;
+        }
+        gone
+    }
+
+    /// Moves the open layer to `area`, the cells the overlay drew this frame.
+    pub fn place(&self, layers: &mut LayerStack, area: Rect) {
+        if let Some(id) = self.id {
+            layers.set_area(id, area);
+        }
+    }
+
+    /// Whether the slot's layer is open.
+    #[must_use]
+    pub const fn is_open(&self) -> bool {
+        self.id.is_some()
+    }
+
+    /// The open layer.
+    #[must_use]
+    pub const fn id(&self) -> Option<LayerId> {
+        self.id
+    }
+}
+
 fn contains(area: Rect, column: u16, row: u16) -> bool {
     let right = area.x.saturating_add(area.width);
     let bottom = area.y.saturating_add(area.height);
@@ -304,11 +482,238 @@ fn contains(area: Rect, column: u16, row: u16) -> bool {
 #[cfg(test)]
 mod tests {
     use lunatui_core::Rect;
+    use lunatui_term::{
+        Event, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
+    };
 
-    use super::{Layer, LayerStack, PressRoute};
-    use crate::{HitId, HitMap};
+    use super::{Layer, LayerEvent, LayerSlot, LayerStack, PressRoute};
+    use crate::{FocusManager, HitId, HitMap};
 
     const AREA: Rect = Rect::new(10, 5, 20, 8);
+    const OPENER: HitId = HitId(1);
+    const OTHER: HitId = HitId(2);
+
+    fn esc() -> Event {
+        Event::Key(KeyEvent::press(KeyCode::Esc))
+    }
+
+    fn press(column: u16, row: u16) -> Event {
+        Event::Mouse(MouseEvent::new(
+            MouseKind::Down(MouseButton::Left),
+            column,
+            row,
+        ))
+    }
+
+    fn base_focus() -> FocusManager {
+        let mut focus = FocusManager::new();
+        focus.sync(vec![
+            (OPENER, Rect::new(0, 0, 4, 1)),
+            (OTHER, Rect::new(5, 0, 4, 1)),
+        ]);
+        focus
+    }
+
+    #[test]
+    fn esc_closes_only_the_top_layer_and_then_the_next() {
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let dialog = layers.push(Layer::modal(AREA));
+        let menu = layers.push(Layer::popover(Rect::new(12, 6, 4, 2)));
+        assert_eq!(
+            layers.handle(&esc(), &mut focus),
+            LayerEvent::Dismissed {
+                layer: menu,
+                deliver: false
+            }
+        );
+        assert_eq!(layers.top(), Some(dialog));
+        assert_eq!(
+            layers.handle(&esc(), &mut focus),
+            LayerEvent::Dismissed {
+                layer: dialog,
+                deliver: false
+            }
+        );
+        assert!(layers.is_empty());
+        assert_eq!(layers.handle(&esc(), &mut focus), LayerEvent::Pass);
+    }
+
+    #[test]
+    fn esc_release_and_modified_esc_do_not_dismiss() {
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        layers.push(Layer::popover(AREA));
+        let release = KeyEvent::press(KeyCode::Esc).kind(KeyKind::Release);
+        let shifted = KeyEvent::press(KeyCode::Esc).modifiers(Modifiers::new().shift());
+        assert_eq!(
+            layers.handle(&Event::Key(release), &mut focus),
+            LayerEvent::Pass
+        );
+        assert_eq!(
+            layers.handle(&Event::Key(shifted), &mut focus),
+            LayerEvent::Pass
+        );
+        assert_eq!(layers.len(), 1);
+    }
+
+    #[test]
+    fn outside_press_closes_a_popover_and_still_reaches_the_screen() {
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let menu = layers.push(Layer::popover(AREA));
+        assert_eq!(layers.handle(&press(15, 7), &mut focus), LayerEvent::Pass);
+        assert_eq!(
+            layers.handle(&press(0, 0), &mut focus),
+            LayerEvent::Dismissed {
+                layer: menu,
+                deliver: true
+            }
+        );
+        assert!(layers.is_empty());
+    }
+
+    #[test]
+    fn outside_press_leaves_a_modal_open_and_is_dropped() {
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let dialog = layers.push(Layer::modal(AREA));
+        assert_eq!(
+            layers.handle(&press(0, 0), &mut focus),
+            LayerEvent::Consumed
+        );
+        assert_eq!(layers.top(), Some(dialog));
+        assert_eq!(layers.handle(&press(12, 6), &mut focus), LayerEvent::Pass);
+    }
+
+    #[test]
+    fn closing_a_layer_returns_focus_to_its_opener_on_the_next_frame() {
+        let base = vec![
+            (OPENER, Rect::new(0, 0, 4, 1)),
+            (OTHER, Rect::new(5, 0, 4, 1)),
+        ];
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let dialog = layers.push(Layer::modal(AREA).return_focus(OTHER));
+        layers.assign(dialog, HitId(7), Rect::new(12, 10, 6, 1));
+        focus.sync(layers.focus_entries(base.clone()));
+        assert_eq!(focus.focused(), Some(HitId(7)));
+        layers.handle(&esc(), &mut focus);
+        focus.sync(layers.focus_entries(base));
+        assert_eq!(focus.focused(), Some(OTHER));
+    }
+
+    #[test]
+    fn press_on_the_anchor_reaches_the_opener_instead_of_dismissing() {
+        let field = Rect::new(10, 4, 12, 1);
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        layers.push(Layer::popover(AREA).anchor(field));
+        assert_eq!(layers.handle(&press(11, 4), &mut focus), LayerEvent::Pass);
+        assert_eq!(layers.len(), 1);
+    }
+
+    #[test]
+    fn slot_follows_its_layer_and_reports_a_stack_close_once() {
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let mut slot = LayerSlot::new();
+        let id = slot.open(&mut layers, Layer::popover(AREA).return_focus(OTHER));
+        assert_eq!(slot.open(&mut layers, Layer::popover(AREA)), id);
+        assert_eq!(layers.len(), 1);
+        assert!(!slot.sync(&layers));
+        layers.handle(&press(0, 0), &mut focus);
+        assert!(slot.sync(&layers));
+        assert!(!slot.sync(&layers));
+        assert!(!slot.is_open());
+        assert_eq!(focus.focused(), Some(OTHER));
+    }
+
+    #[test]
+    fn slot_close_removes_the_layer_and_restores_focus() {
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let mut slot = LayerSlot::new();
+        slot.open(&mut layers, Layer::modal(AREA).return_focus(OTHER));
+        slot.place(&mut layers, Rect::new(0, 0, 2, 2));
+        assert_eq!(layers.route_press(1, 1), PressRoute::Deliver);
+        assert!(slot.close(&mut layers, &mut focus));
+        assert!(!slot.close(&mut layers, &mut focus));
+        assert!(layers.is_empty());
+        assert_eq!(focus.focused(), Some(OTHER));
+    }
+
+    #[test]
+    fn a_toast_layer_above_a_popover_lets_outside_presses_close_the_popover() {
+        let toast_area = Rect::new(40, 0, 10, 2);
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let menu = layers.push(Layer::popover(AREA));
+        layers.push(Layer::popover(toast_area).dismissable(false));
+        assert_eq!(layers.handle(&press(41, 1), &mut focus), LayerEvent::Pass);
+        assert_eq!(
+            layers.handle(&press(0, 0), &mut focus),
+            LayerEvent::Dismissed {
+                layer: menu,
+                deliver: true
+            }
+        );
+    }
+
+    #[test]
+    fn a_press_on_a_toast_over_a_modal_never_reaches_the_screen_behind_the_modal() {
+        let toast_area = Rect::new(40, 0, 10, 2);
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let dialog = layers.push(Layer::modal(AREA));
+        let toasts = layers.push(Layer::popover(toast_area).dismissable(false));
+        let mut map = HitMap::new();
+        map.push(OPENER, Rect::new(0, 0, 60, 20), 0);
+        map.push(
+            HitId(7),
+            Rect::new(12, 6, 4, 1),
+            layers.z(dialog).unwrap_or(0),
+        );
+        map.push(
+            HitId(9),
+            Rect::new(40, 0, 10, 1),
+            layers.z(toasts).unwrap_or(0),
+        );
+
+        assert_eq!(layers.handle(&press(45, 1), &mut focus), LayerEvent::Pass);
+        assert_eq!(
+            map.pick(45, 1),
+            Some(OPENER),
+            "the plain pick reaches behind the modal"
+        );
+        assert_eq!(layers.pick(&map, 45, 1), None);
+        assert_eq!(layers.pick(&map, 45, 0), Some(HitId(9)));
+        assert_eq!(layers.pick(&map, 13, 6), Some(HitId(7)));
+        assert_eq!(
+            layers.handle(&press(2, 15), &mut focus),
+            LayerEvent::Consumed
+        );
+        layers.remove(dialog);
+        assert_eq!(layers.floor(), 0);
+        assert_eq!(layers.pick(&map, 45, 1), Some(OPENER));
+    }
+
+    #[test]
+    fn a_toast_layer_ignores_esc_and_outside_presses() {
+        let mut layers = LayerStack::new();
+        let mut focus = base_focus();
+        let dialog = layers.push(Layer::modal(AREA));
+        layers.push(Layer::popover(Rect::new(40, 0, 10, 2)).dismissable(false));
+        assert_eq!(
+            layers.handle(&esc(), &mut focus),
+            LayerEvent::Dismissed {
+                layer: dialog,
+                deliver: false
+            }
+        );
+        assert_eq!(layers.handle(&press(0, 0), &mut focus), LayerEvent::Pass);
+        assert_eq!(layers.len(), 1);
+    }
 
     #[test]
     fn empty_stack_delivers_presses_and_has_no_escape_target() {
@@ -393,17 +798,19 @@ mod tests {
     }
 
     #[test]
-    fn press_outside_a_modal_dismisses_and_is_consumed() {
+    fn press_outside_a_modal_is_blocked_unless_outside_presses_dismiss_it() {
         let mut layers = LayerStack::new();
-        let id = layers.push(Layer::modal(AREA));
+        layers.push(Layer::modal(AREA));
+        assert_eq!(layers.route_press(0, 0), PressRoute::Block);
+        assert_eq!(layers.route_press(12, 6), PressRoute::Deliver);
+        let palette = layers.push(Layer::modal(AREA).outside_press(true));
         assert_eq!(
             layers.route_press(0, 0),
             PressRoute::Dismiss {
-                layer: id,
+                layer: palette,
                 deliver: false
             }
         );
-        assert_eq!(layers.route_press(12, 6), PressRoute::Deliver);
     }
 
     #[test]

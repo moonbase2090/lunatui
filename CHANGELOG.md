@@ -10,7 +10,20 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `LayerStack::handle(&event, &mut focus)` is the one place that turns Esc and pointer presses into dismissals. Esc closes the top layer that Esc dismisses; a press outside a popover or drop-down closes it and is still handled; a press outside a modal layer such as a dialog or the command palette is dropped and the modal stays open. A closed layer gives focus back to its opener through the new `FocusManager::restore`, which applies at the next `sync` when the opener is not registered yet. `LayerSlot` tracks one overlay's layer, and `Layer::anchor` and `Layer::outside_press` set a layer's anchor rectangle and whether outside presses dismiss it. `LayerStack::pick` hit tests a delivered press without reaching regions under an open modal, through the new `HitMap::pick_from`.
+- `Select::layer`, `CommandPalette::layer` and `ToastStack::layer` give each overlay's layer for the app's `LayerStack`. Toasts sit in a layer that Esc and outside presses leave alone.
 - `lunatui_test::Harness` and `Component`: mount state that takes events and draws itself, inject real key and pointer events (`key`, `keys`, `type_text`, `click`, `hover`, `drag`, `scroll`), advance a virtual clock, and assert focus, value and the drawn rows. Every event goes through the terminal encoding and the real input parser first. The select, radio group and form tests now drive their widgets through it, and `docs/conventions.md` requires it for interactive widgets.
+
+### Changed
+
+- Breaking: dialogs and popovers open and close through the app's `LayerStack`. `DialogState::open` takes the stack and the opener's `HitId`, `activate` and `click` take the stack and the `FocusManager`, and `sync` reports a dialog that Esc cancelled. `DialogState::cancel`, `DialogState::focus_trap` and `DialogClosed::restore` are gone: Esc and focus return belong to the stack. `PopoverState::click` and `PopoverClick` are replaced by `toggle`, `close`, `sync` and `place`, and outside presses are the stack's. The `popup`, `select` and `toast` features now turn on `lunatui-runtime`.
+- Breaking: `FocusTrap`, `Overlay::focus_trap`, `Overlay::traps_focus`, `Popup::focus_trap` and `Popup::traps_focus` are removed. `LayerStack::focus_entries` keeps Tab inside the topmost modal layer instead, so there is no second id space for focus.
+- Breaking: `Layer::modal` is no longer dismissed by a press outside it; Esc still dismisses it, and `outside_press(true)` brings the old behaviour back. `LayerStack::route_press` now looks past layers that ignore outside presses, such as toasts, so a popover under a toast still closes on an outside press.
+
+## [0.1.29] - 2026-11-12
+
+### Added
+
 - `benches/tests/dashboard_tick_bytes.rs` fails when the lunatui dashboard tick at 200×60 encodes to more than the PRD's 160 B target without colour (now 157 B, against 209 B for ratatui), and pins the exact byte counts without colour and in truecolor (157 B and 382 B).
 - `benches/tests/dashboard_allocs.rs` fails when the lunatui dashboard at 200×60 allocates more than today while rendering (25,120 allocations and reallocations over 240 steady-state frames, at most 120 in one frame) or allocates or reallocates at all while diffing and encoding.
 - `docs/platforms.md`: what tier 1 means and how Linux, macOS and Windows are checked. The `CI` workflow gains a Windows clippy job.
@@ -18,10 +31,13 @@ Every PR adds its entry under **Unreleased**.
 ### Changed
 
 - BigText digits, capitals, and `:.-%` sit on a 7×7 grid inside the 8×8 cell, with one-pixel strokes and a blank bottom row and rightmost column. The bitmap remains derived from Press Start 2P by `CodeMan38` under OFL-1.1 (`lunatui-widgets/assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII stays a hollow box.
-- The `CI` workflow now also runs on pull requests, with the macOS and Windows test jobs, the Windows clippy job and the `--all-features` suite. The Linux-only jobs that `Rookrunner` already runs stay dispatch-only.
+- The `CI` workflow now also runs on pull requests, with the macOS and Windows test jobs, the Windows clippy job and the `--all-features` suite. The Linux-only jobs that already run on the project's self-hosted runners stay dispatch-only.
 
 ### Fixed
 
+- The `keymap_pty` tests find the example binary from cargo's own build report instead of assuming the test executable sits two directories below `target/debug`, which is not true with the newer cargo build layout and made all five tests fail with a missing file.
+- The native pie chart rasteriser iterates the slice colours directly instead of indexing them by a counter, which newer clippy releases flag as `clippy::needless_range_loop`. The output is unchanged.
+- A lone Esc key press is now delivered. The input thread held a trailing `ESC` byte until more input arrived, so Esc did nothing until the next key (which then acted as Alt+key or was swallowed). `Parser::holds_escape` and `Parser::expire` are new; the runtime input reader gives a held escape 50 ms to be completed by a following byte and then reports it as `KeyCode::Esc`. Whole CSI and SS3 sequences, Alt+key pairs and open pastes are unaffected. The sandbox WASM artifact is regenerated.
 - `Cargo.lock` moves `rustix` from 1.1.5 to 1.1.6, which fixes the advisory RUSTSEC-2026-0486 that `cargo deny` reported.
 - The Windows build: the Windows-only `lunatui-term` tests build `MouseEvent` with `MouseEvent::new`, and the `live_dashboard` and `lunatui_dashboard` examples no longer have unused imports on Windows. `cargo clippy` no longer fails on `lunatui-runtime`'s input module on Windows.
 - The checkbox parity tests in `lunatui-bench` no longer fail when the workspace is tested with `--all-features`. The ratatui reference drew the disabled label's gap cells in the foreground colour instead of the muted label colour, which only differs once the `graphite` token mapping is on.

@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Attrs, ClusterTable, Color, Grid, Rect, Size, Style};
+use lunatui_runtime::{FocusManager, LayerEvent, LayerStack};
+use lunatui_term::{Event, KeyCode, KeyEvent, MouseButton, MouseEvent, MouseKind};
 use lunatui_theme::{Theme, Token};
 use lunatui_widgets::{
-    Block, BorderType, Constraint, Paragraph, Popover, PopoverClick, PopoverState, RenderCx,
-    StatusBar, Table, VecSource, Widget,
+    Block, BorderType, Constraint, Paragraph, Popover, PopoverState, RenderCx, StatusBar, Table,
+    VecSource, Widget,
 };
 
 const BUTTONS: [&str; 4] = ["Filter", "Columns", "Export", "Sort"];
@@ -92,17 +94,21 @@ struct App {
     columns: [bool; 3],
     open: Option<Panel>,
     state: PopoverState,
+    layers: LayerStack,
+    focus: FocusManager,
     action: &'static str,
 }
 
 impl App {
-    const fn new() -> Self {
+    fn new() -> Self {
         Self {
             shown: [true; 3],
             sort: 0,
             columns: [true; 3],
             open: None,
             state: PopoverState::new(),
+            layers: LayerStack::new(),
+            focus: FocusManager::new(),
             action: "Click a toolbar button",
         }
     }
@@ -153,35 +159,49 @@ impl App {
         self.popover(area, which).area(area)
     }
 
-    fn click(&mut self, area: Rect, (column, row): (u16, u16)) {
-        for (index, which) in [(0, Panel::Filter), (1, Panel::Columns), (3, Panel::Sort)] {
-            if self.open.is_some_and(|open| open != which) {
-                continue;
-            }
-            let anchor = button(area, index);
-            let panel = self.panel_area(area);
-            match self.state.click(column, row, anchor, panel) {
-                PopoverClick::Anchor => {
-                    self.open = self.state.is_open().then_some(which);
-                    self.action = if self.open.is_some() {
-                        "Opened"
+    fn event(&mut self, area: Rect, event: &Event) {
+        let deliver = match self.layers.handle(event, &mut self.focus) {
+            LayerEvent::Pass => true,
+            LayerEvent::Consumed => false,
+            LayerEvent::Dismissed { deliver, .. } => {
+                if self.state.sync(&self.layers) {
+                    self.open = None;
+                    self.action = if matches!(event, Event::Key(_)) {
+                        "Closed with Escape"
                     } else {
-                        "Closed"
+                        "Closed by clicking outside"
                     };
-                    return;
                 }
-                PopoverClick::Inside => {
-                    if let Some(panel) = panel {
-                        self.choose(which, usize::from(row.saturating_sub(panel.y + 1)));
-                    }
-                    return;
-                }
-                _ => {}
+                deliver
+            }
+        };
+        if deliver && let Event::Mouse(mouse) = event {
+            self.press(area, (mouse.column, mouse.row));
+        }
+        let panel = self.panel_area(area);
+        self.state.place(&mut self.layers, panel);
+    }
+
+    fn press(&mut self, area: Rect, (column, row): (u16, u16)) {
+        for (index, which) in [(0, Panel::Filter), (1, Panel::Columns), (3, Panel::Sort)] {
+            let anchor = button(area, index);
+            if contains(anchor, column, row) {
+                self.state
+                    .toggle(&mut self.layers, &mut self.focus, anchor, None);
+                self.open = self.state.is_open().then_some(which);
+                self.action = if self.open.is_some() {
+                    "Opened"
+                } else {
+                    "Closed"
+                };
+                return;
             }
         }
-        self.open = None;
-        self.state.close();
-        self.action = "Closed by clicking outside";
+        if let (Some(which), Some(panel)) = (self.open, self.panel_area(area))
+            && contains(panel, column, row)
+        {
+            self.choose(which, usize::from(row.saturating_sub(panel.y + 1)));
+        }
     }
 
     fn choose(&mut self, which: Panel, option: usize) {
@@ -197,7 +217,7 @@ impl App {
             Panel::Sort if option < 3 => {
                 self.sort = option;
                 self.open = None;
-                self.state.close();
+                self.state.close(&mut self.layers, &mut self.focus);
                 self.action = "Sorted";
             }
             _ => {}
@@ -210,6 +230,10 @@ fn lines(items: impl Iterator<Item = (&'static str, bool)>) -> String {
         .map(|(name, on)| format!(" {} {name}", if on { "☑" } else { "☐" }))
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn contains(area: Rect, column: u16, row: u16) -> bool {
+    column >= area.x && column - area.x < area.width && row >= area.y && row - area.y < area.height
 }
 
 fn button(area: Rect, index: usize) -> Rect {
@@ -261,7 +285,8 @@ fn replay(area: Rect, tick: u32) -> (App, (u16, u16), bool) {
                 if tick < when {
                     return (app, at, false);
                 }
-                app.click(area, at);
+                let down = MouseEvent::new(MouseKind::Down(MouseButton::Left), at.0, at.1);
+                app.event(area, &Event::Mouse(down));
                 pressed = tick < when + 3;
                 from = at;
                 start = when;
@@ -270,9 +295,7 @@ fn replay(area: Rect, tick: u32) -> (App, (u16, u16), bool) {
                 if tick < when {
                     return (app, at, false);
                 }
-                app.open = None;
-                app.state.close();
-                app.action = "Closed with Escape";
+                app.event(area, &Event::Key(KeyEvent::press(KeyCode::Esc)));
             }
         }
     }

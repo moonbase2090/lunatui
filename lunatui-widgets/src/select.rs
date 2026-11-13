@@ -4,6 +4,7 @@
 use std::borrow::Cow;
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix};
+use lunatui_runtime::{HitId, Layer};
 use lunatui_theme::Token;
 
 use crate::{RenderCx, Widget, WidgetState};
@@ -128,6 +129,10 @@ impl<'a, S: AsRef<str>> Select<'a, S> {
         if !self.open {
             return 0;
         }
+        self.open_rows(height)
+    }
+
+    fn open_rows(&self, height: u16) -> u16 {
         let wanted = u16::try_from(self.options.len().max(1)).unwrap_or(u16::MAX);
         wanted.min(self.max_rows).min(height.saturating_sub(1))
     }
@@ -136,6 +141,20 @@ impl<'a, S: AsRef<str>> Select<'a, S> {
     #[must_use]
     pub fn field_area(&self, area: Rect) -> Rect {
         Rect::new(area.x, area.y, area.width, area.height.min(1))
+    }
+
+    /// The drop-down's layer for the app's [`LayerStack`](lunatui_runtime::LayerStack): a
+    /// non-modal layer over the list the select shows in `area` once open, anchored on the field
+    /// so a press there reaches the select instead of closing the list. Esc or a press outside
+    /// closes it, and focus goes back to `opener`.
+    #[must_use]
+    pub fn layer(&self, area: Rect, opener: Option<HitId>) -> Layer {
+        let list = Rect::new(area.x, area.y + 1, area.width, self.open_rows(area.height));
+        let layer = Layer::popover(list).anchor(self.field_area(area));
+        match opener {
+            Some(opener) => layer.return_focus(opener),
+            None => layer,
+        }
     }
 
     /// The cells of the drop-down list in `area` (empty while it is closed).

@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use lunatui_core::{Rect, Style, clip_display_prefix, width};
+use lunatui_runtime::Layer;
 use lunatui_theme::Token;
 
 use crate::{Block, BorderType, RenderCx, Widget};
@@ -282,6 +283,26 @@ impl ToastStack {
         placed
     }
 
+    /// The toasts' layer for the app's [`LayerStack`](lunatui_runtime::LayerStack) at time
+    /// `now`, or `None` when no toast is shown: a non-modal layer over the cells the shown toasts
+    /// cover, which Esc and outside presses leave alone, so a toast stays until it expires or is
+    /// dismissed. Open it in a [`LayerSlot`](lunatui_runtime::LayerSlot) while it is `Some` and
+    /// close the slot once it is `None`.
+    #[must_use]
+    pub fn layer(
+        &self,
+        now: Duration,
+        area: Rect,
+        pane: impl Fn(u32) -> Option<Rect>,
+    ) -> Option<Layer> {
+        let placements = self.placements(now, area, pane);
+        let first = placements.first()?.rect;
+        let covered = placements
+            .iter()
+            .fold(first, |cover, placement| union(cover, placement.rect));
+        Some(Layer::popover(covered).dismissable(false))
+    }
+
     /// Draws the shown toasts at time `now`. See [`ToastStack::placements`].
     pub fn render(
         &self,
@@ -349,4 +370,14 @@ fn draw(toast: &Toast, rect: Rect, cx: &mut RenderCx<'_>) {
         clip_display_prefix(&toast.text, room),
         fill,
     );
+}
+
+fn union(a: Rect, b: Rect) -> Rect {
+    let x = a.x.min(b.x);
+    let y = a.y.min(b.y);
+    let right = a.x.saturating_add(a.width).max(b.x.saturating_add(b.width));
+    let bottom =
+        a.y.saturating_add(a.height)
+            .max(b.y.saturating_add(b.height));
+    Rect::new(x, y, right - x, bottom - y)
 }

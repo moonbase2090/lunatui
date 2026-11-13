@@ -27,7 +27,7 @@ line-gauge = ["widget-state"]
 code-view = ["widget-state"]
 color-picker = ["widget-state"]
 combo-box = ["widget-state", "search-box"]
-select = ["widget-state"]
+select = ["widget-state", "dep:lunatui-runtime", "lunatui-runtime/app"]
 file-picker = ["widget-state"]
 button = ["widget-state"]
 calendar = ["widget-state"]
@@ -42,7 +42,7 @@ pixel-canvas = ["canvas", "image"]
 barchart = ["widget-state"]
 pixel-barchart = ["barchart", "image"]
 pixel-gauge = ["image"]
-toast = ["widget-state"]
+toast = ["widget-state", "dep:lunatui-runtime", "lunatui-runtime/app"]
 tag-input = ["widget-state"]
 notification-center = ["widget-state", "toast"]
 slider = ["widget-state"]
@@ -69,7 +69,7 @@ bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
 image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["dep:lunatui-runtime"]
-popup = ["widget-state"]
+popup = ["widget-state", "dep:lunatui-runtime", "lunatui-runtime/app"]
 scroll-view = ["widget-state", "lunatui-core/blit"]
 widget-list = ["widget-state", "lunatui-core/blit"]
 # `LayoutDebug`: outlines layout boxes with their sizes.
@@ -83,20 +83,21 @@ all-widgets = ["widget-list", "layout-debug", "native-alpha", "native-subcell", 
 
 [dependencies]
 vt100 = { version = "=0.16.2", optional = true }
-lunatui-term = { version = "0.1.28", path = "../lunatui-term", optional = true }
-lunatui-core = { version = "0.1.28", path = "../lunatui-core" }
-lunatui-layout = { version = "0.1.28", path = "../lunatui-layout" }
-lunatui-image = { version = "0.1.28", path = "../lunatui-image", optional = true }
-lunatui-text = { version = "0.1.28", path = "../lunatui-text" }
-lunatui-theme = { version = "0.1.28", path = "../lunatui-theme" }
-lunatui-runtime = { version = "0.1.28", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
+lunatui-term = { version = "0.1.29", path = "../lunatui-term", optional = true }
+lunatui-core = { version = "0.1.29", path = "../lunatui-core" }
+lunatui-layout = { version = "0.1.29", path = "../lunatui-layout" }
+lunatui-image = { version = "0.1.29", path = "../lunatui-image", optional = true }
+lunatui-text = { version = "0.1.29", path = "../lunatui-text" }
+lunatui-theme = { version = "0.1.29", path = "../lunatui-theme" }
+lunatui-runtime = { version = "0.1.29", path = "../lunatui-runtime", optional = true, features = ["keymap"] }
 unicode-segmentation = "=1.13.3"
 
 tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"] }
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.28", path = "../lunatui-test" }
-lunatui-term = { version = "0.1.28", path = "../lunatui-term" }
+lunatui-test = { version = "0.1.29", path = "../lunatui-test" }
+lunatui-term = { version = "0.1.29", path = "../lunatui-term" }
+lunatui-runtime = { version = "0.1.29", path = "../lunatui-runtime" }
 ratatui = "=0.30.2"
 tui-menu = "=0.3.1"
 proptest = "=1.9.0"

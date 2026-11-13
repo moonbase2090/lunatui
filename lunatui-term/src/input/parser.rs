@@ -73,6 +73,15 @@ impl Parser {
         self.pending.len()
     }
 
+    /// Whether the parser is holding bytes that begin with an escape and are not inside a
+    /// paste. A reader that sees this stay true while no more input arrives should call
+    /// [`Parser::expire`] after a short delay, because a lone Esc press is indistinguishable
+    /// from the start of a longer sequence until more bytes arrive.
+    #[must_use]
+    pub fn holds_escape(&self) -> bool {
+        !self.paste && self.pending.first() == Some(&0x1b)
+    }
+
     /// Feeds bytes and returns every event that completed.
     #[must_use]
     pub fn push(&mut self, bytes: &[u8]) -> Vec<Event> {
@@ -85,6 +94,17 @@ impl Parser {
             self.drain(&mut out);
         }
         out
+    }
+
+    /// Gives up waiting for the rest of a held escape sequence and returns what it was: an Esc
+    /// key press, followed by whatever the remaining bytes parse to. Does nothing while a
+    /// paste is open or when no escape is held, so it is safe to call on an input timeout.
+    #[must_use]
+    pub fn expire(&mut self) -> Vec<Event> {
+        if !self.holds_escape() {
+            return Vec::new();
+        }
+        self.flush()
     }
 
     /// Finishes a trailing escape or an open paste.
