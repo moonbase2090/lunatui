@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+#![doc = include_str!("../README.md")]
+
 use std::io::{self, Write};
 
 use lunatui_core::{Cell, Color, Grid, Rect, Style};
