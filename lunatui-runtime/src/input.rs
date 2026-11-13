@@ -7,7 +7,9 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread;
 use std::time::Duration;
 
-use lunatui_term::{Event, Parser, SIZE_POLL, terminal_size, watch_size};
+use lunatui_term::{Event, Parser, watch_size};
+#[cfg(unix)]
+use lunatui_term::{SIZE_POLL, terminal_size};
 
 type SizeReader = Box<dyn FnMut() -> Option<(u16, u16)> + Send>;
 
