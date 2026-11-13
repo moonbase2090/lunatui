@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.30] - 2026-11-13
+
 ### Added
 
 - `Event::Resize(columns, rows)` reports a terminal size change, and `lunatui_runtime::run` follows it: the loop reallocates both frame grids, hands the app the new area on the next render and repaints every cell, so a window that is tiled, floated or dragged to another size after start is drawn at its new size. The event reaches `App::update` too. On Unix a thread checks the size every 100 ms and sends the first size at start, so a resize that happened before input opened is not missed; on Windows the console's own resize event is used (it was dropped before). `lunatui_term::terminal_size` and `lunatui_term::watch_size` are the reading and polling pieces, and `Input::from_reader_sized` starts an input worker with a size source.
