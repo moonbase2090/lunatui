@@ -507,8 +507,6 @@ impl Dismissal {
 }
 
 impl Handle for FocusManager {
-    /// Tab and Shift+Tab move through the Tab order, and arrows move to the nearest region in
-    /// their direction.
     fn handle(&mut self, event: &Event) -> Outcome {
         let Event::Key(key) = event else {
             return Outcome::Ignored;
