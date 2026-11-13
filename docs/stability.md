@@ -31,7 +31,7 @@ Not breaking, and allowed in a minor version:
 
 ## Outside the promise
 
-- The accessibility export in `lunatui-runtime` (feature `accessibility`) is documented as experimental and is not covered until that note is removed.
+- The version-2 accessibility export in `lunatui-runtime` (available with `app`) is documented as experimental and is not covered until that note is removed.
 - The bench, test-helper and web-sample crates are not published API.
 - Items documented as internal, and anything not reachable from a crate root or a public module.
 - The exact bytes of recorded captures and the `site/` sandbox build.

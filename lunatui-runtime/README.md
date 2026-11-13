@@ -6,21 +6,25 @@ The default `image-presenter` feature adds `App::render_frame` and a runtime-own
 
 The optional `effects` feature (it implies `motion`) adds `effect::Effect`: fade, dissolve, sweep, slide and HSL shift, with delay, duration and `Ease` on each, joined by `Effect::sequence` and `Effect::parallel`. Draw the widgets into the `Grid` as usual, then call `Effect::render(elapsed, &mut grid, area, &palette)`. An effect is a pure function of elapsed time, so a frame at a given time is reproducible and testable. `Effect::reversed` runs an effect backward (fade-out to fade-in) and `Effect::with_policy(MotionPolicy)` jumps to the end state under reduced motion. A `Palette` built from the active theme resolves default colors, palette indexes and theme tokens to RGB, so effects use theme colors and not hard-coded ones. Colors blend in `OKLab` and come out as RGB, which the encoder reduces to the terminal's 256 or 16 colors. This is cell-level animation; sub-cell precision and real alpha belong to the render core and are not part of it.
 
-The optional `accessibility` feature implies `app` and adds experimental flat role
-export. Register a semantic region with
-`HitMap::push_with_role(id, area, z, AccessibilityRole::Button)` and call
-`write_accessibility_json(writer, focus.focused())`. Each call writes one
-version-1 JSON object and a newline, with annotated regions in registration
-order, their IDs, roles, cell rectangles, depth and current focus. Ordinary
-`push` regions are omitted. Clearing the hit map clears the metadata too.
-Repeated IDs and empty rectangles are preserved; export does not infer
-visibility or hierarchy. This exports role metadata, not a platform
-accessibility tree. See [the format decision](../docs/adr/0008-accessibility-role-export.md).
+With `app`, `HitMap` records named controls with their role, disabled state,
+exact depth and optional layer identity. `controls()` returns those records;
+`find_control(role, name, layer)` reports ambiguous selectors instead of choosing
+one. Disabled controls remain queryable but do not activate through pointer
+picking. Register with `push_control(id, area, z, ControlMetadata::new(name, role))`
+or render a `Field`, `Form`, or `NamedControl` through `RenderCx::hit_map`.
+
+`write_accessibility_json(writer, focus.focused())` emits experimental version-2
+JSON with control names and availability, excluding input values, help and
+validation text. It is a flat snapshot, not a platform accessibility tree.
+Raw geometric regions are omitted. Legacy role-only annotations retain a null
+name and are not named selector targets. Clearing the map clears the metadata.
+The `accessibility` feature remains a compatibility alias for `app`.
+See [the format decision](../docs/adr/0008-accessibility-role-export.md).
 
 Run the headless example and its JSON/focus check:
 
 ```sh
-cargo run --locked -p lunatui-runtime --no-default-features --features accessibility --example accessibility_roles
+cargo run --locked -p lunatui-runtime --no-default-features --features app --example accessibility_roles
 python3 scripts/check-accessibility-roles.py
-cargo test --locked -p lunatui-runtime --no-default-features --features accessibility --test accessibility
+cargo test --locked -p lunatui-runtime --no-default-features --features app --test accessibility
 ```

@@ -309,7 +309,7 @@ where
                 continue;
             }
             let mut scratch = Grid::new(item.rect.width, item.height);
-            cx.offscreen(&mut scratch, |inner| {
+            let hits = cx.offscreen(&mut scratch, |inner| {
                 let full = Rect::new(0, 0, item.rect.width, item.height);
                 inner.fill(full, base, ' ');
                 (self.draw)(item.index, full, is_selected, inner);
@@ -317,6 +317,12 @@ where
             });
             cx.blit(
                 &scratch,
+                Rect::new(0, item.skip, item.rect.width, item.rect.height),
+                item.rect.x,
+                item.rect.y,
+            );
+            cx.blit_controls(
+                hits.as_ref(),
                 Rect::new(0, item.skip, item.rect.width, item.rect.height),
                 item.rect.x,
                 item.rect.y,

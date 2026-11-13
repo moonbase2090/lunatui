@@ -217,6 +217,18 @@ impl<'a> Button<'a> {
 }
 
 impl Widget for Button<'_> {
+    fn control_role(&self) -> Option<lunatui_widgets::AccessibilityRole> {
+        Some(lunatui_widgets::AccessibilityRole::Button)
+    }
+
+    fn control_name(&self) -> Option<&str> {
+        Some(self.label)
+    }
+
+    fn control_disabled(&self) -> bool {
+        matches!(self.state, WidgetState::Disabled)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let base = resting(cx, self.variant, self.on);
         let ghost = matches!(self.variant, Variant::Ghost | Variant::Outline);
@@ -298,6 +310,18 @@ impl<'a> Toggle<'a> {
 }
 
 impl Widget for Toggle<'_> {
+    fn control_role(&self) -> Option<lunatui_widgets::AccessibilityRole> {
+        Some(lunatui_widgets::AccessibilityRole::Checkbox)
+    }
+
+    fn control_name(&self) -> Option<&str> {
+        Some(self.label)
+    }
+
+    fn control_disabled(&self) -> bool {
+        matches!(self.state, WidgetState::Disabled)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         let variant = if self.on {
             Variant::Default

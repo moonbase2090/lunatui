@@ -102,7 +102,7 @@ C4 decisions. Each struct is listed once; "stays" means a complete value that ca
 
 | Structs | Decision |
 |---|---|
-| `SectionArea`, `FieldArea`, `PaneArea`, `ItemArea` (widgets) | `#[non_exhaustive]`: layout results that callers only read. |
+| `SectionArea`, `PaneArea`, `ItemArea` (widgets), `FieldArea` (field) | `#[non_exhaustive]`: layout results that callers only read. |
 | `Document`, `List`, `Item`, `Table` (text markdown) | `#[non_exhaustive]`: tree nodes, like the `Block` and `Inline` enums that hold them. |
 | `BundledTheme` (theme), `TerminalCell` (widgets) | `#[non_exhaustive]`: metadata and borrowed views the library produces. |
 | `KeyEvent`, `MouseEvent` (term) | `#[non_exhaustive]`: an input event gains a field when a protocol does. `KeyEvent` already had builders; `MouseEvent` gains `new`, `modifiers` and `unit`. |
@@ -145,7 +145,7 @@ Eight `mod.rs` files exist (`core`: `simd`, `symbols`; `runtime`: `anim`; `term`
 | G1 | Trait surfaces. Twelve public traits: `App`, `Widget`, `ImageSink`, `HostRenderer`, `RowSource`, `TextMetrics`, `HostFontMetrics`, `CodeHighlight`, `Shape`, `CellStyle`, `SparklineValue`, `DateStyle`. All are meant to be implemented by downstream code or used as `dyn` objects (`Widget` is held as `&dyn Widget` by `Card` and `Field`), so none is sealed and none can be. The rule instead: a method added to one of them after 1.0 must have a default body, because a new required method breaks every implementer. The required methods today are the stable contract. `App` and `ImageSink` already follow this: their later additions (`render_frame`, `needs_animation_frames`, `token_palette`, `pixel_target`, `submit_raster`) all have defaults. | accept; the rule is in `stability.md` |
 | G2 | Facade parity. `lunatui` re-exports only the runtime entry points (`App`, `ControlFlow`, `RunOptions`, `is_quit`, `render_once`, `run`, and the `Result` alias), behind the `app` feature. It does not mirror the other crates, on purpose: a program depends on `lunatui-core`, `lunatui-widgets` and the rest directly. Nothing is re-exported that should not be, and every re-exported item is in the stable surface. | accept; the facade stays this small until a user need says otherwise |
 | G3 | Feature gating. Features are additive, named for the capability, and use `dep:` for optional dependencies (conventions §9); the widget features all appear in `all-widgets`. A public item behind a feature is public API under that feature. No public item exists only for tests or benches: nothing is `#[doc(hidden)]`, and the bench and test helper crates are not published API. The long default feature list of `lunatui-widgets` is a product choice (features on by default), not an API problem. | accept |
-| G4 | Deprecated and experimental items. No item carries `#[deprecated]`. One surface is documented as experimental: the version-1 accessibility export in `lunatui-runtime`, behind the `accessibility` feature. | accept; the accessibility export is excluded from the 1.0 stability promise until its documentation drops the word "experimental" |
+| G4 | Deprecated and experimental items. No item carries `#[deprecated]`. One surface is documented as experimental: the version-2 accessibility export in `lunatui-runtime`, available with `app`. | accept; the accessibility export is excluded from the 1.0 stability promise until its documentation drops the word "experimental" |
 
 ## Changes this list expects
 

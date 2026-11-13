@@ -35,6 +35,18 @@ Migration guide: [docs/porting-from-ratatui.md](docs/porting-from-ratatui.md). C
 
 Still frames and short recordings of real widget output, in the dark theme. Native pixel demos use the real terminal recorder; cell demos use `scripts/record-showcase.sh`.
 
+### Named fields and controls
+
+One `Field` descriptor supports stacked fields and `Form` rows. Rendered controls
+register accessible names, roles and disabled state on the pointer hit map;
+input values stay out of the export. [Usage and migration](docs/named-controls.md).
+
+<img src="docs/media/named-controls.gif" alt="Real form controls with required labels, changing focus and a disabled field" width="1028">
+
+Recorded from real widgets with an injected virtual clock. Reproduce with
+`python3 scripts/record-named-controls.py`, which also checks every frame's
+names, roles, disabled state and value-free export.
+
 ### TextArea
 
 A notes editor with line numbers, selection, incremental search and an undoable checklist edit. TextArea also supports Vim and Emacs keymaps and cursor-following scroll. Enable the off-by-default `text-area` feature.

@@ -11,11 +11,14 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+lunatui-runtime = { version = "0.1.29", path = "../lunatui-runtime", default-features = false, features = ["app"] }
 lunatui-core = { version = "0.1.29", path = "../lunatui-core" }
 lunatui-ui-tokens = { version = "0.1.29", path = "../lunatui-ui-tokens" }
 lunatui-widgets = { version = "0.1.29", path = "../lunatui-widgets", features = ["widget-state"] }
 
 [dev-dependencies]
+lunatui-test = { version = "0.1.29", path = "../lunatui-test" }
+lunatui-widgets = { version = "0.1.29", path = "../lunatui-widgets", features = ["scroll-view", "button"] }
 lunatui-badge = { version = "0.1.29", path = "../lunatui-badge" }
 lunatui-button = { version = "0.1.29", path = "../lunatui-button" }
 lunatui-card = { version = "0.1.29", path = "../lunatui-card" }

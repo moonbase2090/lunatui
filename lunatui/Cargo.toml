@@ -24,6 +24,7 @@ text-area = ["lunatui-widgets/text-area", "lunatui-bench/text-area"]
 lunatui-runtime = { version = "0.1.29", path = "../lunatui-runtime", optional = true }
 
 [dev-dependencies]
+lunatui-field = { version = "0.1.29", path = "../lunatui-field" }
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
 lunatui-image = { path = "../lunatui-image" }

@@ -22,6 +22,7 @@ pub struct RenderCx<'a> {
     grid: &'a mut Grid,
     clusters: &'a mut ClusterTable,
     theme: &'a Theme,
+    hit_map: Option<&'a mut lunatui_runtime::HitMap>,
     #[cfg(feature = "color-profiles")]
     palette: Option<&'a PreparedPalette>,
     #[cfg(feature = "image")]
@@ -65,12 +66,51 @@ impl<'a> RenderCx<'a> {
             grid,
             clusters,
             theme,
+            hit_map: None,
             #[cfg(feature = "color-profiles")]
             palette: None,
             #[cfg(feature = "image")]
             image_sink: None,
             #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
             native: false,
+        }
+    }
+
+    /// Attaches the current frame's named-control and pointer registry.
+    /// Clear the map before each frame, just as the cell buffers are repainted.
+    #[must_use]
+    pub fn hit_map(mut self, hits: &'a mut lunatui_runtime::HitMap) -> Self {
+        self.hit_map = Some(hits);
+        self
+    }
+
+    /// Registers a named control at its rendered rectangle. Metadata is
+    /// constructed only when a map is attached, so ordinary cell rendering
+    /// does not allocate registry records.
+    ///
+    /// # Panics
+    ///
+    /// Panics when a map is attached but the control has no application-defined ID.
+    pub fn register_control(
+        &mut self,
+        id: Option<lunatui_runtime::HitId>,
+        area: Rect,
+        z: u16,
+        metadata: impl FnOnce() -> lunatui_runtime::ControlMetadata,
+    ) {
+        if let Some(hits) = self.hit_map.as_deref_mut() {
+            assert!(
+                id.is_some(),
+                "registered controls require an explicit HitId"
+            );
+            let width = area.width.min(self.grid.width().saturating_sub(area.x));
+            let height = area.height.min(self.grid.height().saturating_sub(area.y));
+            if let Some(id) = id
+                && width > 0
+                && height > 0
+            {
+                hits.push_control(id, Rect::new(area.x, area.y, width, height), z, metadata());
+            }
         }
     }
 
@@ -412,11 +452,20 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(feature = "scroll-view", feature = "widget-list"))]
-    pub(crate) fn offscreen(&mut self, grid: &mut Grid, draw: impl FnOnce(&mut RenderCx<'_>)) {
+    pub(crate) fn offscreen(
+        &mut self,
+        grid: &mut Grid,
+        draw: impl FnOnce(&mut RenderCx<'_>),
+    ) -> Option<lunatui_runtime::HitMap> {
+        let mut hits = self
+            .hit_map
+            .as_ref()
+            .map(|_| lunatui_runtime::HitMap::new());
         let mut cx = RenderCx {
             grid,
             clusters: self.clusters,
             theme: self.theme,
+            hit_map: hits.as_mut(),
             #[cfg(feature = "color-profiles")]
             palette: self.palette,
             #[cfg(feature = "image")]
@@ -425,6 +474,22 @@ impl<'a> RenderCx<'a> {
             native: self.native,
         };
         draw(&mut cx);
+        hits
+    }
+
+    #[cfg(any(feature = "scroll-view", feature = "widget-list"))]
+    pub(crate) fn blit_controls(
+        &mut self,
+        source: Option<&lunatui_runtime::HitMap>,
+        mut from: Rect,
+        x: u16,
+        y: u16,
+    ) {
+        if let (Some(target), Some(source)) = (self.hit_map.as_deref_mut(), source) {
+            from.width = from.width.min(self.grid.width().saturating_sub(x));
+            from.height = from.height.min(self.grid.height().saturating_sub(y));
+            target.append_viewport(source, from, x, y);
+        }
     }
 
     #[cfg(any(feature = "scroll-view", feature = "layout-debug"))]

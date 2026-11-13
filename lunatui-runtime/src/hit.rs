@@ -3,10 +3,9 @@
 
 use lunatui_core::Rect;
 
-#[cfg(feature = "accessibility")]
 mod accessibility;
-#[cfg(feature = "accessibility")]
-pub use accessibility::AccessibilityRole;
+mod control;
+pub use control::{AccessibilityRole, AmbiguousControl, Control, ControlMetadata};
 
 /// Stable identifier for an interactive region (PRD §2.9).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -25,13 +24,19 @@ impl HitId {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Annotation {
+    Geometry,
+    Role(AccessibilityRole),
+    Control(ControlMetadata),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct HitRegion {
     id: HitId,
     area: Rect,
     z: u16,
-    #[cfg(feature = "accessibility")]
-    role: Option<AccessibilityRole>,
+    annotation: Annotation,
 }
 
 /// Flat hit map for a single frame. Later entries with the same `z` win ties.
@@ -58,9 +63,88 @@ impl HitMap {
             id,
             area,
             z,
-            #[cfg(feature = "accessibility")]
-            role: None,
+            annotation: Annotation::Geometry,
         });
+    }
+
+    /// Records the same geometry used for rendering and named-control queries.
+    /// Disabled controls remain queryable but cannot be picked for activation.
+    pub fn push_control(&mut self, id: HitId, area: Rect, z: u16, metadata: ControlMetadata) {
+        self.regions.push(HitRegion {
+            id,
+            area,
+            z,
+            annotation: Annotation::Control(metadata),
+        });
+    }
+
+    /// Copies visible regions from an offscreen viewport to its screen position.
+    /// Clips the source geometry and preserves identity, names, roles, depth and layer.
+    /// Completely clipped regions are omitted.
+    pub fn append_viewport(&mut self, source: &Self, viewport: Rect, x: u16, y: u16) {
+        for region in &source.regions {
+            let left = region.area.x.max(viewport.x);
+            let top = region.area.y.max(viewport.y);
+            let right = region
+                .area
+                .x
+                .saturating_add(region.area.width)
+                .min(viewport.x.saturating_add(viewport.width));
+            let bottom = region
+                .area
+                .y
+                .saturating_add(region.area.height)
+                .min(viewport.y.saturating_add(viewport.height));
+            if left >= right || top >= bottom {
+                continue;
+            }
+            let mut visible = region.clone();
+            visible.area = Rect::new(
+                x.saturating_add(left - viewport.x),
+                y.saturating_add(top - viewport.y),
+                right - left,
+                bottom - top,
+            );
+            self.regions.push(visible);
+        }
+    }
+
+    /// Named controls in registration order. Raw geometry and legacy role-only
+    /// annotations are not named controls.
+    pub fn controls(&self) -> impl Iterator<Item = Control<'_>> {
+        self.regions
+            .iter()
+            .filter_map(|region| match &region.annotation {
+                Annotation::Control(metadata) => {
+                    Some(metadata.record(region.id, region.area, region.z))
+                }
+                _ => None,
+            })
+    }
+
+    /// Finds a control by role, exact accessible name, and owning layer.
+    /// Disabled controls are included so callers can explain their availability.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AmbiguousControl`] when multiple records match. It never
+    /// silently selects the first duplicate.
+    pub fn find_control(
+        &self,
+        role: AccessibilityRole,
+        name: &str,
+        layer: Option<crate::LayerId>,
+    ) -> Result<Option<Control<'_>>, AmbiguousControl> {
+        let mut matching = self
+            .controls()
+            .filter(|c| c.role == role && c.name == name && c.layer == layer);
+        let first = matching.next();
+        let extra = matching.count();
+        if extra == 0 {
+            Ok(first)
+        } else {
+            Err(AmbiguousControl { matches: extra + 1 })
+        }
     }
 
     /// Records one region per `(index, area)` pair, with ids counting up from `first`: item
@@ -100,7 +184,14 @@ impl HitMap {
                 Some(prev) => prev,
             });
         }
-        best.map(|region| region.id)
+        best.and_then(|region| match &region.annotation {
+            Annotation::Control(metadata)
+                if metadata.record(region.id, region.area, region.z).disabled =>
+            {
+                None
+            }
+            Annotation::Control(_) | Annotation::Geometry | Annotation::Role(_) => Some(region.id),
+        })
     }
 }
 

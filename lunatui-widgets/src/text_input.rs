@@ -90,6 +90,10 @@ impl TextInput {
 }
 
 impl Widget for TextInput {
+    fn control_role(&self) -> Option<crate::AccessibilityRole> {
+        Some(crate::AccessibilityRole::TextInput)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         if area.width == 0 || area.height == 0 {
             return;

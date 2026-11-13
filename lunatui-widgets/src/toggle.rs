@@ -125,6 +125,18 @@ impl Toggle {
 }
 
 impl Widget for Toggle {
+    fn control_role(&self) -> Option<crate::AccessibilityRole> {
+        Some(crate::AccessibilityRole::Checkbox)
+    }
+
+    fn control_name(&self) -> Option<&str> {
+        Some(self.label.as_ref())
+    }
+
+    fn control_disabled(&self) -> bool {
+        matches!(self.state, WidgetState::Disabled)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         if area.width == 0 || area.height == 0 {
             return;

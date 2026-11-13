@@ -23,24 +23,24 @@ fn export_uses_registration_geometry_and_live_focus() -> io::Result<()> {
     let mut output = Vec::new();
     map.write_accessibility_json(&mut output, focus.focused())?;
     assert_eq!(output, concat!(
-        "{\"version\":1,\"regions\":[",
-        "{\"id\":7,\"role\":\"button\",\"area\":{\"x\":3,\"y\":4,\"width\":8,\"height\":2},\"z\":2,\"focused\":true},",
-        "{\"id\":8,\"role\":\"text_input\",\"area\":{\"x\":1,\"y\":2,\"width\":20,\"height\":1},\"z\":0,\"focused\":false}]}\n",
+        "{\"version\":2,\"regions\":[",
+        "{\"id\":7,\"role\":\"button\",\"name\":null,\"disabled\":false,\"layer\":null,\"area\":{\"x\":3,\"y\":4,\"width\":8,\"height\":2},\"z\":2,\"focused\":true},",
+        "{\"id\":8,\"role\":\"text_input\",\"name\":null,\"disabled\":false,\"layer\":null,\"area\":{\"x\":1,\"y\":2,\"width\":20,\"height\":1},\"z\":0,\"focused\":false}]}\n",
     ).as_bytes());
     focus.tab(false);
     output.clear();
     map.write_accessibility_json(&mut output, focus.focused())?;
     assert_eq!(output, concat!(
-        "{\"version\":1,\"regions\":[",
-        "{\"id\":7,\"role\":\"button\",\"area\":{\"x\":3,\"y\":4,\"width\":8,\"height\":2},\"z\":2,\"focused\":false},",
-        "{\"id\":8,\"role\":\"text_input\",\"area\":{\"x\":1,\"y\":2,\"width\":20,\"height\":1},\"z\":0,\"focused\":true}]}\n",
+        "{\"version\":2,\"regions\":[",
+        "{\"id\":7,\"role\":\"button\",\"name\":null,\"disabled\":false,\"layer\":null,\"area\":{\"x\":3,\"y\":4,\"width\":8,\"height\":2},\"z\":2,\"focused\":false},",
+        "{\"id\":8,\"role\":\"text_input\",\"name\":null,\"disabled\":false,\"layer\":null,\"area\":{\"x\":1,\"y\":2,\"width\":20,\"height\":1},\"z\":0,\"focused\":true}]}\n",
     ).as_bytes());
     assert_eq!(map.pick(3, 4), Some(HitId(99)));
     Ok(())
 }
 
 #[test]
-fn every_role_has_a_distinct_version_one_wire_name() -> io::Result<()> {
+fn every_role_has_a_distinct_version_two_wire_name() -> io::Result<()> {
     for (role, expected) in [
         (Role::Button, "button"),
         (Role::Tab, "tab"),
@@ -56,7 +56,7 @@ fn every_role_has_a_distinct_version_one_wire_name() -> io::Result<()> {
         let mut output = Vec::new();
         map.write_accessibility_json(&mut output, None)?;
         assert_eq!(output, format!(
-            "{{\"version\":1,\"regions\":[{{\"id\":1,\"role\":\"{expected}\",\"area\":{{\"x\":0,\"y\":0,\"width\":1,\"height\":1}},\"z\":0,\"focused\":false}}]}}\n"
+            "{{\"version\":2,\"regions\":[{{\"id\":1,\"role\":\"{expected}\",\"name\":null,\"disabled\":false,\"layer\":null,\"area\":{{\"x\":0,\"y\":0,\"width\":1,\"height\":1}},\"z\":0,\"focused\":false}}]}}\n"
         ).as_bytes());
     }
     Ok(())
@@ -70,7 +70,7 @@ fn clear_removes_metadata_and_unannotated_regions_export_nothing() -> io::Result
     map.push(HitId(2), Rect::new(0, 0, 2, 1), 0);
     let mut output = Vec::new();
     map.write_accessibility_json(&mut output, Some(HitId(1)))?;
-    assert_eq!(output, b"{\"version\":1,\"regions\":[]}\n");
+    assert_eq!(output, b"{\"version\":2,\"regions\":[]}\n");
     assert_eq!(map.pick(0, 0), Some(HitId(2)));
     Ok(())
 }
@@ -83,9 +83,9 @@ fn repeated_ids_and_empty_rectangles_are_preserved() -> io::Result<()> {
     let mut output = Vec::new();
     map.write_accessibility_json(&mut output, Some(HitId(4)))?;
     assert_eq!(output, concat!(
-        "{\"version\":1,\"regions\":[",
-        "{\"id\":4,\"role\":\"list_item\",\"area\":{\"x\":0,\"y\":0,\"width\":1,\"height\":1},\"z\":0,\"focused\":true},",
-        "{\"id\":4,\"role\":\"list_item\",\"area\":{\"x\":5,\"y\":6,\"width\":0,\"height\":0},\"z\":3,\"focused\":true}]}\n",
+        "{\"version\":2,\"regions\":[",
+        "{\"id\":4,\"role\":\"list_item\",\"name\":null,\"disabled\":false,\"layer\":null,\"area\":{\"x\":0,\"y\":0,\"width\":1,\"height\":1},\"z\":0,\"focused\":true},",
+        "{\"id\":4,\"role\":\"list_item\",\"name\":null,\"disabled\":false,\"layer\":null,\"area\":{\"x\":5,\"y\":6,\"width\":0,\"height\":0},\"z\":3,\"focused\":true}]}\n",
     ).as_bytes());
     assert_eq!(map.pick(5, 6), None);
     Ok(())
@@ -97,7 +97,7 @@ fn unregistered_focus_does_not_mark_an_exported_region() -> io::Result<()> {
     map.push_with_role(HitId(1), Rect::new(0, 0, 1, 1), 0, Role::Checkbox);
     let mut output = Vec::new();
     map.write_accessibility_json(&mut output, Some(HitId(42)))?;
-    assert_eq!(output, b"{\"version\":1,\"regions\":[{\"id\":1,\"role\":\"checkbox\",\"area\":{\"x\":0,\"y\":0,\"width\":1,\"height\":1},\"z\":0,\"focused\":false}]}\n");
+    assert_eq!(output, b"{\"version\":2,\"regions\":[{\"id\":1,\"role\":\"checkbox\",\"name\":null,\"disabled\":false,\"layer\":null,\"area\":{\"x\":0,\"y\":0,\"width\":1,\"height\":1},\"z\":0,\"focused\":false}]}\n");
     Ok(())
 }
 

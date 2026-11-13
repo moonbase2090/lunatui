@@ -4,6 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 #[cfg(any(unix, windows))]
+use lunatui_field::{Field, Form};
 use std::env;
 #[cfg(any(unix, windows))]
 use std::io::{self, Write};
@@ -14,7 +15,7 @@ use lunatui_runtime::{App, ControlFlow, is_quit};
 use lunatui_runtime::{RunOptions, render_once, run};
 use lunatui_term::{Event, KeyCode};
 use lunatui_theme::{Theme, Token, Variant};
-use lunatui_widgets::{Block, Form, FormField, RenderCx, TextInput, Widget};
+use lunatui_widgets::{Block, RenderCx, TextInput, Widget};
 
 #[cfg(any(unix, windows))]
 const WIDTH: u16 = 56;
@@ -40,10 +41,10 @@ impl Screen {
         }
     }
 
-    fn form(&self) -> Form {
+    fn form(&self) -> Form<'static> {
         Form::new([
-            FormField::new("Name").required(),
-            FormField::new("Role").hint("shown on the card"),
+            Field::new("Name").required(),
+            Field::new("Role").help("shown on the card"),
         ])
         .focus(Some(self.focus))
     }

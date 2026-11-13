@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+use lunatui_field::{Field, Form};
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::io::{self, LineWriter, Write};
@@ -21,11 +22,11 @@ use lunatui_widgets::{
     Accordion, AccordionSection, Axis, Bar, BarChart, BigText, Block, BorderType, Breadcrumbs,
     Button, ButtonVariant, Canvas, Chart, CodeMark, CodeView, CodeViewState, ColorPicker,
     ColorPickerFocus, ColorPickerState, ComboBox, Dataset, Date, DatePicker, Dialog, DialogFocus,
-    DialogKind, DialogState, Diff, DiffView, DividerId, FileEntry, FilePicker, Form, FormField,
-    Gauge, GraphType, HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView,
-    MarkdownView, Marker, Menu, MenuItem, MenuState, Monthly, NotificationCenter, NotificationLog,
-    NumberInput, Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup,
-    RenderCx, ScrollView, ScrollbarVisibility, SearchBox, Select, Slider, SortDirection, Sparkline,
+    DialogKind, DialogState, Diff, DiffView, DividerId, FileEntry, FilePicker, Gauge, GraphType,
+    HexViewer, KeyHintBar, List, LogBuffer, LogEntry, LogLevel, LogView, MarkdownView, Marker,
+    Menu, MenuItem, MenuState, Monthly, NotificationCenter, NotificationLog, NumberInput,
+    Paragraph, PieChart, PieSlice, PixelSize, Popover, Popup, ProgressBar, RadioGroup, RenderCx,
+    ScrollView, ScrollbarVisibility, SearchBox, Select, Slider, SortDirection, Sparkline,
     SplitAxis, SplitTree, Table, TableState, Tabs, TagInput, TextWrap, ToastKind, ToastScope,
     ToastStack, Toggle, Tooltip, Widget, WidgetState,
 };
@@ -1776,11 +1777,9 @@ fn form_lunatui(
     let mut cx = RenderCx::new(grid, clusters, theme);
     let focus = usize::try_from(tick / 4 % 3).unwrap_or(0);
     let fields = [
-        FormField::new(FORM_LABELS[0])
-            .required()
-            .hint("As on invoices"),
-        FormField::new(FORM_LABELS[1]).required().error("Required"),
-        FormField::new(FORM_LABELS[2]).hint("Optional"),
+        Field::new(FORM_LABELS[0]).required().help("As on invoices"),
+        Field::new(FORM_LABELS[1]).required().error("Required"),
+        Field::new(FORM_LABELS[2]).help("Optional"),
     ];
     Form::new(fields).focus(Some(focus)).render(area, &mut cx);
 }
