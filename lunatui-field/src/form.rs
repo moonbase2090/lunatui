@@ -3,7 +3,7 @@
 
 use crate::Field;
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
-use lunatui_runtime::HitId;
+use lunatui_runtime::{HitId, RovingFocus};
 use lunatui_ui_tokens::Role;
 use lunatui_widgets::{RenderCx, Widget};
 use std::borrow::Cow;
@@ -41,8 +41,8 @@ pub struct FieldArea {
 ///
 /// Each field's [`Field::body`] is rendered into its input rectangle. Callers
 /// can instead draw their own inputs into the rectangles from [`Form::layout`].
-/// [`Form::step`] moves focus through the fields, wrapping and skipping disabled
-/// fields.
+/// [`FormState`](crate::FormState) moves focus through the fields with Tab and Shift+Tab, and
+/// [`Form::step`] is the same move as a pure function; both wrap and skip disabled fields.
 ///
 /// # Panics
 ///
@@ -155,25 +155,19 @@ impl<'a> Form<'a> {
     /// when no field can take focus.
     #[must_use]
     pub fn step(&self, from: Option<usize>, forward: bool) -> Option<usize> {
-        let count = self.fields.len();
-        if count == 0 {
-            return None;
-        }
-        let start = match (from.filter(|index| *index < count), forward) {
-            (Some(index), true) => index + 1,
-            (Some(index), false) => index + count - 1,
-            (None, true) => 0,
-            (None, false) => count - 1,
-        };
-        (0..count)
-            .map(|offset| {
-                if forward {
-                    (start + offset) % count
-                } else {
-                    (start + count - offset) % count
-                }
-            })
-            .find(|index| !self.fields[*index].is_disabled())
+        RovingFocus::step(from, self.fields.len(), forward, true, |index| {
+            !self.fields[index].is_disabled()
+        })
+    }
+
+    pub(crate) fn enabled(&self) -> impl Iterator<Item = bool> + '_ {
+        self.fields.iter().map(|field| !field.is_disabled())
+    }
+
+    pub(crate) fn keys(&self) -> impl Iterator<Item = (Option<HitId>, &str)> + '_ {
+        self.fields
+            .iter()
+            .map(|field| (field.id, field.accessible_name()))
     }
 
     fn label_column(&self) -> u16 {

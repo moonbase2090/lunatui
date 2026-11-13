@@ -4,7 +4,8 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
-use lunatui_field::{Field, FieldArea, Form};
+use lunatui_field::{Field, FieldArea, Form, FormState};
+use lunatui_runtime::{Handle, HitId};
 use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
 use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Token, Variant};
@@ -281,8 +282,7 @@ fn nothing_is_drawn_outside_the_area_or_for_empty_areas() {
 struct FormApp {
     fields: Vec<Field<'static>>,
     values: Vec<String>,
-    disabled: Vec<usize>,
-    focus: Option<usize>,
+    state: FormState,
     submitted: bool,
     valid: bool,
     area: Rect,
@@ -294,8 +294,7 @@ impl FormApp {
         Self {
             fields,
             values,
-            disabled: Vec::new(),
-            focus: None,
+            state: FormState::new(),
             submitted: false,
             valid: false,
             area: Rect::new(0, 0, 0, 0),
@@ -303,7 +302,7 @@ impl FormApp {
     }
 
     fn form(&self) -> Form<'static> {
-        let form = Form::new(self.fields.clone()).focus(self.focus);
+        let form = Form::new(self.fields.clone()).focus(self.state.focused());
         if self.submitted {
             let values: Vec<&str> = self.values.iter().map(String::as_str).collect();
             form.check_required(&values)
@@ -316,9 +315,7 @@ impl FormApp {
         self.submitted = true;
         let form = self.form();
         self.valid = form.is_valid();
-        if let Some(index) = form.first_error() {
-            self.focus = Some(index);
-        }
+        self.state.focus_first_error(&form);
     }
 
     fn click(&mut self, x: u16, y: u16) {
@@ -329,28 +326,29 @@ impl FormApp {
                 && y >= field.row.y
                 && y - field.row.y < field.row.height
         });
-        if let Some(field) = hit.filter(|field| !self.disabled.contains(&field.index)) {
-            self.focus = Some(field.index);
+        if let Some(field) = hit {
+            self.state.focus(field.index);
         }
     }
 }
 
 impl Component for FormApp {
     fn update(&mut self, event: &Event) {
+        self.state.sync(&self.form());
+        if self.state.handle(event).is_taken() {
+            return;
+        }
+        let focus = self.state.focused();
         match event {
             Event::Key(key) => match key.code {
-                KeyCode::Tab => {
-                    let forward = !key.modifiers.is_shift();
-                    self.focus = self.form().step(self.focus, forward).or(self.focus);
-                }
                 KeyCode::Enter => self.submit(),
                 KeyCode::Backspace => {
-                    if let Some(value) = self.focus.and_then(|index| self.values.get_mut(index)) {
+                    if let Some(value) = focus.and_then(|index| self.values.get_mut(index)) {
                         value.pop();
                     }
                 }
                 KeyCode::Char(ch) => {
-                    if let Some(value) = self.focus.and_then(|index| self.values.get_mut(index)) {
+                    if let Some(value) = focus.and_then(|index| self.values.get_mut(index)) {
                         value.push(ch);
                     }
                 }
@@ -365,6 +363,7 @@ impl Component for FormApp {
 
     fn render(&mut self, grid: &mut Grid, area: Rect, clusters: &mut ClusterTable) {
         self.area = area;
+        self.state.sync(&self.form());
         let theme = Theme::builtin(Variant::Dark);
         let form = self.form();
         let mut cx = RenderCx::new(grid, clusters, &theme);
@@ -381,7 +380,7 @@ impl Component for FormApp {
     }
 
     fn focus(&self) -> Option<usize> {
-        self.focus
+        self.state.focused()
     }
 
     fn value(&self) -> Option<String> {
@@ -416,17 +415,86 @@ fn shift_tab_walks_backward_and_starts_at_the_last_field() {
 }
 
 #[test]
-fn a_focus_past_the_last_field_restarts_the_order() {
-    let mut app = FormApp::new(fields());
-    app.focus = Some(9);
-    let mut form = Harness::mount(app, 30, 8);
+fn a_focused_field_that_goes_away_or_is_disabled_hands_focus_back() {
+    let mut form = signup();
+    form.keys("Tab Tab Tab");
+    form.assert_focus(Some(2));
+    form.component_mut().fields.pop();
+    form.key("Esc");
+    form.assert_focus(Some(1));
+    let fields = &mut form.component_mut().fields;
+    fields[1] = fields[1].clone().disabled(true);
+    form.key("Esc");
+    form.assert_focus(Some(0));
     form.key("Tab");
     form.assert_focus(Some(0));
-    let mut app = FormApp::new(fields());
-    app.focus = Some(3);
-    let mut form = Harness::mount(app, 30, 8);
-    form.key("S-Tab");
+}
+
+#[test]
+fn removing_a_focused_middle_field_hands_focus_to_the_one_before_it() {
+    let mut form = signup();
+    form.keys("Tab Tab");
+    form.assert_focus(Some(1));
+    let app = form.component_mut();
+    app.fields.remove(1);
+    app.values.remove(1);
+    form.key("Esc");
+    form.assert_focus(Some(0));
+    form.type_text("Ada");
+    form.assert_value("Ada|");
+}
+
+#[test]
+fn focus_follows_its_field_when_fields_are_inserted_or_reordered() {
+    let mut form = signup();
+    form.keys("Tab Tab");
+    form.assert_focus(Some(1));
+    let app = form.component_mut();
+    app.fields.insert(0, Field::new("Title"));
+    app.values.insert(0, String::new());
+    form.key("Esc");
     form.assert_focus(Some(2));
+    let app = form.component_mut();
+    app.fields.swap(1, 2);
+    app.values.swap(1, 2);
+    form.key("Esc");
+    form.assert_focus(Some(1));
+    form.type_text("a@b.c");
+    form.assert_value("|a@b.c||");
+}
+
+#[test]
+fn a_field_with_an_id_keeps_focus_when_its_label_changes() {
+    let app = FormApp::new(vec![
+        Field::new("A").id(HitId(10)),
+        Field::new("B").id(HitId(11)),
+    ]);
+    let mut form = Harness::mount(app, 20, 8);
+    form.keys("Tab Tab");
+    form.assert_focus(Some(1));
+    let fields = &mut form.component_mut().fields;
+    fields.insert(0, Field::new("New").id(HitId(9)));
+    fields[2] = Field::new("Renamed").id(HitId(11));
+    form.component_mut().values.insert(0, String::new());
+    form.key("Esc");
+    form.assert_focus(Some(2));
+}
+
+#[test]
+fn fields_with_the_same_name_keep_their_order() {
+    let app = FormApp::new(vec![
+        Field::new("Item"),
+        Field::new("Item"),
+        Field::new("Item"),
+    ]);
+    let mut form = Harness::mount(app, 20, 12);
+    form.keys("Tab Tab Tab");
+    form.assert_focus(Some(2));
+    let app = form.component_mut();
+    app.fields.remove(0);
+    app.values.remove(0);
+    form.key("Esc");
+    form.assert_focus(Some(1));
 }
 
 #[test]
@@ -441,6 +509,16 @@ fn tab_skips_disabled_fields() {
     form.assert_focus(Some(2));
     form.key("S-Tab");
     form.assert_focus(Some(0));
+}
+
+#[test]
+fn alt_tab_is_left_to_the_app() {
+    let mut form = signup();
+    form.key("Tab");
+    form.key("A-Tab");
+    form.assert_focus(Some(0));
+    form.key("Tab");
+    form.assert_focus(Some(1));
 }
 
 #[test]
@@ -531,8 +609,7 @@ fn a_click_on_the_gap_between_fields_does_nothing() {
 
 #[test]
 fn a_click_on_a_disabled_field_does_not_focus_it() {
-    let mut app = FormApp::new(vec![Field::new("A").disabled(true), Field::new("B")]);
-    app.disabled = vec![0];
+    let app = FormApp::new(vec![Field::new("A").disabled(true), Field::new("B")]);
     let mut form = Harness::mount(app, 20, 6);
     form.click(3, 0);
     form.assert_focus(None);

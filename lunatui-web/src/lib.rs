@@ -223,6 +223,18 @@ mod tests {
     }
 
     #[test]
+    fn the_form_template_moves_between_fields_with_tab_and_the_arrow_keys() {
+        let mut app = Template::Form.app();
+        for event in parsed(b"\tDev\x1b[AY\x1b[BZ") {
+            let _ = app.update(&event);
+        }
+        let (grid, clusters) = render(app.as_mut(), 56, 12);
+        let text = grid.display_text(&clusters);
+        assert!(text.contains("AdaY"), "{text}");
+        assert!(text.contains("DevZ"), "{text}");
+    }
+
+    #[test]
     fn resize_renders_from_a_blank_frame() {
         let mut reference = Template::Minimal.app();
         let (next, clusters) = render(reference.as_mut(), 60, 12);

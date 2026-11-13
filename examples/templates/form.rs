@@ -9,8 +9,8 @@ use std::env;
 use std::io::{self, Write};
 
 use lunatui_core::{ClusterTable, Grid, Rect, Style};
-use lunatui_field::{Field, Form};
-use lunatui_runtime::{App, ControlFlow, is_quit};
+use lunatui_field::{Field, Form, FormState};
+use lunatui_runtime::{App, ControlFlow, Handle, is_quit};
 #[cfg(any(unix, windows))]
 use lunatui_runtime::{RunOptions, render_once, run};
 use lunatui_term::{Event, KeyCode};
@@ -25,7 +25,7 @@ const HEIGHT: u16 = 12;
 struct Screen {
     name: String,
     role: String,
-    focus: usize,
+    focus: FormState,
 }
 
 pub(crate) fn app() -> impl App {
@@ -34,11 +34,14 @@ pub(crate) fn app() -> impl App {
 
 impl Screen {
     fn new() -> Self {
-        Self {
+        let mut screen = Self {
             name: String::from("Ada"),
             role: String::new(),
-            focus: 0,
-        }
+            focus: FormState::new(),
+        };
+        screen.focus.sync(&screen.form());
+        screen.focus.focus(0);
+        screen
     }
 
     fn form(&self) -> Form<'static> {
@@ -46,11 +49,11 @@ impl Screen {
             Field::new("Name").required(),
             Field::new("Role").help("shown on the card"),
         ])
-        .focus(Some(self.focus))
+        .focus(self.focus.focused())
     }
 
     fn field_mut(&mut self) -> &mut String {
-        if self.focus == 0 {
+        if self.focus.focused() == Some(0) {
             &mut self.name
         } else {
             &mut self.role
@@ -63,17 +66,13 @@ impl App for Screen {
         if is_quit(event) {
             return ControlFlow::Break;
         }
+        if self.focus.handle(event).is_taken() {
+            return ControlFlow::Continue;
+        }
         if let Event::Key(key) = event {
             match key.code {
-                KeyCode::Tab | KeyCode::Down => {
-                    if let Some(next) = self.form().step(Some(self.focus), true) {
-                        self.focus = next;
-                    }
-                }
-                KeyCode::Up => {
-                    if let Some(next) = self.form().step(Some(self.focus), false) {
-                        self.focus = next;
-                    }
+                KeyCode::Down | KeyCode::Up => {
+                    self.focus.step(key.code == KeyCode::Down);
                 }
                 KeyCode::Backspace => {
                     self.field_mut().pop();
@@ -118,7 +117,7 @@ impl App for Screen {
                 continue;
             }
             TextInput::new(value, value.len())
-                .show_cursor(field.index == self.focus)
+                .show_cursor(self.focus.focused() == Some(field.index))
                 .style(text)
                 .field_style(text)
                 .render(field.input, &mut cx);
