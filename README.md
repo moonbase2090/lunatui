@@ -356,6 +356,10 @@ Hover, pressed, invalid, and open are the shared `WidgetState` paints. The still
 
 <img src="docs/media/button-states.png" alt="Button states: hover, pressed, invalid, and open in the dark theme" width="440">
 
+The same cells as a terminal recording: [docs/media/button-states.gif](docs/media/button-states.gif).
+
+<img src="docs/media/button-states.gif" alt="Terminal recording of the hover, pressed, invalid, and open buttons" width="440">
+
 ### UI button
 
 The `lunatui-button` crate in a deploy console. The run is scripted, not interactive: focus steps across the five variants (Deploy, Rollback, Promote, Diff, Logs) and then the four option toggles, and the script presses each one as it goes. The size row shows Small, Medium and Large, and the Disabled button is muted text with no fill.
