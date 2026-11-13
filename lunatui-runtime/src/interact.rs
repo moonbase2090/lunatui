@@ -775,6 +775,43 @@ mod tests {
     }
 
     #[test]
+    fn focus_keys_skip_disabled_controls_and_rove_inside_a_group() {
+        let mut focus = FocusManager::new();
+        focus.sync(
+            (1_u16..=5)
+                .map(|id| (HitId(u32::from(id)), Rect::new(id * 4, 0, 3, 1)))
+                .collect(),
+        );
+        focus.set_disabled(HitId(2), true);
+        focus.set_group(crate::FocusGroup(1), &[HitId(3), HitId(4)]);
+        focus.focus(HitId(1));
+        let tab = Event::Key(key(KeyCode::Tab));
+        let back = Event::Key(key(KeyCode::Tab).modifiers(Modifiers::new().shift()));
+        let right = Event::Key(key(KeyCode::Right));
+        assert_eq!(focus.handle(&tab), Outcome::Changed);
+        assert_eq!(
+            focus.focused(),
+            Some(HitId(3)),
+            "the disabled control is skipped"
+        );
+        assert_eq!(focus.handle(&right), Outcome::Changed);
+        assert_eq!(focus.focused(), Some(HitId(4)));
+        assert_eq!(
+            focus.handle(&right),
+            Outcome::Handled,
+            "arrows stay in the group"
+        );
+        assert_eq!(focus.handle(&tab), Outcome::Changed);
+        assert_eq!(focus.focused(), Some(HitId(5)), "the group is one Tab stop");
+        assert_eq!(focus.handle(&back), Outcome::Changed);
+        assert_eq!(
+            focus.focused(),
+            Some(HitId(4)),
+            "Tab returns to the last member"
+        );
+    }
+
+    #[test]
     fn dismissal_reports_the_stack_closing_its_layer_once() {
         let mut layers = LayerStack::new();
         let mut focus = FocusManager::new();
