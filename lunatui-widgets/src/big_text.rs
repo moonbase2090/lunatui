@@ -310,6 +310,10 @@ impl<'a> BigText<'a> {
             WidgetState::Disabled => Style::new()
                 .fg(cx.token(Token::TextPrimary))
                 .with_attrs(Attrs::default().set_dim(true)),
+            WidgetState::Hover
+            | WidgetState::Pressed
+            | WidgetState::Invalid
+            | WidgetState::Open => Style::new().fg(cx.token(Token::TextPrimary)),
         }
     }
 
