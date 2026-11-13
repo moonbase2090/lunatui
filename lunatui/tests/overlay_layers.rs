@@ -184,9 +184,11 @@ fn toasts_sit_in_a_layer_that_leaves_esc_and_outside_presses_alone_until_they_ex
         ToastKind::Success,
         "Saved",
     );
-    let mut sync_toasts = |screen: &mut Screen, slot: &mut LayerSlot, now: Duration| match toasts
-        .layer(now, SCREEN, |_| None)
-    {
+    let sync_toasts = |screen: &mut Screen, slot: &mut LayerSlot, now: Duration| match toasts.layer(
+        now,
+        SCREEN,
+        |_| None,
+    ) {
         Some(layer) => {
             slot.open(&mut screen.layers, layer);
             slot.place(&mut screen.layers, layer.area());
@@ -218,7 +220,7 @@ fn toasts_sit_in_a_layer_that_leaves_esc_and_outside_presses_alone_until_they_ex
     assert_eq!(screen.layers.len(), 1);
     assert_eq!(screen.delivered, vec![(40, 15)]);
 
-    clock.advance(ttl - Duration::from_millis(1));
+    clock.advance(ttl.saturating_sub(Duration::from_millis(1)));
     sync_toasts(&mut screen, &mut slot, clock.now());
     assert!(slot.is_open());
     assert_eq!(screen.layers.len(), 1);
