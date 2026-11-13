@@ -7,7 +7,11 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread;
 use std::time::Duration;
 
-use lunatui_term::{Event, Parser};
+use lunatui_term::{Event, Parser, watch_size};
+#[cfg(unix)]
+use lunatui_term::{SIZE_POLL, terminal_size};
+
+type SizeReader = Box<dyn FnMut() -> Option<(u16, u16)> + Send>;
 
 pub(crate) const ESCAPE_TIMEOUT: Duration = Duration::from_millis(50);
 
@@ -107,7 +111,7 @@ impl Input {
     pub fn open() -> io::Result<Self> {
         #[cfg(unix)]
         {
-            Self::from_reader(io::stdin())
+            Self::from_reader_sized(io::stdin(), Box::new(terminal_size), SIZE_POLL)
         }
         #[cfg(windows)]
         {
@@ -133,7 +137,11 @@ impl Input {
     pub(crate) fn open_prefixed(bytes: Vec<u8>) -> io::Result<Self> {
         #[cfg(unix)]
         {
-            Self::from_reader(io::Cursor::new(bytes).chain(io::stdin()))
+            Self::from_reader_sized(
+                io::Cursor::new(bytes).chain(io::stdin()),
+                Box::new(terminal_size),
+                SIZE_POLL,
+            )
         }
         #[cfg(not(unix))]
         {
@@ -158,10 +166,26 @@ impl Input {
     where
         R: Read + Send + 'static,
     {
-        Self::from_reader_timed(reader, Arc::new(Clock(escape_timeout)))
+        Self::from_reader_timed(reader, Arc::new(Clock(escape_timeout)), None)
     }
 
-    fn from_reader_timed<R>(mut reader: R, timer: Arc<dyn Timer>) -> io::Result<Self>
+    /// Starts a worker that reads terminal bytes from `reader` and also delivers an [`Event::Resize`] first and whenever `size` reports a new value, checked every `poll`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a worker thread cannot be started.
+    pub fn from_reader_sized<R>(reader: R, size: SizeReader, poll: Duration) -> io::Result<Self>
+    where
+        R: Read + Send + 'static,
+    {
+        Self::from_reader_timed(reader, Arc::new(Clock(ESCAPE_TIMEOUT)), Some((size, poll)))
+    }
+
+    fn from_reader_timed<R>(
+        mut reader: R,
+        timer: Arc<dyn Timer>,
+        size: Option<(SizeReader, Duration)>,
+    ) -> io::Result<Self>
     where
         R: Read + Send + 'static,
     {
@@ -181,6 +205,20 @@ impl Input {
             .spawn(move || {
                 watch_escape(&watcher_shared, &watcher_sender, timer.as_ref());
             })?;
+        if let Some((read, poll)) = size {
+            let size_sender = sender.clone();
+            let size_shared = Arc::clone(&shared);
+            watch_size(
+                read,
+                poll,
+                move |columns, rows| {
+                    size_sender
+                        .send(Ok(vec![Event::Resize(columns, rows)]))
+                        .is_ok()
+                },
+                move || lock(&size_shared).closed,
+            )?;
+        }
         let failed_shared = Arc::clone(&shared);
         thread::Builder::new()
             .name(String::from("lunatui-input"))
@@ -815,7 +853,7 @@ mod tests {
             fire: Arc::clone(&fire),
             armed: Mutex::new(armed_sender),
         };
-        let input = Input::from_reader_timed(ChannelSource { bytes }, Arc::new(timer))
+        let input = Input::from_reader_timed(ChannelSource { bytes }, Arc::new(timer), None)
             .map_err(|error| error.to_string())?;
         let wait = |armed: &Receiver<u64>| {
             armed
@@ -837,6 +875,49 @@ mod tests {
             frame,
             Some(vec![key(KeyCode::Esc), key(KeyCode::Char('['))])
         );
+        Ok(())
+    }
+
+    struct Silent {
+        release: Receiver<()>,
+    }
+
+    impl Read for Silent {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            let _ = self.release.recv();
+            Ok(0)
+        }
+    }
+
+    #[test]
+    fn a_size_change_wakes_a_blocked_reader() -> Result<(), Box<dyn std::error::Error>> {
+        let (release, held) = mpsc::channel();
+        let size = Arc::new(Mutex::new((80, 24)));
+        let reader = Arc::clone(&size);
+        let mut input = Input::from_reader_sized(
+            Silent { release: held },
+            Box::new(move || reader.lock().ok().map(|size| *size)),
+            Duration::from_millis(1),
+        )?;
+        assert_eq!(input.next_frame()?, Some(vec![Event::Resize(80, 24)]));
+        *size.lock().map_err(|_| "poisoned")? = (132, 43);
+        assert_eq!(input.next_frame()?, Some(vec![Event::Resize(132, 43)]));
+        release.send(())?;
+        assert_eq!(input.next_frame()?, None);
+        Ok(())
+    }
+
+    #[test]
+    fn ending_input_ends_the_session_even_with_a_size_watcher()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (release, held) = mpsc::channel();
+        let mut input = Input::from_reader_sized(
+            Silent { release: held },
+            Box::new(|| None),
+            Duration::from_millis(1),
+        )?;
+        release.send(())?;
+        assert_eq!(input.next_frame()?, None);
         Ok(())
     }
 }

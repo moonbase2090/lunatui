@@ -111,8 +111,11 @@ mod smoke {
     }
 
     #[test]
-    fn console_resize_is_dropped() {
-        assert_eq!(map_event(CrosstermEvent::Resize(80, 24)), None);
+    fn console_resize_is_reported() {
+        assert_eq!(
+            map_event(CrosstermEvent::Resize(80, 24)),
+            Some(Event::Resize(80, 24))
+        );
     }
 
     #[test]
