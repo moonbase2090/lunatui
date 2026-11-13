@@ -8,21 +8,27 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
-## [0.1.29] - 2026-11-12
-
 ### Added
 
 - `LayerStack::handle(&event, &mut focus)` is the one place that turns Esc and pointer presses into dismissals. Esc closes the top layer that Esc dismisses; a press outside a popover or drop-down closes it and is still handled; a press outside a modal layer such as a dialog or the command palette is dropped and the modal stays open. A closed layer gives focus back to its opener through the new `FocusManager::restore`, which applies at the next `sync` when the opener is not registered yet. `LayerSlot` tracks one overlay's layer, and `Layer::anchor` and `Layer::outside_press` set a layer's anchor rectangle and whether outside presses dismiss it.
 - `Select::layer`, `CommandPalette::layer` and `ToastStack::layer` give each overlay's layer for the app's `LayerStack`. Toasts sit in a layer that Esc and outside presses leave alone.
-- `benches/tests/dashboard_tick_bytes.rs` fails when the lunatui dashboard tick at 200×60 encodes to more than the PRD's 160 B target without colour (now 157 B, against 209 B for ratatui), and pins the exact byte counts without colour and in truecolor (157 B and 382 B).
-- `benches/tests/dashboard_allocs.rs` fails when the lunatui dashboard at 200×60 allocates more than today while rendering (25,120 allocations and reallocations over 240 steady-state frames, at most 120 in one frame) or allocates or reallocates at all while diffing and encoding.
-- `docs/platforms.md`: what tier 1 means and how Linux, macOS and Windows are checked. The `CI` workflow gains a Windows clippy job.
 
 ### Changed
 
 - Breaking: dialogs and popovers open and close through the app's `LayerStack`. `DialogState::open` takes the stack and the opener's `HitId`, `activate` and `click` take the stack and the `FocusManager`, and `sync` reports a dialog that Esc cancelled. `DialogState::cancel`, `DialogState::focus_trap` and `DialogClosed::restore` are gone: Esc and focus return belong to the stack. `PopoverState::click` and `PopoverClick` are replaced by `toggle`, `close`, `sync` and `place`, and outside presses are the stack's. The `popup`, `select` and `toast` features now turn on `lunatui-runtime`.
 - Breaking: `FocusTrap`, `Overlay::focus_trap`, `Overlay::traps_focus`, `Popup::focus_trap` and `Popup::traps_focus` are removed. `LayerStack::focus_entries` keeps Tab inside the topmost modal layer instead, so there is no second id space for focus.
 - Breaking: `Layer::modal` is no longer dismissed by a press outside it; Esc still dismisses it, and `outside_press(true)` brings the old behaviour back. `LayerStack::route_press` now looks past layers that ignore outside presses, such as toasts, so a popover under a toast still closes on an outside press.
+
+## [0.1.29] - 2026-11-12
+
+### Added
+
+- `benches/tests/dashboard_tick_bytes.rs` fails when the lunatui dashboard tick at 200×60 encodes to more than the PRD's 160 B target without colour (now 157 B, against 209 B for ratatui), and pins the exact byte counts without colour and in truecolor (157 B and 382 B).
+- `benches/tests/dashboard_allocs.rs` fails when the lunatui dashboard at 200×60 allocates more than today while rendering (25,120 allocations and reallocations over 240 steady-state frames, at most 120 in one frame) or allocates or reallocates at all while diffing and encoding.
+- `docs/platforms.md`: what tier 1 means and how Linux, macOS and Windows are checked. The `CI` workflow gains a Windows clippy job.
+
+### Changed
+
 - BigText digits, capitals, and `:.-%` sit on a 7×7 grid inside the 8×8 cell, with one-pixel strokes and a blank bottom row and rightmost column. The bitmap remains derived from Press Start 2P by `CodeMan38` under OFL-1.1 (`lunatui-widgets/assets/fonts/PressStart2P-OFL.txt`). Other printable ASCII stays a hollow box.
 - The `CI` workflow now also runs on pull requests, with the macOS and Windows test jobs, the Windows clippy job and the `--all-features` suite. The Linux-only jobs that already run on the project's self-hosted runners stay dispatch-only.
 
