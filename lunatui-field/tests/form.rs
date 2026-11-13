@@ -5,7 +5,7 @@
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Size, Style};
 use lunatui_field::{Field, FieldArea, Form, FormState};
-use lunatui_runtime::Handle;
+use lunatui_runtime::{Handle, HitId};
 use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
 use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Token, Variant};
@@ -428,6 +428,73 @@ fn a_focused_field_that_goes_away_or_is_disabled_hands_focus_back() {
     form.assert_focus(Some(0));
     form.key("Tab");
     form.assert_focus(Some(0));
+}
+
+#[test]
+fn removing_a_focused_middle_field_hands_focus_to_the_one_before_it() {
+    let mut form = signup();
+    form.keys("Tab Tab");
+    form.assert_focus(Some(1));
+    let app = form.component_mut();
+    app.fields.remove(1);
+    app.values.remove(1);
+    form.key("Esc");
+    form.assert_focus(Some(0));
+    form.type_text("Ada");
+    form.assert_value("Ada|");
+}
+
+#[test]
+fn focus_follows_its_field_when_fields_are_inserted_or_reordered() {
+    let mut form = signup();
+    form.keys("Tab Tab");
+    form.assert_focus(Some(1));
+    let app = form.component_mut();
+    app.fields.insert(0, Field::new("Title"));
+    app.values.insert(0, String::new());
+    form.key("Esc");
+    form.assert_focus(Some(2));
+    let app = form.component_mut();
+    app.fields.swap(1, 2);
+    app.values.swap(1, 2);
+    form.key("Esc");
+    form.assert_focus(Some(1));
+    form.type_text("a@b.c");
+    form.assert_value("|a@b.c||");
+}
+
+#[test]
+fn a_field_with_an_id_keeps_focus_when_its_label_changes() {
+    let app = FormApp::new(vec![
+        Field::new("A").id(HitId(10)),
+        Field::new("B").id(HitId(11)),
+    ]);
+    let mut form = Harness::mount(app, 20, 8);
+    form.keys("Tab Tab");
+    form.assert_focus(Some(1));
+    let fields = &mut form.component_mut().fields;
+    fields.insert(0, Field::new("New").id(HitId(9)));
+    fields[2] = Field::new("Renamed").id(HitId(11));
+    form.component_mut().values.insert(0, String::new());
+    form.key("Esc");
+    form.assert_focus(Some(2));
+}
+
+#[test]
+fn fields_with_the_same_name_keep_their_order() {
+    let app = FormApp::new(vec![
+        Field::new("Item"),
+        Field::new("Item"),
+        Field::new("Item"),
+    ]);
+    let mut form = Harness::mount(app, 20, 12);
+    form.keys("Tab Tab Tab");
+    form.assert_focus(Some(2));
+    let app = form.component_mut();
+    app.fields.remove(0);
+    app.values.remove(0);
+    form.key("Esc");
+    form.assert_focus(Some(1));
 }
 
 #[test]

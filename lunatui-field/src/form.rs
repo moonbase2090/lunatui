@@ -164,6 +164,12 @@ impl<'a> Form<'a> {
         self.fields.iter().map(|field| !field.is_disabled())
     }
 
+    pub(crate) fn keys(&self) -> impl Iterator<Item = (Option<HitId>, &str)> + '_ {
+        self.fields
+            .iter()
+            .map(|field| (field.id, field.accessible_name()))
+    }
+
     fn label_column(&self) -> u16 {
         self.label_width.unwrap_or_else(|| {
             self.fields
