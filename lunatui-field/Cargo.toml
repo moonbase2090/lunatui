@@ -11,19 +11,19 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-runtime = { version = "0.1.31", path = "../lunatui-runtime", default-features = false, features = ["app"] }
-lunatui-core = { version = "0.1.31", path = "../lunatui-core" }
-lunatui-term = { version = "0.1.31", path = "../lunatui-term" }
-lunatui-ui-tokens = { version = "0.1.31", path = "../lunatui-ui-tokens" }
-lunatui-widgets = { version = "0.1.31", path = "../lunatui-widgets", features = ["widget-state"] }
+lunatui-runtime = { version = "0.1.32", path = "../lunatui-runtime", default-features = false, features = ["app"] }
+lunatui-core = { version = "0.1.32", path = "../lunatui-core" }
+lunatui-term = { version = "0.1.32", path = "../lunatui-term" }
+lunatui-ui-tokens = { version = "0.1.32", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.32", path = "../lunatui-widgets", features = ["widget-state"] }
 
 [dev-dependencies]
-lunatui-test = { version = "0.1.31", path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.31", path = "../lunatui-widgets", features = ["scroll-view", "button", "toggle"] }
-lunatui-badge = { version = "0.1.31", path = "../lunatui-badge" }
-lunatui-button = { version = "0.1.31", path = "../lunatui-button" }
-lunatui-card = { version = "0.1.31", path = "../lunatui-card" }
-lunatui-theme = { version = "0.1.31", path = "../lunatui-theme" }
+lunatui-test = { version = "0.1.32", path = "../lunatui-test" }
+lunatui-widgets = { version = "0.1.32", path = "../lunatui-widgets", features = ["scroll-view", "button", "toggle"] }
+lunatui-badge = { version = "0.1.32", path = "../lunatui-badge" }
+lunatui-button = { version = "0.1.32", path = "../lunatui-button" }
+lunatui-card = { version = "0.1.32", path = "../lunatui-card" }
+lunatui-theme = { version = "0.1.32", path = "../lunatui-theme" }
 
 [[example]]
 name = "ui_field"

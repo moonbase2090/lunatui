@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.32] - 2026-11-13
+
 ### Added
 
 - `lunatui_field::FormState` moves focus between a `Form`'s fields as a `Handle`: Tab and Shift+Tab skip disabled fields and wrap, `sync` keeps focus on the same field (known by its `id`, else its accessible name) when fields are added, removed or reordered and moves it to the nearest earlier enabled field when that one is gone or disabled, `step` moves focus for other keys an app chooses, and `focus_first_error` follows `check_required`. `Form::step` now calls `RovingFocus::step`, and the form template moves between its fields through `FormState`: Tab and Shift+Tab, and Up and Down through `FormState::step` for phone keyboards.
