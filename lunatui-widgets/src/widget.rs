@@ -57,6 +57,17 @@ pub trait Widget {
         None
     }
 
+    /// The current value an agent may read, such as the text in an input. Never an accessible
+    /// name, and never in the accessibility export.
+    fn control_value(&self) -> Option<&str> {
+        None
+    }
+
+    /// Whether an on/off control is on, or `None` for a control that is not one or is mixed.
+    fn control_checked(&self) -> Option<bool> {
+        None
+    }
+
     /// Whether a named wrapper should reject activation of this widget.
     fn control_disabled(&self) -> bool {
         false

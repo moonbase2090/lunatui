@@ -22,6 +22,8 @@ pub struct NamedControl<'a> {
     disabled: bool,
     layer: Option<LayerId>,
     z: u16,
+    selected: bool,
+    secret: bool,
 }
 
 impl<'a> NamedControl<'a> {
@@ -42,6 +44,8 @@ impl<'a> NamedControl<'a> {
             disabled: false,
             layer: None,
             z: 0,
+            selected: false,
+            secret: false,
         }
     }
 
@@ -66,6 +70,20 @@ impl<'a> NamedControl<'a> {
         self
     }
 
+    /// Marks this item as the chosen one in its group, for an agent's snapshot.
+    #[must_use]
+    pub const fn selected(mut self, selected: bool) -> Self {
+        self.selected = selected;
+        self
+    }
+
+    /// Keeps the widget's value out of an agent's snapshot, as for a password.
+    #[must_use]
+    pub const fn secret(mut self, secret: bool) -> Self {
+        self.secret = secret;
+        self
+    }
+
     /// Exact `HitMap` depth, normally obtained from the layer stack.
     #[must_use]
     pub const fn z(mut self, z: u16) -> Self {
@@ -82,9 +100,15 @@ impl Widget for NamedControl<'_> {
             "unlabeled controls require .name()"
         );
         cx.register_control(Some(self.id), area, self.z, || {
-            ControlMetadata::new(name, self.role)
+            let metadata = ControlMetadata::new(name, self.role)
                 .disabled(self.disabled || self.body.control_disabled())
                 .layer(self.layer)
+                .checked(self.body.control_checked())
+                .selected(self.selected);
+            match self.body.control_value() {
+                Some(value) if !self.secret => metadata.value(value),
+                _ => metadata,
+            }
         });
         self.body.render(area, cx);
     }

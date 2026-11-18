@@ -19,9 +19,10 @@ lunatui-widgets = { version = "0.1.32", path = "../lunatui-widgets", features = 
 
 [dev-dependencies]
 lunatui-test = { version = "0.1.32", path = "../lunatui-test" }
-lunatui-widgets = { version = "0.1.32", path = "../lunatui-widgets", features = ["scroll-view", "button", "toggle"] }
+lunatui-widgets = { version = "0.1.32", path = "../lunatui-widgets", features = ["scroll-view", "button", "toggle", "select"] }
 lunatui-badge = { version = "0.1.32", path = "../lunatui-badge" }
 lunatui-button = { version = "0.1.32", path = "../lunatui-button" }
+lunatui-choice = { version = "0.1.32", path = "../lunatui-choice" }
 lunatui-card = { version = "0.1.32", path = "../lunatui-card" }
 lunatui-theme = { version = "0.1.32", path = "../lunatui-theme" }
 

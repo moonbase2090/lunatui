@@ -133,6 +133,10 @@ impl Widget for Toggle {
         Some(self.label.as_ref())
     }
 
+    fn control_checked(&self) -> Option<bool> {
+        Some(self.on)
+    }
+
     fn control_disabled(&self) -> bool {
         matches!(self.state, WidgetState::Disabled)
     }

@@ -94,6 +94,10 @@ impl Widget for TextInput {
         Some(crate::AccessibilityRole::TextInput)
     }
 
+    fn control_value(&self) -> Option<&str> {
+        Some(&self.value)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         if area.width == 0 || area.height == 0 {
             return;

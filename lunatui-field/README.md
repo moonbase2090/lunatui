@@ -33,4 +33,4 @@ Shift+Tab, skips disabled fields and wraps, and leaves other keys to the focused
 Down where a phone keyboard has no Shift+Tab.
 
 For composition, registration and the former `FormField` API, see
-[the named-control migration guide](../docs/named-controls.md).
+[the named-control migration guide](../docs/named-controls.md). An agent can read these fields and change them by name with `lunatui_runtime::Agent`; `Field::secret(true)` keeps a password out of its snapshot.

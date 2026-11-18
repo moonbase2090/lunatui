@@ -51,6 +51,35 @@ availability, with no input values, help text or validation messages. See
 [ADR 0008](adr/0008-accessibility-role-export.md) for the schema and legacy
 role-only annotations.
 
+## Let an agent act by name
+
+`Agent` gives a program the same controls a user sees, without keystrokes. It is on by
+default and needs nothing beyond the registration above.
+
+```rust,ignore
+let snapshot = Agent::snapshot(&hits, focus.focused());
+let ticket = agent.act(&hits, Selector::new(Role::Checkbox, "Notifications"), Action::Toggle)?;
+
+while let Some(request) = agent.take() {
+    match request.id.index_in(first, count) {
+        Some(0) => name.act(&request.action),
+        _ => Outcome::Ignored,
+    };
+}
+```
+
+A snapshot lists, in registration order, each control's `name`, `role`, `value`, `checked`,
+`states`, `actions` and layer `parent`. `act` finds one control by role, exact name and layer and
+returns `ActError` when none, several, or a disabled one matches, or when the role does not take
+that action. Otherwise it queues a `Request` with `source: Source::Agent` and returns a `Ticket`;
+`Ticket::cancel` drops the request if the app has not taken it. The app takes requests with
+`Agent::take` during its update step, applies each to the state behind `request.id` and redraws.
+`Act` applies the common cases: `bool` toggles and `String` sets its value.
+
+Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
+field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
+snapshot as well.
+
 ## Migrate existing forms
 
 Import `Field`, `Form` and `FieldArea` from `lunatui-field`. The old

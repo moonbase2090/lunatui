@@ -243,6 +243,20 @@ impl<'a, S: AsRef<str>> Select<'a, S> {
 }
 
 impl<S: AsRef<str>> Widget for Select<'_, S> {
+    fn control_role(&self) -> Option<crate::AccessibilityRole> {
+        Some(crate::AccessibilityRole::ComboBox)
+    }
+
+    fn control_value(&self) -> Option<&str> {
+        self.chosen()
+            .and_then(|index| self.options.get(index))
+            .map(AsRef::as_ref)
+    }
+
+    fn control_disabled(&self) -> bool {
+        matches!(self.state, WidgetState::Disabled)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         if area.width == 0 || area.height == 0 {
             return;

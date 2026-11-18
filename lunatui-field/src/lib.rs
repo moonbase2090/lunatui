@@ -17,6 +17,12 @@ pub use state::FormState;
 
 const MARKER: &str = " *";
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ValueShown {
+    Yes,
+    No,
+}
+
 /// A label, a control widget, and a help or error line under it.
 ///
 /// # Panics
@@ -40,6 +46,7 @@ pub struct Field<'a> {
     pub(crate) required: bool,
     focused: bool,
     pub(crate) disabled: bool,
+    value_shown: ValueShown,
     body: Option<&'a dyn Widget>,
     on: Role,
 }
@@ -69,6 +76,7 @@ impl<'a> Field<'a> {
             required: false,
             focused: false,
             disabled: false,
+            value_shown: ValueShown::Yes,
             body: None,
             on: Role::Background,
         }
@@ -87,6 +95,17 @@ impl<'a> Field<'a> {
     pub fn error(mut self, error: impl Into<Cow<'a, str>>) -> Self {
         let error = error.into();
         self.error = (!error.is_empty()).then_some(error);
+        self
+    }
+
+    /// Keeps the control's value out of an agent's snapshot, as for a password.
+    #[must_use]
+    pub const fn secret(mut self, secret: bool) -> Self {
+        self.value_shown = if secret {
+            ValueShown::No
+        } else {
+            ValueShown::Yes
+        };
         self
     }
 
@@ -202,7 +221,7 @@ impl<'a> Field<'a> {
     pub(crate) fn register(&self, area: Rect, cx: &mut RenderCx<'_>, fallback: Option<HitId>) {
         let name = self.accessible_name();
         cx.register_control(self.id.or(fallback), area, self.z, || {
-            ControlMetadata::new(
+            let metadata = ControlMetadata::new(
                 name,
                 self.role
                     .or_else(|| self.body.and_then(Widget::control_role))
@@ -210,6 +229,12 @@ impl<'a> Field<'a> {
             )
             .disabled(self.is_disabled())
             .layer(self.layer)
+            .checked(self.body.and_then(Widget::control_checked))
+            .invalid(self.error.is_some());
+            match self.body.and_then(Widget::control_value) {
+                Some(value) if self.value_shown == ValueShown::Yes => metadata.value(value),
+                _ => metadata,
+            }
         });
     }
 
