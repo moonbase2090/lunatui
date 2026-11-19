@@ -160,11 +160,12 @@ impl App {
     }
 
     fn event(&mut self, area: Rect, event: &Event) {
-        let deliver = match self.layers.handle(event, &mut self.focus) {
+        let receipt = self.layers.handle(event, &mut self.focus);
+        let deliver = match receipt {
             LayerEvent::Pass => true,
-            LayerEvent::Consumed => false,
+            LayerEvent::Consumed | LayerEvent::Canceled { .. } => false,
             LayerEvent::Dismissed { deliver, .. } => {
-                if self.state.sync(&self.layers) {
+                if self.state.sync(&self.layers, &receipt).is_taken() {
                     self.open = None;
                     self.action = if matches!(event, Event::Key(_)) {
                         "Closed with Escape"

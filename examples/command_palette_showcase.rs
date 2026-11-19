@@ -154,8 +154,9 @@ impl App {
             }
             Key::Escape => {
                 let esc = Event::Key(KeyEvent::press(KeyCode::Esc));
-                if let LayerEvent::Dismissed { .. } = self.layers.handle(&esc, &mut self.focus)
-                    && self.palette.sync(&self.layers)
+                let receipt = self.layers.handle(&esc, &mut self.focus);
+                if let LayerEvent::Dismissed { .. } = receipt
+                    && self.palette.sync(&self.layers, &receipt).is_some()
                 {
                     self.note = "Cancelled palette · focus back on editor";
                 }

@@ -2870,7 +2870,7 @@ fn tab_drag_frame(strip: Rect, tick: u32) -> TabDragFrame {
                 );
                 drag.drag(&areas, column, row);
                 if now == step.to
-                    && let Some(reorder) = drag.release()
+                    && let Some(reorder) = drag.release().into_value().flatten()
                 {
                     reorder.apply(&mut titles);
                     selected = reorder.selection(selected);

@@ -267,7 +267,13 @@ fn selecting_a_leaf_queues_an_action_until_drained() {
     state.select();
     assert_eq!(
         state.drain_events().collect::<Vec<_>>(),
-        [lunatui_widgets::MenuEvent::Selected("open")]
+        [lunatui_widgets::MenuEvent::Selected {
+            value: "open",
+            details: lunatui_runtime::ChangeDetails::new(
+                lunatui_runtime::ChangeReason::Activate,
+                lunatui_runtime::ChangeSource::Application
+            )
+        }]
     );
     assert_eq!(state.drain_events().count(), 0);
 }
@@ -290,7 +296,13 @@ fn reset_closes_nested_levels_without_dropping_queued_actions() {
     assert_eq!(state.selected_path(), &[] as &[usize]);
     assert_eq!(
         state.drain_events().collect::<Vec<_>>(),
-        [lunatui_widgets::MenuEvent::Selected("open-recent")]
+        [lunatui_widgets::MenuEvent::Selected {
+            value: "open-recent",
+            details: lunatui_runtime::ChangeDetails::new(
+                lunatui_runtime::ChangeReason::Activate,
+                lunatui_runtime::ChangeSource::Application
+            )
+        }]
     );
 }
 

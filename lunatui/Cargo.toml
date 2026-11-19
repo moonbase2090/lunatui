@@ -291,3 +291,9 @@ name = "node_graph"
 path = "../examples/node_graph.rs"
 required-features = ["image-presenter"]
 test = true
+
+[[example]]
+name = "change_guard"
+path = "../examples/change_guard.rs"
+test = true
+required-features = ["app"]

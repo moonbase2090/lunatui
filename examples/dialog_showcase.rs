@@ -167,7 +167,11 @@ impl App {
             match key {
                 Key::Tab => self.dialog.next(),
                 Key::Enter => {
-                    if let Some(closed) = self.dialog.activate(&mut self.layers, &mut self.focus) {
+                    if let Some(closed) = self
+                        .dialog
+                        .activate(&mut self.layers, &mut self.focus)
+                        .into_value()
+                    {
                         self.sync();
                         self.answer(closed.outcome());
                     }

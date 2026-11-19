@@ -95,14 +95,32 @@ fn a_mnemonic_in_an_open_menu_chooses_the_item() {
     state.press_mnemonic('e');
     assert!(state.press_mnemonic('p'));
     assert_eq!(state.selected_path(), [1, 2]);
-    assert_eq!(events(&mut state), [MenuEvent::Selected("paste")]);
+    assert_eq!(
+        events(&mut state),
+        [MenuEvent::Selected {
+            value: "paste",
+            details: lunatui_runtime::ChangeDetails::new(
+                lunatui_runtime::ChangeReason::Mnemonic,
+                lunatui_runtime::ChangeSource::Application
+            )
+        }]
+    );
 
     let mut state = menus();
     state.press_mnemonic('f');
     assert!(state.press_mnemonic('r'));
     assert_eq!(state.selected_path(), [0, 2, 0]);
     assert!(state.press_mnemonic('N'));
-    assert_eq!(events(&mut state), [MenuEvent::Selected("notes")]);
+    assert_eq!(
+        events(&mut state),
+        [MenuEvent::Selected {
+            value: "notes",
+            details: lunatui_runtime::ChangeDetails::new(
+                lunatui_runtime::ChangeReason::Mnemonic,
+                lunatui_runtime::ChangeSource::Application
+            )
+        }]
+    );
 }
 
 #[test]
@@ -133,7 +151,16 @@ fn unknown_and_disabled_mnemonics_change_nothing() {
     let mut help = menus();
     assert!(help.press_mnemonic('h'));
     assert_eq!(help.selected_path(), [3]);
-    assert_eq!(events(&mut help), [MenuEvent::Selected("help")]);
+    assert_eq!(
+        events(&mut help),
+        [MenuEvent::Selected {
+            value: "help",
+            details: lunatui_runtime::ChangeDetails::new(
+                lunatui_runtime::ChangeReason::Mnemonic,
+                lunatui_runtime::ChangeSource::Application
+            )
+        }]
+    );
     assert_eq!(
         MenuItem::item("Go", 1).mnemonic('g').mnemonic_key(),
         Some('g')
@@ -227,7 +254,16 @@ fn letters_reach_the_dropdown_of_an_opened_group_then_the_bar() {
     assert!(state.open(1));
     assert!(state.press_mnemonic('p'));
     assert_eq!(state.selected_path(), [1, 2]);
-    assert_eq!(events(&mut state), [MenuEvent::Selected("paste")]);
+    assert_eq!(
+        events(&mut state),
+        [MenuEvent::Selected {
+            value: "paste",
+            details: lunatui_runtime::ChangeDetails::new(
+                lunatui_runtime::ChangeReason::Mnemonic,
+                lunatui_runtime::ChangeSource::Application
+            )
+        }]
+    );
 
     let mut state = menus();
     state.open(0);
@@ -260,7 +296,16 @@ fn a_highlighted_group_in_a_dropdown_does_not_take_its_childrens_keys() {
     assert_eq!(state.selected_path(), [0, 2]);
     assert!(state.press_mnemonic('n'));
     assert_eq!(state.selected_path(), [0, 0]);
-    assert_eq!(events(&mut state), [MenuEvent::Selected("new")]);
+    assert_eq!(
+        events(&mut state),
+        [MenuEvent::Selected {
+            value: "new",
+            details: lunatui_runtime::ChangeDetails::new(
+                lunatui_runtime::ChangeReason::Mnemonic,
+                lunatui_runtime::ChangeSource::Application
+            )
+        }]
+    );
 }
 
 #[test]

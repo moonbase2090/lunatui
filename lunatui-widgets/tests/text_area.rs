@@ -38,13 +38,13 @@ fn inserts_multiline_text_and_undoes_as_one_edit() {
         false,
     );
     assert_eq!(
-        editor.handle_event(&key(KeyCode::Enter)),
-        EditResult::DocumentChanged
+        editor.handle_event(&key(KeyCode::Enter)).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "a\nb");
     assert_eq!(
-        editor.handle_event(&undo_key()),
-        EditResult::DocumentChanged
+        editor.handle_event(&undo_key()).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "ab");
     assert_eq!(editor.redo(), EditResult::DocumentChanged);
@@ -57,8 +57,8 @@ fn inserts_multiline_text_and_undoes_as_one_edit() {
         false,
     );
     assert_eq!(
-        editor.handle_event(&key(KeyCode::Backspace)),
-        EditResult::DocumentChanged
+        editor.handle_event(&key(KeyCode::Backspace)).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "ab");
     assert_eq!(editor.cursor().line, 0);
@@ -75,19 +75,19 @@ fn directed_selection_replaces_content_and_survives_recomposition() {
         false,
     );
     assert_eq!(
-        editor.handle_event(&typed('x')),
-        EditResult::DocumentChanged
+        editor.handle_event(&typed('x')).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "a\u{301}xb");
     assert_eq!(editor.cursor().grapheme, 2);
     assert_eq!(
-        editor.handle_event(&key(KeyCode::Backspace)),
-        EditResult::DocumentChanged
+        editor.handle_event(&key(KeyCode::Backspace)).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "a\u{301}b");
     assert_eq!(
-        editor.handle_event(&undo_key()),
-        EditResult::DocumentChanged
+        editor.handle_event(&undo_key()).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "a\u{301}xb");
 }
@@ -173,8 +173,8 @@ fn key_repeats_are_processed_by_the_widget() {
 fn printable_key_without_associated_text_still_inserts() {
     let mut editor = TextArea::new("");
     assert_eq!(
-        editor.handle_event(&key(KeyCode::Char('x'))),
-        EditResult::DocumentChanged
+        editor.handle_event(&key(KeyCode::Char('x'))).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "x");
 }
@@ -187,8 +187,8 @@ fn bracketed_paste_is_one_undoable_edit_and_normalizes_newlines() {
     editor.handle_event(&Event::Paste(Paste::Chunk("\nb".into())));
     assert_eq!(editor.text(), "start");
     assert_eq!(
-        editor.handle_event(&Event::Paste(Paste::End)),
-        EditResult::DocumentChanged
+        editor.handle_event(&Event::Paste(Paste::End)).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "a\nbstart");
     editor.handle_event(&undo_key());
@@ -220,16 +220,20 @@ fn rejected_bracketed_paste_discards_the_rest_of_its_chunks() {
     editor.handle_event(&Event::Paste(Paste::Start));
     let too_large = "x".repeat(256 * 1024 + 1);
     assert_eq!(
-        editor.handle_event(&Event::Paste(Paste::Chunk(too_large))),
-        EditResult::PasteRejected
+        editor
+            .handle_event(&Event::Paste(Paste::Chunk(too_large)))
+            .into_value(),
+        Some(EditResult::PasteRejected)
     );
     assert_eq!(
-        editor.handle_event(&Event::Paste(Paste::Chunk("tail".into()))),
-        EditResult::Ignored
+        editor
+            .handle_event(&Event::Paste(Paste::Chunk("tail".into())))
+            .into_value(),
+        None
     );
     assert_eq!(
-        editor.handle_event(&Event::Paste(Paste::End)),
-        EditResult::Ignored
+        editor.handle_event(&Event::Paste(Paste::End)).into_value(),
+        Some(EditResult::StateChanged)
     );
     assert_eq!(editor.text(), "unchanged");
 }
@@ -240,7 +244,7 @@ fn empty_yank_does_not_delete_a_selection() {
     editor.handle_event(&shifted(KeyCode::Right));
     let paste =
         Event::Key(KeyEvent::press(KeyCode::Char('v')).modifiers(Modifiers::new().control()));
-    assert_eq!(editor.handle_event(&paste), EditResult::Ignored);
+    assert_eq!(editor.handle_event(&paste).into_value(), None);
     assert_eq!(editor.text(), "ab");
 }
 
@@ -251,7 +255,7 @@ fn disabled_editor_ignores_input_and_vim_exposes_mode() {
     editor.handle_event(&typed('i'));
     assert_eq!(editor.vim_mode(), VimMode::Insert);
     editor.set_widget_state(WidgetState::Disabled);
-    assert_eq!(editor.handle_event(&typed('x')), EditResult::Ignored);
+    assert_eq!(editor.handle_event(&typed('x')).into_value(), None);
     assert_eq!(editor.text(), "");
 }
 
@@ -259,10 +263,12 @@ fn disabled_editor_ignores_input_and_vim_exposes_mode() {
 fn vim_insert_mode_routes_text_and_escape_through_its_registry() {
     let mut editor = TextArea::new("").keymap_mode(KeymapMode::Vim);
     assert_eq!(
-        editor.handle_event(&Event::Key(
-            KeyEvent::press(KeyCode::Char('H')).modifiers(Modifiers::new().shift()),
-        )),
-        EditResult::Ignored
+        editor
+            .handle_event(&Event::Key(
+                KeyEvent::press(KeyCode::Char('H')).modifiers(Modifiers::new().shift()),
+            ))
+            .into_value(),
+        None
     );
     editor.handle_event(&key(KeyCode::Char('i')));
     assert_eq!(editor.vim_mode(), VimMode::Insert);
@@ -317,7 +323,7 @@ fn keymap_registry_lists_commands_for_the_active_mode() {
     let search =
         Event::Key(KeyEvent::press(KeyCode::Char('s')).modifiers(Modifiers::new().control()));
     assert_eq!(emacs.keymap_registry().dispatch(&search), Some("search"));
-    assert_eq!(emacs.execute_command("unknown"), EditResult::Ignored);
+    assert_eq!(emacs.execute_command("unknown").into_value(), None);
     let repeated = Event::Key(
         KeyEvent::press(KeyCode::Char('s'))
             .modifiers(Modifiers::new().control())
@@ -496,8 +502,8 @@ fn typing_tab_preserves_a_literal_tab_and_undo_while_expanding_its_rendering() {
         false,
     );
     assert_eq!(
-        editor.handle_event(&key(KeyCode::Tab)),
-        EditResult::DocumentChanged
+        editor.handle_event(&key(KeyCode::Tab)).into_value(),
+        Some(EditResult::DocumentChanged)
     );
     assert_eq!(editor.text(), "a\tb");
     let mut grid = Grid::new(6, 1);

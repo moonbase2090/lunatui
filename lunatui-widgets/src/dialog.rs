@@ -4,7 +4,10 @@
 use std::borrow::Cow;
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
-use lunatui_runtime::{FocusManager, HitId, Layer, LayerId, LayerSlot, LayerStack};
+use lunatui_runtime::{
+    Change, ChangeContext, ChangeReason, ChangeSource, FocusManager, HitId, Layer, LayerEvent,
+    LayerId, LayerSlot, LayerStack,
+};
 use lunatui_theme::Token;
 
 use crate::{BorderType, Popup, RenderCx, Widget};
@@ -175,14 +178,30 @@ impl DialogState {
         &mut self,
         layers: &mut LayerStack,
         focus: &mut FocusManager,
-    ) -> Option<DialogClosed> {
+    ) -> Change<DialogClosed> {
+        self.activate_with(layers, focus, ChangeContext::new(ChangeSource::Application))
+    }
+
+    /// Answers the dialog after the application's policy permits the complete
+    /// close. A veto preserves the dialog, its slot, the stack and focus.
+    pub fn activate_with(
+        &mut self,
+        layers: &mut LayerStack,
+        focus: &mut FocusManager,
+        mut context: ChangeContext<'_>,
+    ) -> Change<DialogClosed> {
+        if !self.is_open() {
+            return Change::ignored();
+        }
         let outcome = match self.focus {
             DialogFocus::Cancel => DialogOutcome::Cancelled,
             DialogFocus::Input | DialogFocus::Confirm => DialogOutcome::Confirmed,
         };
-        let closed = self.close(outcome)?;
-        self.slot.close(layers, focus);
-        Some(closed)
+        let reason = answer_reason(outcome);
+        context.apply(reason, DialogClosed { outcome }, || {
+            self.close(outcome);
+            self.slot.close(layers, focus);
+        })
     }
 
     /// Handles a press on `target`, from [`Dialog::control_at`]. A button answers the dialog; the
@@ -192,24 +211,61 @@ impl DialogState {
         target: Option<DialogFocus>,
         layers: &mut LayerStack,
         focus: &mut FocusManager,
-    ) -> Option<DialogClosed> {
-        let target = target?;
-        if !self.set_focus(target) {
-            return None;
+    ) -> Change<Option<DialogClosed>> {
+        self.click_with(
+            target,
+            layers,
+            focus,
+            ChangeContext::new(ChangeSource::Mouse),
+        )
+    }
+
+    /// Handles a pointer or synthetic press with explicit provenance and policy.
+    /// An accepted field press has a `None` answer; refusal has no accepted payload.
+    pub fn click_with(
+        &mut self,
+        target: Option<DialogFocus>,
+        layers: &mut LayerStack,
+        focus: &mut FocusManager,
+        mut context: ChangeContext<'_>,
+    ) -> Change<Option<DialogClosed>> {
+        let (Some(target), Some(kind)) = (target, self.kind) else {
+            return Change::ignored();
+        };
+        if !kind.order().contains(&target) {
+            return Change::ignored();
         }
-        match target {
+        let answer = match target {
             DialogFocus::Input => None,
-            DialogFocus::Cancel | DialogFocus::Confirm => self.activate(layers, focus),
-        }
+            DialogFocus::Cancel => Some(DialogClosed {
+                outcome: DialogOutcome::Cancelled,
+            }),
+            DialogFocus::Confirm => Some(DialogClosed {
+                outcome: DialogOutcome::Confirmed,
+            }),
+        };
+        let reason = answer.map_or(ChangeReason::Navigate, |closed| {
+            answer_reason(closed.outcome)
+        });
+        context.apply(reason, answer, || {
+            self.focus = target;
+            if let Some(closed) = answer {
+                self.close(closed.outcome);
+                self.slot.close(layers, focus);
+            }
+        })
     }
 
     /// Reports the dialog as cancelled when the stack closed its layer since the last call, as
     /// Esc does.
-    pub fn sync(&mut self, layers: &LayerStack) -> Option<DialogClosed> {
-        if self.slot.sync(layers) {
-            return self.close(DialogOutcome::Cancelled);
-        }
-        None
+    pub fn sync(&mut self, layers: &LayerStack, receipt: &LayerEvent) -> Change<DialogClosed> {
+        let Some(details) = self.slot.sync(layers, receipt) else {
+            return Change::ignored();
+        };
+        self.close(DialogOutcome::Cancelled)
+            .map_or_else(Change::ignored, |closed| {
+                Change::new(closed, details.reason(), details.source())
+            })
     }
 
     /// Records the cells the panel covers this frame, from [`Dialog::area`], so presses inside it
@@ -238,6 +294,13 @@ impl DialogState {
     fn close(&mut self, outcome: DialogOutcome) -> Option<DialogClosed> {
         self.kind.take()?;
         Some(DialogClosed { outcome })
+    }
+}
+
+fn answer_reason(outcome: DialogOutcome) -> ChangeReason {
+    match outcome {
+        DialogOutcome::Confirmed => ChangeReason::Confirm,
+        DialogOutcome::Cancelled => ChangeReason::CancelButton,
     }
 }
 
