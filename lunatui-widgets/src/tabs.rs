@@ -276,6 +276,7 @@ impl Widget for Tabs {
                             name: title,
                             role: AccessibilityRole::Tab,
                             selected: index == self.selected,
+                            disabled: false,
                         },
                         rect,
                     );

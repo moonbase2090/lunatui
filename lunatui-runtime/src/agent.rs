@@ -45,7 +45,9 @@ impl ActionKind {
         match role {
             AccessibilityRole::Button => &[Self::Focus, Self::Activate],
             AccessibilityRole::Tab | AccessibilityRole::RadioButton => &[Self::Focus, Self::Select],
-            AccessibilityRole::ListItem => &[Self::Focus, Self::Select, Self::Activate],
+            AccessibilityRole::ListItem | AccessibilityRole::MenuItem => {
+                &[Self::Focus, Self::Select, Self::Activate]
+            }
             AccessibilityRole::TextInput | AccessibilityRole::Slider => {
                 &[Self::Focus, Self::SetValue]
             }

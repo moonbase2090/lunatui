@@ -10,7 +10,9 @@ use lunatui_runtime::{
 use lunatui_term::{Event, KeyCode, KeyKind, Modifiers};
 use lunatui_theme::Token;
 
-use crate::{Block, Borders, RenderCx, Widget, WidgetState};
+use crate::named_control::Item;
+use crate::{Block, Borders, ItemControls, RenderCx, Widget, WidgetState};
+use lunatui_runtime::AccessibilityRole;
 
 /// An action emitted when a leaf menu item is selected.
 ///
@@ -372,6 +374,78 @@ impl<T> MenuState<T> {
         })
     }
 
+    /// The path of the item an agent's control id stands for. Every item of the tree is
+    /// numbered in reading order, parents before their children, so the number does not
+    /// depend on which panels are open. [`Menu::controls`] registers its items by it.
+    #[must_use]
+    pub fn path_of(&self, index: usize) -> Option<Vec<usize>> {
+        let mut remaining = index;
+        let mut level = self.items.as_slice();
+        let mut path = Vec::new();
+        loop {
+            let (position, item) = level.iter().enumerate().find(|(_, item)| {
+                if remaining < subtree_len(item) {
+                    true
+                } else {
+                    remaining -= subtree_len(item);
+                    false
+                }
+            })?;
+            path.push(position);
+            if remaining == 0 {
+                return Some(path);
+            }
+            remaining -= 1;
+            level = &item.children;
+        }
+    }
+
+    /// Highlights the item an agent chose by id, opening the panels that lead to it. Returns
+    /// whether the item exists and neither it nor a group above it is disabled.
+    pub fn highlight_with(&mut self, index: usize, mut context: ChangeContext<'_>) -> Change<bool> {
+        let Some(path) = self.enabled_path(index) else {
+            return Change::ignored();
+        };
+        context.perform(ChangeReason::Navigate, || {
+            self.selected_path = path;
+            true
+        })
+    }
+
+    /// Chooses the item an agent named by id as [`select_with`](Self::select_with) would after a
+    /// highlight: a group opens and a leaf queues its action. A disabled item, or one inside a
+    /// disabled group, passes without a policy call.
+    pub fn activate_with(&mut self, index: usize, mut context: ChangeContext<'_>) -> Change<Outcome>
+    where
+        T: Clone,
+    {
+        let Some(path) = self.enabled_path(index) else {
+            return Change::ignored();
+        };
+        let Some(is_group) = item_at_path(&self.items, &path).map(MenuItem::is_group) else {
+            return Change::ignored();
+        };
+        let reason = if is_group {
+            ChangeReason::Open
+        } else {
+            ChangeReason::Activate
+        };
+        let details = ChangeDetails::new(reason, context.source());
+        context.perform(reason, || {
+            self.selected_path = path;
+            self.select_details(details)
+        })
+    }
+
+    fn enabled_path(&self, index: usize) -> Option<Vec<usize>> {
+        let path = self.path_of(index)?;
+        (1..=path.len())
+            .all(|depth| {
+                item_at_path(&self.items, &path[..depth]).is_some_and(|item| !item.disabled)
+            })
+            .then_some(path)
+    }
+
     /// Closes every open level while leaving queued actions available to drain.
     pub fn reset(&mut self) -> bool {
         if self.selected_path.is_empty() {
@@ -450,6 +524,7 @@ pub struct Menu<'a, T> {
     dropdown_width: u16,
     widget_state: WidgetState,
     mnemonics: bool,
+    controls: Option<ItemControls>,
 }
 
 impl<'a, T> Menu<'a, T> {
@@ -461,7 +536,19 @@ impl<'a, T> Menu<'a, T> {
             dropdown_width: 20,
             widget_state: WidgetState::Normal,
             mnemonics: true,
+            controls: None,
         }
+    }
+
+    /// Registers each visible item as a named control, role `MenuItem`, named by its label,
+    /// when the frame has a hit map: the whole bar, and the rows of every open panel. The id of
+    /// an item is `first` plus its number in [`MenuState::path_of`], so it does not change as
+    /// panels open and close. The highlighted items are marked selected and a disabled item is
+    /// a disabled control. Nothing drawn changes.
+    #[must_use]
+    pub const fn controls(mut self, controls: ItemControls) -> Self {
+        self.controls = Some(controls);
+        self
     }
 
     /// Maximum width used when positioning nested panels.
@@ -564,6 +651,7 @@ impl<T> Widget for Menu<'_, T> {
                 y: area.y.saturating_add(1),
                 items: &root_item.children,
                 selected_path: self.state.selected_path.get(1..).unwrap_or_default(),
+                base: &[selected_root],
                 remaining: dropdowns,
             },
         );
@@ -632,10 +720,36 @@ struct Dropdown<'a, T> {
     y: u16,
     items: &'a [MenuItem<T>],
     selected_path: &'a [usize],
+    base: &'a [usize],
     remaining: u16,
 }
 
 impl<T> Menu<'_, T> {
+    fn register(
+        &self,
+        cx: &mut RenderCx<'_>,
+        path: &[usize],
+        item: &MenuItem<T>,
+        area: Rect,
+        selected: bool,
+    ) {
+        let Some(controls) = self.controls else {
+            return;
+        };
+        controls.register_at(
+            cx,
+            flat_index(&self.state.items, path),
+            &Item {
+                index: 0,
+                name: &item.label,
+                role: AccessibilityRole::MenuItem,
+                selected,
+                disabled: item.disabled,
+            },
+            area,
+        );
+    }
+
     fn render_bar(&self, area: Rect, cx: &mut RenderCx<'_>, colors: MenuColors) {
         let mut x = area.x;
         put_clipped(cx, area, x, area.y, " ", colors.bar);
@@ -660,6 +774,13 @@ impl<T> Menu<'_, T> {
             if x == start {
                 break;
             }
+            self.register(
+                cx,
+                &[index],
+                item,
+                Rect::new(start, area.y, x - start, 1),
+                self.state.selected_path.first() == Some(&index),
+            );
         }
     }
 
@@ -675,6 +796,7 @@ impl<T> Menu<'_, T> {
             y,
             items,
             selected_path,
+            base,
             remaining,
         } = *dropdown;
         let selected = selected_path.first().copied();
@@ -751,6 +873,8 @@ impl<T> Menu<'_, T> {
             .y
             .saturating_add(1)
             .saturating_add(u16::try_from(index).unwrap_or(u16::MAX));
+        let mut nested_base = base.to_vec();
+        nested_base.push(index);
         self.render_dropdown(
             bounds,
             cx,
@@ -760,6 +884,7 @@ impl<T> Menu<'_, T> {
                 y: nested_y,
                 items: &item.children,
                 selected_path: selected_path.get(1..).unwrap_or_default(),
+                base: &nested_base,
                 remaining: remaining.saturating_sub(1),
             },
         );
@@ -783,6 +908,20 @@ impl<T> Menu<'_, T> {
                 break;
             }
             let is_selected = selected == Some(index);
+            let mut path = dropdown.base.to_vec();
+            path.push(index);
+            self.register(
+                cx,
+                &path,
+                item,
+                Rect::new(
+                    panel.x.saturating_add(1),
+                    row_y,
+                    panel.width.saturating_sub(2),
+                    1,
+                ),
+                is_selected,
+            );
             let style = if item.disabled {
                 colors.disabled
             } else if is_selected {
@@ -877,6 +1016,26 @@ fn dropdown_count<T>(items: &[MenuItem<T>], selected_path: &[usize]) -> u16 {
         level = &item.children;
     }
     count
+}
+
+fn subtree_len<T>(item: &MenuItem<T>) -> usize {
+    1 + item.children.iter().map(subtree_len).sum::<usize>()
+}
+
+fn flat_index<T>(items: &[MenuItem<T>], path: &[usize]) -> usize {
+    let mut index = 0;
+    let mut level = items;
+    for (depth, &position) in path.iter().enumerate() {
+        index += level.iter().take(position).map(subtree_len).sum::<usize>();
+        let Some(item) = level.get(position) else {
+            break;
+        };
+        if depth + 1 < path.len() {
+            index += 1;
+            level = &item.children;
+        }
+    }
+    index
 }
 
 fn same_key(a: char, b: char) -> bool {

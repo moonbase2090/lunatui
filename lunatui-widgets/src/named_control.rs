@@ -118,8 +118,8 @@ impl Widget for NamedControl<'_> {
     }
 }
 
-/// Registers each visible item of a [`Tabs`](crate::Tabs) strip or a
-/// [`List`](crate::List) as a named control, so an agent can find and choose it.
+/// Registers each visible item of a [`Tabs`](crate::Tabs) strip, a
+/// [`List`](crate::List) or a [`Menu`](crate::Menu) as a named control, so an agent can find and choose it.
 ///
 /// Item `n` gets the id `first + n`, so the application maps a request's id back to
 /// an index by subtracting `first`. An item with a blank name is left out.
@@ -165,14 +165,25 @@ impl ItemControls {
     }
 
     pub(crate) fn register(&self, cx: &mut RenderCx<'_>, item: &Item<'_>, area: Rect) {
+        self.register_at(cx, item.index, item, area);
+    }
+
+    pub(crate) fn register_at(
+        &self,
+        cx: &mut RenderCx<'_>,
+        index: usize,
+        item: &Item<'_>,
+        area: Rect,
+    ) {
         if item.name.trim().is_empty() {
             return;
         }
-        let Some(id) = self.id(item.index) else {
+        let Some(id) = self.id(index) else {
             return;
         };
         cx.register_control(Some(id), area, self.z, || {
             ControlMetadata::new(item.name, item.role)
+                .disabled(item.disabled)
                 .layer(self.layer)
                 .selected(item.selected)
         });
@@ -184,4 +195,5 @@ pub(crate) struct Item<'a> {
     pub(crate) name: &'a str,
     pub(crate) role: AccessibilityRole,
     pub(crate) selected: bool,
+    pub(crate) disabled: bool,
 }

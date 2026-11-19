@@ -83,6 +83,17 @@ Tabs and lists register their items too. `Tabs::controls(ItemControls::new(first
 index. A row with a blank name is left out, rows scrolled out of view are not registered, and
 rows that share a name make `act` return `ActError::Ambiguous`. What is drawn does not change.
 
+A menu registers its items the same way. `Menu::new(&state).controls(ItemControls::new(first))`
+gives every visible item, the whole bar and the rows of each open panel, the role `MenuItem` and
+a name from its label. The id is `first` plus the item's number in reading order, parents before
+their children, over the whole tree, so it stays the same whichever panels are open; hand
+`request.id - first` to `MenuState::path_of` for the item's path. `Action::Select` calls
+`MenuState::highlight_with`, which highlights the item and shows the panels that lead to it.
+`Action::Activate` calls `MenuState::activate_with`, which does what Enter does on that item: a
+group opens and a leaf queues its `MenuEvent::Selected`, with source `Agent`. A disabled item, or
+an item in a disabled group, is a disabled control and `act` refuses it. A panel that is not open
+has no controls, so open it first with `Select`; the same name in two open panels is ambiguous.
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.

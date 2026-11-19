@@ -11,6 +11,7 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - `ItemControls`, `Tabs::controls` and `List::controls` register each visible tab and list row as a named control (roles `Tab` and `ListItem`, the chosen one marked selected), so an agent selects one by name with `Action::Select`. Nothing drawn changes.
+- `Menu::controls` registers the menu bar and the rows of every open panel as named controls with the new role `AccessibilityRole::MenuItem` (wire name `menu_item`), so an agent walks into a nested panel and chooses an item by name. `Action::Select` highlights an item and opens the panels above it; `Action::Activate` chooses it as Enter does, opening a group or queuing a leaf's action. `MenuState::path_of`, `highlight_with` and `activate_with` map a request's id back to the item and apply it under the same change policy as the keyboard, with source `Agent`. Disabled items are disabled controls. Nothing drawn changes.
 
 ## [0.1.33] - 2026-11-18
 
