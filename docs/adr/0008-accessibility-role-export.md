@@ -64,6 +64,14 @@ does not infer hierarchy or visibility. Legacy role-only annotations have
 `name: null`, `disabled: false`, and `layer: null`. Version-1 consumers must adopt
 the version-2 schema. Writer errors propagate and may leave a partial snapshot.
 
+## Agent snapshot
+
+`Agent::snapshot` reads the same registry and adds what an agent needs to act: the current value,
+checked state, selected and invalid flags, and the actions the role takes. These live on
+`ControlMetadata` as separate optional facets and are written only by `Snapshot::write_json`.
+`write_accessibility_json` ignores them, so the export keeps excluding input values. A secret
+field supplies no value to either. `ComboBox` is added to the roles for a closed list of options.
+
 ## One field model
 
 `lunatui-field` owns both `Field` and `Form`. A field holds the label/name,

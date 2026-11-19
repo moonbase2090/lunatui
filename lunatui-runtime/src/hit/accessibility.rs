@@ -84,7 +84,7 @@ impl HitMap {
     }
 }
 
-fn write_string(writer: &mut impl Write, value: &str) -> io::Result<()> {
+pub(crate) fn write_string(writer: &mut impl Write, value: &str) -> io::Result<()> {
     writer.write_all(b"\"")?;
     for character in value.chars() {
         match character {

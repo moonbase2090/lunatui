@@ -326,6 +326,10 @@ impl Widget for Toggle<'_> {
         Some(lunatui_widgets::AccessibilityRole::Checkbox)
     }
 
+    fn control_checked(&self) -> Option<bool> {
+        Some(self.on)
+    }
+
     fn control_name(&self) -> Option<&str> {
         Some(self.label)
     }

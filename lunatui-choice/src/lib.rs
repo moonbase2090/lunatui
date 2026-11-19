@@ -167,6 +167,14 @@ impl Widget for Checkbox<'_> {
         Some(self.label)
     }
 
+    fn control_checked(&self) -> Option<bool> {
+        match self.checked {
+            CheckState::Unchecked => Some(false),
+            CheckState::Checked => Some(true),
+            CheckState::Mixed => None,
+        }
+    }
+
     fn control_disabled(&self) -> bool {
         matches!(self.state, WidgetState::Disabled)
     }

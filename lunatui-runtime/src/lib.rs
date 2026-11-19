@@ -3,6 +3,8 @@
 
 #![doc = include_str!("../README.md")]
 
+#[cfg(feature = "app")]
+mod agent;
 mod anim;
 #[cfg(feature = "app")]
 mod app;
@@ -44,6 +46,11 @@ mod options;
 mod run;
 mod sched;
 
+#[cfg(feature = "app")]
+pub use agent::{
+    Act, ActError, Action, ActionKind, Agent, AgentControl, ControlState, Request, Selector,
+    Snapshot, Source, Ticket,
+};
 pub use anim::{Clock, Ease, Spring, Tween};
 #[cfg(feature = "motion")]
 pub use anim::{

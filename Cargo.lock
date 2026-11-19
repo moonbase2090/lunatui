@@ -1166,6 +1166,7 @@ dependencies = [
  "lunatui-badge",
  "lunatui-button",
  "lunatui-card",
+ "lunatui-choice",
  "lunatui-core",
  "lunatui-runtime",
  "lunatui-term",

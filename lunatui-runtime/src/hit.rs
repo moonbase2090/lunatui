@@ -4,6 +4,7 @@
 use lunatui_core::Rect;
 
 mod accessibility;
+pub(crate) use accessibility::write_string;
 mod control;
 pub use control::{AccessibilityRole, AmbiguousControl, Control, ControlMetadata};
 
