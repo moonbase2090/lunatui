@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.33] - 2026-11-18
+
 ### Added
 
 - `lunatui_runtime::Agent` lets an agent read and change an app by control name, on by default. `Agent::snapshot(&hits, focused)` lists every named control of a frame with its name, role, value, `checked`, `states` (disabled, focused, selected, invalid), the `actions` it takes and its layer as `parent`, and `Snapshot::write_json` writes it. `Agent::act(&hits, Selector::new(role, name), Action)` finds the control, refuses a disabled, missing, duplicate or unsupported target with an `ActError`, and queues a `Request` tagged `Source::Agent`. The app takes requests with `Agent::take` in its update step and applies them, so nothing types keys or waits on time. The `Ticket` from `act` cancels a request not yet taken. `Act` is implemented for `bool` (toggle) and `String` (set value). Controls register through `RenderCx`: `Field`, `NamedControl`, `TextInput`, `Toggle`, `Checkbox` and `Select` supply their value and checked state, `Field` supplies `invalid` from its error, and `Field::secret` and `NamedControl::secret` keep a value out of the snapshot. The accessibility export still carries no values.
