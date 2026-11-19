@@ -118,9 +118,11 @@ Accepted in ADR 0009. The host has no native feature today. Hosts and clients th
 
 Ring ABI 1.1 amends three rules (HELLO ring minor, mapping header minor, ACTIVE flags), and only for a host that lists the feature. Everything else, and every host that does not list it, stays exactly as written above.
 
-- The host lists `native.alpha.v1` next to `native.grid.v1` in its capability reply. A client that sees both may send ring ABI minor 1 in HELLO. A client that does not see the feature always sends minor 0, so a 1.0 host never receives a minor other than 0.
+- The host lists `native.alpha.v1` next to `native.grid.v1` in its capability reply. A client that sees both may send ring ABI minor 1 in HELLO. Within this legacy grid path, a client that does not select the alpha feature always sends minor 0, so a 1.0 host never receives a minor other than 0.
 - A host that received minor 1 writes minor 1 in the mapping header and the client checks that it equals the minor it sent; after minor 0 the mapping header minor is 0, as in ABI 1.0.
 - ACTIVE header flags are zero except that a host which received a HELLO with minor 1 may set bit 0 (`0x0001`) to affirm that frames may carry attributes. Every other bit stays zero. A host that received minor 0 sends flags 0.
+
+The [image-session extension](native-image-protocol.md#capability-selection-and-platform-proof) defines a separate minor-2 selection from `native.images.v1`, including an images-only advertisement. A client that implements only minors 0 and 1 still requires `native.grid.v1`; it stays on ANSI when only the images token is offered. The grid token continues to promise live legacy grid support. The extension does not relax this section's byte encodings or backing checks.
 
 A client treats anything else as "attributes stripped" and sends plain ABI 1.0 frames: no listed feature, a HELLO with minor 0, a reply without the bit, a reply with extra bits, and a bit set on a session that never offered minor 1. Affirmation covers the session only; a resize, release or failure starts the next session stripped.
 
