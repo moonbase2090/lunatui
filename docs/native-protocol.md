@@ -4,6 +4,10 @@ Status: host contract accepted (capability 0.4 profile, inherited PTY-generation
 
 The existing host [capability envelope](https://github.com/moonbase2090/Prismattyc/blob/main/docs/capability-protocol.md) owns capability versions and identifiers. New behavior requires explicit opt-in and an affirmative host reply. No reply or any failed setup leaves ANSI available.
 
+## Image transport amendment
+
+[Ring ABI 1.2](native-image-protocol.md) proposes image resources, explicit pixel placements, platform-specific fixed backing, and session rearming on a per-launch inherited endpoint. Its rules apply only after minor-2 negotiation. The ABI 1.0 and 1.1 bytes, strict backing validators, and capability 0.1 through 0.3 profiles below remain unchanged. [ADR 0010](adr/0010-native-image-sessions.md) records the rationale. No runtime native support is implied by the amendment.
+
 ## Private discovery
 
 Use the host-owned existing envelope verbatim:
