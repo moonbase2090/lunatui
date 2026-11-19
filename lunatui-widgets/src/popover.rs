@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Rect, Size, Style};
-use lunatui_runtime::{FocusManager, HitId, Layer, LayerId, LayerSlot, LayerStack};
+use lunatui_runtime::{
+    Change, ChangeContext, ChangeReason, FocusManager, HitId, Layer, LayerEvent, LayerId,
+    LayerSlot, LayerStack,
+};
 
 use crate::anchor::{AnchorSide, place};
 use crate::render_cx::clip_to_coordinates;
@@ -176,6 +179,19 @@ impl PopoverState {
         self.slot.close(layers, focus);
     }
 
+    /// Closes after policy approval, preserving the slot, stack and focus on veto.
+    pub fn close_with(
+        &mut self,
+        layers: &mut LayerStack,
+        focus: &mut FocusManager,
+        mut context: ChangeContext<'_>,
+    ) -> Change<()> {
+        let Some(layer) = self.layer() else {
+            return Change::ignored();
+        };
+        context.apply(ChangeReason::Close(layer), (), || self.close(layers, focus))
+    }
+
     /// Opens a closed popover and closes an open one, as a press on its anchor does.
     pub fn toggle(
         &mut self,
@@ -184,7 +200,7 @@ impl PopoverState {
         anchor: Rect,
         opener: Option<HitId>,
     ) {
-        if self.slot.sync(layers) || !self.is_open() {
+        if self.layer().is_none_or(|id| layers.get(id).is_none()) {
             self.open(layers, anchor, opener);
         } else {
             self.close(layers, focus);
@@ -192,8 +208,29 @@ impl PopoverState {
     }
 
     /// Whether the stack closed the popover since the last call, on Esc or an outside press.
-    pub fn sync(&mut self, layers: &LayerStack) -> bool {
-        self.slot.sync(layers)
+    pub fn sync(&mut self, layers: &LayerStack, receipt: &LayerEvent) -> Change<()> {
+        self.slot
+            .sync(layers, receipt)
+            .map_or_else(Change::ignored, |details| {
+                Change::new((), details.reason(), details.source())
+            })
+    }
+
+    /// Toggles after one policy decision. Opening and closing keep their original
+    /// ownership; rejected input changes neither slot nor focus.
+    pub fn toggle_with(
+        &mut self,
+        layers: &mut LayerStack,
+        focus: &mut FocusManager,
+        anchor: Rect,
+        opener: Option<HitId>,
+        mut context: ChangeContext<'_>,
+    ) -> Change<bool> {
+        let live = self.layer().filter(|id| layers.get(*id).is_some());
+        let reason = live.map_or(ChangeReason::Open, ChangeReason::Close);
+        context.apply(reason, live.is_none(), || {
+            self.toggle(layers, focus, anchor, opener);
+        })
     }
 
     /// Records the cells the panel covers this frame, from [`Popover::area`].

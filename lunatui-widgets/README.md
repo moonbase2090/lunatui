@@ -200,10 +200,10 @@ state.down();
 state.down();
 state.right();
 state.select();
-assert_eq!(
-    state.drain_events().collect::<Vec<_>>(),
-    [MenuEvent::Selected("open-recent")],
-);
+assert!(matches!(
+    state.drain_events().collect::<Vec<_>>().as_slice(),
+    [MenuEvent::Selected { value: "open-recent", .. }]
+));
 # }
 ```
 
@@ -278,3 +278,11 @@ let view = graph.view().selected(Some(1)).scroll(0, 0);
 cell sizes and text underlay. Other targets retain the same cell layout. Both
 features are enabled by default and part of `all-widgets`. A cell-only build uses
 `--no-default-features --features node-graph`. See the [comparison and recording guide](../docs/recording-node-graph.md).
+
+### Approve changes before they commit
+
+Widget input returns `Change<T>` with a reason, source, and cancellation decision. A `ChangeContext` guard can refuse Escape, an outside press, or an external edit before state changes. Canceled events remain consumed, and their results expose no accepted payload.
+
+![An editor refuses a dialog close and an external edit, then accepts them after permission is granted](../docs/media/change-guard.gif)
+
+Run `cargo run -p lunatui --example change_guard`. See [Refuse a widget change](../docs/canceling-changes.md) for policies and migration from the previous outcomes. Regenerate the recording with `python3 scripts/record-change-guard.py` using the pinned recorder described by the script.

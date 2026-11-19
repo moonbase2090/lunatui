@@ -86,11 +86,12 @@ impl Screen {
     }
 
     fn event(&mut self, event: &Event) {
-        let deliver = match self.layers.handle(event, &mut self.focus) {
+        let receipt = self.layers.handle(event, &mut self.focus);
+        let deliver = match receipt {
             LayerEvent::Pass => true,
-            LayerEvent::Consumed => false,
+            LayerEvent::Consumed | LayerEvent::Canceled { .. } => false,
             LayerEvent::Dismissed { deliver, .. } => {
-                self.view.sync(&self.layers);
+                self.view.sync(&self.layers, &receipt);
                 deliver
             }
         };

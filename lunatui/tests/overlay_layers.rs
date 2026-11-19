@@ -44,6 +44,7 @@ fn base() -> Vec<(HitId, Rect)> {
 
 struct Screen {
     layers: LayerStack,
+    last: LayerEvent,
     focus: FocusManager,
     select: LayerSlot,
     chosen: Option<usize>,
@@ -54,6 +55,7 @@ impl Screen {
     fn new() -> Self {
         let mut screen = Self {
             layers: LayerStack::new(),
+            last: LayerEvent::Pass,
             focus: FocusManager::new(),
             select: LayerSlot::new(),
             chosen: None,
@@ -74,11 +76,13 @@ impl Screen {
     }
 
     fn event(&mut self, event: &Event) {
-        let deliver = match self.layers.handle(event, &mut self.focus) {
+        let receipt = self.layers.handle(event, &mut self.focus);
+        self.last = receipt;
+        let deliver = match receipt {
             LayerEvent::Pass => true,
-            LayerEvent::Consumed => false,
+            LayerEvent::Consumed | LayerEvent::Canceled { .. } => false,
             LayerEvent::Dismissed { deliver, .. } => {
-                self.select.sync(&self.layers);
+                self.select.sync(&self.layers, &receipt);
                 deliver
             }
         };
@@ -164,7 +168,7 @@ fn the_command_palette_is_modal_esc_closes_it_and_presses_outside_are_dropped() 
     assert_eq!(screen.delivered, Vec::new());
 
     screen.event(&esc());
-    assert!(slot.sync(&screen.layers));
+    assert!(slot.sync(&screen.layers, &screen.last).is_some());
     assert_eq!(screen.focus.focused(), Some(LIST_ID));
     screen.event(&press(5, 2));
     assert!(screen.select.is_open(), "the screen takes presses again");
@@ -211,10 +215,13 @@ fn toasts_sit_in_a_layer_that_leaves_esc_and_outside_presses_alone_until_they_ex
         "Esc closes the select, not the toast"
     );
     screen.event(&esc());
-    assert!(!slot.sync(&screen.layers), "Esc leaves the toast");
+    assert!(
+        slot.sync(&screen.layers, &screen.last).is_none(),
+        "Esc leaves the toast"
+    );
     screen.event(&press(40, 15));
     assert!(
-        !slot.sync(&screen.layers),
+        slot.sync(&screen.layers, &screen.last).is_none(),
         "an outside press leaves the toast"
     );
     assert_eq!(screen.layers.len(), 1);
@@ -244,17 +251,17 @@ fn a_dialog_over_an_open_popover_closes_first_then_the_popover() {
 
     screen.event(&press(31, 4));
     assert!(popover.is_open(), "the dialog blocks the popover under it");
-    assert_eq!(dialog.sync(&screen.layers), None);
+    assert_eq!(dialog.sync(&screen.layers, &screen.last).into_value(), None);
 
     screen.event(&esc());
-    let closed = dialog.sync(&screen.layers);
+    let closed = dialog.sync(&screen.layers, &screen.last).into_value();
     assert!(closed.is_some(), "Esc cancels the dialog first");
     assert!(popover.is_open());
-    assert!(!popover.sync(&screen.layers));
+    assert!(!popover.sync(&screen.layers, &screen.last).is_taken());
     assert_eq!(screen.focus.focused(), Some(FIELD_ID));
 
     screen.event(&esc());
-    assert!(popover.sync(&screen.layers));
+    assert!(popover.sync(&screen.layers, &screen.last).is_taken());
     assert!(screen.layers.is_empty());
     assert_eq!(screen.focus.focused(), Some(LIST_ID));
 }

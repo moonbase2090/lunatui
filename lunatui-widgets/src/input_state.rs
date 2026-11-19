@@ -4,13 +4,16 @@
 #[cfg(any(feature = "select", feature = "file-picker"))]
 use std::time::Duration;
 
-use lunatui_runtime::{Handle, Orientation, Outcome, RovingFocus, Selection, SelectionMode};
+use lunatui_runtime::{
+    Change, ChangeContext, ChangeReason, Handle, Orientation, Outcome, RovingFocus, Selection,
+    SelectionMode,
+};
 #[cfg(any(feature = "select", feature = "file-picker"))]
 use lunatui_runtime::{Typeahead, Typed};
 use lunatui_term::{Event, KeyCode, KeyEvent, KeyKind, Modifiers};
 
 #[cfg(feature = "select")]
-use lunatui_runtime::{Dismissal, FocusManager, Layer, LayerStack};
+use lunatui_runtime::{Dismissal, FocusManager, Layer, LayerEvent, LayerStack};
 
 fn key_of(event: &Event) -> Option<&KeyEvent> {
     match event {
@@ -76,8 +79,8 @@ impl ListState {
     }
 }
 
-impl Handle for ListState {
-    fn handle(&mut self, event: &Event) -> Outcome {
+impl ListState {
+    fn apply_input(&mut self, event: &Event, reason: &mut ChangeReason) -> Outcome {
         let Some(key) = key_of(event) else {
             return Outcome::Ignored;
         };
@@ -97,9 +100,11 @@ impl Handle for ListState {
             };
         }
         if plain(key, KeyCode::Enter) {
+            *reason = ChangeReason::Activate;
             return before.map_or(Outcome::Handled, Outcome::Activated);
         }
         if plain(key, KeyCode::Char(' ')) {
+            *reason = ChangeReason::Toggle;
             let Some(row) = before else {
                 return Outcome::Handled;
             };
@@ -151,8 +156,8 @@ impl TabsState {
     }
 }
 
-impl Handle for TabsState {
-    fn handle(&mut self, event: &Event) -> Outcome {
+impl TabsState {
+    fn apply_input(&mut self, event: &Event) -> Outcome {
         key_of(event).map_or(Outcome::Ignored, |key| {
             self.roving.handle_key(key, self.count, |_| true)
         })
@@ -224,12 +229,13 @@ impl RadioState {
 }
 
 #[cfg(feature = "radio")]
-impl Handle for RadioState {
-    fn handle(&mut self, event: &Event) -> Outcome {
+impl RadioState {
+    fn apply_input(&mut self, event: &Event, reason: &mut ChangeReason) -> Outcome {
         let Some(key) = key_of(event) else {
             return Outcome::Ignored;
         };
         if plain(key, KeyCode::Char(' ')) {
+            *reason = ChangeReason::Select;
             let Some(index) = self.roving.current() else {
                 return Outcome::Handled;
             };
@@ -364,8 +370,8 @@ impl SelectState {
     }
 
     /// [`Outcome::Dismissed`] once after the stack closed the list.
-    pub fn sync_layer(&mut self, layers: &LayerStack) -> Outcome {
-        self.list.sync(layers)
+    pub fn sync_layer(&mut self, layers: &LayerStack, receipt: &LayerEvent) -> Change<Outcome> {
+        self.list.sync(layers, receipt)
     }
 
     fn typed(&mut self, key: &KeyEvent, current: Option<usize>) -> Typed {
@@ -378,8 +384,8 @@ impl SelectState {
 }
 
 #[cfg(feature = "select")]
-impl Handle for SelectState {
-    fn handle(&mut self, event: &Event) -> Outcome {
+impl SelectState {
+    fn apply_input(&mut self, event: &Event, reason: &mut ChangeReason) -> Outcome {
         let Some(key) = key_of(event) else {
             return Outcome::Ignored;
         };
@@ -388,6 +394,7 @@ impl Handle for SelectState {
             if plain(key, KeyCode::Enter)
                 || plain(key, KeyCode::Char(' ')) && self.typeahead.query().is_empty()
             {
+                *reason = ChangeReason::Select;
                 let Some(row) = self.active.current() else {
                     return Outcome::Handled;
                 };
@@ -396,10 +403,14 @@ impl Handle for SelectState {
             }
             match self.typed(key, self.active.current()) {
                 Typed::Found(row) if Some(row) != self.active.current() => {
+                    *reason = ChangeReason::Typeahead;
                     self.active.set(Some(row));
                     return Outcome::Changed;
                 }
-                Typed::Found(_) | Typed::NotFound => return Outcome::Handled,
+                Typed::Found(_) | Typed::NotFound => {
+                    *reason = ChangeReason::Typeahead;
+                    return Outcome::Handled;
+                }
                 Typed::Ignored => {}
             }
             return self.active.handle_key(key, count, |_| true);
@@ -408,11 +419,18 @@ impl Handle for SelectState {
             || plain(key, KeyCode::Char(' '))
             || key.code == KeyCode::Down && key.modifiers == Modifiers::new().alt();
         if opens {
+            *reason = ChangeReason::Open;
             return Outcome::Activated(self.chosen.unwrap_or(0));
         }
         let next = match self.typed(key, self.chosen) {
-            Typed::Found(index) => Some(index),
-            Typed::NotFound => None,
+            Typed::Found(index) => {
+                *reason = ChangeReason::Typeahead;
+                Some(index)
+            }
+            Typed::NotFound => {
+                *reason = ChangeReason::Typeahead;
+                None
+            }
             Typed::Ignored if plain(key, KeyCode::Down) || plain(key, KeyCode::Up) => {
                 RovingFocus::step(self.chosen, count, key.code == KeyCode::Down, false, |_| {
                     true
@@ -509,17 +527,19 @@ impl FilePickerState {
 }
 
 #[cfg(feature = "file-picker")]
-impl Handle for FilePickerState {
-    fn handle(&mut self, event: &Event) -> Outcome {
+impl FilePickerState {
+    fn apply_input(&mut self, event: &Event, reason: &mut ChangeReason) -> Outcome {
         let Some(key) = key_of(event) else {
             return Outcome::Ignored;
         };
         let count = self.names.len();
         let before = self.roving.current();
         if plain(key, KeyCode::Enter) {
+            *reason = ChangeReason::Activate;
             return before.map_or(Outcome::Handled, Outcome::Activated);
         }
         if plain(key, KeyCode::Char(' ')) && self.typeahead.query().is_empty() {
+            *reason = ChangeReason::Toggle;
             let Some(row) = before else {
                 return Outcome::Handled;
             };
@@ -530,6 +550,9 @@ impl Handle for FilePickerState {
         let typed = self
             .typeahead
             .handle_key(key, self.now, before, count, |index| names[index].as_str());
+        if typed != Typed::Ignored {
+            *reason = ChangeReason::Typeahead;
+        }
         if let Typed::Found(row) = typed {
             self.roving.set(Some(row));
         } else if typed == Typed::NotFound {
@@ -550,5 +573,58 @@ impl Handle for FilePickerState {
         } else {
             Outcome::Changed
         }
+    }
+}
+
+impl Handle for ListState {
+    fn handle_with(&mut self, event: &Event, context: ChangeContext<'_>) -> Change<Outcome> {
+        crate::change::guarded(self, context, |state, source| {
+            let mut reason = ChangeReason::Navigate;
+            let outcome = state.apply_input(event, &mut reason);
+            outcome.with_details(reason, source)
+        })
+    }
+}
+
+impl Handle for TabsState {
+    fn handle_with(&mut self, event: &Event, context: ChangeContext<'_>) -> Change<Outcome> {
+        crate::change::guarded(self, context, |state, source| {
+            let reason = ChangeReason::Navigate;
+            let outcome = state.apply_input(event);
+            outcome.with_details(reason, source)
+        })
+    }
+}
+
+#[cfg(feature = "radio")]
+impl Handle for RadioState {
+    fn handle_with(&mut self, event: &Event, context: ChangeContext<'_>) -> Change<Outcome> {
+        crate::change::guarded(self, context, |state, source| {
+            let mut reason = ChangeReason::Navigate;
+            let outcome = state.apply_input(event, &mut reason);
+            outcome.with_details(reason, source)
+        })
+    }
+}
+
+#[cfg(feature = "select")]
+impl Handle for SelectState {
+    fn handle_with(&mut self, event: &Event, context: ChangeContext<'_>) -> Change<Outcome> {
+        crate::change::guarded(self, context, |state, source| {
+            let mut reason = ChangeReason::Navigate;
+            let outcome = state.apply_input(event, &mut reason);
+            outcome.with_details(reason, source)
+        })
+    }
+}
+
+#[cfg(feature = "file-picker")]
+impl Handle for FilePickerState {
+    fn handle_with(&mut self, event: &Event, context: ChangeContext<'_>) -> Change<Outcome> {
+        crate::change::guarded(self, context, |state, source| {
+            let mut reason = ChangeReason::Navigate;
+            let outcome = state.apply_input(event, &mut reason);
+            outcome.with_details(reason, source)
+        })
     }
 }

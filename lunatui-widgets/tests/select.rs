@@ -196,7 +196,10 @@ fn press(code: KeyCode) -> Event {
 
 fn typed(state: &mut SelectState, clock: &Clock, ch: char) -> Outcome {
     state.set_time(clock.now());
-    state.handle(&press(KeyCode::Char(ch)))
+    state
+        .handle(&press(KeyCode::Char(ch)))
+        .into_value()
+        .unwrap_or(Outcome::Ignored)
 }
 
 #[test]
@@ -224,10 +227,16 @@ fn typing_on_the_closed_field_chooses_the_matching_option() {
 fn arrows_on_the_closed_field_step_and_stop_at_the_ends() {
     let mut state = SelectState::new();
     state.sync(&FRUIT);
-    assert_eq!(state.handle(&press(KeyCode::Down)), Outcome::Changed);
+    assert_eq!(
+        state.handle(&press(KeyCode::Down)).into_value(),
+        Some(Outcome::Changed)
+    );
     assert_eq!(state.chosen(), Some(0));
-    assert_eq!(state.handle(&press(KeyCode::Up)), Outcome::Handled);
-    assert_eq!(state.handle(&press(KeyCode::Tab)), Outcome::Ignored);
+    assert_eq!(
+        state.handle(&press(KeyCode::Up)).into_value(),
+        Some(Outcome::Handled)
+    );
+    assert_eq!(state.handle(&press(KeyCode::Tab)).into_value(), None);
 }
 
 #[test]
@@ -240,18 +249,28 @@ fn the_list_opens_on_enter_moves_with_typing_and_esc_closes_it_through_the_stack
     let mut state = SelectState::new();
     state.sync(&FRUIT);
     let select = Select::new(&FRUIT, state.chosen());
-    assert_eq!(state.handle(&press(KeyCode::Enter)), Outcome::Activated(0));
+    assert_eq!(
+        state.handle(&press(KeyCode::Enter)).into_value(),
+        Some(Outcome::Activated(0))
+    );
     state.open(&mut layers, select.layer(area, Some(field_id)));
     assert!(state.is_open());
     assert_eq!(state.active(), Some(0));
-    assert_eq!(state.handle(&press(KeyCode::Char('c'))), Outcome::Changed);
+    assert_eq!(
+        state.handle(&press(KeyCode::Char('c'))).into_value(),
+        Some(Outcome::Changed)
+    );
     assert_eq!(state.active(), Some(4));
     assert_eq!(state.chosen(), None, "moving in the list does not choose");
+    let receipt = layers.handle(&press(KeyCode::Esc), &mut focus);
     assert!(matches!(
-        layers.handle(&press(KeyCode::Esc), &mut focus),
+        receipt,
         LayerEvent::Dismissed { deliver: false, .. }
     ));
-    assert_eq!(state.sync_layer(&layers), Outcome::Dismissed);
+    assert_eq!(
+        state.sync_layer(&layers, &receipt).into_value(),
+        Some(Outcome::Dismissed)
+    );
     assert!(!state.is_open());
     assert_eq!(state.chosen(), None);
     assert_eq!(focus.focused(), Some(field_id));
@@ -264,13 +283,22 @@ fn enter_in_the_open_list_chooses_the_active_row() {
     let mut state = SelectState::new();
     state.sync(&FRUIT);
     let alt_down = Event::Key(KeyEvent::press(KeyCode::Down).modifiers(Modifiers::new().alt()));
-    assert_eq!(state.handle(&alt_down), Outcome::Activated(0));
+    assert_eq!(
+        state.handle(&alt_down).into_value(),
+        Some(Outcome::Activated(0))
+    );
     state.open(
         &mut layers,
         Select::new(&FRUIT, None).layer(Rect::new(0, 0, 20, 8), None),
     );
-    assert_eq!(state.handle(&press(KeyCode::Down)), Outcome::Changed);
-    assert_eq!(state.handle(&press(KeyCode::Enter)), Outcome::Toggled(1));
+    assert_eq!(
+        state.handle(&press(KeyCode::Down)).into_value(),
+        Some(Outcome::Changed)
+    );
+    assert_eq!(
+        state.handle(&press(KeyCode::Enter)).into_value(),
+        Some(Outcome::Toggled(1))
+    );
     assert_eq!(state.chosen(), Some(1));
     state.close(&mut layers, &mut focus);
     assert!(layers.is_empty());

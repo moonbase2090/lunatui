@@ -128,7 +128,7 @@ impl App {
     fn handle(&mut self) {
         let events: Vec<_> = self.menu.drain_events().collect();
         for event in events {
-            let MenuEvent::Selected(action) = event else {
+            let MenuEvent::Selected { value: action, .. } = event else {
                 continue;
             };
             self.menu.reset();

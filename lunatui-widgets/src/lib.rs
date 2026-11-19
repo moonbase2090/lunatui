@@ -21,6 +21,8 @@ mod calendar;
 /// Shapes for [`Canvas`] and the painter they draw with.
 #[cfg(feature = "canvas")]
 pub mod canvas;
+#[cfg(any(feature = "input", feature = "text-area"))]
+mod change;
 #[cfg(feature = "chart")]
 mod chart;
 #[cfg(feature = "code-view")]

@@ -4,7 +4,7 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::{Cell, ClusterTable, Color, Grid, Rect, Style};
-use lunatui_runtime::{FocusManager, HitId, LayerEvent, LayerStack};
+use lunatui_runtime::{FocusManager, HitId, LayerStack};
 use lunatui_term::{Event, KeyCode, KeyEvent, MouseButton, MouseEvent, MouseKind};
 use lunatui_theme::{Theme, Token, Variant};
 use lunatui_widgets::{
@@ -101,17 +101,17 @@ impl Screen {
 
     fn event(&mut self, event: &Event) {
         let route = self.layers.handle(event, &mut self.focus);
-        let closed = self.state.sync(&self.layers);
-        self.answered(closed);
-        let deliver = match route {
-            LayerEvent::Pass => true,
-            LayerEvent::Consumed => false,
-            LayerEvent::Dismissed { deliver, .. } => deliver,
-        };
+        let closed = self.state.sync(&self.layers, &route);
+        self.answered(closed.into_value());
+        let deliver = route.delivers();
         if deliver && let Event::Mouse(mouse) = event {
             if self.state.is_open() {
                 let target = delete().control_at(SCREEN, mouse.column, mouse.row);
-                let closed = self.state.click(target, &mut self.layers, &mut self.focus);
+                let closed = self
+                    .state
+                    .click(target, &mut self.layers, &mut self.focus)
+                    .into_value()
+                    .flatten();
                 self.answered(closed);
             } else if mouse.row >= 1 {
                 self.list_presses += 1;
@@ -393,21 +393,24 @@ fn answering_reports_the_outcome_once() -> Result<(), Box<dyn std::error::Error>
     let mut state = opened(DialogKind::Confirm);
     let closed = state
         .activate(&mut layers, &mut focus)
+        .into_value()
         .ok_or("open dialog closes")?;
     assert_eq!(closed.outcome(), DialogOutcome::Confirmed);
     assert!(!state.is_open());
-    assert_eq!(state.activate(&mut layers, &mut focus), None);
+    assert_eq!(state.activate(&mut layers, &mut focus).into_value(), None);
 
     let mut cancel = opened(DialogKind::Confirm);
     cancel.next();
     let closed = cancel
         .activate(&mut layers, &mut focus)
+        .into_value()
         .ok_or("open dialog closes")?;
     assert_eq!(closed.outcome(), DialogOutcome::Cancelled);
 
     let mut field = opened(DialogKind::Prompt);
     let closed = field
         .activate(&mut layers, &mut focus)
+        .into_value()
         .ok_or("enter in the field confirms")?;
     assert_eq!(closed.outcome(), DialogOutcome::Confirmed);
     Ok(())
@@ -469,15 +472,26 @@ fn clicks_answer_with_buttons_focus_the_field_and_ignore_the_outside()
     let (mut layers, mut focus) = (LayerStack::new(), FocusManager::new());
     let mut state = opened(DialogKind::Prompt);
     state.next();
-    assert_eq!(state.click(None, &mut layers, &mut focus), None);
+    assert_eq!(
+        state
+            .click(None, &mut layers, &mut focus)
+            .into_value()
+            .flatten(),
+        None
+    );
     assert!(state.is_open());
     assert_eq!(
-        state.click(Some(DialogFocus::Input), &mut layers, &mut focus),
+        state
+            .click(Some(DialogFocus::Input), &mut layers, &mut focus)
+            .into_value()
+            .flatten(),
         None
     );
     assert_eq!(state.focus(), DialogFocus::Input);
     let closed = state
         .click(Some(DialogFocus::Cancel), &mut layers, &mut focus)
+        .into_value()
+        .flatten()
         .ok_or("cancel closes")?;
     assert_eq!(closed.outcome(), DialogOutcome::Cancelled);
 
@@ -485,12 +499,17 @@ fn clicks_answer_with_buttons_focus_the_field_and_ignore_the_outside()
     confirm.next();
     let closed = confirm
         .click(Some(DialogFocus::Confirm), &mut layers, &mut focus)
+        .into_value()
+        .flatten()
         .ok_or("confirm closes")?;
     assert_eq!(closed.outcome(), DialogOutcome::Confirmed);
 
     let mut alert = opened(DialogKind::Alert);
     assert_eq!(
-        alert.click(Some(DialogFocus::Cancel), &mut layers, &mut focus),
+        alert
+            .click(Some(DialogFocus::Cancel), &mut layers, &mut focus)
+            .into_value()
+            .flatten(),
         None
     );
     assert!(alert.is_open());

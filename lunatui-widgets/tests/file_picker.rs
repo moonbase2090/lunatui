@@ -248,7 +248,10 @@ fn typing_jumps_to_names_and_shares_the_type_ahead_timeout() {
     state.sync(&FILES, 3);
     let typed = |state: &mut FilePickerState, clock: &Clock, ch| {
         state.set_time(clock.now());
-        state.handle(&key(KeyCode::Char(ch)))
+        state
+            .handle(&key(KeyCode::Char(ch)))
+            .into_value()
+            .unwrap_or(Outcome::Ignored)
     };
     assert_eq!(typed(&mut state, &clock, 'c'), Outcome::Changed);
     assert_eq!(state.focused(), Some(2));
@@ -271,17 +274,41 @@ fn typing_jumps_to_names_and_shares_the_type_ahead_timeout() {
 fn space_marks_rows_enter_opens_and_paging_stops_at_the_ends() {
     let mut state = FilePickerState::new();
     state.sync(&FILES, 2);
-    assert_eq!(state.handle(&key(KeyCode::Down)), Outcome::Changed);
-    assert_eq!(state.handle(&key(KeyCode::Char(' '))), Outcome::Toggled(0));
-    assert_eq!(state.handle(&key(KeyCode::PageDown)), Outcome::Changed);
+    assert_eq!(
+        state.handle(&key(KeyCode::Down)).into_value(),
+        Some(Outcome::Changed)
+    );
+    assert_eq!(
+        state.handle(&key(KeyCode::Char(' '))).into_value(),
+        Some(Outcome::Toggled(0))
+    );
+    assert_eq!(
+        state.handle(&key(KeyCode::PageDown)).into_value(),
+        Some(Outcome::Changed)
+    );
     assert_eq!(state.focused(), Some(2));
-    assert_eq!(state.handle(&key(KeyCode::Char(' '))), Outcome::Toggled(2));
+    assert_eq!(
+        state.handle(&key(KeyCode::Char(' '))).into_value(),
+        Some(Outcome::Toggled(2))
+    );
     assert_eq!(state.marked(), &[0, 2]);
-    assert_eq!(state.handle(&key(KeyCode::PageDown)), Outcome::Changed);
-    assert_eq!(state.handle(&key(KeyCode::PageDown)), Outcome::Handled);
+    assert_eq!(
+        state.handle(&key(KeyCode::PageDown)).into_value(),
+        Some(Outcome::Changed)
+    );
+    assert_eq!(
+        state.handle(&key(KeyCode::PageDown)).into_value(),
+        Some(Outcome::Handled)
+    );
     assert_eq!(state.focused(), Some(4));
-    assert_eq!(state.handle(&key(KeyCode::Enter)), Outcome::Activated(4));
-    assert_eq!(state.handle(&key(KeyCode::Home)), Outcome::Changed);
+    assert_eq!(
+        state.handle(&key(KeyCode::Enter)).into_value(),
+        Some(Outcome::Activated(4))
+    );
+    assert_eq!(
+        state.handle(&key(KeyCode::Home)).into_value(),
+        Some(Outcome::Changed)
+    );
     assert_eq!(state.focused(), Some(0));
     state.sync(&FILES[..1], 2);
     assert_eq!(state.marked(), &[0], "marks past the end are dropped");
