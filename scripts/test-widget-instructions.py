@@ -20,6 +20,9 @@ class InstructionGateTests(unittest.TestCase):
         for elapsed in [0.000001, 0.64, 0.80, 1.01, 1.07, 999.0, float("nan"), float("inf")]:
             frame = gate.Frame("effects 80x24", gate.Sample(103, elapsed), gate.Sample(100, 1.0))
             self.assertEqual(gate.regressions([frame], Fraction(3)), [])
+            slow = gate.Frame("effects 80x24", gate.Sample(104, elapsed), gate.Sample(100, 1.0))
+            self.assertEqual(gate.regressions([slow], Fraction(3)),
+                             ["effects 80x24 instructions 104 exceed main 100 by more than 3%"])
 
     def test_extra_work_fails_even_when_its_clock_looks_faster(self):
         frame = gate.Frame("effects 80x24", gate.Sample(104, 0.1), gate.Sample(100, 1.0))
@@ -32,7 +35,10 @@ class InstructionGateTests(unittest.TestCase):
                          ["x instructions 10300000000000000001 exceed main 10000000000000000000 by more than 3%"])
 
     def test_a_new_case_reports_without_an_invented_baseline(self):
-        self.assertEqual(gate.regressions([gate.Frame("new", gate.Sample(100, 1.0), None)], Fraction(3)), [])
+        frames = [gate.Frame("new", gate.Sample(100, 1.0), None),
+                  gate.Frame("existing", gate.Sample(104, 0.1), gate.Sample(100, 1.0))]
+        self.assertEqual(gate.regressions(frames, Fraction(3)),
+                         ["existing instructions 104 exceed main 100 by more than 3%"])
 
     def test_callgrind_declares_the_event_order(self):
         self.assertEqual(gate.parse_count("events: Dr Ir Dw\nsummary: 7 12345 9\n"), 12345)

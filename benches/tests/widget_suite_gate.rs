@@ -28,6 +28,10 @@ fn equal_or_fewer_allocations_pass() {
     assert_eq!(gate_failures("x", 10.0, 10.0), Vec::<String>::new());
     assert_eq!(gate_failures("x", 0.0, 0.0), Vec::<String>::new());
     assert_eq!(gate_failures("x", 9.0, 10.0), Vec::<String>::new());
+    assert_eq!(
+        gate_failures("x", 11.0, 10.0),
+        ["x allocations 11.0 > 10.0"]
+    );
 }
 
 #[test]
