@@ -12,6 +12,28 @@ The valid successful trace is HELLO/SETUP sequence1, publish frame1, ACTIVATE/AC
 
 Every frame is a complete 1x1 grid, full flag1, hidden cursor, metrics9, zero attributes/clusters/blob/damage. Cells start128; empty base-section offsets are144. Initial and omission glyph is `?`, placement glyph is space, foreground RGB white `0x80ffffff`, background RGB black `0x80000000`, meta width1 `0x1000`. Initial/omission used length144; placement frame208 has count1/offset144, placement ID1, handle1, depth0, crop0,0,1,1, destination0,0,8,16, opacity255, ordinal0. Only used slot bytes appear below; bytes through the 1 MiB slot boundary are implicit zero and must be checked by a production parser.
 
+## Discovery selection fixtures
+
+The minor-2 trace below accepts this native Darwin reply without a grid token:
+
+```text
+ESC _ Prismattyc;cap;r;id=17;v=0.4;features=native.images.v1;native.offer=0123456789abcdef0123456789abcdef;native.generation=7 ESC \
+```
+
+| Advertised features at profile 0.4 | Client implementation | Expected selection |
+|---|---|---|
+| `native.images.v1` | Minor 2 | Minor 2, SETUP_EXT, ACTIVE flags 2 |
+| `native.images.v1` | Minors 0 and 1 only | ANSI before HELLO |
+| `native.grid.v1,native.images.v1` | Minors 0 and 2 | Minor 2, SETUP_EXT, ACTIVE flags 2 |
+| `native.grid.v1,native.images.v1` | Minors 0 and 1 only | Minor 0, legacy SETUP and ACTIVE |
+| `native.grid.v1,native.alpha.v1` | Minors 0 and 1 | Minor 1, legacy SETUP and attribute affirmation |
+| `native.alpha.v1` | Minors 0, 1 and 2 | ANSI before HELLO |
+
+The first Linux host must serve minors 0 and 2 and list both transport tokens.
+The first native Darwin host must serve only minor 2 and list only the images
+token. Alpha is unavailable in both initial host profiles. These discovery
+fixtures change no control-record or frame literal below.
+
 ## Wire literals
 
 ### hello

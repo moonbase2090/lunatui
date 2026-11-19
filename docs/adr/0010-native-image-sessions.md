@@ -43,6 +43,14 @@ all earlier wire bytes and validators. Images do not require cell alpha or
 sub-cell attributes. A host advertises `native.alpha.v1` only when it actually
 renders those attributes.
 
+Capability tokens promise live session paths. `native.images.v1` selects minor 2
+without requiring the grid token. `native.grid.v1` is listed only when the host
+also serves the legacy grid path: minor 0 and, when alpha is offered, minor 1.
+The first Linux host must serve minors 0 and 2. Darwin must list only the images token while
+its rounded POSIX backing cannot satisfy the frozen legacy checks. A client
+that implements only legacy grids stays on ANSI for that advertisement. Tests
+compare each platform's token set with its live minor support.
+
 The inherited socketpair lasts for one PTY launch. Each explicit fresh offer
 creates a new session, generation, metrics epoch, and ring. Resize and ownership
 loss revoke old authority before further PTY parsing. A new application starts
