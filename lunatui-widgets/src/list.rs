@@ -4,8 +4,10 @@
 use lunatui_core::{Rect, Size, Style, clip_display_prefix, width};
 use lunatui_text::source::{RowBuilder, RowSource};
 
+use crate::named_control::Item;
 use crate::render_cx::patch_style;
-use crate::{RenderCx, Widget};
+use crate::{ItemControls, RenderCx, Widget};
+use lunatui_runtime::AccessibilityRole;
 
 /// Single-column list backed by a [`RowSource`].
 ///
@@ -22,6 +24,7 @@ pub struct List<S> {
     icons: Vec<(String, Style)>,
     marks: Vec<Option<(String, Style)>>,
     mark_padding: u16,
+    controls: Option<ItemControls>,
 }
 
 impl<S: RowSource> List<S> {
@@ -38,7 +41,16 @@ impl<S: RowSource> List<S> {
             icons: Vec::new(),
             marks: Vec::new(),
             mark_padding: 0,
+            controls: None,
         }
+    }
+
+    /// Registers each visible row as a named control, named by its first cell, when the
+    /// frame has a hit map.
+    #[must_use]
+    pub const fn controls(mut self, controls: ItemControls) -> Self {
+        self.controls = Some(controls);
+        self
     }
 
     /// Default row style.
@@ -136,6 +148,18 @@ impl<S: RowSource> Widget for List<S> {
             let style = if selected { self.highlight } else { self.style };
             cx.fill(Rect::new(area.x, line, area.width, 1), style, ' ');
             self.source.row(index, &mut row);
+            if let Some(controls) = self.controls {
+                controls.register(
+                    cx,
+                    &Item {
+                        index,
+                        name: row.cells.first().map_or("", String::as_str),
+                        role: AccessibilityRole::ListItem,
+                        selected,
+                    },
+                    Rect::new(area.x, line, area.width, 1),
+                );
+            }
             if let (true, Some((symbol, symbol_style))) = (selected, self.highlight_symbol) {
                 let draw = clip_display_prefix(symbol, gutter);
                 cx.put_str(area.x, line, draw, decoration(style, symbol_style));

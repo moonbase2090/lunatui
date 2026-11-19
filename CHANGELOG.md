@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `ItemControls`, `Tabs::controls` and `List::controls` register each visible tab and list row as a named control (roles `Tab` and `ListItem`, the chosen one marked selected), so an agent selects one by name with `Action::Select`. Nothing drawn changes.
+
 ## [0.1.33] - 2026-11-18
 
 ### Added

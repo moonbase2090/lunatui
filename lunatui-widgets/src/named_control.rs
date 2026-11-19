@@ -117,3 +117,71 @@ impl Widget for NamedControl<'_> {
         self.body.measure(avail)
     }
 }
+
+/// Registers each visible item of a [`Tabs`](crate::Tabs) strip or a
+/// [`List`](crate::List) as a named control, so an agent can find and choose it.
+///
+/// Item `n` gets the id `first + n`, so the application maps a request's id back to
+/// an index by subtracting `first`. An item with a blank name is left out.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ItemControls {
+    first: HitId,
+    layer: Option<LayerId>,
+    z: u16,
+}
+
+impl ItemControls {
+    /// Ids start at `first` and count up by item index.
+    #[must_use]
+    pub const fn new(first: HitId) -> Self {
+        Self {
+            first,
+            layer: None,
+            z: 0,
+        }
+    }
+
+    /// Associates the items with an overlay layer.
+    #[must_use]
+    pub const fn layer(mut self, layer: Option<LayerId>) -> Self {
+        self.layer = layer;
+        self
+    }
+
+    /// Exact `HitMap` depth, normally obtained from the layer stack.
+    #[must_use]
+    pub const fn z(mut self, z: u16) -> Self {
+        self.z = z;
+        self
+    }
+
+    /// The id of item `index`, or `None` when it would overflow.
+    #[must_use]
+    pub fn id(&self, index: usize) -> Option<HitId> {
+        u32::try_from(index)
+            .ok()
+            .and_then(|index| self.first.0.checked_add(index))
+            .map(HitId)
+    }
+
+    pub(crate) fn register(&self, cx: &mut RenderCx<'_>, item: &Item<'_>, area: Rect) {
+        if item.name.trim().is_empty() {
+            return;
+        }
+        let Some(id) = self.id(item.index) else {
+            return;
+        };
+        cx.register_control(Some(id), area, self.z, || {
+            ControlMetadata::new(item.name, item.role)
+                .layer(self.layer)
+                .selected(item.selected)
+        });
+    }
+}
+
+pub(crate) struct Item<'a> {
+    pub(crate) index: usize,
+    pub(crate) name: &'a str,
+    pub(crate) role: AccessibilityRole,
+    pub(crate) selected: bool,
+}
