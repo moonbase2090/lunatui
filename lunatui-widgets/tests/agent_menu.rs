@@ -18,8 +18,6 @@ use lunatui_widgets::{ItemControls, Menu, MenuEvent, MenuItem, MenuState, Render
 
 const FIRST: u32 = 100;
 
-/// Reading order, parents first: File 0, New 1, Open 2, Open recent 3, `file_1` 4, `file_2` 5,
-/// Save as 6, Edit 7, Copy 8, Cut 9, Paste 10, Tools 11, Run 12, Help 13.
 fn items() -> Vec<MenuItem<&'static str>> {
     vec![
         MenuItem::group(
@@ -204,7 +202,6 @@ fn the_agent_and_the_keyboard_reach_the_same_state_and_the_same_picture() -> Tes
     keyboard.component_mut().state.activate();
     keyboard.keys("Down Down Down Right Down Enter");
 
-    // Both leave the menu on the second recent file and queue the same action.
     assert_eq!(
         agent.component().state.selected_path(),
         keyboard.component().state.selected_path()
@@ -225,7 +222,6 @@ fn choosing_a_group_opens_it_as_enter_does_and_selecting_only_highlights_it() ->
     let mut harness = mount(true);
     select(&mut harness, "File")?;
     select(&mut harness, "Open recent")?;
-    // Highlighted, so its panel shows, but nothing is inside it yet.
     assert_eq!(harness.component().state.selected_path(), [0, 2]);
     assert!(harness.rows().iter().any(|row| row.contains("file_1.txt")));
 

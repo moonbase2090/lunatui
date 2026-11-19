@@ -651,7 +651,11 @@ impl<T> Widget for Menu<'_, T> {
                 y: area.y.saturating_add(1),
                 items: &root_item.children,
                 selected_path: self.state.selected_path.get(1..).unwrap_or_default(),
-                base: &[selected_root],
+                first: if self.controls.is_some() {
+                    flat_before(&self.state.items, selected_root) + 1
+                } else {
+                    0
+                },
                 remaining: dropdowns,
             },
         );
@@ -720,7 +724,7 @@ struct Dropdown<'a, T> {
     y: u16,
     items: &'a [MenuItem<T>],
     selected_path: &'a [usize],
-    base: &'a [usize],
+    first: usize,
     remaining: u16,
 }
 
@@ -728,7 +732,7 @@ impl<T> Menu<'_, T> {
     fn register(
         &self,
         cx: &mut RenderCx<'_>,
-        path: &[usize],
+        flat: usize,
         item: &MenuItem<T>,
         area: Rect,
         selected: bool,
@@ -738,7 +742,7 @@ impl<T> Menu<'_, T> {
         };
         controls.register_at(
             cx,
-            flat_index(&self.state.items, path),
+            flat,
             &Item {
                 index: 0,
                 name: &item.label,
@@ -752,6 +756,7 @@ impl<T> Menu<'_, T> {
 
     fn render_bar(&self, area: Rect, cx: &mut RenderCx<'_>, colors: MenuColors) {
         let mut x = area.x;
+        let mut flat = 0;
         put_clipped(cx, area, x, area.y, " ", colors.bar);
         x = x.saturating_add(1);
         for (index, item) in self.state.items.iter().enumerate() {
@@ -776,11 +781,12 @@ impl<T> Menu<'_, T> {
             }
             self.register(
                 cx,
-                &[index],
+                flat,
                 item,
                 Rect::new(start, area.y, x - start, 1),
                 self.state.selected_path.first() == Some(&index),
             );
+            flat += subtree_len(item);
         }
     }
 
@@ -796,7 +802,7 @@ impl<T> Menu<'_, T> {
             y,
             items,
             selected_path,
-            base,
+            first,
             remaining,
         } = *dropdown;
         let selected = selected_path.first().copied();
@@ -873,8 +879,11 @@ impl<T> Menu<'_, T> {
             .y
             .saturating_add(1)
             .saturating_add(u16::try_from(index).unwrap_or(u16::MAX));
-        let mut nested_base = base.to_vec();
-        nested_base.push(index);
+        let nested_first = if self.controls.is_some() {
+            first + flat_before(items, index) + 1
+        } else {
+            0
+        };
         self.render_dropdown(
             bounds,
             cx,
@@ -884,7 +893,7 @@ impl<T> Menu<'_, T> {
                 y: nested_y,
                 items: &item.children,
                 selected_path: selected_path.get(1..).unwrap_or_default(),
-                base: &nested_base,
+                first: nested_first,
                 remaining: remaining.saturating_sub(1),
             },
         );
@@ -899,6 +908,7 @@ impl<T> Menu<'_, T> {
         max_label: u16,
     ) {
         let selected = dropdown.selected_path.first().copied();
+        let mut flat = dropdown.first;
         for (index, item) in dropdown.items.iter().enumerate() {
             let row_y = panel
                 .y
@@ -908,11 +918,9 @@ impl<T> Menu<'_, T> {
                 break;
             }
             let is_selected = selected == Some(index);
-            let mut path = dropdown.base.to_vec();
-            path.push(index);
             self.register(
                 cx,
-                &path,
+                flat,
                 item,
                 Rect::new(
                     panel.x.saturating_add(1),
@@ -922,6 +930,9 @@ impl<T> Menu<'_, T> {
                 ),
                 is_selected,
             );
+            if self.controls.is_some() {
+                flat += subtree_len(item);
+            }
             let style = if item.disabled {
                 colors.disabled
             } else if is_selected {
@@ -1022,20 +1033,8 @@ fn subtree_len<T>(item: &MenuItem<T>) -> usize {
     1 + item.children.iter().map(subtree_len).sum::<usize>()
 }
 
-fn flat_index<T>(items: &[MenuItem<T>], path: &[usize]) -> usize {
-    let mut index = 0;
-    let mut level = items;
-    for (depth, &position) in path.iter().enumerate() {
-        index += level.iter().take(position).map(subtree_len).sum::<usize>();
-        let Some(item) = level.get(position) else {
-            break;
-        };
-        if depth + 1 < path.len() {
-            index += 1;
-            level = &item.children;
-        }
-    }
-    index
+fn flat_before<T>(items: &[MenuItem<T>], position: usize) -> usize {
+    items.iter().take(position).map(subtree_len).sum()
 }
 
 fn same_key(a: char, b: char) -> bool {
