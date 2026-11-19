@@ -5,7 +5,9 @@ use std::sync::OnceLock;
 
 use lunatui_core::{Color, Rect, Size, Style, clip_display_prefix, cluster_display_width};
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
-use lunatui_runtime::{Change, ChangeContext, ChangeReason, ChangeSource, Handle, Outcome};
+use lunatui_runtime::{
+    Act, Action, Change, ChangeContext, ChangeReason, ChangeSource, Handle, Outcome,
+};
 use lunatui_term::{Event, KeyCode, KeyKind, Modifiers, Paste};
 use lunatui_theme::Token;
 use unicode_segmentation::UnicodeSegmentation;
@@ -1333,11 +1335,33 @@ impl TextArea {
 }
 
 impl Widget for TextArea {
+    fn control_value(&self) -> Option<&str> {
+        Some(&self.text)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         self.render_inner(area, cx);
     }
     fn measure(&self, avail: Size) -> Size {
         avail
+    }
+}
+
+/// An agent's [`Action::SetValue`] replaces the whole document, as [`TextArea::set_text`] does:
+/// line endings become `\n`, the cursor keeps its offset limited to the new text and
+/// moved onto a character boundary, and the selection, search, pending paste and edit history are dropped. Setting the text it already
+/// holds changes nothing and answers [`Outcome::Handled`]. Other actions are
+/// [`Outcome::Ignored`].
+impl Act for TextArea {
+    fn act(&mut self, action: &Action) -> Outcome {
+        let Action::SetValue(value) = action else {
+            return Outcome::Ignored;
+        };
+        if self.text == normalize_newlines(value) {
+            return Outcome::Handled;
+        }
+        self.set_text(value);
+        Outcome::Changed
     }
 }
 
