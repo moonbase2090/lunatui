@@ -1,7 +1,9 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-use lunatui_runtime::{Handle, HitId, Orientation, Outcome, RovingFocus};
+use lunatui_runtime::{
+    Change, ChangeContext, ChangeReason, Handle, HitId, Orientation, Outcome, RovingFocus,
+};
 use lunatui_term::{Event, KeyCode, KeyKind, Modifiers};
 
 use crate::Form;
@@ -129,8 +131,8 @@ impl FormState {
     }
 }
 
-impl Handle for FormState {
-    fn handle(&mut self, event: &Event) -> Outcome {
+impl FormState {
+    fn apply_input(&mut self, event: &Event) -> Outcome {
         let Event::Key(key) = event else {
             return Outcome::Ignored;
         };
@@ -143,6 +145,22 @@ impl Handle for FormState {
             self.step(false)
         } else {
             Outcome::Ignored
+        }
+    }
+}
+
+impl Handle for FormState {
+    fn handle_with(&mut self, event: &Event, mut context: ChangeContext<'_>) -> Change<Outcome> {
+        let source = context.source();
+        if context.is_guarded() {
+            let mut next = self.clone();
+            let proposed = next
+                .apply_input(event)
+                .with_details(ChangeReason::Navigate, source);
+            context.commit(proposed, || *self = next)
+        } else {
+            self.apply_input(event)
+                .with_details(ChangeReason::Navigate, source)
         }
     }
 }

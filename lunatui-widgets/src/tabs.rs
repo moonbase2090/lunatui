@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Rect, Size, Style, clip_display_prefix, width};
+use lunatui_runtime::{Change, ChangeContext, ChangeReason, ChangeSource};
 
 use crate::{RenderCx, Widget};
 
@@ -288,6 +289,23 @@ impl TabMove {
         }
     }
 
+    /// Reorders items and follows the selected item after one policy decision.
+    /// Invalid indices do nothing; refusal changes neither the items nor selection.
+    pub fn apply_with<T>(
+        self,
+        items: &mut Vec<T>,
+        selected: &mut usize,
+        mut context: ChangeContext<'_>,
+    ) -> Change<()> {
+        if self.from >= items.len() || self.to >= items.len() {
+            return Change::ignored();
+        }
+        context.apply(ChangeReason::Reorder, (), || {
+            self.apply(items);
+            *selected = self.selection(*selected);
+        })
+    }
+
     /// Where the selected tab `selected` ends up after this move, so the selection stays on the
     /// same tab: the dragged tab keeps it, and tabs it passed shift by one.
     #[must_use]
@@ -379,10 +397,29 @@ impl TabsDrag {
     }
 
     /// Ends the drag and returns the reorder to apply, if the tab was dropped on another tab.
-    pub fn release(&mut self) -> Option<TabMove> {
-        let from = self.from.take()?;
-        let to = self.target.take()?;
-        (from != to).then_some(TabMove { from, to })
+    pub fn release(&mut self) -> Change<Option<TabMove>> {
+        self.release_with(ChangeContext::new(ChangeSource::Mouse))
+    }
+
+    /// Ends a drag only after policy approval. Refusal preserves the complete
+    /// gesture and exposes no reorder. An accepted click has a `None` reorder.
+    pub fn release_with(&mut self, mut context: ChangeContext<'_>) -> Change<Option<TabMove>> {
+        let Some(from) = self.from else {
+            return Change::ignored();
+        };
+        let movement = self
+            .target
+            .filter(|to| *to != from)
+            .map(|to| TabMove { from, to });
+        let reason = if movement.is_some() {
+            ChangeReason::Reorder
+        } else {
+            ChangeReason::DragEnd
+        };
+        context.apply(reason, movement, || {
+            self.from = None;
+            self.target = None;
+        })
     }
 
     /// Abandons the drag without a reorder.

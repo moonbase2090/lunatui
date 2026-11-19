@@ -12,6 +12,13 @@ Every PR adds its entry under **Unreleased**.
 
 - `lunatui_runtime::Agent` lets an agent read and change an app by control name, on by default. `Agent::snapshot(&hits, focused)` lists every named control of a frame with its name, role, value, `checked`, `states` (disabled, focused, selected, invalid), the `actions` it takes and its layer as `parent`, and `Snapshot::write_json` writes it. `Agent::act(&hits, Selector::new(role, name), Action)` finds the control, refuses a disabled, missing, duplicate or unsupported target with an `ActError`, and queues a `Request` tagged `Source::Agent`. The app takes requests with `Agent::take` in its update step and applies them, so nothing types keys or waits on time. The `Ticket` from `act` cancels a request not yet taken. `Act` is implemented for `bool` (toggle) and `String` (set value). Controls register through `RenderCx`: `Field`, `NamedControl`, `TextInput`, `Toggle`, `Checkbox` and `Select` supply their value and checked state, `Field` supplies `invalid` from its error, and `Field::secret` and `NamedControl::secret` keep a value out of the snapshot. The accessibility export still carries no values.
 - `AccessibilityRole::ComboBox` (`combo_box` in the export) for `Select`. `Widget::control_value` and `Widget::control_checked` let a widget report them.
+- Shared `Change<T>`, `ChangeDetails`, and `ChangeContext` report an operation's reason and input source and let applications refuse it before live state changes. Guards cover input handling, layer dismissal, dialog actions, menu actions, tab drops, split resizing, and editor input, commands, and document replacement. A refused event remains consumed; a refused close preserves focus, and a refused editor operation preserves its complete state.
+- A runnable `change_guard` editor and dialog example, a real-widget recording, and [migration instructions](docs/canceling-changes.md).
+
+### Changed
+
+- Breaking: `Handle::handle` returns `Change<Outcome>` and implementors supply `handle_with`. Extract accepted payloads with `value()` or `into_value()`, and use `is_taken()` for event routing. `DialogState::activate` and `click`, `TextArea::handle_event` and `execute_command`, `TabsDrag::release`, and `SplitDrag::drag` also return `Change` results. `MenuEvent::Selected` has named `value` and `details` fields.
+- Breaking: `LayerSlot::sync`, `Dismissal::sync`, and the dialog, popover, and select synchronization methods take a `LayerEvent` receipt. Accepted dismissals preserve their reason and source. Synchronization also notices direct layer removal and reports an application close. `LayerEvent::Dismissed` includes details, and `LayerEvent::Canceled` records a refused dismissal.
 
 ## [0.1.32] - 2026-11-13
 

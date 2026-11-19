@@ -5,7 +5,10 @@ use std::time::Duration;
 
 use lunatui_term::{Event, KeyCode, KeyEvent, KeyKind, Modifiers};
 
-use crate::{FocusDirection, FocusManager, Layer, LayerSlot, LayerStack};
+use crate::{
+    Change, ChangeContext, ChangeReason, ChangeSource, FocusDirection, FocusManager, Layer,
+    LayerSlot, LayerStack,
+};
 
 /// How long a pause ends a [`Typeahead`] burst: the next key starts a new query.
 pub const TYPEAHEAD_TIMEOUT: Duration = Duration::from_secs(1);
@@ -34,15 +37,36 @@ impl Outcome {
     pub const fn is_taken(self) -> bool {
         !matches!(self, Self::Ignored)
     }
+
+    /// Attaches provenance to a recognized interaction. A handled boundary action
+    /// remains eligible for the application's policy even if no visible value moves.
+    #[must_use]
+    pub const fn with_details(self, reason: ChangeReason, source: ChangeSource) -> Change<Self> {
+        if matches!(self, Self::Ignored) {
+            Change::ignored()
+        } else {
+            Change::new(self, reason, source)
+        }
+    }
 }
 
 /// The widget input contract: a state handles its own keys.
 ///
 /// Rendering stays immediate-mode. The app keeps the state between frames, passes it each event
-/// and acts on the [`Outcome`]; a state answers [`Outcome::Ignored`] for anything it does not use.
+/// and acts on the accepted [`Outcome`] in [`Change::value`]. Canceled input is
+/// taken but has no accepted payload, so it must not fall through to another control.
+/// A custom implementation must prepare without changing live state or causing
+/// external effects, then use [`ChangeContext::commit`] or [`ChangeContext::apply`].
 pub trait Handle {
-    /// Applies `event` and reports what changed.
-    fn handle(&mut self, event: &Event) -> Outcome;
+    /// Applies terminal input with inferred provenance and no application guard.
+    fn handle(&mut self, event: &Event) -> Change<Outcome> {
+        self.handle_with(event, ChangeContext::for_event(event))
+    }
+
+    /// Handles input with explicit provenance and an optional pre-commit guard.
+    /// Refusal leaves participating live state unchanged. There is no default
+    /// eager implementation: every implementor must honor the guard.
+    fn handle_with(&mut self, event: &Event, context: ChangeContext<'_>) -> Change<Outcome>;
 }
 
 /// Which arrow keys move a [`RovingFocus`].
@@ -497,17 +521,17 @@ impl Dismissal {
 
     /// [`Outcome::Dismissed`] once after the stack closed the layer, and
     /// [`Outcome::Ignored`] otherwise.
-    pub fn sync(&mut self, layers: &LayerStack) -> Outcome {
-        if self.slot.sync(layers) {
-            Outcome::Dismissed
-        } else {
-            Outcome::Ignored
-        }
+    pub fn sync(&mut self, layers: &LayerStack, receipt: &crate::LayerEvent) -> Change<Outcome> {
+        self.slot
+            .sync(layers, receipt)
+            .map_or_else(Change::ignored, |details| {
+                Change::new(Outcome::Dismissed, details.reason(), details.source())
+            })
     }
 }
 
-impl Handle for FocusManager {
-    fn handle(&mut self, event: &Event) -> Outcome {
+impl FocusManager {
+    fn apply_input(&mut self, event: &Event) -> Outcome {
         let Event::Key(key) = event else {
             return Outcome::Ignored;
         };
@@ -529,6 +553,22 @@ impl Handle for FocusManager {
             Outcome::Handled
         } else {
             Outcome::Changed
+        }
+    }
+}
+
+impl Handle for FocusManager {
+    fn handle_with(&mut self, event: &Event, mut context: ChangeContext<'_>) -> Change<Outcome> {
+        let source = context.source();
+        if context.is_guarded() {
+            let mut next = self.clone();
+            let proposed = next
+                .apply_input(event)
+                .with_details(ChangeReason::Navigate, source);
+            context.commit(proposed, || *self = next)
+        } else {
+            self.apply_input(event)
+                .with_details(ChangeReason::Navigate, source)
         }
     }
 }
@@ -756,21 +796,23 @@ mod tests {
         ]);
         let tab = Event::Key(key(KeyCode::Tab));
         let back = Event::Key(key(KeyCode::Tab).modifiers(Modifiers::new().shift()));
-        assert_eq!(focus.handle(&tab), Outcome::Changed);
+        assert_eq!(focus.handle(&tab).into_value(), Some(Outcome::Changed));
         assert_eq!(focus.focused(), Some(HitId(2)));
-        assert_eq!(focus.handle(&back), Outcome::Changed);
+        assert_eq!(focus.handle(&back).into_value(), Some(Outcome::Changed));
         assert_eq!(
-            focus.handle(&Event::Key(key(KeyCode::Right))),
-            Outcome::Changed
+            focus.handle(&Event::Key(key(KeyCode::Right))).into_value(),
+            Some(Outcome::Changed)
         );
         assert_eq!(focus.focused(), Some(HitId(2)));
         assert_eq!(
-            focus.handle(&Event::Key(key(KeyCode::Right))),
-            Outcome::Handled
+            focus.handle(&Event::Key(key(KeyCode::Right))).into_value(),
+            Some(Outcome::Handled)
         );
         assert_eq!(
-            focus.handle(&Event::Key(key(KeyCode::Char('x')))),
-            Outcome::Ignored
+            focus
+                .handle(&Event::Key(key(KeyCode::Char('x'))))
+                .into_value(),
+            None
         );
     }
 
@@ -788,22 +830,22 @@ mod tests {
         let tab = Event::Key(key(KeyCode::Tab));
         let back = Event::Key(key(KeyCode::Tab).modifiers(Modifiers::new().shift()));
         let right = Event::Key(key(KeyCode::Right));
-        assert_eq!(focus.handle(&tab), Outcome::Changed);
+        assert_eq!(focus.handle(&tab).into_value(), Some(Outcome::Changed));
         assert_eq!(
             focus.focused(),
             Some(HitId(3)),
             "the disabled control is skipped"
         );
-        assert_eq!(focus.handle(&right), Outcome::Changed);
+        assert_eq!(focus.handle(&right).into_value(), Some(Outcome::Changed));
         assert_eq!(focus.focused(), Some(HitId(4)));
         assert_eq!(
-            focus.handle(&right),
-            Outcome::Handled,
+            focus.handle(&right).into_value(),
+            Some(Outcome::Handled),
             "arrows stay in the group"
         );
-        assert_eq!(focus.handle(&tab), Outcome::Changed);
+        assert_eq!(focus.handle(&tab).into_value(), Some(Outcome::Changed));
         assert_eq!(focus.focused(), Some(HitId(5)), "the group is one Tab stop");
-        assert_eq!(focus.handle(&back), Outcome::Changed);
+        assert_eq!(focus.handle(&back).into_value(), Some(Outcome::Changed));
         assert_eq!(
             focus.focused(),
             Some(HitId(4)),
@@ -817,10 +859,16 @@ mod tests {
         let mut focus = FocusManager::new();
         let mut list = Dismissal::new();
         list.open(&mut layers, Layer::popover(Rect::new(0, 1, 10, 4)));
-        assert_eq!(list.sync(&layers), Outcome::Ignored);
-        layers.handle(&Event::Key(key(KeyCode::Esc)), &mut focus);
-        assert_eq!(list.sync(&layers), Outcome::Dismissed);
-        assert_eq!(list.sync(&layers), Outcome::Ignored);
+        assert_eq!(
+            list.sync(&layers, &crate::LayerEvent::Pass).into_value(),
+            None
+        );
+        let receipt = layers.handle(&Event::Key(key(KeyCode::Esc)), &mut focus);
+        assert_eq!(
+            list.sync(&layers, &receipt).into_value(),
+            Some(Outcome::Dismissed)
+        );
+        assert_eq!(list.sync(&layers, &receipt).into_value(), None);
         assert!(!list.is_open());
     }
 }

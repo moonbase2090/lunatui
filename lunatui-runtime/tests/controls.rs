@@ -157,7 +157,11 @@ fn named_controls_respect_modal_floor_and_disabled_shields_with_real_events()
         layers.handle(&Event::Key(KeyEvent::press(KeyCode::Esc)), &mut focus),
         LayerEvent::Dismissed {
             layer: modal,
-            deliver: false
+            deliver: false,
+            details: lunatui_runtime::ChangeDetails::new(
+                lunatui_runtime::ChangeReason::Escape(modal),
+                lunatui_runtime::ChangeSource::Keyboard
+            )
         }
     );
     assert_eq!(layers.pick(&hits, 4, 2), Some(HitId(1)));

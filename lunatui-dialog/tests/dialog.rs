@@ -149,6 +149,8 @@ fn clicks_find_the_button_and_close_the_dialog() -> Result<(), &'static str> {
     );
     let closed = state
         .click(widget.control_at(area, x, y), &mut layers, &mut focus)
+        .into_value()
+        .flatten()
         .ok_or("did not close")?;
     assert_eq!(closed.outcome(), DialogOutcome::Cancelled);
     assert!(!state.is_open());

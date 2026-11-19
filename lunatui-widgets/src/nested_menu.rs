@@ -4,6 +4,10 @@
 use std::borrow::Cow;
 
 use lunatui_core::{Rect, Size, Style, UnderlineStyle, clip_display_prefix, width};
+use lunatui_runtime::{
+    Change, ChangeContext, ChangeDetails, ChangeReason, ChangeSource, Handle, Outcome,
+};
+use lunatui_term::{Event, KeyCode, KeyKind, Modifiers};
 use lunatui_theme::Token;
 
 use crate::{Block, Borders, RenderCx, Widget, WidgetState};
@@ -17,7 +21,7 @@ use crate::{Block, Borders, RenderCx, Widget, WidgetState};
 ///
 /// fn covers_every_value(value: MenuEvent<u8>) -> u8 {
 ///     match value {
-///         MenuEvent::Selected(_) => 0,
+///         MenuEvent::Selected { .. } => 0,
 ///     }
 /// }
 /// ```
@@ -25,7 +29,12 @@ use crate::{Block, Borders, RenderCx, Widget, WidgetState};
 #[non_exhaustive]
 pub enum MenuEvent<T> {
     /// The payload attached to the selected leaf.
-    Selected(T),
+    Selected {
+        /// The selected leaf's action.
+        value: T,
+        /// The accepted selection's original reason and source.
+        details: ChangeDetails,
+    },
 }
 
 /// A selectable leaf or a group that opens a nested menu.
@@ -124,6 +133,11 @@ pub struct MenuState<T> {
     items: Vec<MenuItem<T>>,
     selected_path: Vec<usize>,
     events: Vec<MenuEvent<T>>,
+}
+
+struct MnemonicPlan {
+    path: Vec<usize>,
+    choose: bool,
 }
 
 impl<T> MenuState<T> {
@@ -226,16 +240,49 @@ impl<T> MenuState<T> {
     where
         T: Clone,
     {
+        let _ = self.select_with(ChangeContext::new(ChangeSource::Application));
+    }
+
+    /// Selects after policy approval. Payload cloning and queue mutation happen
+    /// only after approval, so rejecting user-defined payloads has no clone effects.
+    pub fn select_with(&mut self, mut context: ChangeContext<'_>) -> Change<Outcome>
+    where
+        T: Clone,
+    {
+        let Some(item) = self.selected().filter(|item| !item.disabled) else {
+            return Change::ignored();
+        };
+        let reason = if item.is_group() {
+            ChangeReason::Open
+        } else {
+            ChangeReason::Activate
+        };
+        let details = ChangeDetails::new(reason, context.source());
+        context.perform(reason, || self.select_details(details))
+    }
+
+    fn select_details(&mut self, details: ChangeDetails) -> Outcome
+    where
+        T: Clone,
+    {
         let Some(item) = self.selected() else {
-            return;
+            return Outcome::Handled;
         };
         if item.disabled {
-            return;
+            return Outcome::Handled;
         }
         if item.is_group() {
-            self.push();
+            if self.push() {
+                Outcome::Changed
+            } else {
+                Outcome::Handled
+            }
         } else if let Some(data) = &item.data {
-            self.events.push(MenuEvent::Selected(data.clone()));
+            let value = data.clone();
+            self.events.push(MenuEvent::Selected { value, details });
+            Outcome::Changed
+        } else {
+            Outcome::Handled
         }
     }
 
@@ -262,57 +309,67 @@ impl<T> MenuState<T> {
     where
         T: Clone,
     {
+        self.press_mnemonic_with(key, ChangeContext::new(ChangeSource::Application))
+            .into_value()
+            .unwrap_or(false)
+    }
+
+    /// Uses a mnemonic after policy approval, preserving the complete path and
+    /// action queue on refusal. Unknown mnemonics pass without a policy call.
+    pub fn press_mnemonic_with(&mut self, key: char, mut context: ChangeContext<'_>) -> Change<bool>
+    where
+        T: Clone,
+    {
+        let Some(plan) = self.mnemonic_plan(key) else {
+            return Change::ignored();
+        };
+        let details = ChangeDetails::new(ChangeReason::Mnemonic, context.source());
+        context.perform(ChangeReason::Mnemonic, || {
+            self.selected_path = plan.path;
+            if plan.choose {
+                self.select_details(details);
+            }
+            true
+        })
+    }
+
+    fn mnemonic_plan(&self, key: char) -> Option<MnemonicPlan> {
         let open_group = self.selected_path.len() == 1
             && self
                 .selected()
                 .is_some_and(|item| !item.disabled && item.is_group());
         if open_group {
-            self.selected_path.push(usize::MAX);
-            if self.choose_mnemonic(key) {
-                return true;
-            }
-            self.selected_path.pop();
-            let root = self.selected_path.pop();
-            if self.choose_mnemonic(key) {
-                return true;
-            }
-            self.selected_path.extend(root);
-            return false;
+            let mut path = self.selected_path.clone();
+            path.push(usize::MAX);
+            self.mnemonic_at(&path, key)
+                .or_else(|| self.mnemonic_at(&[], key))
+        } else {
+            self.mnemonic_at(&self.selected_path, key)
         }
-        self.choose_mnemonic(key)
     }
 
-    fn choose_mnemonic(&mut self, key: char) -> bool
-    where
-        T: Clone,
-    {
-        let depth = self.selected_path.len().max(1);
-        let parent = &self.selected_path[..depth - 1];
-        let Some(siblings) = items_at_path(&self.items, parent) else {
-            return false;
-        };
+    fn mnemonic_at(&self, path: &[usize], key: char) -> Option<MnemonicPlan> {
+        let depth = path.len().max(1);
+        let parent = &path[..depth - 1];
+        let siblings = items_at_path(&self.items, parent)?;
         let matches = |item: &MenuItem<T>| {
             !item.disabled && item.mnemonic.is_some_and(|own| same_key(own, key))
         };
         let count = siblings.iter().filter(|item| matches(item)).count();
-        let start = self
-            .selected_path
+        let start = path
             .get(depth - 1)
             .copied()
             .filter(|index| *index < siblings.len())
             .map_or(0, |index| index + 1);
-        let Some(target) = (0..siblings.len())
+        let target = (0..siblings.len())
             .map(|step| (start + step) % siblings.len())
-            .find(|index| matches(&siblings[*index]))
-        else {
-            return false;
-        };
-        self.selected_path.truncate(depth - 1);
-        self.selected_path.push(target);
-        if count == 1 {
-            self.select();
-        }
-        true
+            .find(|index| matches(&siblings[*index]))?;
+        let mut path = parent.to_vec();
+        path.push(target);
+        Some(MnemonicPlan {
+            path,
+            choose: count == 1,
+        })
     }
 
     /// Closes every open level while leaving queued actions available to drain.
@@ -848,6 +905,57 @@ fn items_at_path<'a, T>(items: &'a [MenuItem<T>], path: &[usize]) -> Option<&'a 
     Some(level)
 }
 
+impl<T: Clone> Handle for MenuState<T> {
+    fn handle_with(&mut self, event: &Event, mut context: ChangeContext<'_>) -> Change<Outcome> {
+        let Event::Key(key) = event else {
+            return Change::ignored();
+        };
+        if !matches!(key.kind, KeyKind::Press | KeyKind::Repeat) {
+            return Change::ignored();
+        }
+        let plain = key.modifiers == Modifiers::new();
+        if plain && matches!(key.code, KeyCode::Enter | KeyCode::Char(' ')) {
+            return self.select_with(context);
+        }
+        if let KeyCode::Char(ch) = key.code
+            && [
+                Modifiers::new(),
+                Modifiers::new().shift(),
+                Modifiers::new().alt(),
+                Modifiers::new().alt().shift(),
+            ]
+            .contains(&key.modifiers)
+        {
+            return self
+                .press_mnemonic_with(ch, context)
+                .map(|_| Outcome::Changed);
+        }
+        if !plain || !self.is_active() {
+            return Change::ignored();
+        }
+        let reason = match key.code {
+            KeyCode::Esc => ChangeReason::Cancel,
+            KeyCode::Up | KeyCode::Down | KeyCode::Left | KeyCode::Right => ChangeReason::Navigate,
+            _ => return Change::ignored(),
+        };
+        context.perform(reason, || {
+            let changed = match key.code {
+                KeyCode::Esc => self.reset(),
+                KeyCode::Up => self.up(),
+                KeyCode::Down => self.down(),
+                KeyCode::Left => self.left(),
+                KeyCode::Right => self.right(),
+                _ => false,
+            };
+            if changed {
+                Outcome::Changed
+            } else {
+                Outcome::Handled
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{MenuEvent, MenuItem, MenuState};
@@ -878,7 +986,13 @@ mod tests {
         state.select();
         assert_eq!(
             state.drain_events().collect::<Vec<_>>(),
-            [MenuEvent::Selected("notes")]
+            [MenuEvent::Selected {
+                value: "notes",
+                details: lunatui_runtime::ChangeDetails::new(
+                    lunatui_runtime::ChangeReason::Activate,
+                    lunatui_runtime::ChangeSource::Application
+                )
+            }]
         );
     }
 
@@ -905,7 +1019,13 @@ mod tests {
         state.select();
         assert_eq!(
             state.drain_events().collect::<Vec<_>>(),
-            [MenuEvent::Selected("good")]
+            [MenuEvent::Selected {
+                value: "good",
+                details: lunatui_runtime::ChangeDetails::new(
+                    lunatui_runtime::ChangeReason::Activate,
+                    lunatui_runtime::ChangeSource::Application
+                )
+            }]
         );
     }
 }

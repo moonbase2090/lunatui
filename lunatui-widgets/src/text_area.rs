@@ -5,6 +5,7 @@ use std::sync::OnceLock;
 
 use lunatui_core::{Color, Rect, Size, Style, clip_display_prefix, cluster_display_width};
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
+use lunatui_runtime::{Change, ChangeContext, ChangeReason, ChangeSource, Handle, Outcome};
 use lunatui_term::{Event, KeyCode, KeyKind, Modifiers, Paste};
 use lunatui_theme::Token;
 use unicode_segmentation::UnicodeSegmentation;
@@ -75,7 +76,7 @@ pub enum VimMode {
 pub enum EditResult {
     /// Event did not affect this editor.
     Ignored,
-    /// Cursor, selection, mode, search or viewport changed.
+    /// Cursor, selection, mode, search, viewport or paste buffer changed.
     StateChanged,
     /// Document changed and the edit is undoable.
     DocumentChanged,
@@ -85,7 +86,7 @@ pub enum EditResult {
     PasteRejected,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Edit {
     start: usize,
     removed: String,
@@ -96,7 +97,7 @@ struct Edit {
     anchor_after: Option<usize>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum PasteBuffer {
     Collecting(String),
     Rejected,
@@ -114,7 +115,12 @@ struct RenderLayout {
 }
 
 /// Editable multi-line UTF-8 text with cursor, selection, search and bounded undo.
-#[derive(Clone, Debug)]
+///
+/// Event, command and replacement entry points have guarded variants. Other
+/// setters are immediate application operations. Guarded event/command calls
+/// prepare an owned draft, which can copy the document and undo history; calls
+/// without a guard use the same interpreter directly without that draft.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TextArea {
     text: String,
     line_starts: Vec<usize>,
@@ -303,6 +309,16 @@ impl TextArea {
         self.paste = None;
     }
 
+    /// Replaces the document only after the application's policy permits it.
+    /// Refusal preserves text, cursor, selection, search, paste and edit history.
+    pub fn set_text_with(
+        &mut self,
+        text: impl AsRef<str>,
+        mut context: ChangeContext<'_>,
+    ) -> Change<()> {
+        context.apply(ChangeReason::Edit, (), || self.set_text(text))
+    }
+
     /// Current cursor as a grapheme position.
     #[must_use]
     pub fn cursor(&self) -> TextPosition {
@@ -400,14 +416,31 @@ impl TextArea {
     }
 
     /// Executes a command registered for the active keymap; unknown ids are ignored.
-    pub fn execute_command(&mut self, command_id: &str) -> EditResult {
+    pub fn execute_command(&mut self, command_id: &str) -> Change<EditResult> {
+        self.execute_command_with(command_id, ChangeContext::new(ChangeSource::Application))
+    }
+
+    /// Executes a registered command with explicit provenance and a pre-commit policy.
+    pub fn execute_command_with(
+        &mut self,
+        command_id: &str,
+        context: ChangeContext<'_>,
+    ) -> Change<EditResult> {
+        crate::change::guarded(self, context, |state, source| {
+            let mut reason = ChangeReason::Edit;
+            let value = state.apply_command(command_id, &mut reason);
+            editor_change(value, reason, source)
+        })
+    }
+
+    fn apply_command(&mut self, command_id: &str, reason: &mut ChangeReason) -> EditResult {
         let registered = self
             .keymap_registry()
             .commands()
             .iter()
             .any(|command| command.id() == command_id);
         if registered {
-            self.run_command(command_id, Modifiers::new())
+            self.run_command(command_id, Modifiers::new(), reason)
         } else {
             EditResult::Ignored
         }
@@ -446,95 +479,126 @@ impl TextArea {
     }
 
     /// Handles one terminal event.
-    pub fn handle_event(&mut self, event: &Event) -> EditResult {
+    pub fn handle_event(&mut self, event: &Event) -> Change<EditResult> {
+        self.handle_event_with(event, ChangeContext::for_event(event))
+    }
+
+    /// Handles an event with explicit provenance and policy before any live edit.
+    /// Cancellation includes hidden history, search, preferred-column and paste state.
+    pub fn handle_event_with(
+        &mut self,
+        event: &Event,
+        mut context: ChangeContext<'_>,
+    ) -> Change<EditResult> {
         if self.widget_state == WidgetState::Disabled {
-            return EditResult::Ignored;
+            return Change::ignored();
         }
+        if let Some(result) = self.buffered_paste(event, &mut context) {
+            return result;
+        }
+        crate::change::guarded(self, context, |state, source| {
+            let mut reason = ChangeReason::Edit;
+            let value = state.apply_event(event, &mut reason);
+            editor_change(value, reason, source)
+        })
+    }
+
+    fn buffered_paste(
+        &mut self,
+        event: &Event,
+        context: &mut ChangeContext<'_>,
+    ) -> Option<Change<EditResult>> {
         match event {
-            Event::Paste(Paste::Start) => {
-                self.paste = Some(PasteBuffer::Collecting(String::new()));
-                EditResult::StateChanged
-            }
+            Event::Paste(Paste::Start) => Some(context.apply(
+                ChangeReason::Paste,
+                EditResult::StateChanged,
+                || self.paste = Some(PasteBuffer::Collecting(String::new())),
+            )),
             Event::Paste(Paste::Chunk(chunk)) => {
-                let Some(state) = self.paste.as_mut() else {
-                    return if self.search.is_some() {
-                        self.append_search_text(chunk)
-                    } else {
-                        self.insert_text(chunk)
-                    };
+                let reason = if self.search.is_some() {
+                    ChangeReason::Search
+                } else {
+                    ChangeReason::Paste
                 };
+                let state = self.paste.as_mut()?;
                 match state {
-                    PasteBuffer::Rejected => EditResult::Ignored,
+                    PasteBuffer::Rejected => Some(Change::ignored()),
                     PasteBuffer::Collecting(buffer) => {
                         if buffer.len().saturating_add(chunk.len()) > PASTE_LIMIT {
-                            *state = PasteBuffer::Rejected;
-                            EditResult::PasteRejected
+                            Some(context.apply(reason, EditResult::PasteRejected, || {
+                                *state = PasteBuffer::Rejected;
+                            }))
                         } else {
-                            buffer.push_str(chunk);
-                            EditResult::StateChanged
+                            Some(context.apply(reason, EditResult::StateChanged, || {
+                                buffer.push_str(chunk);
+                            }))
                         }
                     }
                 }
             }
+            _ => None,
+        }
+    }
+
+    fn apply_event(&mut self, event: &Event, reason: &mut ChangeReason) -> EditResult {
+        if self.widget_state == WidgetState::Disabled {
+            return EditResult::Ignored;
+        }
+        match event {
+            Event::Paste(Paste::Chunk(chunk)) => {
+                *reason = if self.search.is_some() {
+                    ChangeReason::Search
+                } else {
+                    ChangeReason::Paste
+                };
+                if self.search.is_some() {
+                    self.append_search_text(chunk)
+                } else {
+                    self.insert_text(chunk)
+                }
+            }
             Event::Paste(Paste::End) => {
+                *reason = if self.search.is_some() {
+                    ChangeReason::Search
+                } else {
+                    ChangeReason::Paste
+                };
                 let Some(state) = self.paste.take() else {
                     return EditResult::Ignored;
                 };
                 let PasteBuffer::Collecting(buffer) = state else {
-                    return EditResult::Ignored;
+                    return EditResult::StateChanged;
                 };
-                if self.search.is_some() {
+                let result = if self.search.is_some() {
                     self.append_search_text(&buffer)
                 } else {
                     self.insert_text(&buffer)
-                }
+                };
+                state_change(result, true)
             }
             Event::Key(key) if key.kind == KeyKind::Release => EditResult::Ignored,
-            Event::Key(_) => self.handle_key(event),
+            Event::Key(_) => self.handle_key(event, reason),
             _ => EditResult::Ignored,
         }
     }
 
-    fn handle_key(&mut self, event: &Event) -> EditResult {
+    fn handle_key(&mut self, event: &Event, reason: &mut ChangeReason) -> EditResult {
         let Event::Key(key) = event else {
             return EditResult::Ignored;
         };
         let code = key.code;
         let modifiers = key.modifiers;
         let text = key.text.as_deref();
+        *reason = ChangeReason::Navigate;
         if self.search.is_some() {
+            *reason = ChangeReason::Search;
             return self.search_key(code, modifiers, text);
         }
         if let Some(command) = self.keymap_registry().dispatch(event) {
-            return self.run_command(command, modifiers);
+            return self.run_command(command, modifiers, reason);
         }
         if self.keymap_mode == KeymapMode::Vim && self.vim_mode == VimMode::Normal {
-            if modifiers != Modifiers::new() {
-                return EditResult::Ignored;
-            }
-            return match code {
-                KeyCode::Char('h') | KeyCode::Left => self.move_horizontal(false, false),
-                KeyCode::Char('l') | KeyCode::Right => self.move_horizontal(true, false),
-                KeyCode::Char('j') | KeyCode::Down => self.move_vertical(1, false),
-                KeyCode::Char('k') | KeyCode::Up => self.move_vertical(-1, false),
-                KeyCode::Char('i') => {
-                    self.vim_mode = VimMode::Insert;
-                    EditResult::StateChanged
-                }
-                KeyCode::Char('a') => {
-                    self.move_horizontal(true, false);
-                    self.vim_mode = VimMode::Insert;
-                    EditResult::StateChanged
-                }
-                KeyCode::Char('/') => {
-                    self.start_search();
-                    EditResult::StateChanged
-                }
-                KeyCode::Char('x') => self.delete_forward(),
-                KeyCode::Char('u') => self.undo(),
-                KeyCode::Char('n') => self.find_next(),
-                _ => EditResult::Ignored,
-            };
+            return self.normal_key(code, modifiers, reason);
         }
         let control = modifiers == Modifiers::new().control();
         if control {
@@ -542,21 +606,38 @@ impl TextArea {
                 KeyCode::Char('a') => self.move_line_edge(false, modifiers.is_shift()),
                 KeyCode::Char('e') => self.move_line_edge(true, modifiers.is_shift()),
                 KeyCode::Char('s') => {
+                    *reason = ChangeReason::Search;
                     self.start_search();
                     EditResult::StateChanged
                 }
-                KeyCode::Char('z') => self.undo(),
-                KeyCode::Char('y') => self.redo(),
-                KeyCode::Char('c') => self.copy_selection(),
+                KeyCode::Char('z') => {
+                    *reason = ChangeReason::Undo;
+                    self.undo()
+                }
+                KeyCode::Char('y') => {
+                    *reason = ChangeReason::Redo;
+                    self.redo()
+                }
+                KeyCode::Char('c') => {
+                    *reason = ChangeReason::Copy;
+                    self.copy_selection()
+                }
                 KeyCode::Char('x') => {
+                    *reason = ChangeReason::Edit;
                     if self.copy_selection() == EditResult::StateChanged {
                         self.delete_selection()
                     } else {
                         EditResult::Ignored
                     }
                 }
-                KeyCode::Char('v') if !self.yank.is_empty() => self.insert_text(&self.yank.clone()),
-                KeyCode::Char('f') => self.find_next(),
+                KeyCode::Char('v') if !self.yank.is_empty() => {
+                    *reason = ChangeReason::Paste;
+                    self.insert_text(&self.yank.clone())
+                }
+                KeyCode::Char('f') => {
+                    *reason = ChangeReason::Search;
+                    self.find_next()
+                }
                 _ => EditResult::Ignored,
             };
         }
@@ -567,15 +648,29 @@ impl TextArea {
             KeyCode::Down => self.move_vertical(1, modifiers.is_shift()),
             KeyCode::Home => self.move_line_edge(false, modifiers.is_shift()),
             KeyCode::End => self.move_line_edge(true, modifiers.is_shift()),
-            KeyCode::Backspace => self.backspace(),
-            KeyCode::Delete => self.delete_forward(),
-            KeyCode::Enter => self.insert_text("\n"),
-            KeyCode::Tab => self.insert_text("\t"),
+            KeyCode::Backspace => {
+                *reason = ChangeReason::Edit;
+                self.backspace()
+            }
+            KeyCode::Delete => {
+                *reason = ChangeReason::Edit;
+                self.delete_forward()
+            }
+            KeyCode::Enter => {
+                *reason = ChangeReason::Edit;
+                self.insert_text("\n")
+            }
+            KeyCode::Tab => {
+                *reason = ChangeReason::Edit;
+                self.insert_text("\t")
+            }
             KeyCode::Esc if self.keymap_mode == KeymapMode::Vim => {
+                *reason = ChangeReason::Mode;
                 self.vim_mode = VimMode::Normal;
                 EditResult::StateChanged
             }
             KeyCode::Char(c) => {
+                *reason = ChangeReason::Edit;
                 if !allows_text_input(modifiers) {
                     return EditResult::Ignored;
                 }
@@ -589,7 +684,59 @@ impl TextArea {
         }
     }
 
-    fn run_command(&mut self, command_id: &str, modifiers: Modifiers) -> EditResult {
+    fn normal_key(
+        &mut self,
+        code: KeyCode,
+        modifiers: Modifiers,
+        reason: &mut ChangeReason,
+    ) -> EditResult {
+        if modifiers != Modifiers::new() {
+            return EditResult::Ignored;
+        }
+        match code {
+            KeyCode::Char('h') | KeyCode::Left => self.move_horizontal(false, false),
+            KeyCode::Char('l') | KeyCode::Right => self.move_horizontal(true, false),
+            KeyCode::Char('j') | KeyCode::Down => self.move_vertical(1, false),
+            KeyCode::Char('k') | KeyCode::Up => self.move_vertical(-1, false),
+            KeyCode::Char('i') => {
+                *reason = ChangeReason::Mode;
+                self.vim_mode = VimMode::Insert;
+                EditResult::StateChanged
+            }
+            KeyCode::Char('a') => {
+                *reason = ChangeReason::Mode;
+                self.move_horizontal(true, false);
+                self.vim_mode = VimMode::Insert;
+                EditResult::StateChanged
+            }
+            KeyCode::Char('/') => {
+                *reason = ChangeReason::Search;
+                self.start_search();
+                EditResult::StateChanged
+            }
+            KeyCode::Char('x') => {
+                *reason = ChangeReason::Edit;
+                self.delete_forward()
+            }
+            KeyCode::Char('u') => {
+                *reason = ChangeReason::Undo;
+                self.undo()
+            }
+            KeyCode::Char('n') => {
+                *reason = ChangeReason::Search;
+                self.find_next()
+            }
+            _ => EditResult::Ignored,
+        }
+    }
+
+    fn run_command(
+        &mut self,
+        command_id: &str,
+        modifiers: Modifiers,
+        reason: &mut ChangeReason,
+    ) -> EditResult {
+        *reason = ChangeReason::Navigate;
         match command_id {
             "move-left" => self.move_horizontal(false, modifiers.is_shift()),
             "move-right" => self.move_horizontal(true, modifiers.is_shift()),
@@ -597,36 +744,59 @@ impl TextArea {
             "move-down" => self.move_vertical(1, modifiers.is_shift()),
             "extend-up" => self.move_vertical(-1, true),
             "extend-down" => self.move_vertical(1, true),
-            "undo" => self.undo(),
-            "redo" => self.redo(),
+            "undo" => {
+                *reason = ChangeReason::Undo;
+                self.undo()
+            }
+            "redo" => {
+                *reason = ChangeReason::Redo;
+                self.redo()
+            }
             "search" => {
+                *reason = ChangeReason::Search;
                 self.start_search();
                 EditResult::StateChanged
             }
-            "copy" => self.copy_selection(),
+            "copy" => {
+                *reason = ChangeReason::Copy;
+                self.copy_selection()
+            }
             "cut" => {
+                *reason = ChangeReason::Edit;
                 if self.copy_selection() == EditResult::StateChanged {
                     self.delete_selection()
                 } else {
                     EditResult::Ignored
                 }
             }
-            "paste" if !self.yank.is_empty() => self.insert_text(&self.yank.clone()),
+            "paste" if !self.yank.is_empty() => {
+                *reason = ChangeReason::Paste;
+                self.insert_text(&self.yank.clone())
+            }
             "insert-mode" if self.keymap_mode == KeymapMode::Vim => {
+                *reason = ChangeReason::Mode;
                 self.vim_mode = VimMode::Insert;
                 EditResult::StateChanged
             }
             "append-mode" if self.keymap_mode == KeymapMode::Vim => {
+                *reason = ChangeReason::Mode;
                 self.move_horizontal(true, false);
                 self.vim_mode = VimMode::Insert;
                 EditResult::StateChanged
             }
             "normal-mode" if self.keymap_mode == KeymapMode::Vim => {
+                *reason = ChangeReason::Mode;
                 self.vim_mode = VimMode::Normal;
                 EditResult::StateChanged
             }
-            "find-next" => self.find_next(),
-            "delete-char" => self.delete_forward(),
+            "find-next" => {
+                *reason = ChangeReason::Search;
+                self.find_next()
+            }
+            "delete-char" => {
+                *reason = ChangeReason::Edit;
+                self.delete_forward()
+            }
             _ => EditResult::Ignored,
         }
     }
@@ -803,21 +973,21 @@ impl TextArea {
             self.search_match = Some((pos, pos + query.len()));
             EditResult::StateChanged
         } else {
-            self.search_match = None;
-            EditResult::Ignored
+            state_change(EditResult::Ignored, self.search_match.take().is_some())
         }
     }
 
     fn move_horizontal(&mut self, right: bool, extend: bool) -> EditResult {
-        self.preferred_col = None;
+        let changed = self.preferred_col.take().is_some();
         let next = if right {
             next_grapheme(&self.text, self.cursor)
         } else {
             previous_grapheme(&self.text, self.cursor)
         };
-        self.move_byte(next, extend)
+        state_change(self.move_byte(next, extend), changed)
     }
     fn move_vertical(&mut self, direction: i32, extend: bool) -> EditResult {
+        let changed = self.preferred_col.is_none();
         let pos = self.position(self.cursor);
         let line = if direction < 0 {
             pos.line.saturating_sub(1)
@@ -849,10 +1019,10 @@ impl TextArea {
             }
             display_col = next;
         }
-        self.move_byte(target_byte, extend)
+        state_change(self.move_byte(target_byte, extend), changed)
     }
     fn move_line_edge(&mut self, end: bool, extend: bool) -> EditResult {
-        self.preferred_col = None;
+        let changed = self.preferred_col.take().is_some();
         let p = self.position(self.cursor);
         let line_start = self.line_starts[p.line];
         let line_end = self
@@ -861,7 +1031,10 @@ impl TextArea {
             .copied()
             .unwrap_or(self.text.len())
             .saturating_sub(usize::from(p.line + 1 < self.line_starts.len()));
-        self.move_byte(if end { line_end } else { line_start }, extend)
+        state_change(
+            self.move_byte(if end { line_end } else { line_start }, extend),
+            changed,
+        )
     }
     fn move_byte(&mut self, next: usize, extend: bool) -> EditResult {
         if next == self.cursor && (!extend || self.anchor.is_some()) {
@@ -1266,4 +1439,37 @@ fn display_columns(text: &str) -> usize {
     text.graphemes(true).fold(0, |column, grapheme| {
         column + grapheme_columns(grapheme, column)
     })
+}
+
+impl Handle for TextArea {
+    fn handle_with(&mut self, event: &Event, context: ChangeContext<'_>) -> Change<Outcome> {
+        self.handle_event_with(event, context)
+            .map(|value| match value {
+                EditResult::Ignored => Outcome::Ignored,
+                EditResult::PasteRejected => Outcome::Handled,
+                EditResult::StateChanged
+                | EditResult::DocumentChanged
+                | EditResult::DocumentChangedWithoutUndo => Outcome::Changed,
+            })
+    }
+}
+
+fn editor_change(
+    value: EditResult,
+    reason: ChangeReason,
+    source: ChangeSource,
+) -> Change<EditResult> {
+    if value == EditResult::Ignored {
+        Change::ignored()
+    } else {
+        Change::new(value, reason, source)
+    }
+}
+
+fn state_change(value: EditResult, changed: bool) -> EditResult {
+    if changed && value == EditResult::Ignored {
+        EditResult::StateChanged
+    } else {
+        value
+    }
 }

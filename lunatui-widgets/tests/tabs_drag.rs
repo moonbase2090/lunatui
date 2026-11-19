@@ -15,7 +15,7 @@ fn drag_to(start: u16, end: u16) -> Option<TabMove> {
     let mut drag = TabsDrag::new();
     assert!(drag.press(&areas, start, 2));
     drag.drag(&areas, end, 2);
-    drag.release()
+    drag.release().into_value().flatten()
 }
 
 #[test]
@@ -66,14 +66,17 @@ fn leaving_the_strip_cancels_the_drop_and_returning_resumes_it() {
     drag.drag(&areas, 9, 5);
     assert_eq!(drag.target(), None);
     assert!(drag.is_dragging());
-    assert_eq!(drag.release(), None);
+    assert_eq!(drag.release().into_value().flatten(), None);
     assert!(!drag.is_dragging());
 
     drag.press(&areas, 1, 2);
     drag.drag(&areas, 9, 5);
     drag.drag(&areas, 9, 2);
     assert_eq!(drag.target(), Some(2));
-    assert_eq!(drag.release(), Some(TabMove { from: 0, to: 2 }));
+    assert_eq!(
+        drag.release().into_value().flatten(),
+        Some(TabMove { from: 0, to: 2 })
+    );
 }
 
 #[test]
@@ -84,7 +87,7 @@ fn returning_into_a_gap_after_leaving_targets_the_dragged_tab() {
     drag.drag(&areas, 5, 0);
     drag.drag(&areas, 7, 2);
     assert_eq!(drag.target(), Some(1));
-    assert_eq!(drag.release(), None);
+    assert_eq!(drag.release().into_value().flatten(), None);
 }
 
 #[test]
@@ -108,7 +111,7 @@ fn cancel_abandons_the_drag() {
     assert!(!drag.is_dragging());
     assert_eq!(drag.from(), None);
     assert_eq!(drag.target(), None);
-    assert_eq!(drag.release(), None);
+    assert_eq!(drag.release().into_value().flatten(), None);
 }
 
 #[test]
@@ -120,7 +123,7 @@ fn a_press_off_every_tab_starts_nothing() {
     assert!(!drag.press(&areas, 19, 2));
     drag.drag(&areas, 9, 2);
     assert_eq!(drag.target(), None);
-    assert_eq!(drag.release(), None);
+    assert_eq!(drag.release().into_value().flatten(), None);
 }
 
 #[test]
@@ -143,7 +146,10 @@ fn boxed_strips_drag_by_their_slots() {
     let mut drag = TabsDrag::new();
     assert!(drag.press(&areas, 2, 1));
     drag.drag(&areas, 13, 0);
-    assert_eq!(drag.release(), Some(TabMove { from: 0, to: 2 }));
+    assert_eq!(
+        drag.release().into_value().flatten(),
+        Some(TabMove { from: 0, to: 2 })
+    );
     assert!(!drag.press(&areas, 2, 2));
 }
 
@@ -184,7 +190,7 @@ fn the_reordered_strip_keeps_the_same_tab_selected() {
     let mut drag = TabsDrag::new();
     drag.press(&areas, 1, 2);
     drag.drag(&areas, 15, 2);
-    let reorder = drag.release();
+    let reorder = drag.release().into_value().flatten();
     let Some(reorder) = reorder else {
         unreachable!("a drop on another tab reorders");
     };
@@ -209,7 +215,10 @@ fn an_indented_strip_picks_the_first_tab_left_of_it() {
     drag.press(&areas, 8, 0);
     drag.drag(&areas, 1, 0);
     assert_eq!(drag.target(), Some(0));
-    assert_eq!(drag.release(), Some(TabMove { from: 1, to: 0 }));
+    assert_eq!(
+        drag.release().into_value().flatten(),
+        Some(TabMove { from: 1, to: 0 })
+    );
 }
 
 #[test]

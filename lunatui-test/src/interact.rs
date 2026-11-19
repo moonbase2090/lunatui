@@ -197,11 +197,26 @@ impl<C: Component> Harness<C> {
             "{event:?} encodes to {bytes:?}, which the input parser decodes to no event"
         );
         for event in decoded {
-            self.component.update(&event);
-            self.log.push(event);
+            self.apply_event(event);
         }
         self.redraw();
         self
+    }
+
+    /// Delivers an already decoded event, records it and redraws.
+    ///
+    /// Agent and application input can contain paste chunks independently of a
+    /// terminal parser's bracketed-paste state. This entry point preserves that
+    /// event boundary; [`inject`](Self::inject) exercises terminal encoding.
+    pub fn dispatch(&mut self, event: &Event) -> &mut Self {
+        self.apply_event(event.clone());
+        self.redraw();
+        self
+    }
+
+    fn apply_event(&mut self, event: Event) {
+        self.component.update(&event);
+        self.log.push(event);
     }
 
     /// Moves the virtual clock forward by `delta`, calls the component's

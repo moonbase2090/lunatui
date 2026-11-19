@@ -135,7 +135,34 @@ pub enum LayerEvent {
         layer: LayerId,
         /// Whether the event should also be handled as usual.
         deliver: bool,
+        /// The original operation and input source, approved before closure.
+        details: crate::ChangeDetails,
     },
+    /// The application refused dismissal. The layer and focus stay put, and
+    /// the event must not reach an underlying control.
+    Canceled {
+        /// The layer that remains open.
+        layer: LayerId,
+        /// Why dismissal was attempted and refused.
+        details: crate::ChangeDetails,
+    },
+}
+
+impl LayerEvent {
+    /// Whether the application should continue routing the original event.
+    #[must_use]
+    pub const fn delivers(self) -> bool {
+        matches!(self, Self::Pass | Self::Dismissed { deliver: true, .. })
+    }
+
+    /// Details of an accepted or refused dismissal.
+    #[must_use]
+    pub const fn details(&self) -> Option<&crate::ChangeDetails> {
+        match self {
+            Self::Dismissed { details, .. } | Self::Canceled { details, .. } => Some(details),
+            _ => None,
+        }
+    }
 }
 
 /// Open overlays in z order, with modal focus trapping and dismissal routing.
@@ -219,6 +246,18 @@ impl LayerStack {
     /// and a pointer press goes through [`route_press`](Self::route_press). A closed layer gives
     /// focus back to its opener. Other events pass.
     pub fn handle(&mut self, event: &Event, focus: &mut FocusManager) -> LayerEvent {
+        self.handle_with(event, focus, crate::ChangeContext::for_event(event))
+    }
+
+    /// Routes input with a source and optional guard. The decision precedes
+    /// layer removal and focus restoration; a veto also prevents delivery of an
+    /// outside press. Forward accepted receipts to each overlay's `sync` method.
+    pub fn handle_with(
+        &mut self,
+        event: &Event,
+        focus: &mut FocusManager,
+        context: crate::ChangeContext<'_>,
+    ) -> LayerEvent {
         match event {
             Event::Key(key)
                 if key.code == KeyCode::Esc
@@ -228,23 +267,70 @@ impl LayerStack {
                 let Some(layer) = self.escape() else {
                     return LayerEvent::Pass;
                 };
-                self.close(layer, focus);
-                LayerEvent::Dismissed {
+                self.dismiss(
                     layer,
-                    deliver: false,
-                }
+                    false,
+                    crate::ChangeReason::Escape(layer),
+                    focus,
+                    context,
+                )
             }
             Event::Mouse(mouse) if matches!(mouse.kind, MouseKind::Down(_)) => {
                 match self.route_press(mouse.column, mouse.row) {
                     PressRoute::Deliver => LayerEvent::Pass,
                     PressRoute::Block => LayerEvent::Consumed,
-                    PressRoute::Dismiss { layer, deliver } => {
-                        self.close(layer, focus);
-                        LayerEvent::Dismissed { layer, deliver }
-                    }
+                    PressRoute::Dismiss { layer, deliver } => self.dismiss(
+                        layer,
+                        deliver,
+                        crate::ChangeReason::OutsidePress(layer),
+                        focus,
+                        context,
+                    ),
                 }
             }
             _ => LayerEvent::Pass,
+        }
+    }
+
+    /// Explicitly closes a layer with a pre-commit guard and a receipt suitable
+    /// for overlay synchronization. Unknown layers pass without a guard call.
+    pub fn close_with(
+        &mut self,
+        layer: LayerId,
+        focus: &mut FocusManager,
+        context: crate::ChangeContext<'_>,
+    ) -> LayerEvent {
+        if self.get(layer).is_none() {
+            return LayerEvent::Pass;
+        }
+        self.dismiss(
+            layer,
+            false,
+            crate::ChangeReason::Close(layer),
+            focus,
+            context,
+        )
+    }
+
+    fn dismiss(
+        &mut self,
+        layer: LayerId,
+        deliver: bool,
+        reason: crate::ChangeReason,
+        focus: &mut FocusManager,
+        mut context: crate::ChangeContext<'_>,
+    ) -> LayerEvent {
+        let result = context.apply(reason, layer, || {
+            self.close(layer, focus);
+        });
+        match result.details().copied() {
+            Some(details) if result.is_canceled() => LayerEvent::Canceled { layer, details },
+            Some(details) => LayerEvent::Dismissed {
+                layer,
+                deliver,
+                details,
+            },
+            None => LayerEvent::Pass,
         }
     }
 
@@ -443,14 +529,28 @@ impl LayerSlot {
         self.id.take().is_some_and(|id| layers.close(id, focus))
     }
 
-    /// Notices a layer that the stack closed. Returns `true` once, on the first call after the
-    /// layer left the stack.
-    pub fn sync(&mut self, layers: &LayerStack) -> bool {
-        let gone = self.id.is_some_and(|id| layers.get(id).is_none());
-        if gone {
-            self.id = None;
+    /// Clears a slot whose layer is gone, once. A matching accepted receipt
+    /// preserves its reason and source; immediate removals report an application close.
+    /// A layer that is still present, including a vetoed close, leaves the slot intact.
+    /// Receipts belong to the app's stack; forward them before the next event.
+    pub fn sync(
+        &mut self,
+        layers: &LayerStack,
+        receipt: &LayerEvent,
+    ) -> Option<crate::ChangeDetails> {
+        let id = self.id?;
+        if layers.get(id).is_some() {
+            return None;
         }
-        gone
+        let details = match receipt {
+            LayerEvent::Dismissed { layer, details, .. } if *layer == id => *details,
+            _ => crate::ChangeDetails::new(
+                crate::ChangeReason::Close(id),
+                crate::ChangeSource::Application,
+            ),
+        };
+        self.id = None;
+        Some(details)
     }
 
     /// Moves the open layer to `area`, the cells the overlay drew this frame.
@@ -515,6 +615,39 @@ mod tests {
     }
 
     #[test]
+    fn slots_notice_immediate_remove_pop_and_close_once() {
+        for operation in 0..3 {
+            let mut layers = LayerStack::new();
+            let mut focus = base_focus();
+            let mut slot = LayerSlot::new();
+            let id = slot.open(&mut layers, Layer::modal(AREA).return_focus(OPENER));
+            assert_eq!(slot.sync(&layers, &LayerEvent::Pass), None);
+            assert!(slot.is_open());
+            match operation {
+                0 => {
+                    assert_eq!(layers.remove(id), Some(OPENER));
+                }
+                1 => {
+                    assert_eq!(layers.pop(), Some(OPENER));
+                }
+                _ => {
+                    assert!(layers.close(id, &mut focus));
+                }
+            }
+            assert_eq!(
+                slot.sync(&layers, &LayerEvent::Pass),
+                Some(crate::ChangeDetails::new(
+                    crate::ChangeReason::Close(id),
+                    crate::ChangeSource::Application
+                ))
+            );
+            assert!(!slot.is_open());
+            assert_eq!(slot.id(), None);
+            assert_eq!(slot.sync(&layers, &LayerEvent::Pass), None);
+        }
+    }
+
+    #[test]
     fn esc_closes_only_the_top_layer_and_then_the_next() {
         let mut layers = LayerStack::new();
         let mut focus = base_focus();
@@ -524,7 +657,11 @@ mod tests {
             layers.handle(&esc(), &mut focus),
             LayerEvent::Dismissed {
                 layer: menu,
-                deliver: false
+                deliver: false,
+                details: crate::ChangeDetails::new(
+                    crate::ChangeReason::Escape(menu),
+                    crate::ChangeSource::Keyboard
+                )
             }
         );
         assert_eq!(layers.top(), Some(dialog));
@@ -532,7 +669,11 @@ mod tests {
             layers.handle(&esc(), &mut focus),
             LayerEvent::Dismissed {
                 layer: dialog,
-                deliver: false
+                deliver: false,
+                details: crate::ChangeDetails::new(
+                    crate::ChangeReason::Escape(dialog),
+                    crate::ChangeSource::Keyboard
+                )
             }
         );
         assert!(layers.is_empty());
@@ -567,7 +708,11 @@ mod tests {
             layers.handle(&press(0, 0), &mut focus),
             LayerEvent::Dismissed {
                 layer: menu,
-                deliver: true
+                deliver: true,
+                details: crate::ChangeDetails::new(
+                    crate::ChangeReason::OutsidePress(menu),
+                    crate::ChangeSource::Mouse
+                )
             }
         );
         assert!(layers.is_empty());
@@ -621,10 +766,10 @@ mod tests {
         let id = slot.open(&mut layers, Layer::popover(AREA).return_focus(OTHER));
         assert_eq!(slot.open(&mut layers, Layer::popover(AREA)), id);
         assert_eq!(layers.len(), 1);
-        assert!(!slot.sync(&layers));
-        layers.handle(&press(0, 0), &mut focus);
-        assert!(slot.sync(&layers));
-        assert!(!slot.sync(&layers));
+        assert!(slot.sync(&layers, &LayerEvent::Pass).is_none());
+        let receipt = layers.handle(&press(0, 0), &mut focus);
+        assert!(slot.sync(&layers, &receipt).is_some());
+        assert!(slot.sync(&layers, &receipt).is_none());
         assert!(!slot.is_open());
         assert_eq!(focus.focused(), Some(OTHER));
     }
@@ -655,7 +800,11 @@ mod tests {
             layers.handle(&press(0, 0), &mut focus),
             LayerEvent::Dismissed {
                 layer: menu,
-                deliver: true
+                deliver: true,
+                details: crate::ChangeDetails::new(
+                    crate::ChangeReason::OutsidePress(menu),
+                    crate::ChangeSource::Mouse
+                )
             }
         );
     }
@@ -708,7 +857,11 @@ mod tests {
             layers.handle(&esc(), &mut focus),
             LayerEvent::Dismissed {
                 layer: dialog,
-                deliver: false
+                deliver: false,
+                details: crate::ChangeDetails::new(
+                    crate::ChangeReason::Escape(dialog),
+                    crate::ChangeSource::Keyboard
+                )
             }
         );
         assert_eq!(layers.handle(&press(0, 0), &mut focus), LayerEvent::Pass);

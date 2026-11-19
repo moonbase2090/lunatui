@@ -108,3 +108,4 @@ helper document_panels # renders source, labels and preview border through Block
 scope examples/text_area_showcase.rs # the notes editor composes TextArea, Block and Paragraph through public APIs
 scope examples/command_palette_showcase.rs # the editor composes Block, Paragraph and CommandPalette widgets
 helper palette_workspace # renders the editor file tree and split panes through Block and Paragraph
+scope examples/change_guard.rs # Guarded editor recording renders real widgets only.

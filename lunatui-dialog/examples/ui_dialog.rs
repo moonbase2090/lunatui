@@ -67,6 +67,7 @@ impl Model {
         if at(RENAME) {
             renamed = state
                 .activate(&mut layers, &mut focus)
+                .into_value()
                 .is_some_and(|closed| closed.outcome() == DialogOutcome::Confirmed);
         }
         if at(ASK) {
@@ -82,13 +83,14 @@ impl Model {
         if at(DELETE) {
             deleted = state
                 .activate(&mut layers, &mut focus)
+                .into_value()
                 .is_some_and(|closed| closed.outcome() == DialogOutcome::Confirmed);
         }
         if at(REPORT) {
             state.open(DialogKind::Alert, &mut layers, None);
         }
         if at(DISMISS) {
-            let _ = state.activate(&mut layers, &mut focus);
+            let _ = state.activate(&mut layers, &mut focus).into_value();
         }
         Self {
             state,

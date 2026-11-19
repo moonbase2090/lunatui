@@ -213,11 +213,17 @@ impl Frame {
         }
         for event in self.menu.drain_events().collect::<Vec<_>>() {
             match event {
-                MenuEvent::Selected(Action::Metrics) => {
+                MenuEvent::Selected {
+                    value: Action::Metrics,
+                    ..
+                } => {
                     self.metrics = true;
                     self.status = "Opened src/metrics.rs from Recent".into();
                 }
-                MenuEvent::Selected(Action::Save) => {
+                MenuEvent::Selected {
+                    value: Action::Save,
+                    ..
+                } => {
                     self.dirty = false;
                     self.status = "Saved src/metrics.rs".into();
                 }

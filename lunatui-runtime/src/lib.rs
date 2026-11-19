@@ -8,6 +8,8 @@ mod agent;
 mod anim;
 #[cfg(feature = "app")]
 mod app;
+#[cfg(feature = "app")]
+mod change;
 #[cfg(feature = "effects")]
 /// Composable cell effects: fade, dissolve, sweep, slide and HSL shift.
 ///
@@ -56,6 +58,8 @@ pub use anim::{
 };
 #[cfg(feature = "app")]
 pub use app::{App, ControlFlow, is_quit};
+#[cfg(feature = "app")]
+pub use change::{Change, ChangeContext, ChangeDetails, ChangeReason, ChangeSource};
 #[cfg(feature = "app")]
 pub use focus::{FocusDirection, FocusGroup, FocusManager};
 #[cfg(feature = "image-presenter")]

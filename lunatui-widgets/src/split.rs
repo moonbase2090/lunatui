@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Rect, Style};
+use lunatui_runtime::{Change, ChangeContext, ChangeReason, ChangeSource};
 
 use crate::RenderCx;
 
@@ -385,7 +386,28 @@ impl SplitDrag {
     }
 
     /// Moves the grabbed divider to follow the pointer at `(column, row)`.
-    pub fn drag(&mut self, tree: &mut SplitTree, column: u16, row: u16) {
+    pub fn drag(&mut self, tree: &mut SplitTree, column: u16, row: u16) -> Change<()> {
+        self.drag_with(tree, column, row, ChangeContext::new(ChangeSource::Mouse))
+    }
+
+    /// Resizes only after policy approval. Refusal leaves both tree and gesture
+    /// state untouched. Idle motion is ignored without invoking the guard.
+    pub fn drag_with(
+        &mut self,
+        tree: &mut SplitTree,
+        column: u16,
+        row: u16,
+        mut context: ChangeContext<'_>,
+    ) -> Change<()> {
+        if self.grabbed.is_none() {
+            return Change::ignored();
+        }
+        context.apply(ChangeReason::Resize, (), || {
+            self.apply_drag(tree, column, row);
+        })
+    }
+
+    fn apply_drag(&mut self, tree: &mut SplitTree, column: u16, row: u16) {
         let Some((divider, _)) = self.grabbed else {
             return;
         };
