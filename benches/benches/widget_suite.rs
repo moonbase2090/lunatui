@@ -141,7 +141,7 @@ impl Options {
         for arg in args.iter().filter(|arg| arg.starts_with("--")) {
             if !matches!(
                 arg.as_str(),
-                "--case" | "--gate" | "--gate-all" | "--baseline-first"
+                "--case" | "--gate" | "--gate-all" | "--baseline-first" | "--bench"
             ) {
                 return Err(format!(
                     "unknown argument {arg}; instruction limits are set by scripts/check-widget-instructions.py"

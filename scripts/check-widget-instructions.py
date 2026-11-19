@@ -18,7 +18,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")).resolve()
-WORKER = Path("benches/benches/widget_instruction_worker.rs")
+WORKER = Path("benches/examples/widget_instruction_worker.rs")
 SIZES = ((80, 24), (200, 60))
 
 
@@ -91,28 +91,22 @@ def frozen_base(explicit):
 def baseline_tree(commit, out):
     tree = out / "baseline"
     git("worktree", "add", "--detach", str(tree), commit)
-    manifest = tree / "benches/Cargo.toml"
-    original = None
-    injected = False
+    injected = not (tree / WORKER).exists()
     try:
-        original = manifest.read_bytes()
-        injected = not (tree / WORKER).exists()
-        if injected and original is not None:
+        if injected:
+            (tree / WORKER).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / WORKER, tree / WORKER)
-            with manifest.open("ab") as stream:
-                stream.write(b'\n[[bench]]\nname = "widget_instruction_worker"\nharness = false\n')
         yield tree
     finally:
         if injected:
             (tree / WORKER).unlink(missing_ok=True)
-            manifest.write_bytes(original)
         git("worktree", "remove", str(tree))
 
 
 def build_worker(tree, out, name, env):
     result = subprocess.run([
-        "cargo", "bench", "--locked", "-p", "lunatui-bench", "--features", "text-area",
-        "--bench", "widget_instruction_worker", "--no-run", "--message-format=json",
+        "cargo", "build", "--profile", "bench", "--locked", "-p", "lunatui-bench", "--features", "text-area",
+        "--example", "widget_instruction_worker", "--message-format=json",
         "--target-dir", str(TARGET),
     ], cwd=tree, capture_output=True, text=True, env=env)
     (out / f"{name}-build.log").write_text(result.stdout + result.stderr)

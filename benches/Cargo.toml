@@ -110,10 +110,6 @@ name = "widget_suite"
 harness = false
 
 [[bench]]
-name = "widget_instruction_worker"
-harness = false
-
-[[bench]]
 name = "criterion_widgets"
 harness = false
 
