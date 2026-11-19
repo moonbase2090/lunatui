@@ -141,14 +141,11 @@ fn a_new_value_drops_the_edit_history_so_undo_cannot_bring_old_text_back() -> Te
 
 #[test]
 fn typing_after_a_value_never_lands_inside_a_character_of_the_new_text() -> Test {
-    // Three bytes in, the cursor would be inside the three-byte euro sign of the new text:
-    // it moves back to the start of that character.
     let mut harness = mount("");
     harness.type_text("xxx");
     act(&mut harness, Action::SetValue("é€".into()))?;
     harness.type_text("!");
     assert_eq!(harness.component().area.text(), "é!€");
-    // A cursor past the end of a shorter value comes back to its end.
     let mut harness = mount("");
     harness.type_text("a long first line");
     act(&mut harness, Action::SetValue("hi".into()))?;
@@ -168,7 +165,6 @@ fn a_text_area_takes_no_toggle_or_select_and_the_state_ignores_them() {
         );
     }
     assert_eq!(harness.component().area.text(), "keep");
-    // The state's own Act also leaves text alone for an action it does not take.
     let mut area = TextArea::new("keep");
     assert_eq!(area.act(&Action::Toggle), Outcome::Ignored);
     assert_eq!(area.text(), "keep");

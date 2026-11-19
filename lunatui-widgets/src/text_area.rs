@@ -1347,11 +1347,6 @@ impl Widget for TextArea {
     }
 }
 
-/// An agent's [`Action::SetValue`] replaces the whole document, as [`TextArea::set_text`] does:
-/// line endings become `\n`, the cursor keeps its offset limited to the new text and
-/// moved onto a character boundary, and the selection, search, pending paste and edit history are dropped. Setting the text it already
-/// holds changes nothing and answers [`Outcome::Handled`]. Other actions are
-/// [`Outcome::Ignored`].
 impl Act for TextArea {
     fn act(&mut self, action: &Action) -> Outcome {
         let Action::SetValue(value) = action else {
