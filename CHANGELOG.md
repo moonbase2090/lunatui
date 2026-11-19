@@ -8,6 +8,16 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- Shared `Change<T>`, `ChangeDetails`, and `ChangeContext` report an operation's reason and input source and let applications refuse it before live state changes. Guards cover input handling, layer dismissal, dialog actions, menu actions, tab drops, split resizing, and editor input, commands, and document replacement. A refused event remains consumed; a refused close preserves focus, and a refused editor operation preserves its complete state.
+- A runnable `change_guard` editor and dialog example, a real-widget recording, and [migration instructions](docs/canceling-changes.md).
+
+### Changed
+
+- Breaking: `Handle::handle` returns `Change<Outcome>` and implementors supply `handle_with`. Extract accepted payloads with `value()` or `into_value()`, and use `is_taken()` for event routing. `DialogState::activate` and `click`, `TextArea::handle_event` and `execute_command`, `TabsDrag::release`, and `SplitDrag::drag` also return `Change` results. `MenuEvent::Selected` has named `value` and `details` fields.
+- Breaking: `LayerSlot::sync`, `Dismissal::sync`, and the dialog, popover, and select synchronization methods take a `LayerEvent` receipt. Accepted dismissals preserve their reason and source. Synchronization also notices direct layer removal and reports an application close. `LayerEvent::Dismissed` includes details, and `LayerEvent::Canceled` records a refused dismissal.
+
 ## [0.1.32] - 2026-11-13
 
 ### Added

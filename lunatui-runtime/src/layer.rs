@@ -529,23 +529,28 @@ impl LayerSlot {
         self.id.take().is_some_and(|id| layers.close(id, focus))
     }
 
-    /// Consumes the matching accepted close receipt once. A veto, a receipt for
-    /// another layer, or a layer that is still present leaves the slot untouched.
+    /// Clears a slot whose layer is gone, once. A matching accepted receipt
+    /// preserves its reason and source; immediate removals report an application close.
+    /// A layer that is still present, including a vetoed close, leaves the slot intact.
     /// Receipts belong to the app's stack; forward them before the next event.
     pub fn sync(
         &mut self,
         layers: &LayerStack,
         receipt: &LayerEvent,
     ) -> Option<crate::ChangeDetails> {
-        let LayerEvent::Dismissed { layer, details, .. } = receipt else {
+        let id = self.id?;
+        if layers.get(id).is_some() {
             return None;
-        };
-        if self.id == Some(*layer) && layers.get(*layer).is_none() {
-            self.id = None;
-            Some(*details)
-        } else {
-            None
         }
+        let details = match receipt {
+            LayerEvent::Dismissed { layer, details, .. } if *layer == id => *details,
+            _ => crate::ChangeDetails::new(
+                crate::ChangeReason::Close(id),
+                crate::ChangeSource::Application,
+            ),
+        };
+        self.id = None;
+        Some(details)
     }
 
     /// Moves the open layer to `area`, the cells the overlay drew this frame.
@@ -607,6 +612,39 @@ mod tests {
             (OTHER, Rect::new(5, 0, 4, 1)),
         ]);
         focus
+    }
+
+    #[test]
+    fn slots_notice_immediate_remove_pop_and_close_once() {
+        for operation in 0..3 {
+            let mut layers = LayerStack::new();
+            let mut focus = base_focus();
+            let mut slot = LayerSlot::new();
+            let id = slot.open(&mut layers, Layer::modal(AREA).return_focus(OPENER));
+            assert_eq!(slot.sync(&layers, &LayerEvent::Pass), None);
+            assert!(slot.is_open());
+            match operation {
+                0 => {
+                    assert_eq!(layers.remove(id), Some(OPENER));
+                }
+                1 => {
+                    assert_eq!(layers.pop(), Some(OPENER));
+                }
+                _ => {
+                    assert!(layers.close(id, &mut focus));
+                }
+            }
+            assert_eq!(
+                slot.sync(&layers, &LayerEvent::Pass),
+                Some(crate::ChangeDetails::new(
+                    crate::ChangeReason::Close(id),
+                    crate::ChangeSource::Application
+                ))
+            );
+            assert!(!slot.is_open());
+            assert_eq!(slot.id(), None);
+            assert_eq!(slot.sync(&layers, &LayerEvent::Pass), None);
+        }
     }
 
     #[test]

@@ -40,7 +40,7 @@ if receipt.delivers() {
 }
 ```
 
-A refused close leaves the layer stack, dialog, and focus unchanged. A refused outside press also prevents click-through. `LayerStack::close_with` supplies the same receipt for an explicit close. `DialogState::activate_with` and `click_with` approve before changing button focus or closing the layer. `PopoverState::close_with` and `toggle_with` approve their complete operation.
+A refused close leaves the layer stack, dialog, and focus unchanged. A refused outside press also prevents click-through. `LayerStack::close_with` supplies the same receipt for an explicit close. If application code uses immediate `remove`, `pop`, or `close` instead, synchronization still clears an absent layer once and reports `Close(layer)` from `Application`. `DialogState::activate_with` and `click_with` approve before changing button focus or closing the layer. `PopoverState::close_with` and `toggle_with` approve their complete operation.
 
 `DialogOutcome::Cancelled` is the user's accepted answer. `Change::is_canceled()` means the application refused an operation, so no answer occurred.
 
@@ -74,7 +74,7 @@ Run `cargo run -p lunatui --example change_guard` to try both refusals. Press F2
 | `SplitDrag::drag` | Returns `Change<()>`. `drag_with` guards tree ratios and gesture state together. |
 | `TextArea::handle_event` and `execute_command` | Return `Change<EditResult>`. Their `_with` variants accept a context. Clearing paste or preferred-column state reports `StateChanged`. |
 
-Immediate helpers remain immediate. Examples include `LayerStack::remove`, `pop`, and `close`, overlay `open` and `close`, `RovingFocus::handle_key`, `FormState::step`, and editor movement, configuration, undo, and redo methods. A policy applies at the guarded entry point you choose. Route overlay dismissal through receipt-producing methods when its owning state must synchronize. For a composite application operation, use `ChangeContext::perform(reason, || operation())` to run the whole operation after approval.
+Immediate helpers remain immediate. Examples include `LayerStack::remove`, `pop`, and `close`, overlay `open` and `close`, `RovingFocus::handle_key`, `FormState::step`, and editor movement, configuration, undo, and redo methods. A policy applies at the guarded entry point you choose. Route overlay dismissal through receipt-producing methods to preserve its original reason and source. Immediate removals synchronize with application-close provenance. For a composite application operation, use `ChangeContext::perform(reason, || operation())` to run the whole operation after approval.
 
 ## Why approval happens inside the operation
 

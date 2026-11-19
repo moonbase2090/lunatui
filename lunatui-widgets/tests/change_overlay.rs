@@ -7,7 +7,7 @@
 use lunatui_core::{ClusterTable, Grid, Rect};
 use lunatui_runtime::{Change, ChangeContext, ChangeDetails, ChangeReason, ChangeSource};
 use lunatui_runtime::{FocusManager, HitId, LayerEvent, LayerStack};
-use lunatui_term::{Event, MouseButton, MouseKind};
+use lunatui_term::{Event, KeyCode, MouseButton, MouseKind};
 use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{
@@ -62,6 +62,22 @@ impl DialogApp {
 
 impl Component for DialogApp {
     fn update(&mut self, event: &Event) {
+        if let Event::Key(key) = event
+            && let Some(layer) = self.dialog.layer()
+        {
+            match key.code {
+                KeyCode::F(6) => {
+                    self.layers.remove(layer);
+                }
+                KeyCode::F(7) => {
+                    self.layers.pop();
+                }
+                KeyCode::F(8) => {
+                    self.layers.close(layer, &mut self.focus);
+                }
+                _ => {}
+            }
+        }
         let refuse = self.refuse;
         self.last = self.layers.handle_with(
             event,
@@ -229,4 +245,24 @@ fn refused_escape_preserves_the_layer_slot_dialog_and_focus_then_can_be_accepted
     );
     assert!(harness.rows()[0].starts_with("Editor"));
     Ok(())
+}
+
+#[test]
+fn application_layer_removal_cancels_the_dialog_once() {
+    for key in ["F6", "F7", "F8"] {
+        let mut harness = Harness::mount(DialogApp::new(), 44, 12);
+        harness.key(key);
+        assert!(!harness.component().dialog.is_open());
+        assert!(harness.component().layers.is_empty());
+        assert_eq!(harness.component().answers, [DialogOutcome::Cancelled]);
+        assert_eq!(harness.component().focus.focused(), Some(OPENER));
+        assert!(
+            harness
+                .rows()
+                .iter()
+                .all(|row| !row.contains("Unsaved document"))
+        );
+        harness.key(key);
+        assert_eq!(harness.component().answers, [DialogOutcome::Cancelled]);
+    }
 }
