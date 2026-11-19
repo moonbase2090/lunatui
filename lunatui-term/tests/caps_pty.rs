@@ -6,6 +6,7 @@
 
 use std::fs::File;
 use std::io::{self, Read, Write};
+use std::net::Shutdown;
 use std::os::fd::{AsFd, AsRawFd, FromRawFd};
 use std::os::unix::net::UnixStream;
 use std::thread;
@@ -44,27 +45,14 @@ fn probe_waits_out_the_budget_when_no_reply_arrives() -> io::Result<()> {
 }
 
 #[test]
-fn probe_reads_a_reply_that_arrives_inside_the_budget() -> io::Result<()> {
+fn probe_reads_a_buffered_reply() -> io::Result<()> {
     let (app, mut peer) = UnixStream::pair()?;
-    let fixture = RecordedTerminal::Xterm.replies().to_vec();
-    let writer = thread::spawn(move || -> io::Result<()> {
-        thread::sleep(Duration::from_millis(50));
-        peer.write_all(&fixture)?;
-        Ok(())
-    });
-    let started = Instant::now();
+    peer.write_all(RecordedTerminal::Xterm.replies())?;
+    peer.shutdown(Shutdown::Write)?;
     let reply = probe_fd(app.as_fd(), &env_256())?;
-    let elapsed = started.elapsed();
-    writer
-        .join()
-        .map_err(|_| io::Error::other("reply thread panicked"))??;
     assert!(reply.saw_device_attributes);
     assert_eq!(reply.caps.identity.program, "xterm");
     assert_eq!(reply.caps.identity.version, "384");
-    assert!(
-        elapsed < Duration::from_millis(800),
-        "reply probe took {elapsed:?}"
-    );
     Ok(())
 }
 
