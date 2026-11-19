@@ -131,7 +131,7 @@ mod tooltip;
 mod tree;
 mod widget;
 pub use lunatui_runtime::AccessibilityRole;
-pub use named_control::NamedControl;
+pub use named_control::{ItemControls, NamedControl};
 #[cfg(feature = "widget-list")]
 mod widget_list;
 

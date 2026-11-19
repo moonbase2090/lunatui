@@ -76,6 +76,13 @@ that action. Otherwise it queues a `Request` with `source: Source::Agent` and re
 `Agent::take` during its update step, applies each to the state behind `request.id` and redraws.
 `Act` applies the common cases: `bool` toggles and `String` sets its value.
 
+Tabs and lists register their items too. `Tabs::controls(ItemControls::new(first))` and
+`List::controls(ItemControls::new(first))` give each visible tab (role `Tab`) or row (role
+`ListItem`, named by its first cell) the id `first + index`, with the chosen item marked
+`Selected`. Choose one with `Action::Select`, then subtract `first` from `request.id` to get the
+index. A row with a blank name is left out, rows scrolled out of view are not registered, and
+rows that share a name make `act` return `ActError::Ambiguous`. What is drawn does not change.
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.

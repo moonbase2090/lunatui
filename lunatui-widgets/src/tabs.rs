@@ -4,7 +4,9 @@
 use lunatui_core::{Rect, Size, Style, clip_display_prefix, width};
 use lunatui_runtime::{Change, ChangeContext, ChangeReason, ChangeSource};
 
-use crate::{RenderCx, Widget};
+use crate::named_control::Item;
+use crate::{ItemControls, RenderCx, Widget};
+use lunatui_runtime::AccessibilityRole;
 
 /// Horizontal tab strip.
 ///
@@ -20,6 +22,7 @@ pub struct Tabs {
     indent: u16,
     boxed: Option<BoxedStyle>,
     join_parent_border: bool,
+    controls: Option<ItemControls>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -40,7 +43,15 @@ impl Tabs {
             indent: 0,
             boxed: None,
             join_parent_border: false,
+            controls: None,
         }
+    }
+
+    /// Registers each visible tab as a named control when the frame has a hit map.
+    #[must_use]
+    pub const fn controls(mut self, controls: ItemControls) -> Self {
+        self.controls = Some(controls);
+        self
     }
 
     /// Selected tab index.
@@ -254,6 +265,22 @@ impl Widget for Tabs {
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         if area.width == 0 || area.height == 0 {
             return;
+        }
+        if let Some(controls) = self.controls {
+            for (index, rect) in self.tab_areas(area) {
+                if let Some(title) = self.titles.get(index) {
+                    controls.register(
+                        cx,
+                        &Item {
+                            index,
+                            name: title,
+                            role: AccessibilityRole::Tab,
+                            selected: index == self.selected,
+                        },
+                        rect,
+                    );
+                }
+            }
         }
         match self.boxed {
             Some(boxed) if area.height >= 3 => self.render_boxed(boxed, area, cx),
