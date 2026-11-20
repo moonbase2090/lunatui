@@ -70,7 +70,8 @@ the version-2 schema. Writer errors propagate and may leave a partial snapshot.
 checked state, selected and invalid flags, and the actions the role takes. These live on
 `ControlMetadata` as separate optional facets and are written only by `Snapshot::write_json`.
 `write_accessibility_json` ignores them, so the export keeps excluding input values. A secret
-field supplies no value to either. `ComboBox` is added to the roles for a closed list of options.
+field supplies no value to either. `ComboBox` is added to the roles for a closed list of options,
+and `MenuItem` for an entry of a menu bar or panel.
 
 ## One field model
 

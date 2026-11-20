@@ -303,6 +303,11 @@ path = "tests/menu_mnemonics.rs"
 required-features = ["nested-menu"]
 
 [[test]]
+name = "agent_menu"
+path = "tests/agent_menu.rs"
+required-features = ["nested-menu"]
+
+[[test]]
 name = "code_view"
 path = "tests/code_view.rs"
 required-features = ["code-view"]

@@ -31,6 +31,8 @@ pub enum AccessibilityRole {
     ProgressBar,
     /// A closed list of options that opens to choose one.
     ComboBox,
+    /// One entry of a menu bar or a menu panel, a leaf or a group that opens a submenu.
+    MenuItem,
 }
 
 impl AccessibilityRole {
@@ -45,6 +47,7 @@ impl AccessibilityRole {
             Self::Slider => "slider",
             Self::ProgressBar => "progress_bar",
             Self::ComboBox => "combo_box",
+            Self::MenuItem => "menu_item",
         }
     }
 }

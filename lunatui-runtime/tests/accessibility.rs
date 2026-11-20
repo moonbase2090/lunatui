@@ -50,6 +50,8 @@ fn every_role_has_a_distinct_version_two_wire_name() -> io::Result<()> {
         (Role::RadioButton, "radio_button"),
         (Role::Slider, "slider"),
         (Role::ProgressBar, "progress_bar"),
+        (Role::ComboBox, "combo_box"),
+        (Role::MenuItem, "menu_item"),
     ] {
         let mut map = HitMap::new();
         map.push_with_role(HitId(1), Rect::new(0, 0, 1, 1), 0, role);
