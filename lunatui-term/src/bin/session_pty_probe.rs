@@ -13,7 +13,6 @@ fn main() {
     let Some(mode) = env::args().nth(1) else {
         process::exit(1);
     };
-    // Drain after unwinding too, before macOS can discard queued PTY output on exit.
     let code = std::panic::catch_unwind(|| match mode.as_str() {
         "normal" => run_normal(),
         "panic" => run_panic(),
@@ -89,7 +88,6 @@ fn run_buffered() -> i32 {
     let Ok(session) = Session::enter_with_options(stdout, SessionOptions::default()) else {
         return 2;
     };
-    // Keep the writer undropped so only present_frame can flush its buffered bytes.
     let mut session = std::mem::ManuallyDrop::new(session);
     if session.present_frame(b"buffered-frame").is_err() {
         return 3;
