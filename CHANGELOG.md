@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.35] - 2026-11-20
+
 ### Added
 
 - `Request::apply`, `Request::context` and `Action::reason` let an application's change guard approve or refuse an agent's edit, toggle, selection or press before the state changes, for any type that implements `Act`, with the agent as the source.
