@@ -8,13 +8,16 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `Menu::controls` registers the menu bar and the rows of every open panel as named controls with the new role `AccessibilityRole::MenuItem` (wire name `menu_item`), so an agent walks into a nested panel and chooses an item by name. `Action::Select` highlights an item and opens the panels above it; `Action::Activate` chooses it as Enter does, opening a group or queuing a leaf's action. `MenuState::path_of`, `highlight_with` and `activate_with` map a request's id back to the item and apply it under the same change policy as the keyboard, with source `Agent`. Disabled items are disabled controls. Only labels the picture shows are controls: an item whose label is clipped away, or mostly covered by an open panel, is left out, and ids are counted only when controls are attached. Nothing drawn changes.
+
 ## [0.1.35] - 2026-11-20
 
 ### Added
 
 - `Request::apply`, `Request::context` and `Action::reason` let an application's change guard approve or refuse an agent's edit, toggle, selection or press before the state changes, for any type that implements `Act`, with the agent as the source.
 - `TextArea` reports its text as a control value and implements `Act`, so an agent finds it with a `NamedControl` or a `Field`, reads its text and replaces the document with `Action::SetValue`. The text is normalised to `\n` line endings, the cursor stays on a character boundary, and selection and edit history are dropped, as for `TextArea::set_text`. Setting the text it already holds changes nothing.
-- `Menu::controls` registers the menu bar and the rows of every open panel as named controls with the new role `AccessibilityRole::MenuItem` (wire name `menu_item`), so an agent walks into a nested panel and chooses an item by name. `Action::Select` highlights an item and opens the panels above it; `Action::Activate` chooses it as Enter does, opening a group or queuing a leaf's action. `MenuState::path_of`, `highlight_with` and `activate_with` map a request's id back to the item and apply it under the same change policy as the keyboard, with source `Agent`. Disabled items are disabled controls. Only labels the picture shows are controls: an item whose label is clipped away, or mostly covered by an open panel, is left out, and ids are counted only when controls are attached. Nothing drawn changes.
 
 ## [0.1.34] - 2026-11-19
 
