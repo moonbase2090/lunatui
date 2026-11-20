@@ -90,6 +90,13 @@ stays on a character boundary, and selection and edit history are dropped. The s
 changes nothing (`Outcome::Handled`). Mark the control `secret` to keep the text out of the
 snapshot.
 
+An application can refuse what an agent asks for. `Request::context()` gives a change context
+attributed to the agent, and `Act::act_with(&action, context.guard(&mut guard))` asks the guard
+before the state changes. The guard sees the reason (`Edit` for a value, `Toggle`, `Select`,
+`Activate` or `Navigate`) and the source (`Agent`), and sets `cancel` to refuse; a refusal leaves
+the state and the screen unchanged and returns a result with no accepted payload. `TextArea`
+routes a refused edit through `set_text_with`, so its text, cursor and history stay as they were.
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.

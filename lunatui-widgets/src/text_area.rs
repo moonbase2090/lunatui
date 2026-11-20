@@ -1358,6 +1358,17 @@ impl Act for TextArea {
         self.set_text(value);
         Outcome::Changed
     }
+
+    fn act_with(&mut self, action: &Action, context: ChangeContext<'_>) -> Change<Outcome> {
+        let Action::SetValue(value) = action else {
+            return Change::ignored();
+        };
+        if self.text == normalize_newlines(value) {
+            return Change::handled();
+        }
+        self.set_text_with(value, context)
+            .map(|()| Outcome::Changed)
+    }
 }
 
 fn normalize_newlines(text: &str) -> String {
