@@ -40,6 +40,7 @@ mod interact;
 pub mod keymap;
 #[cfg(feature = "app")]
 mod layer;
+mod mode;
 #[cfg(all(feature = "app", any(unix, windows)))]
 mod options;
 #[cfg(all(feature = "app", any(unix, windows)))]
@@ -74,6 +75,7 @@ pub use interact::{
 };
 #[cfg(feature = "app")]
 pub use layer::{Layer, LayerEvent, LayerId, LayerSlot, LayerStack, PressRoute};
+pub use mode::{Capabilities, GraphiteCaps, ModePolicy, RenderMode};
 #[cfg(all(feature = "app", any(unix, windows)))]
 pub use options::RunOptions;
 #[cfg(all(feature = "app", any(unix, windows)))]

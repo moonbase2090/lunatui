@@ -64,7 +64,7 @@ Two ways to get pixels onto the screen, with different costs:
 
 ## API sketch
 
-None of this is committed. It shows the shape.
+The mode, policy and capability types below are implemented in `lunatui-runtime` (`RenderMode`, `ModePolicy`, `GraphiteCaps`, `Capabilities`, `RunOptions::mode` and `RenderFrame::mode`), with no behavior change: no backend reports Graphite yet, so every frame is Cell. `PixelCx` and `render_graphite` are still a sketch.
 
 ```rust,ignore
 pub enum RenderMode { Cell, Graphite }

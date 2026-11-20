@@ -6,7 +6,7 @@ use lunatui_image::{Fit, ImageId, ImageRequest, ImageSource};
 use lunatui_term::{Caps, CellPixels, Encoder, Event, GraphicsProtocol, PixelLayer};
 
 use super::{FrameState, render_present};
-use crate::{App, ControlFlow, RenderFrame};
+use crate::{App, ControlFlow, RenderFrame, RenderMode};
 
 struct ChartSwitch {
     title: &'static str,
@@ -63,6 +63,7 @@ fn switching_saturation_to_latency_finishes_upload_before_the_new_title_and_reti
         last_palette: None,
         repaint: false,
         images: PixelLayer::from_caps(&caps),
+        mode: RenderMode::Cell,
     };
     let mut app = ChartSwitch {
         title: "Saturation",
@@ -191,6 +192,7 @@ fn immediate_image_repaints_blank_cells(
         last_palette: None,
         repaint: false,
         images: PixelLayer::from_caps(&caps),
+        mode: RenderMode::Cell,
     };
     let mut app = ImageSwitch {
         position: Some(Rect::new(2, 1, 2, 2)),
