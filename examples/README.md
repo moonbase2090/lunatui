@@ -84,3 +84,9 @@ another host may differ even when the canonical artifact needs no update.
 Benchmarks are separate: `cargo xtask bench` prints allocation and write metrics and runs the criterion and gungraun benchmarks in `benches/`.
 
 To verify the deployment scene keeps its cell output, run `python3 scripts/check-gauge-cells.py --base <commit-before-change> --head <commit-to-check>`. The script builds isolated checkouts and compares four complete 240-frame streams across two terminal sizes, dark and light themes, and truecolor and ANSI16 profiles.
+
+## Graphite mode font test
+
+| Example | Command | Shows |
+|---|---|---|
+| `graphite_fonts` | `cargo run --release --example graphite_fonts -- FONT_DIR OUTPUT_DIR` | One sample screen (labels, a menu, a list, a paragraph, numbers and punctuation at four sizes, and a coverage block) rasterized in each of five open-licensed fonts with tiny-skia and fontdue at 2x. It writes one PNG per font and a side-by-side sheet. `FONT_DIR` holds the font files; the fonts are not part of the repository yet. |
