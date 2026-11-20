@@ -406,3 +406,108 @@ fn registering_controls_does_not_change_what_is_drawn() {
     assert_eq!(snapshot(&plain).controls().len(), 0);
     assert_eq!(snapshot(&named).controls().len(), 4 + 4 + 2);
 }
+
+fn drawn(harness: &Harness<App>) -> String {
+    harness.rows().join("\n")
+}
+
+fn control_names(harness: &Harness<App>) -> Vec<String> {
+    snapshot(harness)
+        .controls()
+        .iter()
+        .map(|control| control.name.clone())
+        .collect()
+}
+
+#[test]
+fn a_label_that_is_not_drawn_is_not_a_control() {
+    let state = MenuState::new(vec![MenuItem::item("Quit", "quit")]);
+    let mut harness = Harness::mount(App::with(state, true), 2, 4);
+    assert!(!drawn(&harness).contains("Quit"));
+    assert_eq!(control_names(&harness), Vec::<String>::new());
+    assert!(matches!(
+        activate(&mut harness, "Quit"),
+        Err(ActError::NotFound)
+    ));
+    assert_eq!(harness.component().chosen, []);
+}
+
+fn nested_state(more: &[&'static str], other: &'static str) -> MenuState<&'static str> {
+    MenuState::new(vec![MenuItem::group(
+        "File",
+        vec![
+            MenuItem::group(
+                "More",
+                more.iter()
+                    .map(|name| MenuItem::item(*name, "leaf"))
+                    .collect(),
+            ),
+            MenuItem::item(other, "other"),
+        ],
+    )])
+}
+
+#[test]
+fn a_row_under_a_nested_panel_is_not_a_control() -> Test {
+    let mut harness = Harness::mount(
+        App::with(nested_state(&["Alpha", "Beta", "Gamma"], "Other"), true),
+        14,
+        6,
+    );
+    select(&mut harness, "File")?;
+    assert!(control_names(&harness).contains(&"Other".to_owned()));
+    select(&mut harness, "More")?;
+    let picture = drawn(&harness);
+    assert!(picture.contains("Alpha"), "{picture}");
+    assert!(!picture.contains("Other"), "{picture}");
+    assert!(!control_names(&harness).contains(&"Other".to_owned()));
+    assert!(matches!(
+        activate(&mut harness, "Other"),
+        Err(ActError::NotFound)
+    ));
+    assert_eq!(harness.component().chosen, []);
+    Ok(())
+}
+
+#[test]
+fn a_label_only_partly_under_a_panel_is_not_a_control_and_a_covered_bar_item_is_not_either() -> Test
+{
+    let mut harness = Harness::mount(
+        App::with(nested_state(&["A", "B", "C", "D"], "Other"), true),
+        14,
+        6,
+    );
+    select(&mut harness, "File")?;
+    select(&mut harness, "More")?;
+    let picture = drawn(&harness);
+    assert!(!picture.contains("Other"), "{picture}");
+    assert!(!picture.contains("File"), "{picture}");
+    let names = control_names(&harness);
+    assert!(!names.contains(&"Other".to_owned()), "{names:?}");
+    assert!(!names.contains(&"File".to_owned()), "{names:?}");
+    assert!(names.contains(&"A".to_owned()), "{names:?}");
+    Ok(())
+}
+
+#[test]
+fn every_control_is_a_label_that_the_picture_shows_at_every_step_and_size() -> Test {
+    for (width, height) in [(14, 6), (20, 6), (30, 8), (40, 12)] {
+        let mut harness = Harness::mount(
+            App::with(nested_state(&["Alpha", "Beta", "Gamma"], "Other"), true),
+            width,
+            height,
+        );
+        for step in ["File", "More"] {
+            select(&mut harness, step)?;
+            let picture = drawn(&harness);
+            for name in control_names(&harness) {
+                let most = name.len() / 2 + 1;
+                assert!(
+                    picture.contains(&name[..most]) || picture.contains(&name[name.len() - most..]),
+                    "{name} is a control but mostly not drawn at {width}x{height}\n{picture}"
+                );
+            }
+        }
+    }
+    Ok(())
+}

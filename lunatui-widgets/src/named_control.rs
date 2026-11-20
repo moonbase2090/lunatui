@@ -119,7 +119,7 @@ impl Widget for NamedControl<'_> {
 }
 
 /// Registers each visible item of a [`Tabs`](crate::Tabs) strip, a
-/// [`List`](crate::List) or a [`Menu`](crate::Menu) as a named control, so an agent can find and choose it.
+/// [`List`](crate::List) or a menu bar as a named control, so an agent can find and choose it.
 ///
 /// Item `n` gets the id `first + n`, so the application maps a request's id back to
 /// an index by subtracting `first`. An item with a blank name is left out.

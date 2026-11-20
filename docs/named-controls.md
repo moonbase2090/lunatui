@@ -93,6 +93,8 @@ their children, over the whole tree, so it stays the same whichever panels are o
 group opens and a leaf queues its `MenuEvent::Selected`, with source `Agent`. A disabled item, or
 an item in a disabled group, is a disabled control and `act` refuses it. A panel that is not open
 has no controls, so open it first with `Select`; the same name in two open panels is ambiguous.
+Only what is drawn is a control: a label clipped away by a narrow bar or panel, or mostly covered by a
+nested panel (or an open panel over the bar), is left out, so `act` finds nothing to press.
 
 A `TextArea` is a text control too: wrap it in a `NamedControl` (role `TextInput`) or put it in a
 `Field` and it shows its text as the control's value. `Act` applies `Action::SetValue` to it as
