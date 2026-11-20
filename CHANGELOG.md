@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `Request::apply`, `Request::context` and `Action::reason` let an application's change guard approve or refuse an agent's edit, toggle, selection or press before the state changes, for any type that implements `Act`, with the agent as the source.
 - `TextArea` reports its text as a control value and implements `Act`, so an agent finds it with a `NamedControl` or a `Field`, reads its text and replaces the document with `Action::SetValue`. The text is normalised to `\n` line endings, the cursor stays on a character boundary, and selection and edit history are dropped, as for `TextArea::set_text`. Setting the text it already holds changes nothing.
 
 ## [0.1.34] - 2026-11-19
