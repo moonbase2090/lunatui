@@ -24,9 +24,12 @@ fn main() {
     })
     .unwrap_or(101);
     #[cfg(unix)]
-    if drain_output().is_err() {
-        process::exit(4);
-    }
+    process::exit(if drain_output().is_err() && code == 0 {
+        4
+    } else {
+        code
+    });
+    #[cfg(not(unix))]
     process::exit(code);
 }
 

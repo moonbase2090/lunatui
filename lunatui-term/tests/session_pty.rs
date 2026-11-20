@@ -129,7 +129,10 @@ fn run_probe_in_pty(mode: &str) -> Vec<u8> {
     let Ok(status) = child.wait() else {
         return Vec::new();
     };
-    let buf: Vec<u8> = reader.join().unwrap_or_default();
+    let buf: Vec<u8> = match reader.join() {
+        Ok(buf) => buf,
+        Err(payload) => std::panic::resume_unwind(payload),
+    };
     if !status.success() {
         return buf;
     }
