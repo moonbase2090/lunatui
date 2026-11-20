@@ -212,6 +212,15 @@ fn time<F: FnMut()>(n: usize, mut f: F) -> Vec<Duration> {
     (0..n).map(|_| { let t = Instant::now(); f(); t.elapsed() }).collect()
 }
 
+fn region(frame: &[u8], width: usize, x: usize, y: usize, w: usize, h: usize) -> Vec<u8> {
+    let mut out = Vec::with_capacity(w * h * 4);
+    for row in y..y + h {
+        let start = (row * width + x) * 4;
+        out.extend_from_slice(&frame[start..start + w * 4]);
+    }
+    out
+}
+
 fn main() {
     let font = std::env::args().nth(1).unwrap_or("/System/Library/Fonts/Supplemental/Arial.ttf".into());
     println!("scene: activity monitor mockup, 1480x818 logical; font {font}");
@@ -235,8 +244,13 @@ fn main() {
         stats("handoff: SHA-256 of the frame", time(100, || { let mut h = Sha256::new(); h.update(&bytes); let _ = h.finalize(); }));
         let engine = base64::engine::general_purpose::STANDARD;
         stats("handoff: base64 of the frame (Kitty raw RGBA)", time(40, || { let _ = engine.encode(&bytes); }));
-        let dirty = (770.0 * scale * 230.0 * scale * 4.0) as usize;
-        stats("handoff: base64 of a 'rows' dirty region", time(100, || { let _ = engine.encode(&bytes[..dirty.min(bytes.len())]); }));
+        let (rx, ry, rw, rh) = (0, (98.0 * scale) as usize, (770.0 * scale) as usize, (230.0 * scale) as usize);
+        println!("changed region: {rw}x{rh} px at ({rx},{ry}) = {:.2} MB of {:.2} MB", (rw * rh * 4) as f64 / 1e6, bytes.len() as f64 / 1e6);
+        stats("handoff: copy the changed rectangle out", time(200, || { let _ = region(&bytes, w as usize, rx, ry, rw, rh); }));
+        let tile = region(&bytes, w as usize, rx, ry, rw, rh);
+        stats("handoff: base64 of the changed rectangle", time(100, || { let _ = engine.encode(&tile); }));
+        stats("handoff: copy + base64 of the changed rectangle", time(100, || { let t = region(&bytes, w as usize, rx, ry, rw, rh); let _ = engine.encode(&t); }));
+        stats("handoff: SHA-256 of the changed rectangle", time(100, || { let mut h = Sha256::new(); h.update(&tile); let _ = h.finalize(); }));
         println!("glyph cache warm: {} entries, hits {} misses {}", warm.cache.len(), warm.hits, warm.misses);
     }
 }
