@@ -34,6 +34,37 @@ The first native Darwin host must serve only minor 2 and list only the images
 token. Alpha is unavailable in both initial host profiles. These discovery
 fixtures change no control-record or frame literal below.
 
+## Wide-pair style fixture
+
+This two-cell fixture applies to the cell schema shared by ABI 1.0 and 1.2.
+It is independent of the 1x1 image trace below. Both cells occupy the same row.
+The differing continuation style remains valid under the frozen ABI 1.0 rules.
+
+| Cell | Glyph | Foreground | Background | Meta |
+|---|---|---|---|---|
+| Lead | `0x0000004e` (`N`) | `0x80ffffff` | `0x80000000` | `0x00002000` |
+| Continuation | `0x00110000` | `0x800000ff` | `0x80ff0000` | `0x0000046f` |
+
+The two serialized 16-byte cells, in little-endian field order, are:
+
+```text
+4e 00 00 00 ff ff ff 80 00 00 00 80 00 20 00 00
+00 00 11 00 ff 00 00 80 00 00 ff 80 6f 04 00 00
+```
+
+Expected rendering uses the lead's RGB white foreground, RGB black background
+and no attributes across the entire two-column span. The continuation's blue
+foreground, red background, font attributes, decorations and blink flag have
+no effect. The pair contributes one `N` to text extraction and does not arm a
+blink timer.
+
+A host fixture must produce the same pixels when the continuation instead has
+foreground `0x80ffffff`, background `0x80000000` and meta `0x00000000`.
+Replacing the lead glyph with space (`0x00000020`) leaves both cells black at
+opaque window and pane settings. Setting the lead's hidden bit (`meta=0x2100`)
+hides the entire glyph. These cases use no images, selection or cursor.
+The rendering rule adds no cell-validation or wire-layout constraint.
+
 ## Wire literals
 
 ### hello
