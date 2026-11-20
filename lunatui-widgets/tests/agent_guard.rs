@@ -18,10 +18,25 @@ use lunatui_widgets::{NamedControl, Paragraph, RenderCx, TextArea, Widget};
 
 const NOTES: HitId = HitId(1);
 const ALERTS: HitId = HitId(2);
+const STEPS: HitId = HitId(3);
+
+struct Counter(u32);
+
+impl Act for Counter {
+    fn act(&mut self, action: &Action) -> Outcome {
+        if matches!(action, Action::Activate) {
+            self.0 += 1;
+            Outcome::Changed
+        } else {
+            Outcome::Ignored
+        }
+    }
+}
 
 struct App {
     area: TextArea,
     alerts: bool,
+    counter: Counter,
     refuse: bool,
     agent: Agent,
     hits: HitMap,
@@ -34,6 +49,7 @@ impl App {
         Self {
             area: TextArea::new("draft"),
             alerts: false,
+            counter: Counter(0),
             refuse,
             agent: Agent::new(),
             hits: HitMap::new(),
@@ -55,10 +71,10 @@ impl Component for App {
                 details.cancel = refuse;
             };
             let context = request.context().guard(&mut guard);
-            let change = if request.id == NOTES {
-                self.area.act_with(&request.action, context)
-            } else {
-                self.alerts.act_with(&request.action, context)
+            let change = match request.id {
+                NOTES => request.apply(&mut self.area, context),
+                ALERTS => request.apply(&mut self.alerts, context),
+                _ => request.apply(&mut self.counter, context),
             };
             self.changes.push(change);
         }
@@ -79,6 +95,10 @@ impl Component for App {
         NamedControl::new(ALERTS, Role::Checkbox, &label)
             .name("Alerts")
             .render(Rect::new(area.x, area.y + 4, area.width, 1), &mut cx);
+        let steps = Paragraph::new(format!("steps {}", self.counter.0));
+        NamedControl::new(STEPS, Role::Button, &steps)
+            .name("Steps")
+            .render(Rect::new(area.x, area.y + 5, area.width, 1), &mut cx);
     }
 }
 
@@ -129,7 +149,7 @@ fn an_approved_agent_edit_changes_the_document_and_reports_the_edit() -> Test {
 }
 
 #[test]
-fn setting_the_text_it_already_holds_never_asks_the_guard() -> Test {
+fn the_guard_is_asked_even_for_an_edit_that_would_change_nothing() -> Test {
     let mut harness = Harness::mount(App::new(true), 24, 6);
     act(
         &mut harness,
@@ -138,9 +158,8 @@ fn setting_the_text_it_already_holds_never_asks_the_guard() -> Test {
         Action::SetValue("draft".into()),
     )?;
     let app = harness.component();
-    assert_eq!(app.seen.len(), 0);
-    assert_eq!(app.changes[0].value(), None);
-    assert!(!app.changes[0].is_canceled());
+    assert_eq!(app.seen, [(ChangeReason::Edit, ChangeSource::Agent)]);
+    assert!(app.changes[0].is_canceled());
     Ok(())
 }
 
@@ -167,11 +186,35 @@ fn a_refused_toggle_keeps_the_state_and_an_approved_one_flips_it() -> Test {
 }
 
 #[test]
-fn an_action_the_state_does_not_take_is_not_reported_as_a_change() -> Test {
+fn an_action_the_state_does_not_take_is_approved_and_answered_ignored() -> Test {
     let mut harness = Harness::mount(App::new(false), 24, 6);
     act(&mut harness, Role::TextInput, "Notes", Action::Focus)?;
     let app = harness.component();
-    assert_eq!(app.changes[0].value(), None);
+    assert_eq!(app.seen, [(ChangeReason::Navigate, ChangeSource::Agent)]);
+    assert_eq!(app.changes[0].value(), Some(&Outcome::Ignored));
     assert_eq!(app.area.text(), "draft");
+    Ok(())
+}
+
+#[test]
+fn a_state_implemented_outside_the_library_is_guarded_the_same_way() -> Test {
+    let mut refused = Harness::mount(App::new(true), 24, 6);
+    act(&mut refused, Role::Button, "Steps", Action::Activate)?;
+    assert_eq!(refused.component().counter.0, 0);
+    assert!(refused.component().changes[0].is_canceled());
+    assert_eq!(
+        refused.component().seen,
+        [(ChangeReason::Activate, ChangeSource::Agent)]
+    );
+    assert!(refused.rows().iter().any(|row| row.contains("steps 0")));
+
+    let mut approved = Harness::mount(App::new(false), 24, 6);
+    act(&mut approved, Role::Button, "Steps", Action::Activate)?;
+    assert_eq!(approved.component().counter.0, 1);
+    assert_eq!(
+        approved.component().changes[0].value(),
+        Some(&Outcome::Changed)
+    );
+    assert!(approved.rows().iter().any(|row| row.contains("steps 1")));
     Ok(())
 }

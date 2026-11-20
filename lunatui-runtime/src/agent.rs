@@ -238,6 +238,19 @@ pub struct Request {
 }
 
 impl Request {
+    /// Applies this request to `state` once the guard in `context` approves it. The guard runs
+    /// before `state` is touched, whatever the implementation of [`Act`], sees the reason for the
+    /// action and the source of the request, and cannot change either. A refusal leaves `state`
+    /// unchanged and the result has no accepted payload. An approved result carries the
+    /// state's own [`Outcome`], which may be [`Outcome::Ignored`] or [`Outcome::Handled`].
+    pub fn apply<A: Act + ?Sized>(
+        &self,
+        state: &mut A,
+        mut context: ChangeContext<'_>,
+    ) -> Change<Outcome> {
+        context.perform(self.action.reason(), || state.act(&self.action))
+    }
+
     /// A change context attributed to this request's source, with no guard attached.
     #[must_use]
     pub const fn context<'a>(&self) -> ChangeContext<'a> {
@@ -476,13 +489,6 @@ impl Agent {
 pub trait Act {
     /// Applies `action`, answering [`Outcome::Ignored`] for one this state does not take.
     fn act(&mut self, action: &Action) -> Outcome;
-
-    /// Applies `action` after the application's guard in `context` has approved it. A refusal
-    /// leaves the state unchanged and the result has no accepted payload. The guard sees the
-    /// reason for the action and the source of the request, and cannot change either.
-    fn act_with(&mut self, action: &Action, mut context: ChangeContext<'_>) -> Change<Outcome> {
-        context.perform(action.reason(), || self.act(action))
-    }
 }
 
 impl Act for bool {
