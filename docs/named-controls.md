@@ -83,6 +83,13 @@ Tabs and lists register their items too. `Tabs::controls(ItemControls::new(first
 index. A row with a blank name is left out, rows scrolled out of view are not registered, and
 rows that share a name make `act` return `ActError::Ambiguous`. What is drawn does not change.
 
+A `TextArea` is a text control too: wrap it in a `NamedControl` (role `TextInput`) or put it in a
+`Field` and it shows its text as the control's value. `Act` applies `Action::SetValue` to it as
+`TextArea::set_text` would: the whole document is replaced, line endings become `\n`, the cursor
+stays on a character boundary, and selection and edit history are dropped. The same text again
+changes nothing (`Outcome::Handled`). Mark the control `secret` to keep the text out of the
+snapshot.
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.
