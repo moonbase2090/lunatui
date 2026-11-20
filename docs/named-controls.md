@@ -83,6 +83,19 @@ Tabs and lists register their items too. `Tabs::controls(ItemControls::new(first
 index. A row with a blank name is left out, rows scrolled out of view are not registered, and
 rows that share a name make `act` return `ActError::Ambiguous`. What is drawn does not change.
 
+A menu registers its items the same way. `Menu::new(&state).controls(ItemControls::new(first))`
+gives every visible item, the whole bar and the rows of each open panel, the role `MenuItem` and
+a name from its label. The id is `first` plus the item's number in reading order, parents before
+their children, over the whole tree, so it stays the same whichever panels are open; hand
+`request.id - first` to `MenuState::path_of` for the item's path. `Action::Select` calls
+`MenuState::highlight_with`, which highlights the item and shows the panels that lead to it.
+`Action::Activate` calls `MenuState::activate_with`, which does what Enter does on that item: a
+group opens and a leaf queues its `MenuEvent::Selected`, with source `Agent`. A disabled item, or
+an item in a disabled group, is a disabled control and `act` refuses it. A panel that is not open
+has no controls, so open it first with `Select`; the same name in two open panels is ambiguous.
+Only what is drawn is a control: a label clipped away by a narrow bar or panel, or mostly covered by a
+nested panel (or an open panel over the bar), is left out, so `act` finds nothing to press.
+
 A `TextArea` is a text control too: wrap it in a `NamedControl` (role `TextInput`) or put it in a
 `Field` and it shows its text as the control's value. `Act` applies `Action::SetValue` to it as
 `TextArea::set_text` would: the whole document is replaced, line endings become `\n`, the cursor

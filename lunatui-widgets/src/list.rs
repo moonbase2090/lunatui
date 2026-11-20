@@ -156,6 +156,7 @@ impl<S: RowSource> Widget for List<S> {
                         name: row.cells.first().map_or("", String::as_str),
                         role: AccessibilityRole::ListItem,
                         selected,
+                        disabled: false,
                     },
                     Rect::new(area.x, line, area.width, 1),
                 );
