@@ -1,0 +1,18 @@
+[package]
+name = "graphite-spike"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT"
+
+[dependencies]
+tiny-skia = "0.12"
+fontdue = "0.9"
+sha2 = "0.10"
+base64 = "0.22"
+
+[profile.release]
+opt-level = 3
+debug = false
+
+[workspace]

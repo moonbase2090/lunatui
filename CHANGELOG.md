@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/graphite-mode-spike.md` and `scripts/graphite-spike` measure what a Graphite mode frame costs (raster and handoff) on the activity monitor scene. Measurement only; no API changes.
+
 ## [0.1.35] - 2026-11-20
 
 ### Added
