@@ -13,6 +13,7 @@ use lunatui_term::{PixelLayer, PixelMode};
 
 use crate::app::{App, ControlFlow};
 use crate::input::Input;
+#[cfg(feature = "image-presenter")]
 use crate::mode::{Capabilities, RenderMode};
 use crate::options::RunOptions;
 use crate::sched::{SchedulePoll, Scheduler, State};
@@ -400,6 +401,7 @@ mod tests {
             repaint: false,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
+            #[cfg(feature = "image-presenter")]
             mode: super::RenderMode::Cell,
         };
         let mut app = PaletteApp { palette: None };
@@ -481,6 +483,7 @@ mod tests {
             repaint: false,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
+            #[cfg(feature = "image-presenter")]
             mode: super::RenderMode::Cell,
         };
         let mut app = Tinted { reverse: false };
@@ -532,6 +535,7 @@ mod tests {
             repaint: false,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
+            #[cfg(feature = "image-presenter")]
             mode: super::RenderMode::Cell,
         }
     }
