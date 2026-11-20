@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `RenderMode`, `ModePolicy`, `GraphiteCaps` and `Capabilities` describe how a frame is drawn and what a backend can show, with `RunOptions::mode`, `RenderFrame::mode` and the `LUNATUI_MODE` environment override. No backend reports Graphite yet, so every frame is drawn in Cell mode and nothing changes.
 - `docs/graphite-mode-spike.md` and `scripts/graphite-spike` measure what a Graphite mode frame costs (raster and handoff) on the activity monitor scene. Measurement only; no API changes.
 - `Menu::controls` registers the menu bar and the rows of every open panel as named controls with the new role `AccessibilityRole::MenuItem` (wire name `menu_item`), so an agent walks into a nested panel and chooses an item by name. `Action::Select` highlights an item and opens the panels above it; `Action::Activate` chooses it as Enter does, opening a group or queuing a leaf's action. `MenuState::path_of`, `highlight_with` and `activate_with` map a request's id back to the item and apply it under the same change policy as the keyboard, with source `Agent`. Disabled items are disabled controls. Only labels the picture shows are controls: an item whose label is clipped away, or mostly covered by an open panel, is left out, and ids are counted only when controls are attached. Nothing drawn changes.
 

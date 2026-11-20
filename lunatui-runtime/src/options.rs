@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
+use crate::ModePolicy;
+
 /// Options for an interactive [`run`](crate::run::run) session (PRD §3.2, roadmap PR 23).
 ///
 /// Downstream code cannot build this with a struct literal, because fields can be added. Start from the constructor and change fields on the value:
@@ -22,6 +24,9 @@ pub struct RunOptions {
     pub height: u16,
     /// Whether to probe for pixel images, with automatic fallback when unsupported.
     pub pixel_images: bool,
+    /// What the application asks for: Graphite mode when the backend can show it, cells only, or
+    /// automatic. The `LUNATUI_MODE` environment variable overrides it.
+    pub mode: ModePolicy,
 }
 
 impl RunOptions {
@@ -32,6 +37,7 @@ impl RunOptions {
             width,
             height,
             pixel_images: true,
+            mode: ModePolicy::Auto,
         }
     }
 
@@ -39,6 +45,13 @@ impl RunOptions {
     #[must_use]
     pub const fn pixels(mut self, enabled: bool) -> Self {
         self.pixel_images = enabled;
+        self
+    }
+
+    /// Sets the rendering mode policy.
+    #[must_use]
+    pub const fn mode(mut self, mode: ModePolicy) -> Self {
+        self.mode = mode;
         self
     }
 }

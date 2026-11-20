@@ -13,6 +13,8 @@ use lunatui_term::{PixelLayer, PixelMode};
 
 use crate::app::{App, ControlFlow};
 use crate::input::Input;
+#[cfg(feature = "image-presenter")]
+use crate::mode::{Capabilities, RenderMode};
 use crate::options::RunOptions;
 use crate::sched::{SchedulePoll, Scheduler, State};
 
@@ -25,6 +27,8 @@ struct FrameState {
     repaint: bool,
     #[cfg(feature = "image-presenter")]
     images: PixelLayer,
+    #[cfg(feature = "image-presenter")]
+    mode: RenderMode,
 }
 
 impl FrameState {
@@ -80,6 +84,11 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         repaint: false,
         #[cfg(feature = "image-presenter")]
         images,
+        #[cfg(feature = "image-presenter")]
+        mode: options
+            .mode
+            .with_env_override()
+            .resolve(&Capabilities::CELL_ONLY),
     };
     let mut sched = Scheduler::idle();
     sched.on_input();
@@ -187,6 +196,7 @@ fn render_present<A: App>(
             &mut frames.next,
             &mut frames.clusters,
             &mut frames.images,
+            frames.mode,
         );
         app.render_frame(&mut render_frame, area);
     }
@@ -255,7 +265,8 @@ pub fn render_once<A: App>(app: &mut A, width: u16, height: u16) -> (Grid, Clust
     {
         let mut images = PixelLayer::new(PixelMode::Cells);
         images.begin_frame();
-        let mut frame = crate::frame::RenderFrame::new(&mut grid, &mut clusters, &mut images);
+        let mut frame =
+            crate::frame::RenderFrame::new(&mut grid, &mut clusters, &mut images, RenderMode::Cell);
         app.render_frame(&mut frame, area);
     }
     #[cfg(not(feature = "image-presenter"))]
@@ -327,6 +338,32 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "image-presenter")]
+    #[test]
+    fn a_cell_only_backend_gives_every_frame_cell_mode() {
+        struct Probe(Vec<crate::RenderMode>);
+        impl App for Probe {
+            fn update(&mut self, _: &Event) -> ControlFlow {
+                ControlFlow::Continue
+            }
+            fn render(&mut self, _: &mut Grid, _: Rect, _: &mut ClusterTable) {}
+            fn render_frame(&mut self, frame: &mut crate::RenderFrame<'_>, _: Rect) {
+                self.0.push(frame.mode());
+            }
+        }
+        let mut probe = Probe(Vec::new());
+        let _ = render_once(&mut probe, 4, 2);
+        assert_eq!(probe.0, [crate::RenderMode::Cell]);
+    }
+
+    #[test]
+    fn run_options_ask_for_the_automatic_policy_until_told_otherwise() {
+        use crate::ModePolicy;
+        let options = RunOptions::new(80, 24);
+        assert_eq!(options.mode, ModePolicy::Auto);
+        assert_eq!(options.mode(ModePolicy::Cell).mode, ModePolicy::Cell);
+    }
+
     #[test]
     fn run_options_round_trip() {
         let options = RunOptions::new(80, 24);
@@ -364,6 +401,8 @@ mod tests {
             repaint: false,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
+            #[cfg(feature = "image-presenter")]
+            mode: super::RenderMode::Cell,
         };
         let mut app = PaletteApp { palette: None };
         for (palette, expected) in [
@@ -444,6 +483,8 @@ mod tests {
             repaint: false,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
+            #[cfg(feature = "image-presenter")]
+            mode: super::RenderMode::Cell,
         };
         let mut app = Tinted { reverse: false };
         assert!(present_once(&mut app, area, &mut frames)? > 0);
@@ -494,6 +535,8 @@ mod tests {
             repaint: false,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
+            #[cfg(feature = "image-presenter")]
+            mode: super::RenderMode::Cell,
         }
     }
 
