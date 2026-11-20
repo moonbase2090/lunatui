@@ -5,7 +5,9 @@ use std::sync::OnceLock;
 
 use lunatui_core::{Color, Rect, Size, Style, clip_display_prefix, cluster_display_width};
 use lunatui_runtime::keymap::{Command, KeyChord, Keymap};
-use lunatui_runtime::{Change, ChangeContext, ChangeReason, ChangeSource, Handle, Outcome};
+use lunatui_runtime::{
+    Act, Action, Change, ChangeContext, ChangeReason, ChangeSource, Handle, Outcome,
+};
 use lunatui_term::{Event, KeyCode, KeyKind, Modifiers, Paste};
 use lunatui_theme::Token;
 use unicode_segmentation::UnicodeSegmentation;
@@ -1333,11 +1335,28 @@ impl TextArea {
 }
 
 impl Widget for TextArea {
+    fn control_value(&self) -> Option<&str> {
+        Some(&self.text)
+    }
+
     fn render(&self, area: Rect, cx: &mut RenderCx<'_>) {
         self.render_inner(area, cx);
     }
     fn measure(&self, avail: Size) -> Size {
         avail
+    }
+}
+
+impl Act for TextArea {
+    fn act(&mut self, action: &Action) -> Outcome {
+        let Action::SetValue(value) = action else {
+            return Outcome::Ignored;
+        };
+        if self.text == normalize_newlines(value) {
+            return Outcome::Handled;
+        }
+        self.set_text(value);
+        Outcome::Changed
     }
 }
 

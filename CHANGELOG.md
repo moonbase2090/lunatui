@@ -11,6 +11,12 @@ Every PR adds its entry under **Unreleased**.
 ### Added
 
 - A design note for Graphite mode, a smooth-pixel rendering mode alongside Cell mode, with a hand-composed mockup of the activity monitor and the restart dialog next to the real Cell mode captures. Proposal only; no API changes.
+- `TextArea` reports its text as a control value and implements `Act`, so an agent finds it with a `NamedControl` or a `Field`, reads its text and replaces the document with `Action::SetValue`. The text is normalised to `\n` line endings, the cursor stays on a character boundary, and selection and edit history are dropped, as for `TextArea::set_text`. Setting the text it already holds changes nothing.
+
+## [0.1.34] - 2026-11-19
+
+### Added
+
 - `ItemControls`, `Tabs::controls` and `List::controls` register each visible tab and list row as a named control (roles `Tab` and `ListItem`, the chosen one marked selected), so an agent selects one by name with `Action::Select`. Nothing drawn changes.
 
 ## [0.1.33] - 2026-11-18
