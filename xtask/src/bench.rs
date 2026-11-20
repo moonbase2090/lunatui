@@ -6,24 +6,36 @@ use std::path::Path;
 use std::process::{Command, ExitCode};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct BenchStep {
-    target: &'static str,
-    feature: Option<&'static str>,
-    after: &'static [&'static str],
+enum BenchStep {
+    Cargo {
+        target: &'static str,
+        feature: Option<&'static str>,
+        after: &'static [&'static str],
+    },
+    Python(&'static str),
 }
 
 impl BenchStep {
-    fn cargo_args(self) -> Vec<&'static str> {
-        let mut args = vec!["bench", "--package", "lunatui-bench"];
-        if let Some(feature) = self.feature {
-            args.extend(["--features", feature]);
+    fn args(self) -> Vec<&'static str> {
+        match self {
+            Self::Python(script) => vec![script],
+            Self::Cargo {
+                target,
+                feature,
+                after,
+            } => {
+                let mut args = vec!["bench", "--package", "lunatui-bench"];
+                if let Some(feature) = feature {
+                    args.extend(["--features", feature]);
+                }
+                args.extend(["--bench", target]);
+                if !after.is_empty() {
+                    args.push("--");
+                    args.extend(after);
+                }
+                args
+            }
         }
-        args.extend(["--bench", self.target]);
-        if !self.after.is_empty() {
-            args.push("--");
-            args.extend(self.after);
-        }
-        args
     }
 }
 
@@ -31,12 +43,11 @@ pub(crate) fn run() -> ExitCode {
     let valgrind = on_path("valgrind");
     if !valgrind {
         println!(
-            "xtask: valgrind not found, skipping gungraun benchmarks (they need Linux and valgrind)"
+            "xtask: valgrind not found; widget allocations are gated, instruction checks are skipped"
         );
     }
     for step in bench_plan(valgrind) {
-        println!("xtask: cargo {}", step.cargo_args().join(" "));
-        if let Err(message) = run_cargo(&step.cargo_args()) {
+        if let Err(message) = run_step(step) {
             eprintln!("xtask: {message}");
             return ExitCode::FAILURE;
         }
@@ -46,34 +57,38 @@ pub(crate) fn run() -> ExitCode {
 
 fn bench_plan(valgrind: bool) -> Vec<BenchStep> {
     let mut plan = vec![
-        BenchStep {
+        BenchStep::Cargo {
             target: "metrics",
             feature: None,
             after: &[],
         },
-        BenchStep {
+        BenchStep::Cargo {
             target: "ceiling",
             feature: None,
             after: &[],
         },
-        BenchStep {
+        BenchStep::Cargo {
             target: "criterion_calibration",
             feature: None,
             after: &[],
         },
-        BenchStep {
+        BenchStep::Cargo {
             target: "widget_suite",
             feature: Some("text-area"),
             after: &["--gate"],
         },
-        BenchStep {
-            target: "criterion_widgets",
-            feature: Some("text-area"),
-            after: &["text-area"],
-        },
     ];
     if valgrind {
-        plan.push(BenchStep {
+        plan.push(BenchStep::Python("scripts/test-widget-instructions.py"));
+        plan.push(BenchStep::Python("scripts/check-widget-instructions.py"));
+    }
+    plan.push(BenchStep::Cargo {
+        target: "criterion_widgets",
+        feature: Some("text-area"),
+        after: &["text-area"],
+    });
+    if valgrind {
+        plan.push(BenchStep::Cargo {
             target: "gungraun_calibration",
             feature: Some("gungraun"),
             after: &[],
@@ -82,16 +97,24 @@ fn bench_plan(valgrind: bool) -> Vec<BenchStep> {
     plan
 }
 
-fn run_cargo(args: &[&str]) -> Result<(), String> {
-    let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-    let status = Command::new(&cargo)
-        .args(args)
+fn run_step(step: BenchStep) -> Result<(), String> {
+    let program = match step {
+        BenchStep::Cargo { .. } => env::var_os("CARGO").unwrap_or_else(|| "cargo".into()),
+        BenchStep::Python(_) => "python3".into(),
+    };
+    let args = step.args();
+    println!("xtask: {} {}", program.to_string_lossy(), args.join(" "));
+    let status = Command::new(&program)
+        .args(&args)
         .status()
-        .map_err(|error| format!("could not run cargo: {error}"))?;
+        .map_err(|error| format!("could not run benchmark step: {error}"))?;
     if status.success() {
         Ok(())
     } else {
-        Err(format!("`cargo {}` failed with {status}", args.join(" ")))
+        Err(format!(
+            "benchmark step `{}` failed with {status}",
+            args.join(" ")
+        ))
     }
 }
 
@@ -105,32 +128,32 @@ fn on_path(program: &str) -> bool {
 mod tests {
     use super::{BenchStep, bench_plan};
 
-    const METRICS: BenchStep = BenchStep {
+    const METRICS: BenchStep = BenchStep::Cargo {
         target: "metrics",
         feature: None,
         after: &[],
     };
-    const CEILING: BenchStep = BenchStep {
+    const CEILING: BenchStep = BenchStep::Cargo {
         target: "ceiling",
         feature: None,
         after: &[],
     };
-    const CRITERION: BenchStep = BenchStep {
+    const CRITERION: BenchStep = BenchStep::Cargo {
         target: "criterion_calibration",
         feature: None,
         after: &[],
     };
-    const WIDGETS: BenchStep = BenchStep {
+    const WIDGETS: BenchStep = BenchStep::Cargo {
         target: "widget_suite",
         feature: Some("text-area"),
         after: &["--gate"],
     };
-    const TEXTAREA_CRITERION: BenchStep = BenchStep {
+    const TEXTAREA_CRITERION: BenchStep = BenchStep::Cargo {
         target: "criterion_widgets",
         feature: Some("text-area"),
         after: &["text-area"],
     };
-    const GUNGRAUN: BenchStep = BenchStep {
+    const GUNGRAUN: BenchStep = BenchStep::Cargo {
         target: "gungraun_calibration",
         feature: Some("gungraun"),
         after: &[],
@@ -153,6 +176,8 @@ mod tests {
                 CEILING,
                 CRITERION,
                 WIDGETS,
+                BenchStep::Python("scripts/test-widget-instructions.py"),
+                BenchStep::Python("scripts/check-widget-instructions.py"),
                 TEXTAREA_CRITERION,
                 GUNGRAUN
             ]
@@ -162,7 +187,7 @@ mod tests {
     #[test]
     fn widget_suite_step_passes_the_gate_flag() {
         assert_eq!(
-            WIDGETS.cargo_args(),
+            WIDGETS.args(),
             [
                 "bench",
                 "--package",
@@ -180,7 +205,7 @@ mod tests {
     #[test]
     fn gungraun_step_enables_its_feature() {
         assert_eq!(
-            GUNGRAUN.cargo_args(),
+            GUNGRAUN.args(),
             [
                 "bench",
                 "--package",

@@ -94,6 +94,21 @@ group opens and a leaf queues its `MenuEvent::Selected`, with source `Agent`. A 
 an item in a disabled group, is a disabled control and `act` refuses it. A panel that is not open
 has no controls, so open it first with `Select`; the same name in two open panels is ambiguous.
 
+A `TextArea` is a text control too: wrap it in a `NamedControl` (role `TextInput`) or put it in a
+`Field` and it shows its text as the control's value. `Act` applies `Action::SetValue` to it as
+`TextArea::set_text` would: the whole document is replaced, line endings become `\n`, the cursor
+stays on a character boundary, and selection and edit history are dropped. The same text again
+changes nothing (`Outcome::Handled`). Mark the control `secret` to keep the text out of the
+snapshot.
+
+An application can refuse what an agent asks for. `Request::apply(&mut state, request.context().guard(&mut guard))`
+asks the guard before the state changes, whatever type implements `Act`: the guard runs in the library, so a
+state cannot skip it. The guard sees the reason (`Edit` for a value, `Toggle`, `Select`, `Activate` or `Navigate`) and
+the source (`Agent`), and sets `cancel` to refuse. A refusal leaves the state and the screen unchanged and returns a
+result with no accepted payload. An approved result carries the state's own `Outcome`, which can be `Ignored` for
+an action the state does not take. The guard is asked before the state decides, so it also sees an edit that would
+change nothing.
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.

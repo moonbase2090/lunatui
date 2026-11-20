@@ -8,8 +8,7 @@ use std::time::{Duration, Instant};
 
 use lunatui_bench::CountingAllocator;
 use lunatui_bench::widget_suite::{
-    CASES, Case, LunatuiRun, Parity, RatatuiRun, SIZES, gate_failures, parse_max_ratio,
-    pin_color_output,
+    CASES, Case, LunatuiRun, Parity, RatatuiRun, SIZES, gate_failures, pin_color_output,
 };
 
 #[global_allocator]
@@ -135,11 +134,20 @@ struct Options {
     gate_all: bool,
     baseline_first: bool,
     only: Option<&'static str>,
-    limit: f64,
 }
 
 impl Options {
     fn parse(args: &[String]) -> Result<Self, String> {
+        for arg in args.iter().filter(|arg| arg.starts_with("--")) {
+            if !matches!(
+                arg.as_str(),
+                "--case" | "--gate" | "--gate-all" | "--baseline-first" | "--bench"
+            ) {
+                return Err(format!(
+                    "unknown argument {arg}; instruction limits are set by scripts/check-widget-instructions.py"
+                ));
+            }
+        }
         let only = if let Some(at) = args.iter().position(|arg| arg == "--case") {
             let name = args
                 .get(at + 1)
@@ -154,7 +162,6 @@ impl Options {
             gate_all: args.iter().any(|arg| arg == "--gate-all"),
             baseline_first: args.iter().any(|arg| arg == "--baseline-first"),
             only,
-            limit: parse_max_ratio(args)?,
         })
     }
 }
@@ -169,6 +176,10 @@ fn main() -> ExitCode {
         }
     };
     pin_color_output();
+    println!(
+        "allocation gate: {}; wall-clock ratios: reported only; full gate: cargo xtask bench",
+        options.gate
+    );
     println!(
         "measurement order: baseline_first={}",
         options.baseline_first
@@ -239,8 +250,6 @@ fn main() -> ExitCode {
             if gated {
                 failures.extend(gate_failures(
                     &format!("{} {width}x{height}", case.name),
-                    frame_ratio,
-                    options.limit,
                     lunatui.allocs_per_frame,
                     ratatui.allocs_per_frame,
                 ));
