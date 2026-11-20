@@ -13,7 +13,7 @@ fn main() {
     let Some(mode) = env::args().nth(1) else {
         process::exit(1);
     };
-    let code = match mode.as_str() {
+    let code = std::panic::catch_unwind(|| match mode.as_str() {
         "normal" => run_normal(),
         "panic" => run_panic(),
         "mouse" => run_mouse(),
@@ -21,8 +21,26 @@ fn main() {
         #[cfg(unix)]
         "flush-error" => run_flush_error(),
         _ => 1,
-    };
+    })
+    .unwrap_or(101);
+    #[cfg(unix)]
+    process::exit(if drain_output().is_err() && code == 0 {
+        4
+    } else {
+        code
+    });
+    #[cfg(not(unix))]
     process::exit(code);
+}
+
+#[cfg(unix)]
+fn drain_output() -> rustix::io::Result<()> {
+    loop {
+        match rustix::termios::tcdrain(io::stdout()) {
+            Err(rustix::io::Errno::INTR) => {}
+            result => return result,
+        }
+    }
 }
 
 fn run_normal() -> i32 {
@@ -70,13 +88,14 @@ fn run_panic() -> i32 {
 
 fn run_buffered() -> i32 {
     let stdout = io::BufWriter::new(io::stdout());
-    let Ok(mut session) = Session::enter_with_options(stdout, SessionOptions::default()) else {
+    let Ok(session) = Session::enter_with_options(stdout, SessionOptions::default()) else {
         return 2;
     };
+    let mut session = std::mem::ManuallyDrop::new(session);
     if session.present_frame(b"buffered-frame").is_err() {
         return 3;
     }
-    process::exit(0);
+    0
 }
 
 #[cfg(unix)]
