@@ -277,6 +277,8 @@ impl Widget for Tabs {
                             role: AccessibilityRole::Tab,
                             selected: index == self.selected,
                             disabled: false,
+                            shortcut: None,
+                            mnemonic: None,
                         },
                         rect,
                     );

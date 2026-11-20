@@ -157,6 +157,8 @@ impl<S: RowSource> Widget for List<S> {
                         role: AccessibilityRole::ListItem,
                         selected,
                         disabled: false,
+                        shortcut: None,
+                        mnemonic: None,
                     },
                     Rect::new(area.x, line, area.width, 1),
                 );

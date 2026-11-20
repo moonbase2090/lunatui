@@ -765,6 +765,8 @@ impl<T> Menu<'_, T> {
                 role: AccessibilityRole::MenuItem,
                 selected,
                 disabled: item.disabled,
+                shortcut: None,
+                mnemonic: item.mnemonic,
             },
             area,
         );

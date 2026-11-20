@@ -182,10 +182,15 @@ impl ItemControls {
             return;
         };
         cx.register_control(Some(id), area, self.z, || {
-            ControlMetadata::new(item.name, item.role)
+            let metadata = ControlMetadata::new(item.name, item.role)
                 .disabled(item.disabled)
                 .layer(self.layer)
                 .selected(item.selected)
+                .mnemonic(item.mnemonic);
+            match item.shortcut {
+                Some(shortcut) => metadata.shortcut(shortcut),
+                None => metadata,
+            }
         });
     }
 }
@@ -196,4 +201,6 @@ pub(crate) struct Item<'a> {
     pub(crate) role: AccessibilityRole,
     pub(crate) selected: bool,
     pub(crate) disabled: bool,
+    pub(crate) shortcut: Option<&'a str>,
+    pub(crate) mnemonic: Option<char>,
 }
