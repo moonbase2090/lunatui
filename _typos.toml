@@ -15,7 +15,8 @@ fo = "fo"
 [files]
 # Asciinema recordings in examples/captures are raw terminal output, not prose.
 # The HTML entity name table is generated data, not prose.
-extend-exclude = ["*.cast", "lunatui-text/src/markdown/tables.rs"]
+# The spike's lockfile copy lists package names such as flate2, which are not prose.
+extend-exclude = ["*.cast", "lunatui-text/src/markdown/tables.rs", "scripts/graphite-spike/Cargo.lock.txt"]
 
 [type.cargo-deny]
 extend-glob = ["deny.toml"]
