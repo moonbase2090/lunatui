@@ -12,6 +12,10 @@ Every PR adds its entry under **Unreleased**.
 
 - `Menu::controls` registers the menu bar and the rows of every open panel as named controls with the new role `AccessibilityRole::MenuItem` (wire name `menu_item`), so an agent walks into a nested panel and chooses an item by name. `Action::Select` highlights an item and opens the panels above it; `Action::Activate` chooses it as Enter does, opening a group or queuing a leaf's action. `MenuState::path_of`, `highlight_with` and `activate_with` map a request's id back to the item and apply it under the same change policy as the keyboard, with source `Agent`. Disabled items are disabled controls. Only labels the picture shows are controls: an item whose label is clipped away, or mostly covered by an open panel, is left out, and ids are counted only when controls are attached. Nothing drawn changes.
 
+### Fixed
+
+- The session PTY probes drain terminal output before exit and join their reader at hangup, replacing a fixed sleep that could not prevent output loss on macOS. The buffered-writer check still requires `present_frame` to flush before the writer is dropped.
+
 ## [0.1.35] - 2026-11-20
 
 ### Added
