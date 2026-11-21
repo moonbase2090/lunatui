@@ -3,7 +3,6 @@
 
 use lunatui_core::{ClusterTable, Grid};
 use lunatui_image::ImageSink;
-use lunatui_term::PixelLayer;
 
 use crate::RenderMode;
 
@@ -11,7 +10,7 @@ use crate::RenderMode;
 pub struct RenderFrame<'a> {
     grid: &'a mut Grid,
     clusters: &'a mut ClusterTable,
-    images: &'a mut PixelLayer,
+    images: &'a mut dyn ImageSink,
     mode: RenderMode,
 }
 
@@ -19,7 +18,7 @@ impl<'a> RenderFrame<'a> {
     pub(crate) fn new(
         grid: &'a mut Grid,
         clusters: &'a mut ClusterTable,
-        images: &'a mut PixelLayer,
+        images: &'a mut dyn ImageSink,
         mode: RenderMode,
     ) -> Self {
         Self {
