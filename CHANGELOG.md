@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- A control's snapshot also carries its keyboard `shortcut` (as a person sees it, such as `Ctrl+S`) and its `mnemonic` letter (`ControlMetadata::shortcut`, `ControlMetadata::mnemonic`, `AgentControl::shortcut` and `mnemonic`, and the two keys in `Snapshot::write_json`; the accessibility export is unchanged). Menu items report their mnemonic on their own, and `KeyHintBar::controls` registers each hint it draws in full as a button named by the command's title with its chord as the shortcut, so an agent can read how a person reaches a control and activate it by name.
+
 ## [0.1.36] - 2026-11-20
 
 ### Added

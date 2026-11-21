@@ -111,6 +111,14 @@ result with no accepted payload. An approved result carries the state's own `Out
 an action the state does not take. The guard is asked before the state decides, so it also sees an edit that would
 change nothing.
 
+A snapshot also says how a person reaches a control from the keyboard. A menu item reports its
+mnemonic letter (the one the menu underlines) as `mnemonic`. `KeyHintBar::controls(ItemControls::new(first))`
+registers each key hint drawn in full as a button (role `Button`) named by the command's title, with the
+chord it shows as `shortcut` (`Ctrl+S`), and the id `first + n` for the `n`th command that has a chord; a
+hint the row clips, and a command with no chord, are left out. `Action::Activate` on one reaches the app as a
+request for that id, which the app maps back to its command. Both facets are for the agent only: the
+accessibility export does not write them.
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.

@@ -279,6 +279,10 @@ pub struct AgentControl {
     pub value: Option<String>,
     /// Whether an on/off control is on, or `None` for a control that is not one.
     pub checked: Option<bool>,
+    /// The keyboard shortcut a person sees for the control, such as `Ctrl+S`.
+    pub shortcut: Option<String>,
+    /// The letter that chooses the control while its menu is open.
+    pub mnemonic: Option<char>,
     /// Disabled, focused, selected and invalid, in that order, for those that hold.
     pub states: Vec<ControlState>,
     /// What [`Agent::act`] accepts. Empty when the control is disabled.
@@ -355,6 +359,16 @@ fn write_control(writer: &mut impl Write, control: &AgentControl) -> io::Result<
         Some(checked) => write!(writer, "{checked}")?,
         None => writer.write_all(b"null")?,
     }
+    writer.write_all(b",\"shortcut\":")?;
+    match &control.shortcut {
+        Some(shortcut) => write_string(writer, shortcut)?,
+        None => writer.write_all(b"null")?,
+    }
+    writer.write_all(b",\"mnemonic\":")?;
+    match control.mnemonic {
+        Some(mnemonic) => write_string(writer, mnemonic.encode_utf8(&mut [0; 4]))?,
+        None => writer.write_all(b"null")?,
+    }
     writer.write_all(b",\"states\":[")?;
     for (index, state) in control.states.iter().enumerate() {
         if index > 0 {
@@ -413,6 +427,8 @@ impl Agent {
                 role: control.role,
                 value: control.value.map(str::to_owned),
                 checked: control.checked,
+                shortcut: control.shortcut.map(str::to_owned),
+                mnemonic: control.mnemonic,
                 states: [
                     (ControlState::Disabled, control.disabled),
                     (ControlState::Focused, focused == Some(control.id)),

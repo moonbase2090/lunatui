@@ -66,6 +66,8 @@ pub struct ControlMetadata {
     checked: Option<bool>,
     selected: bool,
     invalid: bool,
+    shortcut: Option<String>,
+    mnemonic: Option<char>,
 }
 
 impl ControlMetadata {
@@ -88,6 +90,8 @@ impl ControlMetadata {
             checked: None,
             selected: false,
             invalid: false,
+            shortcut: None,
+            mnemonic: None,
         }
     }
 
@@ -110,6 +114,22 @@ impl ControlMetadata {
     #[must_use]
     pub const fn selected(mut self, selected: bool) -> Self {
         self.selected = selected;
+        self
+    }
+
+    /// How a person reaches this control from the keyboard, as shown to them, such as `Ctrl+S`.
+    /// For [`crate::Agent`] only; the accessibility export never writes it.
+    #[must_use]
+    pub fn shortcut(mut self, shortcut: impl Into<String>) -> Self {
+        self.shortcut = Some(shortcut.into());
+        self
+    }
+
+    /// The letter that chooses this control while its menu is open, as underlined for a person.
+    /// For [`crate::Agent`] only; the accessibility export never writes it.
+    #[must_use]
+    pub const fn mnemonic(mut self, mnemonic: Option<char>) -> Self {
+        self.mnemonic = mnemonic;
         self
     }
 
@@ -147,6 +167,8 @@ impl ControlMetadata {
             checked: self.checked,
             selected: self.selected,
             invalid: self.invalid,
+            shortcut: self.shortcut.as_deref(),
+            mnemonic: self.mnemonic,
         }
     }
 }
@@ -178,6 +200,10 @@ pub struct Control<'a> {
     pub selected: bool,
     /// Whether the control shows a validation error.
     pub invalid: bool,
+    /// The keyboard shortcut a person sees for this control. For an agent only.
+    pub shortcut: Option<&'a str>,
+    /// The mnemonic letter of this control. For an agent only.
+    pub mnemonic: Option<char>,
 }
 
 /// More than one control matched the same role, name and layer.

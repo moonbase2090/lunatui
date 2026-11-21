@@ -5,7 +5,9 @@ use lunatui_core::{Rect, Size, Style, clip_display_prefix, width};
 use lunatui_runtime::keymap::Keymap;
 use lunatui_theme::Token;
 
-use crate::{RenderCx, Widget};
+use crate::named_control::Item;
+use crate::{ItemControls, RenderCx, Widget};
+use lunatui_runtime::AccessibilityRole;
 
 /// A one-line summary of the commands available in the active keymap.
 ///
@@ -15,13 +17,27 @@ use crate::{RenderCx, Widget};
 pub struct KeyHintBar<'a> {
     keymap: &'a Keymap,
     gap: u16,
+    controls: Option<ItemControls>,
 }
 
 impl<'a> KeyHintBar<'a> {
     /// Hints from the keymap active for this screen or mode.
     #[must_use]
     pub fn new(keymap: &'a Keymap) -> Self {
-        Self { keymap, gap: 2 }
+        Self {
+            keymap,
+            gap: 2,
+            controls: None,
+        }
+    }
+
+    /// Registers each hint drawn in full as a named button, named by the command's title, with
+    /// the chord shown for it as its shortcut, when the frame has a hit map. Hint `n` (counting
+    /// the commands that have a chord) gets the id `first + n`; one that is clipped is left out.
+    #[must_use]
+    pub const fn controls(mut self, controls: ItemControls) -> Self {
+        self.controls = Some(controls);
+        self
     }
 
     /// Number of blank cells between command hints.
@@ -49,12 +65,14 @@ impl Widget for KeyHintBar<'_> {
             .filter(|command| !command.chords().is_empty())
             .count();
 
-        for command in self
+        for (index, command) in self
             .keymap
             .commands()
             .iter()
             .filter(|command| !command.chords().is_empty())
+            .enumerate()
         {
+            let start = x;
             hints_left = hints_left.saturating_sub(1);
             if x >= end {
                 break;
@@ -80,6 +98,23 @@ impl Widget for KeyHintBar<'_> {
             let title_draw = clip_display_prefix(command.title(), end - x);
             cx.put_str(x, area.y, title_draw, title_style);
             x = x.saturating_add(u16::try_from(width(title_draw)).unwrap_or(u16::MAX));
+            if let Some(controls) = self.controls
+                && title_draw == command.title()
+            {
+                controls.register(
+                    cx,
+                    &Item {
+                        index,
+                        name: command.title(),
+                        role: AccessibilityRole::Button,
+                        selected: false,
+                        disabled: false,
+                        shortcut: Some(&chord.to_string()),
+                        mnemonic: None,
+                    },
+                    Rect::new(start, area.y, x - start, 1),
+                );
+            }
             if hints_left > 0 && x < end {
                 let gap = self.gap.min(end - x);
                 for _ in 0..gap {
