@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.36] - 2026-11-20
+
 ### Added
 
 - `RenderMode`, `ModePolicy`, `GraphiteCaps` and `Capabilities` describe how a frame is drawn and what a backend can show, with `RunOptions::mode`, `RenderFrame::mode` and the `LUNATUI_MODE` environment override. No backend reports Graphite yet, so every frame is drawn in Cell mode and nothing changes.

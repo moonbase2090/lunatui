@@ -11,17 +11,17 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-core = { version = "0.1.35", path = "../lunatui-core" }
-lunatui-ui-tokens = { version = "0.1.35", path = "../lunatui-ui-tokens" }
-lunatui-widgets = { version = "0.1.35", path = "../lunatui-widgets", features = ["dialog"] }
+lunatui-core = { version = "0.1.36", path = "../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.36", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.36", path = "../lunatui-widgets", features = ["dialog"] }
 
 [dev-dependencies]
-lunatui-badge = { version = "0.1.35", path = "../lunatui-badge" }
-lunatui-button = { version = "0.1.35", path = "../lunatui-button" }
-lunatui-card = { version = "0.1.35", path = "../lunatui-card" }
-lunatui-runtime = { version = "0.1.35", path = "../lunatui-runtime" }
-lunatui-term = { version = "0.1.35", path = "../lunatui-term" }
-lunatui-theme = { version = "0.1.35", path = "../lunatui-theme" }
+lunatui-badge = { version = "0.1.36", path = "../lunatui-badge" }
+lunatui-button = { version = "0.1.36", path = "../lunatui-button" }
+lunatui-card = { version = "0.1.36", path = "../lunatui-card" }
+lunatui-runtime = { version = "0.1.36", path = "../lunatui-runtime" }
+lunatui-term = { version = "0.1.36", path = "../lunatui-term" }
+lunatui-theme = { version = "0.1.36", path = "../lunatui-theme" }
 
 [[example]]
 name = "ui_dialog"
