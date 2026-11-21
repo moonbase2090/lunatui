@@ -10,7 +10,7 @@ Prismattyc chrome can clone or patch from `frame.next` and `frame.runs` directly
 
 ## Native discovery (PR 53)
 
-[`discover_from_input`] / [`DiscoveryDecoder`] parse Prismattyc capability 0.4 replies for `native.grid.v1`. Discovery is off by default ([`NativePolicy::Disabled`]) and requires [`NativePolicy::DirectLocal`]. An affirmative advertisement never activates native ownership: [`DiscoveryResult::uses_ansi`] stays true and [`DiscoveryResult::native_active`] stays false. Shared-memory setup is not implemented in this cut.
+[`discover_from_input`] / [`DiscoveryDecoder`] parse Prismattyc capability 0.4 replies for `native.grid.v1` and `native.images.v1`. [`DiscoveryResult::ring_minor`] selects ABI 1.2 for native images, including an images-only host; otherwise it selects grid ABI 1.1 with alpha or ABI 1.0. Discovery is off by default ([`NativePolicy::Disabled`]) and requires [`NativePolicy::DirectLocal`]. An affirmative advertisement never activates native ownership: [`DiscoveryResult::uses_ansi`] stays true and [`DiscoveryResult::native_active`] stays false. Shared-memory setup is not implemented in this cut.
 
 ```rust,no_run
 use lunatui_core::{ClusterTable, Grid};
