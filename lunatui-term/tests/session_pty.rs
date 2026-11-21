@@ -10,7 +10,6 @@ use std::os::unix::io::FromRawFd;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::thread;
-use std::time::Duration;
 
 #[test]
 fn present_frame_propagates_flush_failure() {
@@ -130,8 +129,10 @@ fn run_probe_in_pty(mode: &str) -> Vec<u8> {
     let Ok(status) = child.wait() else {
         return Vec::new();
     };
-    thread::sleep(Duration::from_millis(20));
-    let buf: Vec<u8> = reader.join().unwrap_or_default();
+    let buf: Vec<u8> = match reader.join() {
+        Ok(buf) => buf,
+        Err(payload) => std::panic::resume_unwind(payload),
+    };
     if !status.success() {
         return buf;
     }
@@ -143,8 +144,17 @@ fn drain_master(mut master_file: File) -> Vec<u8> {
     let mut scratch = [0u8; 512];
     loop {
         match master_file.read(&mut scratch) {
-            Ok(0) | Err(_) => break,
+            Ok(0) => break,
             Ok(count) => buf.extend_from_slice(&scratch[..count]),
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+            Err(error) => {
+                assert_eq!(
+                    error.raw_os_error(),
+                    Some(libc::EIO),
+                    "reading PTY master: {error}"
+                );
+                break;
+            }
         }
     }
     buf
