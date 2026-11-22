@@ -4,7 +4,83 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_core::Rect;
-use lunatui_runtime::{AccessibilityRole as Role, ControlMetadata, HitId, HitMap, LayerId};
+use lunatui_runtime::{
+    AccessibilityRole as Role, Agent, CONTROL_QUERY_LIMIT, ControlMetadata, ControlQuery, HitId,
+    HitMap, LayerId,
+};
+
+#[test]
+fn control_queries_combine_kind_text_and_exact_layer_filters() {
+    let mut hits = HitMap::new();
+    hits.push_control(
+        HitId(1),
+        Rect::new(0, 0, 8, 1),
+        0,
+        ControlMetadata::new("Save draft", Role::Button),
+    );
+    hits.push_control(
+        HitId(2),
+        Rect::new(1, 1, 8, 1),
+        10,
+        ControlMetadata::new("Search", Role::TextInput).layer(Some(LayerId(7))),
+    );
+    hits.push_control(
+        HitId(3),
+        Rect::new(1, 2, 8, 1),
+        10,
+        ControlMetadata::new("Save changes", Role::Button).layer(Some(LayerId(7))),
+    );
+
+    let result = Agent::query(
+        &hits,
+        Some(HitId(3)),
+        ControlQuery::text("SAVE")
+            .with_kind(Role::Button)
+            .in_layer(Some(LayerId(7))),
+    );
+    assert_eq!(result.controls().len(), 1);
+    let control = &result.controls()[0];
+    assert_eq!(
+        (control.id, control.name.as_str()),
+        (HitId(3), "Save changes")
+    );
+    assert_eq!(control.states, [lunatui_runtime::ControlState::Focused]);
+    assert_eq!(result.more(), 0);
+}
+
+#[test]
+fn control_queries_return_the_first_hundred_matches_and_report_the_rest()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut hits = HitMap::new();
+    for index in 0_u32..102 {
+        hits.push_control(
+            HitId(index + 1),
+            Rect::new(0, 0, 1, 1),
+            0,
+            ControlMetadata::new(format!("Button {}", index + 1), Role::Button),
+        );
+    }
+
+    let result = Agent::query(&hits, None, ControlQuery::kind(Role::Button));
+    assert_eq!(result.controls().len(), CONTROL_QUERY_LIMIT);
+    assert_eq!(
+        result.controls().first().map(|control| control.id),
+        Some(HitId(1))
+    );
+    assert_eq!(
+        result.controls().last().map(|control| control.id),
+        Some(HitId(100))
+    );
+    assert_eq!(result.more(), 2);
+
+    let mut json = Vec::new();
+    result.write_json(&mut json)?;
+    let json = String::from_utf8(json)?;
+    assert!(json.contains("\"id\":100,"));
+    assert!(!json.contains("\"id\":101,"));
+    assert!(json.ends_with("],\"more\":2}\n"));
+    Ok(())
+}
 
 #[test]
 fn selectors_report_ambiguity_and_scope_names_by_role_and_layer()

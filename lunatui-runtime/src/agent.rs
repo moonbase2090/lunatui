@@ -11,9 +11,12 @@ use lunatui_core::Rect;
 
 use crate::hit::write_string;
 use crate::{
-    AccessibilityRole, AmbiguousControl, Change, ChangeContext, ChangeReason, ChangeSource, HitId,
-    HitMap, LayerId, Outcome,
+    AccessibilityRole, AmbiguousControl, Change, ChangeContext, ChangeReason, ChangeSource,
+    Control, HitId, HitMap, LayerId, Outcome,
 };
+
+/// Most controls returned by one [`Agent::query`] call.
+pub const CONTROL_QUERY_LIMIT: usize = 100;
 
 /// What a control can be asked to do, as listed in a [`Snapshot`].
 #[non_exhaustive]
@@ -293,6 +296,118 @@ pub struct AgentControl {
     pub area: Rect,
 }
 
+/// Filters controls by accessible name, semantic kind, owning layer, or a combination.
+///
+/// Constructing a query requires at least one filter. Additional filters are combined with it;
+/// a control must match all of them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ControlQuery<'a> {
+    text: Option<&'a str>,
+    kind: Option<AccessibilityRole>,
+    layer: LayerFilter,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LayerFilter {
+    Any,
+    Exact(Option<LayerId>),
+}
+
+impl<'a> ControlQuery<'a> {
+    /// Finds controls whose accessible name contains `text`, ignoring Unicode case.
+    #[must_use]
+    pub const fn text(text: &'a str) -> Self {
+        Self {
+            text: Some(text),
+            kind: None,
+            layer: LayerFilter::Any,
+        }
+    }
+
+    /// Finds controls with this semantic role.
+    #[must_use]
+    pub const fn kind(kind: AccessibilityRole) -> Self {
+        Self {
+            text: None,
+            kind: Some(kind),
+            layer: LayerFilter::Any,
+        }
+    }
+
+    /// Finds controls owned by `layer`. `None` selects the base layer.
+    #[must_use]
+    pub const fn layer(layer: Option<LayerId>) -> Self {
+        Self {
+            text: None,
+            kind: None,
+            layer: LayerFilter::Exact(layer),
+        }
+    }
+
+    /// Also requires the accessible name to contain `text`, ignoring Unicode case.
+    #[must_use]
+    pub const fn with_text(mut self, text: &'a str) -> Self {
+        self.text = Some(text);
+        self
+    }
+
+    /// Also requires this semantic role.
+    #[must_use]
+    pub const fn with_kind(mut self, kind: AccessibilityRole) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+
+    /// Also requires ownership by `layer`. `None` selects the base layer.
+    #[must_use]
+    pub const fn in_layer(mut self, layer: Option<LayerId>) -> Self {
+        self.layer = LayerFilter::Exact(layer);
+        self
+    }
+
+    fn matches(self, control: Control<'_>, text: Option<&str>) -> bool {
+        text.is_none_or(|text| control.name.to_lowercase().contains(text))
+            && self.kind.is_none_or(|kind| control.role == kind)
+            && match self.layer {
+                LayerFilter::Any => true,
+                LayerFilter::Exact(layer) => control.layer == layer,
+            }
+    }
+}
+
+/// A bounded set of controls returned by [`Agent::query`].
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ControlQueryResult {
+    controls: Vec<AgentControl>,
+    more: usize,
+}
+
+impl ControlQueryResult {
+    /// Matching controls in registration order, up to [`CONTROL_QUERY_LIMIT`].
+    #[must_use]
+    pub fn controls(&self) -> &[AgentControl] {
+        &self.controls
+    }
+
+    /// Matching controls omitted after [`CONTROL_QUERY_LIMIT`] was reached.
+    #[must_use]
+    pub const fn more(&self) -> usize {
+        self.more
+    }
+
+    /// Writes the result as one JSON object and a newline. Like a [`Snapshot`], it may carry
+    /// control values, so keep it off any public surface.
+    ///
+    /// # Errors
+    ///
+    /// Propagates writer errors.
+    pub fn write_json(&self, mut writer: impl Write) -> io::Result<()> {
+        writer.write_all(b"{\"version\":1,\"controls\":[")?;
+        write_controls(&mut writer, &self.controls)?;
+        writeln!(writer, "],\"more\":{}}}", self.more)
+    }
+}
+
 /// Every named control of one frame, in registration order.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Snapshot {
@@ -332,14 +447,19 @@ impl Snapshot {
     /// Propagates writer errors.
     pub fn write_json(&self, mut writer: impl Write) -> io::Result<()> {
         writer.write_all(b"{\"version\":1,\"controls\":[")?;
-        for (index, control) in self.controls.iter().enumerate() {
-            if index > 0 {
-                writer.write_all(b",")?;
-            }
-            write_control(&mut writer, control)?;
-        }
+        write_controls(&mut writer, &self.controls)?;
         writer.write_all(b"]}\n")
     }
+}
+
+fn write_controls(writer: &mut impl Write, controls: &[AgentControl]) -> io::Result<()> {
+    for (index, control) in controls.iter().enumerate() {
+        if index > 0 {
+            writer.write_all(b",")?;
+        }
+        write_control(writer, control)?;
+    }
+    Ok(())
 }
 
 fn write_control(writer: &mut impl Write, control: &AgentControl) -> io::Result<()> {
@@ -421,33 +541,36 @@ impl Agent {
     pub fn snapshot(hits: &HitMap, focused: Option<HitId>) -> Snapshot {
         let controls = hits
             .controls()
-            .map(|control| AgentControl {
-                id: control.id,
-                name: control.name.to_owned(),
-                role: control.role,
-                value: control.value.map(str::to_owned),
-                checked: control.checked,
-                shortcut: control.shortcut.map(str::to_owned),
-                mnemonic: control.mnemonic,
-                states: [
-                    (ControlState::Disabled, control.disabled),
-                    (ControlState::Focused, focused == Some(control.id)),
-                    (ControlState::Selected, control.selected),
-                    (ControlState::Invalid, control.invalid),
-                ]
-                .into_iter()
-                .filter_map(|(state, holds)| holds.then_some(state))
-                .collect(),
-                actions: if control.disabled {
-                    Vec::new()
-                } else {
-                    ActionKind::for_role(control.role).to_vec()
-                },
-                parent: control.layer,
-                area: control.area,
-            })
+            .map(|control| agent_control(control, focused))
             .collect();
         Snapshot { controls }
+    }
+
+    /// Finds controls by accessible-name text, semantic kind, owning layer, or a combination.
+    ///
+    /// Matches keep registration order. Disabled controls are included, as in [`Self::snapshot`].
+    /// At most [`CONTROL_QUERY_LIMIT`] controls are returned; [`ControlQueryResult::more`]
+    /// reports how many additional controls matched.
+    #[must_use]
+    pub fn query(
+        hits: &HitMap,
+        focused: Option<HitId>,
+        query: ControlQuery<'_>,
+    ) -> ControlQueryResult {
+        let text = query.text.map(str::to_lowercase);
+        let mut controls = Vec::new();
+        let mut more = 0;
+        for control in hits
+            .controls()
+            .filter(|control| query.matches(*control, text.as_deref()))
+        {
+            if controls.len() < CONTROL_QUERY_LIMIT {
+                controls.push(agent_control(control, focused));
+            } else {
+                more += 1;
+            }
+        }
+        ControlQueryResult { controls, more }
     }
 
     /// Queues `action` for the control `selector` names in `hits`.
@@ -500,6 +623,34 @@ impl Agent {
     #[must_use]
     pub fn pending(&self) -> usize {
         self.queue.len()
+    }
+}
+
+fn agent_control(control: Control<'_>, focused: Option<HitId>) -> AgentControl {
+    AgentControl {
+        id: control.id,
+        name: control.name.to_owned(),
+        role: control.role,
+        value: control.value.map(str::to_owned),
+        checked: control.checked,
+        shortcut: control.shortcut.map(str::to_owned),
+        mnemonic: control.mnemonic,
+        states: [
+            (ControlState::Disabled, control.disabled),
+            (ControlState::Focused, focused == Some(control.id)),
+            (ControlState::Selected, control.selected),
+            (ControlState::Invalid, control.invalid),
+        ]
+        .into_iter()
+        .filter_map(|(state, holds)| holds.then_some(state))
+        .collect(),
+        actions: if control.disabled {
+            Vec::new()
+        } else {
+            ActionKind::for_role(control.role).to_vec()
+        },
+        parent: control.layer,
+        area: control.area,
     }
 }
 
