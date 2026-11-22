@@ -1,9 +1,7 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! The Graphite instruction and ceiling cases measure the frames they claim: the changed
-//! repaint sends only the rectangle that changed, and that rectangle shows exactly what a
-//! full repaint shows there.
+#![doc = include_str!("../README.md")]
 
 use graphite_core::PixelBuffer;
 use lunatui_bench::graphite_cases::{
@@ -35,7 +33,6 @@ fn base64_decode(text: &str) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
-/// The size and decoded pixels of the one image a Kitty frame transmits.
 fn transmitted(stream: &[u8]) -> Result<((usize, usize), Vec<u8>), String> {
     let stream = std::str::from_utf8(stream).map_err(|error| error.to_string())?;
     let mut size = None;

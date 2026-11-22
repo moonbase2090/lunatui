@@ -15,7 +15,6 @@ use lunatui_bench::graphite_cases::{GRAPHITE_CASES, GraphiteRun, Repaint};
 
 const SAMPLES: usize = 1000;
 
-/// The Graphite window: 185×51 cells of 8×16 pixels, the 1480×816 window the spike measured.
 #[cfg(feature = "graphite-pixels")]
 const GRAPHITE_WINDOW: (u16, u16) = (185, 51);
 #[cfg(feature = "graphite-pixels")]
@@ -46,8 +45,6 @@ fn main() -> io::Result<ExitCode> {
     #[cfg(feature = "graphite-pixels")]
     for case in &GRAPHITE_CASES {
         let times = time_graphite(case)?;
-        // A full repaint (first frame, resize, mode change) may be spread over several
-        // frames, so it is reported against the budget but does not gate.
         let gated = case.repaint == Repaint::Changed;
         let name = format!(
             "{}, {}x{}{}",
@@ -69,7 +66,6 @@ fn main() -> io::Result<ExitCode> {
     }
 }
 
-/// Prints one row and returns whether it fails the ceiling gate.
 fn report(name: &str, times: &FrameTimes, gated: bool) -> bool {
     let verdict = times.verdict();
     println!(
@@ -90,7 +86,6 @@ fn time_graphite(
 ) -> io::Result<FrameTimes> {
     let (cols, rows) = GRAPHITE_WINDOW;
     let mut run = GraphiteRun::new(case, cols, rows).map_err(io::Error::other)?;
-    // The first frame uploads the window image in both repaints; it is a full repaint.
     run.frame()?;
     let samples = sample(GRAPHITE_SAMPLES, || run.frame())?;
     FrameTimes::from_samples(&samples).ok_or_else(|| io::Error::other("no frame-time samples"))

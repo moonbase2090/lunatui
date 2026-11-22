@@ -1,23 +1,6 @@
 // Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
 
-//! Graphite pixel frames for the instruction gate and the frame ceiling.
-//!
-//! Each frame rasterizes an activity-monitor-shaped scene with `graphite-core`'s CPU
-//! [`PixelBuffer`](graphite_core::PixelBuffer) and hands it to the Kitty
-//! [`PixelLayer`](lunatui_term::PixelLayer), which encodes what changed.
-//! Two repaints are measured:
-//!
-//! - [`Repaint::Full`](crate::graphite_cases::Repaint::Full) redraws and retransmits the
-//!   whole window every frame, as a first frame, a resize or a mode change does.
-//! - [`Repaint::Changed`](crate::graphite_cases::Repaint::Changed) keeps the window image
-//!   and redraws and retransmits only the seat rows, the rectangle a poll changes. This is
-//!   a normal Graphite frame.
-//!
-//! The scene changes only inside
-//! [`changed_cells`](crate::graphite_cases::changed_cells) from one tick to the next, so the
-//! two repaints show the same picture. `tests/graphite_cases.rs` checks that.
-
 use std::io::{self, Write};
 
 use graphite_core::{DARK, DEFAULT_ACCENT, PixelBuffer, Rect, Rgba, accent};
@@ -84,7 +67,6 @@ pub fn graphite_case(name: &str) -> Option<&'static GraphiteCase> {
     GRAPHITE_CASES.iter().find(|case| case.name == name)
 }
 
-/// Scene layout in cells for a window of `cols`×`rows`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Layout {
     cols: usize,
@@ -106,7 +88,6 @@ impl Layout {
             cols,
             rows,
             rows_per_seat: (rows / 12).max(1),
-            // About half the width, as in the spike's 770 of 1480 logical pixels.
             changed_cols: (cols * 13 / 25).max(LANE_START + 2),
         })
     }
@@ -134,7 +115,6 @@ pub fn changed_cells(cols: u16, rows: u16) -> Result<CellRect, String> {
     Layout::new(cols, rows).map(Layout::changed)
 }
 
-/// A pixel target: a buffer showing the device-pixel window from `origin`.
 struct Canvas<'a> {
     buffer: &'a mut PixelBuffer,
     origin: (usize, usize),
@@ -142,7 +122,6 @@ struct Canvas<'a> {
 }
 
 impl Canvas<'_> {
-    /// Fills a rectangle given in logical pixels, translated and clipped to this buffer.
     fn fill(&mut self, x: usize, y: usize, w: usize, h: usize, color: Rgba) {
         let (x, y, w, h) = (
             x * self.scale,
@@ -179,7 +158,6 @@ fn tinted(color: [u8; 3], alpha: u8) -> Rgba {
     Rgba::new(color[0], color[1], color[2], alpha)
 }
 
-/// A deterministic bin height in `0..=max` for a lane, varying with the tick.
 fn bin_height(seat: usize, bin: usize, tick: u32, max: usize) -> usize {
     let mut x = (seat as u64) << 32 ^ (bin as u64).wrapping_add(u64::from(tick));
     x = x.wrapping_mul(0x9e37_79b9_7f4a_7c15);
@@ -187,7 +165,6 @@ fn bin_height(seat: usize, bin: usize, tick: u32, max: usize) -> usize {
     usize::try_from(x % (max as u64 + 1)).unwrap_or(0)
 }
 
-/// Draws everything that does not change between ticks: header, timeline and key row.
 fn draw_static(canvas: &mut Canvas<'_>, layout: Layout) {
     let t = &DARK;
     let (cw, ch) = (CELL_WIDTH, CELL_HEIGHT);
@@ -199,7 +176,6 @@ fn draw_static(canvas: &mut Canvas<'_>, layout: Layout) {
         canvas.fill(x, 3, 10 * cw, ch - 6, solid(t.chip_active));
         canvas.fill(x + cw, 7, 6 * cw, 2, solid(t.text));
     }
-    // To the right of the changed rectangle the seat rows show a static summary panel.
     let top = ch * (1 + layout.seat_rows());
     let summary_x = layout.changed_cols * cw;
     canvas.fill(summary_x, ch, width - summary_x, top - ch, solid(t.panel));
@@ -231,7 +207,6 @@ fn draw_static(canvas: &mut Canvas<'_>, layout: Layout) {
     }
 }
 
-/// Draws the seat rows, which change every tick, inside [`Layout::changed`].
 fn draw_seats(canvas: &mut Canvas<'_>, layout: Layout, tick: u32) {
     let t = &DARK;
     let focus = accent(t, DEFAULT_ACCENT);
@@ -349,7 +324,6 @@ fn image(pixels: &PixelBuffer) -> io::Result<PixelImage<'_>> {
     .ok_or_else(|| io::Error::other("the pixel buffer is not a valid image"))
 }
 
-/// The buffers and presenter of one run, apart from where the frames are written.
 struct Frames {
     case: &'static GraphiteCase,
     layout: Layout,
@@ -373,7 +347,6 @@ impl Frames {
             }
             Repaint::Changed => {
                 repaint_changed(&mut self.changed, self.layout, self.case.scale, tick);
-                // The window image keeps generation 1, so Kitty reuses it after the first frame.
                 self.layer
                     .image(WINDOW_IMAGE, 1, &image(&self.window)?, window, 0);
                 self.layer.image(

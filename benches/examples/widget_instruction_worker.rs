@@ -12,7 +12,6 @@ use lunatui_bench::widget_suite::{CASES, Case, LunatuiRun, Parity, pin_color_out
 
 const WARMUP: u32 = 200;
 const FRAMES: u32 = 32;
-/// Graphite frames are large and deterministic, so a short batch gives the same count per frame.
 #[cfg(feature = "graphite-pixels")]
 const GRAPHITE_WARMUP: u32 = 2;
 #[cfg(feature = "graphite-pixels")]
@@ -27,7 +26,6 @@ fn main() -> ExitCode {
                     println!("{}", case.name);
                 }
             }
-            // Graphite cases have no Ratatui side and are always gated.
             #[cfg(feature = "graphite-pixels")]
             for case in &GRAPHITE_CASES {
                 println!("{}", case.name);
@@ -109,7 +107,6 @@ fn graphite_worker(mut run: GraphiteRun) -> Result<(), String> {
     Ok(())
 }
 
-/// Callgrind collects inside functions whose names contain `instruction_frames`.
 #[cfg(feature = "graphite-pixels")]
 #[inline(never)]
 fn graphite_instruction_frames(run: &mut GraphiteRun) -> io::Result<()> {
