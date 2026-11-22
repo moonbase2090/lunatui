@@ -49,8 +49,8 @@ mod sched;
 
 #[cfg(feature = "app")]
 pub use agent::{
-    Act, ActError, Action, ActionKind, Agent, AgentControl, ControlState, Request, Selector,
-    Snapshot, Source, Ticket,
+    Act, ActError, Action, ActionKind, Agent, AgentControl, CONTROL_QUERY_LIMIT, ControlQuery,
+    ControlQueryResult, ControlState, Request, Selector, Snapshot, Source, Ticket,
 };
 pub use anim::{Clock, Ease, Spring, Tween};
 #[cfg(feature = "motion")]

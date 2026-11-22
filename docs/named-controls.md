@@ -76,6 +76,21 @@ that action. Otherwise it queues a `Request` with `source: Source::Agent` and re
 `Agent::take` during its update step, applies each to the state behind `request.id` and redraws.
 `Act` applies the common cases: `bool` toggles and `String` sets its value.
 
+Use `Agent::query` when an agent needs a smaller view than the complete snapshot. A
+`ControlQuery` starts with accessible-name text, a semantic kind, or an exact owning layer; add
+the other filters with `with_text`, `with_kind`, and `in_layer`. Text is a case-insensitive
+substring of the accessible name, filters combine with AND, and `None` selects the base layer.
+Matches keep registration order. A `ControlQueryResult` returns the first 100 controls and its
+`more` count reports the rest; `write_json` includes both the bounded controls and that count.
+
+```rust,ignore
+let save_buttons = Agent::query(
+    &hits,
+    focus.focused(),
+    ControlQuery::text("save").with_kind(Role::Button),
+);
+```
+
 Tabs and lists register their items too. `Tabs::controls(ItemControls::new(first))` and
 `List::controls(ItemControls::new(first))` give each visible tab (role `Tab`) or row (role
 `ListItem`, named by its first cell) the id `first + index`, with the chosen item marked

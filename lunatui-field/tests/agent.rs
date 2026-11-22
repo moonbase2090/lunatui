@@ -10,8 +10,8 @@ use lunatui_choice::{CheckState, Checkbox};
 use lunatui_core::{ClusterTable, Grid, Rect};
 use lunatui_field::{Field, Form, FormState};
 use lunatui_runtime::{
-    AccessibilityRole as Role, Act, ActError, Action, ActionKind, Agent, ControlState, HitId,
-    HitMap, Outcome, Selector, Source,
+    AccessibilityRole as Role, Act, ActError, Action, ActionKind, Agent, ControlQuery,
+    ControlState, HitId, HitMap, Outcome, Selector, Source,
 };
 use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Variant};
@@ -277,6 +277,46 @@ fn the_snapshot_lists_name_role_value_state_actions_and_layer_of_every_control()
     assert_eq!(snapshot.controls()[6].actions, []);
     assert_eq!(name.parent, None);
     Ok(())
+}
+
+#[test]
+fn an_agent_queries_real_controls_by_text_kind_and_layer() {
+    let harness = mount();
+    let app = harness.component();
+    let names = |query| {
+        Agent::query(&app.hits, None, query)
+            .controls()
+            .iter()
+            .map(|control| control.name.clone())
+            .collect::<Vec<_>>()
+    };
+
+    assert_eq!(names(ControlQuery::text("TERmS")), ["Accept terms"]);
+    assert_eq!(
+        names(ControlQuery::kind(Role::Checkbox)),
+        ["Notifications", "Accept terms"]
+    );
+    assert_eq!(
+        names(ControlQuery::kind(Role::TextInput).with_text("mail")),
+        ["Email"]
+    );
+    assert_eq!(
+        names(ControlQuery::layer(None)),
+        [
+            "Name",
+            "Token",
+            "Notifications",
+            "Accept terms",
+            "Plan",
+            "Save",
+            "Locked",
+            "Email"
+        ]
+    );
+    assert_eq!(
+        Agent::query(&app.hits, None, ControlQuery::text("missing")).more(),
+        0
+    );
 }
 
 #[test]
