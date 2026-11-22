@@ -24,7 +24,7 @@ for its scope and tolerance.
 
 `graphite_cases` (feature `graphite-pixels`) measures Graphite mode's pixel path as it exists today. Each frame does two things:
 - it rasterizes an activity-monitor-shaped scene (header chips, three seat rows with lanes, a timeline and a key row) with `graphite-core`'s CPU `PixelBuffer`;
-- it hands the result to the Kitty `PixelLayer`, which base64-encodes what changed into a counting sink.
+- it hands the result to `PixelLayer`, which encodes what changed as terminal images into a counting sink.
 
 Cells are 8×16 pixels at 1x.
 
@@ -33,12 +33,12 @@ Cells are 8×16 pixels at 1x.
 | `graphite-changed-1x`, `graphite-changed-2x` | Redraws only the seat rows, the rectangle a poll changes (about half the width), and sends them as their own image over the unchanged window image. This is a normal Graphite frame. |
 | `graphite-full-1x`, `graphite-full-2x` | Redraws and resends the whole window, as a first frame, a resize or a mode change does. |
 
-- **Instructions.** `scripts/check-widget-instructions.py` runs the four cases at 80×24 and 200×60 cells with the widget cases. Each one is gated at 3% over `main`. Graphite frames are large and deterministic, so the worker warms 2 frames and collects 8, instead of 200 and 32.
+- **Instructions.** The instruction check runs the four cases at 80×24 and 200×60 cells with the widget cases. Each one is gated at 3% over `main`. Graphite frames are large and deterministic, so the worker warms 2 frames and collects 8, instead of 200 and 32.
 - **Ceiling.** The `ceiling` bench times 200 frames of each case in a 185×51 window, which is 1480×816 at 1x, the window the [spike](../docs/graphite-mode-spike.md) measured. The changed cases are gated on the 16 ms ceiling. The full repaints are reported but not gated, because the design lets a full repaint spread over several frames ([frame ceiling](../docs/graphite-mode-design.md#the-8-ms-frame-ceiling)).
-- **Proof.** `tests/graphite_cases.rs` checks three things:
+- **Proof.** The `graphite_cases` test checks three things:
   - a tick changes pixels only inside the changed rectangle;
   - the changed repaint equals the same rectangle cropped from a full repaint;
-  - the Kitty stream of a changed frame carries only that rectangle, and of a full frame only the window, pixel for pixel.
+  - the image stream of a changed frame carries only that rectangle, and of a full frame only the window, pixel for pixel.
 
 When `PixelCx` and the activity monitor's Graphite mode land, they become cases here in the same way.
 
