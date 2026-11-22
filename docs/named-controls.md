@@ -58,7 +58,11 @@ default and needs nothing beyond the registration above.
 
 ```rust,ignore
 let snapshot = Agent::snapshot(&hits, focus.focused());
-let ticket = agent.act(&hits, Selector::new(Role::Checkbox, "Notifications"), Action::Toggle)?;
+let ticket = agent.act(
+    &hits,
+    Selector::new(AccessibilityRole::Checkbox, "Notifications"),
+    Action::Toggle,
+)?;
 
 while let Some(request) = agent.take() {
     match request.id.index_in(first, count) {
@@ -80,14 +84,15 @@ Use `Agent::query` when an agent needs a smaller view than the complete snapshot
 `ControlQuery` starts with accessible-name text, a semantic kind, or an exact owning layer; add
 the other filters with `with_text`, `with_kind`, and `in_layer`. Text is a case-insensitive
 substring of the accessible name, filters combine with AND, and `None` selects the base layer.
-Matches keep registration order. A `ControlQueryResult` returns the first 100 controls and its
-`more` count reports the rest; `write_json` includes both the bounded controls and that count.
+An empty text filter matches every accessible name. Matches keep registration order. A
+`ControlQueryResult` returns the first 100 controls and its `more` count reports the rest;
+`write_json` includes both the bounded controls and that count.
 
 ```rust,ignore
 let save_buttons = Agent::query(
     &hits,
     focus.focused(),
-    ControlQuery::text("save").with_kind(Role::Button),
+    ControlQuery::text("save").with_kind(AccessibilityRole::Button),
 );
 ```
 
