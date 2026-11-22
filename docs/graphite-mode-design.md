@@ -64,7 +64,7 @@ Two ways to get pixels onto the screen, with different costs:
 
 ## API sketch
 
-The mode, policy and capability types below are implemented in `lunatui-runtime` (`RenderMode`, `ModePolicy`, `GraphiteCaps`, `Capabilities`, `RunOptions::mode` and `RenderFrame::mode`), with no behavior change: no backend reports Graphite yet, so every frame is Cell. `PixelCx` and `render_graphite` are still a sketch.
+The mode, policy and capability types below are implemented in `lunatui-runtime` (`RenderMode`, `ModePolicy`, `GraphiteCaps`, `Capabilities`, `RunOptions::mode` and `RenderFrame::mode`), with no behavior change: no backend reports Graphite yet, so every frame is Cell. `PixelCx` and `RenderCx::paint_pixels` are implemented in `lunatui-widgets` (feature `pixel-cx`, on by default) and paint only in Graphite mode. Glyph rasterization waits for the bundled font.
 
 ```rust,ignore
 pub enum RenderMode { Cell, Graphite }
@@ -80,16 +80,20 @@ pub struct GraphiteCaps {
     pub alpha: bool,
 }
 
-pub trait Widget {
-    fn render(&self, area: Rect, cx: &mut RenderCx<'_>);
-    fn render_graphite(&self, area: Rect, px: &mut PixelCx<'_>) {
-        self.render(area, px.cells());
-    }
+impl RenderCx<'_> {
+    pub fn render_mode(self, mode: RenderMode) -> Self;
+    pub fn paint_pixels(
+        &mut self,
+        area: Rect,
+        depth: i32,
+        paint: impl FnOnce(&mut PixelCx<'_>),
+    ) -> bool;
 }
 ```
 
-- `render_graphite` has a default that calls `render`, so every existing widget works in Graphite mode on day one, drawn in cells inside a pixel frame. Widgets then adopt pixels one at a time, each by overriding `render_graphite`.
-- `PixelCx` offers the primitives: filled and stroked rounded rectangles, lines, bars and areas, images, and text runs measured by a `TextMetrics`. A Graphite widget also writes its Cell approximation into the cells underneath, as the alpha work does, so a frame that has to fall back loses detail and not layout.
+- The mode travels in `RenderCx`, not in a second `Widget` method. Applications render their own widget trees by calling `render` on children, so nothing could call a separate `render_graphite`. A widget calls `paint_pixels` from `render`. Every existing widget keeps working in Graphite mode unchanged, drawn in cells. Widgets adopt pixels one at a time.
+- `paint_pixels` paints only when the frame is in Graphite mode, the image sink takes pixels and the area is within the pixel limits. Otherwise it returns `false` having drawn nothing and changed no cell, and the widget draws its Cell form.
+- `PixelCx` offers the primitives: filled and stroked rounded rectangles, lines and areas, with text measured and fitted by a `TextMetrics`. Bars, images and glyph runs come next. A Graphite widget also writes its Cell approximation into the cells underneath, as the alpha work does, so a frame that has to fall back loses detail and not layout.
 - Text is measured with the same `TextMetrics` trait that exists now. Cell mode uses `CellTextMetrics`; Graphite uses host metrics, or a bundled font under option A. A label that does not fit is cut by pixel width with an ellipsis, not by column count.
 - Named controls, the agent API and the accessibility export are mode-independent. They read the registry, not the pixels.
 - Hit testing stays on the cell hit map. Pointer events that carry pixel coordinates refine it with a pixel offset inside the hit cell, for controls that need it (sliders, resize handles).
