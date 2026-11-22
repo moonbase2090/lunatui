@@ -205,3 +205,90 @@ fn block_elements_and_arrows_the_ui_font_lacks_come_from_the_monospaced_font() {
     assert_eq!(noto.width(Face::Regular, 20.0, "\u{2190}"), 12.0);
     assert_eq!(noto.width(Face::SemiBold, 20.0, "\u{2500}"), 12.0);
 }
+
+struct Halves;
+
+impl TextMetrics for Halves {
+    fn width(&self, _face: Face, px: f32, text: &str) -> f32 {
+        px * 0.5 * f32::from(u16::try_from(text.chars().count()).unwrap_or(u16::MAX))
+    }
+}
+
+#[test]
+fn supplied_metrics_measure_but_bundled_text_is_not_drawn_with_them() {
+    let area = Rect::new(0, 0, 16, 4);
+    let mut grid = Grid::new(16, 4);
+    let mut clusters = ClusterTable::new();
+    let [r, g, b, _] = BACK;
+    grid.fill(
+        area,
+        Style::new().bg(Color::Rgb(r, g, b)),
+        ' ',
+        &mut clusters,
+    );
+    let theme = Theme::builtin(Variant::Dark);
+    let mut images = Capture {
+        background: Some([0, 0, 0]),
+        images: Vec::new(),
+    };
+    let metrics = Halves;
+    let painted = RenderCx::new(&mut grid, &mut clusters, &theme)
+        .image_sink(&mut images)
+        .render_mode(RenderMode::Graphite)
+        .text_metrics(&metrics)
+        .paint_pixels(area, 0, |px| {
+            assert_eq!(px.measure(Face::Mono, 20.0, "abcd"), 40.0);
+            assert!(!px.text(Face::Mono, 40.0, (10.0, 48.0), "I", Color::Rgb(220, 40, 30)));
+            assert!(px.line_metrics(Face::Mono, 40.0).is_none());
+        });
+    assert!(painted);
+    assert_eq!(pixel(&images.images[0], 22, 34), BACK);
+}
+
+#[test]
+fn origins_far_outside_the_surface_draw_nothing_and_do_not_overflow() {
+    let image = paint(Some([0, 0, 0]), None, |px| {
+        let red = Color::Rgb(220, 40, 30);
+        for origin in [
+            (0.0, f32::MAX),
+            (0.0, -f32::MAX),
+            (f32::MAX, 40.0),
+            (-f32::MAX, 40.0),
+            (0.0, 1.0e30),
+            (1_048_577.0, 40.0),
+            (f32::INFINITY, 40.0),
+            (0.0, f32::NAN),
+        ] {
+            assert!(
+                !px.text(Face::Regular, 40.0, origin, "gjpqy", red),
+                "{origin:?}"
+            );
+        }
+        assert!(px.text(Face::Regular, 40.0, (0.0, 1_048_576.0), "gjpqy", red));
+        assert!(px.text(
+            Face::Regular,
+            40.0,
+            (-1_048_576.0, -1_048_576.0),
+            "gjpqy",
+            red
+        ));
+    });
+    let painted = (0..64).any(|y| (0..128).any(|x| pixel(&image, x, y) != BACK));
+    assert!(!painted);
+}
+
+#[test]
+fn sizes_above_4096_are_rejected() {
+    paint(Some([0, 0, 0]), None, |px| {
+        assert_eq!(px.measure(Face::Regular, 4097.0, "a"), 0.0);
+        assert!(px.measure(Face::Regular, 4096.0, "a") > 0.0);
+        assert!(!px.text(
+            Face::Regular,
+            4097.0,
+            (0.0, 40.0),
+            "a",
+            Color::Rgb(220, 40, 30)
+        ));
+        assert!(px.line_metrics(Face::Regular, 4097.0).is_none());
+    });
+}

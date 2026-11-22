@@ -11,6 +11,8 @@ use lunatui_fonts::{Family, Weight};
 use super::{Face, TextMetrics};
 
 const CACHE_BYTES: usize = 4 * 1024 * 1024;
+const MAX_SIZE: f32 = 4096.0;
+const MAX_ORIGIN: f32 = 1_048_576.0;
 const SLOTS: usize = 6;
 const UI_REGULAR: usize = 0;
 const UI_BOLD: usize = 1;
@@ -64,7 +66,10 @@ pub struct LineMetrics {
 /// space. Text is neither kerned nor shaped: each character advances by its own width, and
 /// scripts that need shaping, such as Arabic, are drawn letter by letter.
 ///
-/// Fonts are parsed the first time a character needs them. Glyph images are cached, up to 4 MiB.
+/// Sizes are in pixels and must be finite, above 0 and at most 4096.
+///
+/// Fonts are parsed the first time a character needs them. Glyph images are cached, up to 4 MiB
+/// in all; a single glyph image larger than that is drawn without being cached.
 pub struct BundledText {
     ui: UiFont,
     fonts: [OnceLock<Option<Font>>; SLOTS],
@@ -129,7 +134,8 @@ impl BundledText {
         self.ui
     }
 
-    /// Vertical metrics of `face` at `px`, or `None` when `px` is not a positive size.
+    /// Vertical metrics of `face` at `px`, or `None` when `px` is not finite, above 0 and at most
+    /// 4096.
     #[must_use]
     pub fn line_metrics(&self, face: Face, px: f32) -> Option<LineMetrics> {
         if !valid_size(px) {
@@ -152,26 +158,37 @@ impl BundledText {
         text: &str,
         mut blit: impl FnMut(Glyph<'_>),
     ) -> bool {
-        if !(valid_size(px) && origin.0.is_finite() && origin.1.is_finite()) {
+        if !(valid_size(px) && within_reach(origin.0) && within_reach(origin.1)) {
             return false;
         }
         let mut cache = self.glyphs.lock().unwrap_or_else(PoisonError::into_inner);
         let baseline = round(origin.1);
         let mut drew = false;
         self.layout(face, px, text, |slot, font, index, pen| {
-            let key = (slot, index, px.to_bits());
-            let (metrics, coverage) = cache.get(key, || font.rasterize_indexed(index, px));
-            if metrics.width == 0 || metrics.height == 0 {
+            let left = origin.0 + pen;
+            if !within_reach(left) {
                 return;
             }
-            let height = i64::try_from(metrics.height).unwrap_or(i64::MAX);
-            blit(Glyph {
-                left: round(origin.0 + pen) + i64::from(metrics.xmin),
-                top: baseline - height - i64::from(metrics.ymin),
-                width: metrics.width,
-                coverage,
-            });
-            drew = true;
+            let key = (slot, index, px.to_bits());
+            cache.with(
+                key,
+                || font.rasterize_indexed(index, px),
+                |metrics, coverage| {
+                    if metrics.width == 0 || metrics.height == 0 {
+                        return;
+                    }
+                    let height = i64::try_from(metrics.height).unwrap_or(i64::MAX);
+                    blit(Glyph {
+                        left: round(left).saturating_add(i64::from(metrics.xmin)),
+                        top: baseline
+                            .saturating_sub(height)
+                            .saturating_sub(i64::from(metrics.ymin)),
+                        width: metrics.width,
+                        coverage,
+                    });
+                    drew = true;
+                },
+            );
         });
         drew
     }
@@ -236,25 +253,28 @@ impl TextMetrics for BundledText {
 }
 
 impl GlyphCache {
-    fn get(
+    fn with<R>(
         &mut self,
         key: GlyphKey,
         rasterize: impl FnOnce() -> (Metrics, Vec<u8>),
-    ) -> (Metrics, &[u8]) {
-        if !self.entries.contains_key(&key) {
-            let (metrics, coverage) = rasterize();
-            if self.bytes + coverage.len() > CACHE_BYTES {
-                self.entries.clear();
-                self.bytes = 0;
-            }
-            self.bytes += coverage.len();
-            self.entries
-                .insert(key, (metrics, coverage.into_boxed_slice()));
+        use_glyph: impl FnOnce(Metrics, &[u8]) -> R,
+    ) -> R {
+        if let Some((metrics, coverage)) = self.entries.get(&key) {
+            return use_glyph(*metrics, coverage);
         }
-        match self.entries.get(&key) {
-            Some((metrics, coverage)) => (*metrics, coverage),
-            None => (Metrics::default(), &[]),
+        let (metrics, coverage) = rasterize();
+        if coverage.len() > CACHE_BYTES {
+            return use_glyph(metrics, &coverage);
         }
+        if self.bytes + coverage.len() > CACHE_BYTES {
+            self.entries.clear();
+            self.bytes = 0;
+        }
+        self.bytes += coverage.len();
+        let result = use_glyph(metrics, &coverage);
+        self.entries
+            .insert(key, (metrics, coverage.into_boxed_slice()));
+        result
     }
 }
 
@@ -267,7 +287,11 @@ const fn chain(face: Face) -> &'static [usize] {
 }
 
 fn valid_size(px: f32) -> bool {
-    px.is_finite() && px > 0.0 && px <= 4096.0
+    px.is_finite() && px > 0.0 && px <= MAX_SIZE
+}
+
+fn within_reach(value: f32) -> bool {
+    value.is_finite() && value.abs() <= MAX_ORIGIN
 }
 
 fn invisible(character: char) -> bool {
@@ -292,4 +316,60 @@ fn round(value: f32) -> i64 {
     )]
     let rounded = value.round() as i64;
     rounded
+}
+
+#[cfg(test)]
+mod tests {
+    use fontdue::Metrics;
+
+    use super::{CACHE_BYTES, GlyphCache};
+
+    fn cache() -> GlyphCache {
+        GlyphCache {
+            bytes: 0,
+            entries: std::collections::BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn a_glyph_larger_than_the_cap_is_used_but_not_kept() {
+        let mut glyphs = cache();
+        let seen = glyphs.with(
+            (0, 1, 0),
+            || (Metrics::default(), vec![7; CACHE_BYTES + 1]),
+            |_, coverage| coverage.len(),
+        );
+        assert_eq!(seen, CACHE_BYTES + 1);
+        assert_eq!(glyphs.bytes, 0);
+        assert!(glyphs.entries.is_empty());
+    }
+
+    #[test]
+    fn the_cache_never_holds_more_than_the_cap() {
+        let mut glyphs = cache();
+        let size = CACHE_BYTES / 3 + 1;
+        for index in 0..7 {
+            glyphs.with(
+                (0, index, 0),
+                || (Metrics::default(), vec![1; size]),
+                |_, _| (),
+            );
+            let held: usize = glyphs.entries.values().map(|(_, bytes)| bytes.len()).sum();
+            assert_eq!(held, glyphs.bytes);
+            assert!(glyphs.bytes <= CACHE_BYTES, "{}", glyphs.bytes);
+        }
+        assert_eq!(glyphs.entries.len(), 1);
+    }
+
+    #[test]
+    fn a_cached_glyph_is_not_rasterized_again() {
+        let mut glyphs = cache();
+        glyphs.with((0, 1, 0), || (Metrics::default(), vec![9; 4]), |_, _| ());
+        let again = glyphs.with(
+            (0, 1, 0),
+            || (Metrics::default(), vec![0; 2]),
+            |_, coverage| coverage.to_vec(),
+        );
+        assert_eq!(again, vec![9; 4]);
+    }
 }

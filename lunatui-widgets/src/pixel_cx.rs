@@ -31,7 +31,7 @@ pub struct PixelCx<'a> {
     resolve: &'a dyn Fn(Color) -> Option<[u8; 3]>,
     metrics: &'a dyn TextMetrics,
     #[cfg(feature = "graphite-text")]
-    text: &'a crate::graphite::BundledText,
+    text: Option<&'a crate::graphite::BundledText>,
 }
 
 impl fmt::Debug for PixelCx<'_> {
@@ -194,10 +194,17 @@ impl PixelCx<'_> {
     }
 
     /// Draws `text` in `color` starting at `origin`, where `origin.0` is the left edge and
-    /// `origin.1` is the baseline, with the bundled fonts.
+    /// `origin.1` is the baseline, with the bundled fonts that [`measure`](Self::measure) and
+    /// [`fit`](Self::fit) measure with.
     ///
-    /// Returns `false` when `px` is not a positive size, the color has no RGB value, or the text
-    /// has nothing visible.
+    /// Returns `false`, drawing nothing, when:
+    /// - [`RenderCx::text_metrics`] supplied other metrics, so drawn widths would not match
+    ///   `measure` and `fit`;
+    /// - `px` is not finite, above 0 and at most 4096;
+    /// - either coordinate of `origin` is not finite or is more than 1,048,576 pixels from 0;
+    /// - the color has no RGB value, or the text has nothing visible.
+    ///
+    /// Glyphs, or parts of them, outside the surface are clipped.
     #[cfg(feature = "graphite-text")]
     pub fn text(
         &mut self,
@@ -210,17 +217,20 @@ impl PixelCx<'_> {
         let Some(rgb) = (self.resolve)(color) else {
             return false;
         };
+        let Some(fonts) = self.text else {
+            return false;
+        };
         let pixmap = &mut *self.pixmap;
-        self.text
-            .draw(face, px, origin, text, |glyph| blend(pixmap, &glyph, rgb))
+        fonts.draw(face, px, origin, text, |glyph| blend(pixmap, &glyph, rgb))
     }
 
     /// Ascent, descent and line gap of `face` at `px` in the bundled fonts, for placing a
-    /// baseline. Returns `None` when `px` is not a positive size.
+    /// baseline for [`text`](Self::text). Returns `None` when `text` would draw nothing because
+    /// other metrics were supplied, or when `px` is not finite, above 0 and at most 4096.
     #[cfg(feature = "graphite-text")]
     #[must_use]
     pub fn line_metrics(&self, face: Face, px: f32) -> Option<crate::graphite::LineMetrics> {
-        self.text.line_metrics(face, px)
+        self.text?.line_metrics(face, px)
     }
 
     fn paint(&self, color: Color) -> Option<Paint<'static>> {
@@ -237,12 +247,22 @@ fn blend(pixmap: &mut Pixmap, glyph: &crate::graphite::Glyph<'_>, [red, green, b
     let (width, height) = (i64::from(pixmap.width()), i64::from(pixmap.height()));
     let data = pixmap.data_mut();
     for (row, line) in glyph.coverage.chunks_exact(glyph.width).enumerate() {
-        let y = glyph.top + i64::try_from(row).unwrap_or(i64::MAX);
+        let Some(y) = i64::try_from(row)
+            .ok()
+            .and_then(|row| glyph.top.checked_add(row))
+        else {
+            continue;
+        };
         if !(0..height).contains(&y) {
             continue;
         }
         for (column, &coverage) in line.iter().enumerate() {
-            let x = glyph.left + i64::try_from(column).unwrap_or(i64::MAX);
+            let Some(x) = i64::try_from(column)
+                .ok()
+                .and_then(|column| glyph.left.checked_add(column))
+            else {
+                continue;
+            };
             if coverage == 0 || !(0..width).contains(&x) {
                 continue;
             }
@@ -383,7 +403,7 @@ pub(crate) fn paint(
         resolve: &resolve,
         metrics,
         #[cfg(feature = "graphite-text")]
-        text: cx.bundled_text(),
+        text: cx.drawing_text(),
     };
     draw(&mut surface);
     ImageSource::rgba8(

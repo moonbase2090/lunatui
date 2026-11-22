@@ -147,9 +147,10 @@ impl<'a> RenderCx<'a> {
     }
 
     /// Measures text for [`PixelCx::measure`](crate::PixelCx::measure) and
-    /// [`PixelCx::fit`](crate::PixelCx::fit). Without this, text is measured with the bundled
-    /// fonts that [`PixelCx::text`](crate::PixelCx::text) draws with, or, without the
-    /// `graphite-text` feature, in whole cells with
+    /// [`PixelCx::fit`](crate::PixelCx::fit), for text that something other than `PixelCx` draws,
+    /// such as host fonts. With these metrics set, `PixelCx::text` draws nothing, because its
+    /// glyphs would not match them. Without this, text is measured with the bundled fonts that
+    /// `PixelCx::text` draws with, or, without the `graphite-text` feature, in whole cells with
     /// [`CellTextMetrics`](crate::graphite::CellTextMetrics).
     #[cfg(feature = "pixel-cx")]
     #[must_use]
@@ -168,8 +169,8 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(feature = "graphite-text")]
-    pub(crate) fn bundled_text(&self) -> &'static crate::graphite::BundledText {
-        self.bundled_text
+    pub(crate) fn drawing_text(&self) -> Option<&'static crate::graphite::BundledText> {
+        self.text_metrics.is_none().then_some(self.bundled_text)
     }
 
     /// Paints pixels over `area` with `paint` and submits them as one image at `depth`.

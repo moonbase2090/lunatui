@@ -89,4 +89,4 @@ To verify the deployment scene keeps its cell output, run `python3 scripts/check
 
 | Example | Command | Shows |
 |---|---|---|
-| `graphite_fonts` | `cargo run --release -p lunatui --example graphite_fonts -- OUTPUT_DIR` | One sample screen (title, a menu, a service list with a name cut to fit, a paragraph, numbers and punctuation at four sizes, a code block, and fallback characters) drawn by `PixelCx` with the bundled fonts at 2x, once for each UI font: Inter, IBM Plex Sans and Noto Sans. It writes one PNG per UI font and a side-by-side sheet. |
+| `graphite_fonts` | `cargo run --release -p lunatui --example graphite_fonts -- OUTPUT_DIR` | A font specimen drawn by `PixelCx::text` with the bundled fonts at 2x over a `Block` background, once for each UI font (Inter, IBM Plex Sans and Noto Sans): a pangram in Regular and SemiBold, sizes from 16 to 40 pixels, digits and punctuation, a long name cut to the panel width by `PixelCx::fit`, `Face::Mono` lines, and characters that fall back to other fonts. It writes one PNG per UI font and a side-by-side sheet. |

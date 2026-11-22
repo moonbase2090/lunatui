@@ -6,6 +6,11 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+    # ttf-parser is unmaintained and is the font parser of the pinned glyph rasterizer. It
+    # parses only the fonts compiled into lunatui-fonts; no API loads other font files.
+    { id = "RUSTSEC-2026-0192", reason = "parses only the bundled, compiled-in fonts" },
+]
 
 [licenses]
 version = 2
