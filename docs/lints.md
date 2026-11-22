@@ -31,6 +31,9 @@ Changes to this file need MB2090 sign-off (`.github/CODEOWNERS`).
 | `benches/src/widget_suite.rs`, `picker_cell` | `clippy::cast_sign_loss` | The fraction is clamped at zero first, so the cast cannot wrap | ColorPicker |
 | `lunatui-widgets/src/color_picker.rs`, `round_index`, `round_degrees`, `percent`, `hsv_to_rgb` | `clippy::cast_possible_truncation` | Turn a rounded and clamped unit fraction into a cell index, degree, percent or color byte | ColorPicker |
 | `lunatui-widgets/src/color_picker.rs`, `round_index`, `round_degrees`, `percent`, `hsv_to_rgb` | `clippy::cast_sign_loss` | The value is clamped at zero before the cast, so it cannot wrap | ColorPicker |
+| `lunatui-widgets/src/graphite/text.rs`, `round` | `clippy::cast_possible_truncation` | Round a finite glyph position, far inside the `i64` range, to a whole pixel; the cast saturates | Graphite text |
+| `examples/graphite_fonts.rs`, `rect` | `clippy::cast_possible_truncation` | Turn a small layout length in pixels into a whole pixel | Graphite text |
+| `examples/graphite_fonts.rs`, `rect` | `clippy::cast_sign_loss` | The length is clamped at zero before the cast, so it cannot wrap | Graphite text |
 
 ## Checks
 

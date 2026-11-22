@@ -142,7 +142,7 @@ The compiled-in feature and the API ship on by default, as every lunatui feature
 ## Questions for the owner
 
 1. **Option A first, then B**, or wait for B only? A means lunatui carries a font.
-2. **Which font** for option A: a bundled open-licensed UI font, the platform font, or host fonts only (which limits A to the native host)? Answered: bundle five open-licensed families, with Inter as the default UI font plus IBM Plex Sans, Noto Sans, JetBrains Mono and Noto Emoji.
+2. **Which font** for option A: a bundled open-licensed UI font, the platform font, or host fonts only (which limits A to the native host)? Answered: bundle five open-licensed families, with Inter as the default UI font plus IBM Plex Sans, Noto Sans, JetBrains Mono and Noto Emoji. [Sample screens](media/graphite-fonts.png), drawn by `PixelCx` with each UI font (`cargo run --release -p lunatui --example graphite_fonts -- OUTPUT_DIR`).
 3. **Which backends count** for the first demo: the native host only, or also terminals with a pixel protocol?
 4. **Amend D11** as described above?
 5. **The frame ceiling for a full repaint**: is a tiled or faded mode change acceptable, or must a full repaint fit in one frame?
