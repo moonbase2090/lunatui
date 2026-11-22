@@ -320,7 +320,7 @@ fn an_agent_queries_real_controls_by_text_kind_and_layer() {
 }
 
 #[test]
-fn a_secret_value_reaches_neither_the_snapshot_nor_its_json() -> Test {
+fn a_secret_value_reaches_neither_snapshot_nor_query_json() -> Test {
     let harness = mount();
     let app = harness.component();
     let snapshot = Agent::snapshot(&app.hits, None);
@@ -330,6 +330,13 @@ fn a_secret_value_reaches_neither_the_snapshot_nor_its_json() -> Test {
     assert!(!json.contains("hunter2"));
     assert!(json.contains("\"name\":\"Token\",\"role\":\"text_input\",\"value\":null"));
     assert!(json.contains("\"name\":\"Plan\",\"role\":\"combo_box\",\"value\":\"Free\""));
+
+    let query = Agent::query(&app.hits, None, ControlQuery::text("Token"));
+    let mut query_json = Vec::new();
+    query.write_json(&mut query_json)?;
+    let query_json = String::from_utf8(query_json)?;
+    assert!(!query_json.contains("hunter2"));
+    assert!(query_json.contains("\"name\":\"Token\",\"role\":\"text_input\",\"value\":null"));
     Ok(())
 }
 
