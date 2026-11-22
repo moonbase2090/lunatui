@@ -29,6 +29,9 @@ pub struct RenderCx<'a> {
     image_sink: Option<&'a mut dyn ImageSink>,
     #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
     native: bool,
+    mode: lunatui_runtime::RenderMode,
+    #[cfg(feature = "pixel-cx")]
+    text_metrics: Option<&'a dyn crate::graphite::TextMetrics>,
 }
 
 #[cfg(feature = "image")]
@@ -73,7 +76,23 @@ impl<'a> RenderCx<'a> {
             image_sink: None,
             #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
             native: false,
+            mode: lunatui_runtime::RenderMode::Cell,
+            #[cfg(feature = "pixel-cx")]
+            text_metrics: None,
         }
+    }
+
+    /// Sets how this frame is drawn. The default is [`RenderMode::Cell`](lunatui_runtime::RenderMode::Cell).
+    #[must_use]
+    pub fn render_mode(mut self, mode: lunatui_runtime::RenderMode) -> Self {
+        self.mode = mode;
+        self
+    }
+
+    /// How this frame is drawn.
+    #[must_use]
+    pub fn mode(&self) -> lunatui_runtime::RenderMode {
+        self.mode
     }
 
     /// Attaches the current frame's named-control and pointer registry.
@@ -123,6 +142,64 @@ impl<'a> RenderCx<'a> {
         self
     }
 
+    /// Measures text for [`PixelCx`](crate::PixelCx). Without this, text is measured in whole
+    /// cells with [`CellTextMetrics`](crate::graphite::CellTextMetrics).
+    #[cfg(feature = "pixel-cx")]
+    #[must_use]
+    pub fn text_metrics(mut self, metrics: &'a dyn crate::graphite::TextMetrics) -> Self {
+        self.text_metrics = Some(metrics);
+        self
+    }
+
+    /// Paints pixels over `area` with `paint` and submits them as one image at `depth`.
+    ///
+    /// Pixels are painted only when all of these hold:
+    /// - this frame is in [`RenderMode::Graphite`](lunatui_runtime::RenderMode::Graphite);
+    /// - the image sink takes pixels;
+    /// - `area` is inside the grid, and its pixels are at most 4096 on a side and 1,048,576 in
+    ///   total.
+    ///
+    /// The surface starts as each cell's background. A negative `depth` draws under the cells'
+    /// text and needs a sink that keeps text above images. Otherwise every cell in `area` must
+    /// be blank.
+    ///
+    /// Returns `false`, having drawn nothing and changed no cell, when any condition fails. The
+    /// widget then draws its cell form.
+    #[cfg(feature = "pixel-cx")]
+    pub fn paint_pixels(
+        &mut self,
+        area: Rect,
+        depth: i32,
+        paint: impl FnOnce(&mut crate::PixelCx<'_>),
+    ) -> bool {
+        if self.mode != lunatui_runtime::RenderMode::Graphite
+            || area.width == 0
+            || area.height == 0
+            || !self.pixel_area_in_grid(area)
+        {
+            return false;
+        }
+        let Some(target) = self.pixel_target(area) else {
+            return false;
+        };
+        let underlay = depth < 0;
+        if underlay && !target.text_underlay() {
+            return false;
+        }
+        let fallback = crate::graphite::CellTextMetrics::new(
+            match crate::pixel_cx::cell_size(area, target.size()) {
+                Some(cell) => cell,
+                None => return false,
+            },
+        );
+        let metrics = self.text_metrics.unwrap_or(&fallback);
+        let Some(source) = crate::pixel_cx::paint(self, area, target, underlay, metrics, paint)
+        else {
+            return false;
+        };
+        self.submit_raster(&source, area, depth)
+    }
+
     #[cfg(feature = "image")]
     pub(crate) fn submit_image(&mut self, request: ImageRequest<'_>) -> bool {
         self.image_sink
@@ -131,6 +208,7 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(
+        feature = "pixel-cx",
         feature = "pixel-pie-chart",
         feature = "pixel-chart",
         feature = "pixel-canvas",
@@ -152,6 +230,7 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(
+        feature = "pixel-cx",
         feature = "pixel-pie-chart",
         feature = "pixel-chart",
         feature = "pixel-canvas",
@@ -170,6 +249,7 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(
+        feature = "pixel-cx",
         feature = "pixel-pie-chart",
         feature = "pixel-chart",
         feature = "pixel-canvas",
@@ -202,6 +282,7 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(
+        feature = "pixel-cx",
         feature = "pixel-pie-chart",
         feature = "pixel-chart",
         feature = "pixel-canvas",
@@ -227,6 +308,7 @@ impl<'a> RenderCx<'a> {
     }
 
     #[cfg(any(
+        feature = "pixel-cx",
         feature = "pixel-pie-chart",
         feature = "pixel-barchart",
         feature = "pixel-sparkline",
@@ -472,6 +554,9 @@ impl<'a> RenderCx<'a> {
             image_sink: None,
             #[cfg(any(feature = "native-alpha", feature = "native-subcell"))]
             native: self.native,
+            mode: self.mode,
+            #[cfg(feature = "pixel-cx")]
+            text_metrics: self.text_metrics,
         };
         draw(&mut cx);
         hits

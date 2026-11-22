@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = ["input", "widget-list", "layout-debug", "native-alpha", "native-subcell", "pixel-node-graph", "pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge", "pixel-progress"]
+default = ["input", "widget-list", "layout-debug", "native-alpha", "native-subcell", "pixel-cx", "pixel-node-graph", "pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge", "pixel-progress"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 input = ["dep:lunatui-term"]
@@ -68,6 +68,7 @@ dialog = ["popup"]
 command-palette = ["popup", "search-box"]
 bigtext = ["widget-state", "lunatui-core/subcell"]
 image = ["color-profiles", "dep:lunatui-image", "widget-state"]
+pixel-cx = ["image"]
 image-decode = ["image", "lunatui-image/decode"]
 key-hints = ["lunatui-runtime/keymap"]
 popup = ["widget-state"]
@@ -80,7 +81,7 @@ native-subcell = ["lunatui-core/native-attrs"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
 text-area = ["widget-state", "lunatui-theme/graphite-extensions", "lunatui-runtime/keymap", "dep:lunatui-term"]
 symbol-font-fallback = ["graphite-render"]
-all-widgets = ["widget-list", "layout-debug", "native-alpha", "native-subcell", "node-graph", "pixel-node-graph", "file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback", "split-keys", "split-persist"]
+all-widgets = ["widget-list", "layout-debug", "native-alpha", "native-subcell", "pixel-cx", "node-graph", "pixel-node-graph", "file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback", "split-keys", "split-persist"]
 
 [dependencies]
 vt100 = { version = "=0.16.2", optional = true }
@@ -467,3 +468,7 @@ required-features = ["terminal"]
 name = "native_mode"
 path = "tests/native_mode.rs"
 required-features = ["native-alpha", "native-subcell"]
+
+[[test]]
+name = "pixel_cx"
+required-features = ["pixel-cx"]

@@ -10,6 +10,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Added
 
+- `RenderCx::paint_pixels` and `PixelCx` (feature `pixel-cx`, on by default) let a widget paint pixels over a cell area in Graphite mode. The primitives are rounded fill and stroke rectangles, lines, filled areas, and text measured and cut with an ellipsis by pixel width. `RenderCx::render_mode` sets the mode and defaults to Cell, and `RenderCx::text_metrics` supplies text metrics. Painting happens only in Graphite mode with a sink that takes pixels and an area within the pixel limits. Otherwise nothing is drawn and the cells are unchanged. No backend reports Graphite yet, so output does not change.
 - The benchmark suite has Graphite pixel cases (`graphite-changed-1x/2x` and `graphite-full-1x/2x`). Each frame rasterizes an activity-monitor-shaped scene with `graphite-core`'s CPU pixel buffer and encodes it as a terminal image through `PixelLayer`. The changed cases redraw and send only the seat rows; the full cases repaint the window. All four are gated on instruction counts against `main`. The frame-ceiling bench gates the changed cases on the 16 ms ceiling at 1x and 2x, and reports the full repaints. Measurement only; no product code changes.
 - `Agent::query` finds controls by case-insensitive accessible-name text, semantic kind, exact
   layer, or combined filters. Results preserve registration order, stop at 100 controls and
