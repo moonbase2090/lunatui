@@ -64,7 +64,7 @@ Two ways to get pixels onto the screen, with different costs:
 
 ## API sketch
 
-The mode, policy and capability types below are implemented in `lunatui-runtime` (`RenderMode`, `ModePolicy`, `GraphiteCaps`, `Capabilities`, `RunOptions::mode` and `RenderFrame::mode`), with no behavior change: no backend reports Graphite yet, so every frame is Cell. `PixelCx` and `RenderCx::paint_pixels` are implemented in `lunatui-widgets` (feature `pixel-cx`, on by default) and paint only in Graphite mode. Glyph rasterization waits for the bundled font.
+The mode, policy and capability types below are implemented in `lunatui-runtime` (`RenderMode`, `ModePolicy`, `GraphiteCaps`, `Capabilities`, `RunOptions::mode` and `RenderFrame::mode`), with no behavior change: no backend reports Graphite yet, so every frame is Cell. `PixelCx` and `RenderCx::paint_pixels` are implemented in `lunatui-widgets` (feature `pixel-cx`, on by default) and paint only in Graphite mode. `PixelCx::text` draws glyphs with the fonts bundled in `lunatui-fonts` (feature `graphite-text`, on by default).
 
 ```rust,ignore
 pub enum RenderMode { Cell, Graphite }
@@ -93,8 +93,8 @@ impl RenderCx<'_> {
 
 - The mode travels in `RenderCx`, not in a second `Widget` method. Applications render their own widget trees by calling `render` on children, so nothing could call a separate `render_graphite`. A widget calls `paint_pixels` from `render`. Every existing widget keeps working in Graphite mode unchanged, drawn in cells. Widgets adopt pixels one at a time.
 - `paint_pixels` paints only when the frame is in Graphite mode, the image sink takes pixels and the area is within the pixel limits. Otherwise it returns `false` having drawn nothing and changed no cell, and the widget draws its Cell form.
-- `PixelCx` offers the primitives: filled and stroked rounded rectangles, lines and areas, with text measured and fitted by a `TextMetrics`. Bars, images and glyph runs come next. A Graphite widget also writes its Cell approximation into the cells underneath, as the alpha work does, so a frame that has to fall back loses detail and not layout.
-- Text is measured with the same `TextMetrics` trait that exists now. Cell mode uses `CellTextMetrics`; Graphite uses host metrics, or a bundled font under option A. A label that does not fit is cut by pixel width with an ellipsis, not by column count.
+- `PixelCx` offers the primitives: filled and stroked rounded rectangles, lines and areas, with text measured and fitted by a `TextMetrics` and drawn by `PixelCx::text`. Bars and images come next. A Graphite widget also writes its Cell approximation into the cells underneath, as the alpha work does, so a frame that has to fall back loses detail and not layout.
+- Text is measured with the same `TextMetrics` trait that exists now. Cell mode uses `CellTextMetrics`. Graphite measures with the same bundled fonts `PixelCx::text` draws with (Inter for UI text, JetBrains Mono for `Face::Mono`, then Noto Sans, JetBrains Mono and Noto Emoji as fallbacks), unless the application supplies other metrics such as host fonts. A label that does not fit is cut by pixel width with an ellipsis, not by column count.
 - Named controls, the agent API and the accessibility export are mode-independent. They read the registry, not the pixels.
 - Hit testing stays on the cell hit map. Pointer events that carry pixel coordinates refine it with a pixel offset inside the hit cell, for controls that need it (sliders, resize handles).
 
@@ -142,7 +142,7 @@ The compiled-in feature and the API ship on by default, as every lunatui feature
 ## Questions for the owner
 
 1. **Option A first, then B**, or wait for B only? A means lunatui carries a font.
-2. **Which font** for option A: a bundled open-licensed UI font, the platform font, or host fonts only (which limits A to the native host)?
+2. **Which font** for option A: a bundled open-licensed UI font, the platform font, or host fonts only (which limits A to the native host)? Answered: bundle five open-licensed families, with Inter as the default UI font plus IBM Plex Sans, Noto Sans, JetBrains Mono and Noto Emoji.
 3. **Which backends count** for the first demo: the native host only, or also terminals with a pixel protocol?
 4. **Amend D11** as described above?
 5. **The frame ceiling for a full repaint**: is a tiled or faded mode change acceptable, or must a full repaint fit in one frame?

@@ -296,6 +296,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "core_maths"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77745e017f5edba1a9c1d854f6f3a52dac8a12dd5af5d2f54aecf61e43d80d30"
+dependencies = [
+ "libm",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -669,6 +678,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
+name = "fontdue"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e796cb6894e6418daacea84b28dd4f98d3b32c74d5bb452ba1ecfbf5ad8e84ca"
+dependencies = [
+ "ttf-parser",
+]
+
+[[package]]
 name = "futures-core"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1018,6 +1036,7 @@ dependencies = [
 name = "lunatui"
 version = "0.1.36"
 dependencies = [
+ "image",
  "libc",
  "lunatui-bench",
  "lunatui-core",
@@ -1177,6 +1196,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "lunatui-fonts"
+version = "0.1.36"
+
+[[package]]
 name = "lunatui-image"
 version = "0.1.36"
 dependencies = [
@@ -1298,7 +1321,9 @@ dependencies = [
 name = "lunatui-widgets"
 version = "0.1.36"
 dependencies = [
+ "fontdue",
  "lunatui-core",
+ "lunatui-fonts",
  "lunatui-image",
  "lunatui-layout",
  "lunatui-runtime",
@@ -2497,6 +2522,15 @@ name = "toml_write"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
+
+[[package]]
+name = "ttf-parser"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
+dependencies = [
+ "core_maths",
+]
 
 [[package]]
 name = "tui-checkbox"

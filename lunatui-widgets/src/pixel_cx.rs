@@ -30,6 +30,8 @@ pub struct PixelCx<'a> {
     cell_size: CellSize,
     resolve: &'a dyn Fn(Color) -> Option<[u8; 3]>,
     metrics: &'a dyn TextMetrics,
+    #[cfg(feature = "graphite-text")]
+    text: &'a crate::graphite::BundledText,
 }
 
 impl fmt::Debug for PixelCx<'_> {
@@ -191,12 +193,71 @@ impl PixelCx<'_> {
         Cow::Owned([&text[..end], ELLIPSIS].concat())
     }
 
+    /// Draws `text` in `color` starting at `origin`, where `origin.0` is the left edge and
+    /// `origin.1` is the baseline, with the bundled fonts.
+    ///
+    /// Returns `false` when `px` is not a positive size, the color has no RGB value, or the text
+    /// has nothing visible.
+    #[cfg(feature = "graphite-text")]
+    pub fn text(
+        &mut self,
+        face: Face,
+        px: f32,
+        origin: (f32, f32),
+        text: &str,
+        color: Color,
+    ) -> bool {
+        let Some(rgb) = (self.resolve)(color) else {
+            return false;
+        };
+        let pixmap = &mut *self.pixmap;
+        self.text
+            .draw(face, px, origin, text, |glyph| blend(pixmap, &glyph, rgb))
+    }
+
+    /// Ascent, descent and line gap of `face` at `px` in the bundled fonts, for placing a
+    /// baseline. Returns `None` when `px` is not a positive size.
+    #[cfg(feature = "graphite-text")]
+    #[must_use]
+    pub fn line_metrics(&self, face: Face, px: f32) -> Option<crate::graphite::LineMetrics> {
+        self.text.line_metrics(face, px)
+    }
+
     fn paint(&self, color: Color) -> Option<Paint<'static>> {
         let [r, g, b] = (self.resolve)(color)?;
         let mut paint = Paint::default();
         paint.set_color_rgba8(r, g, b, 255);
         paint.anti_alias = true;
         Some(paint)
+    }
+}
+
+#[cfg(feature = "graphite-text")]
+fn blend(pixmap: &mut Pixmap, glyph: &crate::graphite::Glyph<'_>, [red, green, blue]: [u8; 3]) {
+    let (width, height) = (i64::from(pixmap.width()), i64::from(pixmap.height()));
+    let data = pixmap.data_mut();
+    for (row, line) in glyph.coverage.chunks_exact(glyph.width).enumerate() {
+        let y = glyph.top + i64::try_from(row).unwrap_or(i64::MAX);
+        if !(0..height).contains(&y) {
+            continue;
+        }
+        for (column, &coverage) in line.iter().enumerate() {
+            let x = glyph.left + i64::try_from(column).unwrap_or(i64::MAX);
+            if coverage == 0 || !(0..width).contains(&x) {
+                continue;
+            }
+            let Ok(start) = usize::try_from((y * width + x) * 4) else {
+                continue;
+            };
+            let Some(pixel) = data.get_mut(start..start + 4) else {
+                continue;
+            };
+            let (alpha, rest) = (u16::from(coverage), 255 - u16::from(coverage));
+            for (channel, source) in pixel.iter_mut().zip([red, green, blue]) {
+                let mixed = (u16::from(source) * alpha + u16::from(*channel) * rest + 127) / 255;
+                *channel = u8::try_from(mixed).unwrap_or(u8::MAX);
+            }
+        }
     }
 }
 
@@ -321,6 +382,8 @@ pub(crate) fn paint(
         cell_size: cell,
         resolve: &resolve,
         metrics,
+        #[cfg(feature = "graphite-text")]
+        text: cx.bundled_text(),
     };
     draw(&mut surface);
     ImageSource::rgba8(

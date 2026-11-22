@@ -12,7 +12,7 @@ version = 2
 # Widen deliberately as dependencies arrive. MIT, Apache-2.0 and Unicode-3.0
 # arrived with criterion and gungraun (PR 02), Zlib with ratatui (foldhash).
 # BSD-3-Clause covers tiny-skia; BSD-2-Clause covers its arrayref dependency.
-# OFL-1.1 covers the bitmap face shipped in lunatui-widgets.
+# OFL-1.1 covers the bitmap face shipped in lunatui-widgets and the fonts in lunatui-fonts.
 allow = ["MIT", "MIT", "Apache-2.0", "Unicode-3.0", "Zlib", "OFL-1.1", "BSD-3-Clause", "BSD-2-Clause"]
 confidence-threshold = 0.9
 
@@ -37,6 +37,7 @@ allow = [
     "lunatui-data-table",
     "lunatui-dialog",
     "lunatui-field",
+    "lunatui-fonts",
     "lunatui-image",
     "lunatui-layout",
     "lunatui-prismattyc",
@@ -80,6 +81,7 @@ allow = [
     "compact_str",
     "color_quant",
     "convert_case",
+    "core_maths",
     "criterion",
     "criterion-plot",
     "critical-section",
@@ -106,6 +108,7 @@ allow = [
     "find-msvc-tools",
     "flate2",
     "foldhash",
+    "fontdue",
     "getrandom",
     "gif",
     "graphite-core",
@@ -208,6 +211,7 @@ allow = [
     "tinytemplate",
     "tiny-skia",
     "tiny-skia-path",
+    "ttf-parser",
     "tui-checkbox",
     "tui-menu",
     "tui-nodes",

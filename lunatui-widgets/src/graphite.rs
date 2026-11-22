@@ -11,6 +11,12 @@ use lunatui_core::Rect as CellRect;
 mod fonts;
 #[cfg(feature = "symbol-font-fallback")]
 pub use fonts::{FontRun, HostFontMetrics, HostTextMetrics};
+#[cfg(feature = "graphite-text")]
+mod text;
+#[cfg(feature = "graphite-text")]
+pub(crate) use text::Glyph;
+#[cfg(feature = "graphite-text")]
+pub use text::{BundledText, LineMetrics, UiFont};
 
 /// Terminal cell dimensions in pixels.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
