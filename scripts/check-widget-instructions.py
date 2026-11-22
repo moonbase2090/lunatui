@@ -105,7 +105,8 @@ def baseline_tree(commit, out):
 
 def build_worker(tree, out, name, env):
     result = subprocess.run([
-        "cargo", "build", "--profile", "bench", "--locked", "-p", "lunatui-bench", "--features", "text-area",
+        "cargo", "build", "--profile", "bench", "--locked", "-p", "lunatui-bench",
+        "--features", "text-area,graphite-pixels",
         "--example", "widget_instruction_worker", "--message-format=json",
         "--target-dir", str(TARGET),
     ], cwd=tree, capture_output=True, text=True, env=env)
