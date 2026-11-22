@@ -402,7 +402,7 @@ impl GraphiteRun {
         self.sink.stats()
     }
 
-    /// Rasterizes the next tick, encodes what changed for Kitty and writes it to the
+    /// Rasterizes the next tick, encodes what changed as terminal images and writes it to the
     /// counting sink.
     ///
     /// # Errors

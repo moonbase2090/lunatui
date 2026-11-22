@@ -6,7 +6,6 @@ The widget suite reports wall-clock timings at 80×24 and 200×60. Those timings
 
 ```sh
 python3 scripts/test-widget-instructions.py
-cargo test --locked -p lunatui-bench --features graphite-pixels --test graphite_cases
 cargo test --locked -p lunatui-bench --test widget_suite_gate
 cargo test --locked -p lunatui-bench --test widget_suite_parity
 cargo test --locked -p xtask
@@ -15,7 +14,9 @@ python3 scripts/check-widget-instructions.py
 
 The instruction checker fetches `main` into a unique temporary ref and freezes its SHA. `--base REVISION` selects an already available revision instead, including for an offline run. It builds each revision's native worker with the same release profile, features and toolchain, then measures every gated case at both sizes. A new case with no baseline reports `new case`; its allocation and parity checks still apply, and it enters instruction regression checking after it reaches `main`.
 
-Each worker warms 200 frames outside collection and runs 32 complete frames inside `instruction_frames`. The Graphite pixel cases (`graphite-*`, built with the `graphite-pixels` feature) warm 2 frames and collect 8, inside `graphite_instruction_frames`. They have no Ratatui counterpart and are always gated. [Callgrind's collection toggle](https://snapshots.sourceware.org/valgrind/trunk/2026-01-11_19-41_1768160461/html/cl-manual.html#cl-manual.options) counts the named function and its callees. Constructors, warm-up, report formatting and process startup are excluded. The worker verifies its completed batch and propagates frame-write errors. The parser requires a positive `Ir` count. Missing tools, failed workers, an unmatched collection symbol or malformed output fail the check.
+Each worker warms 200 frames outside collection and runs 32 complete frames inside `instruction_frames`. [Callgrind's collection toggle](https://snapshots.sourceware.org/valgrind/trunk/2026-01-11_19-41_1768160461/html/cl-manual.html#cl-manual.options) counts the named function and its callees. Constructors, warm-up, report formatting and process startup are excluded. The worker verifies its completed batch and propagates frame-write errors. The parser requires a positive `Ir` count. Missing tools, failed workers, an unmatched collection symbol or malformed output fail the check.
+
+The Graphite pixel cases (`graphite-*`) are built with the bench crate's `graphite-pixels` feature. They have no Ratatui counterpart and are always gated. Each worker warms 2 of their frames and collects 8, inside `graphite_instruction_frames`, because those frames are large and deterministic. The bench crate's `graphite_cases` test, run with the same feature, checks three things: that the changed-rectangle frames show what a full repaint shows, that they send only that rectangle, and that a full frame sends the whole window.
 
 A baseline that predates the worker target receives the same worker driver in an isolated worktree. Its production crates and scene implementations remain those of the baseline revision. The temporary worktree and ref are removed after measurement. Raw Callgrind files, build logs, elapsed profiling times and a commit-stamped `summary.json` stay under `target/widget-instructions/`. Only instruction counts decide the 3% regression threshold; comparisons use exact integer arithmetic.
 

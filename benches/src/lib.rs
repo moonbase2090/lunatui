@@ -14,7 +14,7 @@ pub mod calibration;
 pub mod ceiling;
 /// Fair lunatui vs stock ratatui dashboard end-to-end helpers.
 pub mod dashboard_fair;
-/// Graphite pixel frames (`graphite-core` raster, Kitty `PixelLayer` encode) for the
+/// Graphite pixel frames (`graphite-core` raster, `PixelLayer` image encode) for the
 /// instruction gate and the frame ceiling.
 #[cfg(feature = "graphite-pixels")]
 pub mod graphite_cases;
