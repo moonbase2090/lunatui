@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.37] - 2026-11-22
+
 ### Added
 
 - `RenderCx::paint_pixels` and `PixelCx` (feature `pixel-cx`, on by default) let a widget paint pixels over a cell area in Graphite mode. The primitives are rounded fill and stroke rectangles, lines, filled areas, and text measured and cut with an ellipsis by pixel width. `RenderCx::render_mode` sets the mode and defaults to Cell, and `RenderCx::text_metrics` supplies text metrics. Painting happens only in Graphite mode with a sink that takes pixels and an area within the pixel limits. Otherwise nothing is drawn and the cells are unchanged. No backend reports Graphite yet, so output does not change.
