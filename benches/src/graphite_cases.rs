@@ -128,13 +128,14 @@ pub const GRAPHITE_CASES: [GraphiteCase; 12] = [
 impl GraphiteCase {
     /// Whether the frame ceiling fails the run when this case goes over it.
     ///
-    /// Changed frames of the raster scene and of the monitor are gated. Full repaints are
-    /// reported, since the design lets them spread over several frames. The dense worst case is
-    /// reported until it fits the ceiling.
+    /// Changed frames are gated, including the dense worst case at 1x. Full repaints are
+    /// reported, since the design lets them spread over several frames. The dense worst case at
+    /// 2x is reported: it sends about 24 MB of base64 a frame, which does not fit the ceiling on
+    /// the CI runner.
     #[must_use]
     pub const fn ceiling_gated(&self) -> bool {
         matches!(self.repaint, Repaint::Changed)
-            && !matches!(self.scene, Scene::Widgets(Density::Dense))
+            && !(matches!(self.scene, Scene::Widgets(Density::Dense)) && self.scale == 2)
     }
 }
 

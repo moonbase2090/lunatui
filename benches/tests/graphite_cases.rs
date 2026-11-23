@@ -220,7 +220,7 @@ fn every_scene_and_repaint_is_registered_at_both_scales() {
 }
 
 #[test]
-fn the_ceiling_gates_changed_frames_except_the_dense_worst_case() {
+fn the_ceiling_gates_changed_frames_except_the_dense_worst_case_at_2x() {
     let gated: Vec<_> = GRAPHITE_CASES
         .iter()
         .filter(|case| case.ceiling_gated())
@@ -233,6 +233,7 @@ fn the_ceiling_gates_changed_frames_except_the_dense_worst_case() {
             "graphite-changed-2x",
             "graphite-monitor-changed-1x",
             "graphite-monitor-changed-2x",
+            "graphite-dense-changed-1x",
         ]
     );
 }
