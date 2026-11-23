@@ -11,6 +11,9 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 - `TextArea` is available behind the off-by-default `text-area` feature. It owns a UTF-8 document, grapheme cursor, directed selection, bounded undo/redo, search, and Emacs/Vim input handling. Loaded and typed tabs remain literal tabs in the document and render to the next four-column stop. Cursor movement, scrolling and selection use those same expanded columns. Enable it with `lunatui-widgets = { version = "0.1.38", features = ["text-area"] }`.
 - [`Size`](https://github.com/moonbase2090/lunatui/blob/main/lunatui-core/src/size.rs) lives in `lunatui-core` and is re-exported here.
 - The default `graphite-text` feature draws and measures `PixelCx` text with the fonts bundled in `lunatui-fonts`; see `graphite::BundledText`. It adds about 5 MB to a binary that draws text. To build without the fonts, depend on `lunatui-widgets` with `default-features = false` and list the features you use without `graphite-text`; the component crates do not turn it back on.
+- In Graphite mode, `Sparkline` draws a lane of rounded bars on a hairline, and `List` draws proportional rows with a rounded selection and a focus bar. When the frame cannot show pixels both draw exactly their Cell mode cells. The `activity_monitor` example uses them:
+
+  ![An activity monitor in Graphite mode, real output of the `activity_monitor` example](../docs/media/graphite-activity-monitor.gif)
 - The default-off `symbol-font-fallback` feature adds host-owned font selection and pixel measurement to the `graphite` bridge. It also enables `graphite-render` and is included in `all-widgets`. See [host-provided symbol fonts](../docs/symbol-font-fallback.md).
 
 ## Widgets (v0.1.0)

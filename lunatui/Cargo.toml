@@ -24,6 +24,7 @@ text-area = ["lunatui-widgets/text-area", "lunatui-bench/text-area"]
 lunatui-runtime = { version = "0.1.38", path = "../lunatui-runtime", optional = true }
 
 [dev-dependencies]
+lunatui-badge = { path = "../lunatui-badge" }
 lunatui-field = { version = "0.1.38", path = "../lunatui-field" }
 lunatui-bench = { path = "../benches" }
 lunatui-core = { path = "../lunatui-core" }
@@ -44,6 +45,8 @@ libc = "0.2.190"
 tui-popup = "=0.7.7"
 tui-scrollview = "=0.6.8"
 image = { version = "=0.25.10", default-features = false, features = ["png"] }
+lunatui-ui-tokens = { path = "../lunatui-ui-tokens" }
+serde_json = "1.0.149"
 
 # Examples live in the top-level `examples/` directory (PRD M13) and are
 # listed here so each one runs with `cargo run --example <name>`.
@@ -302,4 +305,9 @@ required-features = ["app"]
 [[example]]
 name = "graphite_fonts"
 path = "../examples/graphite_fonts.rs"
+test = true
+
+[[example]]
+name = "activity_monitor"
+path = "../examples/activity_monitor.rs"
 test = true

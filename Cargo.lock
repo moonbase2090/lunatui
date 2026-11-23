@@ -1038,6 +1038,7 @@ version = "0.1.38"
 dependencies = [
  "image",
  "libc",
+ "lunatui-badge",
  "lunatui-bench",
  "lunatui-core",
  "lunatui-field",
@@ -1050,8 +1051,10 @@ dependencies = [
  "lunatui-test",
  "lunatui-text",
  "lunatui-theme",
+ "lunatui-ui-tokens",
  "lunatui-widgets",
  "ratatui",
+ "serde_json",
  "time",
  "tui-menu",
  "tui-popup",

@@ -480,3 +480,7 @@ required-features = ["native-alpha", "native-subcell"]
 [[test]]
 name = "pixel_cx"
 required-features = ["pixel-cx"]
+
+[[test]]
+name = "graphite_widgets"
+required-features = ["graphite-text", "sparkline"]

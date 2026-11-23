@@ -7,6 +7,8 @@ use lunatui_theme::Token;
 use crate::render_cx::patch_style;
 use crate::{Block, RenderCx, Widget, WidgetState};
 
+#[cfg(feature = "pixel-cx")]
+mod graphite;
 #[cfg(feature = "pixel-sparkline")]
 mod pixel;
 
@@ -318,7 +320,8 @@ impl<'a, T> Sparkline<'a, T> {
 
     /// Enables native antialiased fills with a measured image presenter.
     /// Unsupported glyphs, styles, metrics or declined rasters retain cells.
-    /// Enabled by default; `false` selects the original cell renderer.
+    /// In Graphite mode the bars are drawn as a Graphite lane instead.
+    /// Enabled by default; `false` selects the original cell renderer in every mode.
     #[must_use]
     pub const fn pixels(mut self, enabled: bool) -> Self {
         self.pixels = enabled;
@@ -362,6 +365,10 @@ impl<T: SparklineValue> Sparkline<'_, T> {
             return;
         }
         let limit = usize::from(area.width).min(self.data.len());
+        #[cfg(feature = "pixel-cx")]
+        if self.pixels && graphite::paint(self, area, limit, cx) {
+            return;
+        }
         #[cfg(feature = "pixel-sparkline")]
         let mut recording = if self.pixels {
             pixel::Recording::new(area, limit, self.direction, cx)

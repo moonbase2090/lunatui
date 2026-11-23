@@ -85,8 +85,9 @@ Benchmarks are separate: `cargo xtask bench` prints allocation and write metrics
 
 To verify the deployment scene keeps its cell output, run `python3 scripts/check-gauge-cells.py --base <commit-before-change> --head <commit-to-check>`. The script builds isolated checkouts and compares four complete 240-frame streams across two terminal sizes, dark and light themes, and truecolor and ANSI16 profiles.
 
-## Graphite mode fonts
+## Graphite mode
 
 | Example | Command | Shows |
 |---|---|---|
 | `graphite_fonts` | `cargo run --release -p lunatui --example graphite_fonts -- OUTPUT_DIR` | A font specimen drawn by `PixelCx::text` with the bundled fonts at 2x over a `Block` background, once for each UI font (Inter, IBM Plex Sans and Noto Sans): a pangram in Regular and SemiBold, sizes from 16 to 40 pixels, digits and punctuation, a long name cut to the panel width by `PixelCx::fit`, `Face::Mono` lines, and characters that fall back to other fonts. It writes one PNG per UI font and a side-by-side sheet. |
+| `activity_monitor` | `cargo run --release -p lunatui --example activity_monitor -- OUTPUT_DIR` | An activity monitor drawn with `Badge`, `Kbd`, `List` and `Sparkline`, ten frames in Cell mode and in Graphite mode. It writes `cells.cast` and `graphite-00.png` to `graphite-09.png`, the images the widgets painted composited over the cell backgrounds as a host would, and stops with an error if any cell text is left outside an image. `scripts/record-graphite.py monitor` renders the cast with the pinned agg and writes the GIF and the Cell beside Graphite still in `docs/media`. |
