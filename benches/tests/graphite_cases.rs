@@ -5,9 +5,10 @@
 
 use graphite_core::PixelBuffer;
 use lunatui_bench::graphite_cases::{
-    CELL_HEIGHT, CELL_WIDTH, GRAPHITE_CASES, GraphiteRun, Repaint, changed_cells, graphite_case,
-    render_changed, render_full,
+    CELL_HEIGHT, CELL_WIDTH, GRAPHITE_CASES, GraphiteRun, Repaint, Scene, changed_cells,
+    graphite_case, render_changed, render_full,
 };
+use lunatui_bench::graphite_monitor::Density;
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -192,18 +193,46 @@ fn a_changed_frame_sends_only_the_rectangle_and_a_full_frame_sends_the_window() 
 }
 
 #[test]
-fn every_repaint_is_registered_at_both_scales() {
-    for repaint in [Repaint::Changed, Repaint::Full] {
-        for scale in [1, 2] {
-            let matching = GRAPHITE_CASES
-                .iter()
-                .filter(|case| case.repaint == repaint && case.scale == scale)
-                .count();
-            assert_eq!(matching, 1, "{repaint:?} at {scale}x");
+fn every_scene_and_repaint_is_registered_at_both_scales() {
+    let scenes = [
+        Scene::Raster,
+        Scene::Widgets(Density::Monitor),
+        Scene::Widgets(Density::Dense),
+    ];
+    for scene in scenes {
+        for repaint in [Repaint::Changed, Repaint::Full] {
+            for scale in [1, 2] {
+                let matching = GRAPHITE_CASES
+                    .iter()
+                    .filter(|case| {
+                        case.scene == scene && case.repaint == repaint && case.scale == scale
+                    })
+                    .count();
+                assert_eq!(matching, 1, "{scene:?} {repaint:?} at {scale}x");
+            }
         }
     }
+    assert_eq!(GRAPHITE_CASES.len(), scenes.len() * 4);
     let mut names: Vec<_> = GRAPHITE_CASES.iter().map(|case| case.name).collect();
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), GRAPHITE_CASES.len());
+}
+
+#[test]
+fn the_ceiling_gates_changed_frames_except_the_dense_worst_case() {
+    let gated: Vec<_> = GRAPHITE_CASES
+        .iter()
+        .filter(|case| case.ceiling_gated())
+        .map(|case| case.name)
+        .collect();
+    assert_eq!(
+        gated,
+        [
+            "graphite-changed-1x",
+            "graphite-changed-2x",
+            "graphite-monitor-changed-1x",
+            "graphite-monitor-changed-2x",
+        ]
+    );
 }
