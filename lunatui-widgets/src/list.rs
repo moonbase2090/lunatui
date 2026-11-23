@@ -4,6 +4,9 @@
 use lunatui_core::{Rect, Size, Style, clip_display_prefix, width};
 use lunatui_text::source::{RowBuilder, RowSource};
 
+#[cfg(feature = "graphite-text")]
+mod graphite;
+
 use crate::named_control::Item;
 use crate::render_cx::patch_style;
 use crate::{ItemControls, RenderCx, Widget};
@@ -168,9 +171,12 @@ impl<S: RowSource> Widget for List<S> {
                 cx.put_str(area.x, line, draw, decoration(style, symbol_style));
             }
             let mut x = area.x + gutter;
-            if let Some((icon, icon_style)) = self.icons.get(index) {
+            let icon = self.icons.get(index).map(|(icon, icon_style)| {
                 let draw = clip_display_prefix(icon, end.saturating_sub(x));
-                cx.put_str(x, line, draw, decoration(style, *icon_style));
+                (x, draw, decoration(style, *icon_style))
+            });
+            if let Some((at, draw, icon_style)) = icon {
+                cx.put_str(at, line, draw, icon_style);
                 x = x
                     .saturating_add(cell_width(draw))
                     .saturating_add(1)
@@ -191,6 +197,29 @@ impl<S: RowSource> Widget for List<S> {
                 let draw = clip_display_prefix(mark, end.saturating_sub(mark_x));
                 cx.put_str(mark_x, line, draw, decoration(style, *mark_style));
             }
+            #[cfg(feature = "graphite-text")]
+            graphite::row(
+                cx,
+                Rect::new(area.x, line, area.width, 1),
+                &graphite::Row {
+                    selected,
+                    base: self.style,
+                    style,
+                    bar: self
+                        .highlight_symbol
+                        .map(|(_, symbol_style)| decoration(style, symbol_style)),
+                    icon: icon.map(|(at, draw, icon_style)| (at - area.x, draw, icon_style)),
+                    text: (x - area.x, text_end - area.x, text),
+                    mark: mark.map(|(mark_x, (mark, mark_style))| {
+                        (
+                            mark_x - area.x,
+                            end.saturating_sub(self.mark_padding).saturating_sub(area.x),
+                            mark.as_str(),
+                            decoration(style, *mark_style),
+                        )
+                    }),
+                },
+            );
         }
     }
 

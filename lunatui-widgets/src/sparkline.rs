@@ -7,6 +7,8 @@ use lunatui_theme::Token;
 use crate::render_cx::patch_style;
 use crate::{Block, RenderCx, Widget, WidgetState};
 
+#[cfg(feature = "pixel-cx")]
+mod graphite;
 #[cfg(feature = "pixel-sparkline")]
 mod pixel;
 
@@ -362,6 +364,10 @@ impl<T: SparklineValue> Sparkline<'_, T> {
             return;
         }
         let limit = usize::from(area.width).min(self.data.len());
+        #[cfg(feature = "pixel-cx")]
+        if graphite::paint(self, area, limit, cx) {
+            return;
+        }
         #[cfg(feature = "pixel-sparkline")]
         let mut recording = if self.pixels {
             pixel::Recording::new(area, limit, self.direction, cx)
