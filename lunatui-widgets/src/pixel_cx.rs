@@ -398,6 +398,29 @@ pub(crate) fn cell_size(area: CellRect, size: PixelSize) -> Option<CellSize> {
     Some(CellSize::new(width, height))
 }
 
+fn fill_backdrop(
+    data: &mut [u8],
+    backdrop: &[[u8; 3]],
+    columns: usize,
+    cell_w: usize,
+    cell_h: usize,
+) -> Option<()> {
+    let line = columns * cell_w * 4;
+    for (row, band) in data.chunks_exact_mut(line * cell_h).enumerate() {
+        let (first, _) = band.split_at_mut(line);
+        for (column, span) in first.chunks_exact_mut(cell_w * 4).enumerate() {
+            let [red, green, blue] = *backdrop.get(row * columns + column)?;
+            for pixel in span.as_chunks_mut::<4>().0 {
+                *pixel = [red, green, blue, 255];
+            }
+        }
+        for copy in 1..cell_h {
+            band.copy_within(0..line, copy * line);
+        }
+    }
+    Some(())
+}
+
 pub(crate) fn paint(
     cx: &RenderCx<'_>,
     area: CellRect,
@@ -419,16 +442,22 @@ pub(crate) fn paint(
     let width = usize::try_from(size.width()).ok()?;
     let columns = usize::from(area.width);
     let (cell_w, cell_h) = (usize::from(cell.width_px()), usize::from(cell.height_px()));
-    for (index, pixel) in pixmap
-        .data_mut()
-        .as_chunks_mut::<4>()
-        .0
-        .iter_mut()
-        .enumerate()
-    {
-        let (column, row) = (index % width / cell_w, index / width / cell_h);
-        let [red, green, blue] = *backdrop.get(row * columns + column)?;
-        *pixel = [red, green, blue, 255];
+    let rows = usize::from(area.height);
+    let height = usize::try_from(size.height()).ok()?;
+    if width == columns * cell_w && height == rows * cell_h {
+        fill_backdrop(pixmap.data_mut(), &backdrop, columns, cell_w, cell_h)?;
+    } else {
+        for (index, pixel) in pixmap
+            .data_mut()
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .enumerate()
+        {
+            let (column, row) = (index % width / cell_w, index / width / cell_h);
+            let [red, green, blue] = *backdrop.get(row * columns + column)?;
+            *pixel = [red, green, blue, 255];
+        }
     }
     let background = target.background();
     let resolve = |color: Color| cx.pixel_rgb(color, background);
