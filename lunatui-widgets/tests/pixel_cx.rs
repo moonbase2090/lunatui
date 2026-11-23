@@ -475,3 +475,179 @@ fn supplied_text_metrics_replace_the_cell_measure() {
         });
     assert!(painted);
 }
+
+struct Declining;
+
+impl ImageSink for Declining {
+    fn supports_pixels(&self) -> bool {
+        true
+    }
+    fn pixel_target(&self, area: Rect) -> Option<PixelTarget> {
+        Some(PixelTarget::new(
+            PixelSize::new(
+                u32::from(area.width) * CELL.0,
+                u32::from(area.height) * CELL.1,
+            )?,
+            false,
+            Some([0, 0, 0]),
+        ))
+    }
+    fn submit(&mut self, _: ImageRequest<'_>) -> bool {
+        false
+    }
+    fn submit_raster(&mut self, _: &ImageSource, _: Rect, _: i32) -> bool {
+        false
+    }
+}
+
+fn labelled(grid: &mut Grid, clusters: &mut ClusterTable) -> Rect {
+    let area = Rect::new(1, 0, 4, 1);
+    backdrop(grid, clusters, Rect::new(0, 0, 6, 1), BACK);
+    grid.put_str(
+        1,
+        0,
+        Style::new().fg(RED).bg(Color::Rgb(1, 2, 3)),
+        "ab",
+        clusters,
+    );
+    area
+}
+
+#[test]
+fn replacing_cells_paints_over_their_text_and_leaves_spaces_on_their_backgrounds() {
+    let mut grid = Grid::new(6, 1);
+    let mut clusters = ClusterTable::new();
+    let area = labelled(&mut grid, &mut clusters);
+    let mut images = capture();
+    images.underlay = false;
+    let theme = Theme::builtin(Variant::Dark);
+    let replaced = RenderCx::new(&mut grid, &mut clusters, &theme)
+        .image_sink(&mut images)
+        .render_mode(RenderMode::Graphite)
+        .replace_with_pixels(area, |px| {
+            assert!(px.fill_rect(
+                PixelRect {
+                    x: 0,
+                    y: 0,
+                    w: 4,
+                    h: 4
+                },
+                0.0,
+                RED
+            ));
+        });
+    assert!(replaced);
+    assert_eq!(images.images.len(), 1);
+    let (image, at, depth) = &images.images[0];
+    assert_eq!((*at, *depth), (area, 0));
+    assert_eq!(pixel(image, 1, 1), [220, 40, 30, 255]);
+    assert_eq!(
+        pixel(image, 4, 8),
+        [1, 2, 3, 255],
+        "the first cell's background"
+    );
+    assert_eq!(
+        pixel(image, 20, 8),
+        [10, 20, 30, 255],
+        "the third cell's background"
+    );
+    let first = grid
+        .get(1, 0)
+        .map(|cell| (cell.style(), format!("{:?}", cell.glyph().decode())));
+    assert_eq!(
+        first,
+        Some((
+            Style::new().bg(Color::Rgb(1, 2, 3)),
+            format!("{:?}", lunatui_core::DecodedGlyph::Inline(' '))
+        ))
+    );
+    assert_eq!(grid.row_display(0, &clusters), "      ");
+}
+
+#[test]
+fn replacing_cells_changes_nothing_when_the_mode_or_the_sink_says_no() {
+    let theme = Theme::builtin(Variant::Dark);
+    for mode in [RenderMode::Cell, RenderMode::Graphite] {
+        let mut grid = Grid::new(6, 1);
+        let mut clusters = ClusterTable::new();
+        let area = labelled(&mut grid, &mut clusters);
+        let before = snapshot(&grid);
+        let called = Cell::new(false);
+        let mut sink = Declining;
+        let replaced = RenderCx::new(&mut grid, &mut clusters, &theme)
+            .image_sink(&mut sink)
+            .render_mode(mode)
+            .replace_with_pixels(area, |_| called.set(true));
+        assert!(!replaced, "{mode:?}");
+        assert_eq!(called.get(), mode == RenderMode::Graphite, "{mode:?}");
+        assert_eq!(snapshot(&grid), before, "{mode:?}");
+    }
+}
+
+#[test]
+fn a_fill_with_opacity_mixes_with_what_is_under_it() {
+    let area = Rect::new(0, 0, 2, 1);
+    let mut grid = Grid::new(2, 1);
+    let mut clusters = ClusterTable::new();
+    backdrop(&mut grid, &mut clusters, area, [0, 0, 0]);
+    let mut images = capture();
+    let square = PixelRect {
+        x: 0,
+        y: 0,
+        w: 16,
+        h: 16,
+    };
+    let white = Color::Rgb(255, 255, 255);
+    assert!(paint(
+        RenderMode::Graphite,
+        &mut images,
+        &mut grid,
+        &mut clusters,
+        area,
+        0,
+        |px| {
+            assert!(px.fill_rect_with_opacity(square, 0.0, white, 0.5));
+            assert!(!px.fill_rect_with_opacity(square, 0.0, RED, 1.5));
+            assert!(!px.fill_rect_with_opacity(square, 0.0, RED, -0.1));
+            assert!(!px.fill_rect_with_opacity(square, 0.0, RED, f32::NAN));
+        },
+    ));
+    let [red, green, blue, alpha] = pixel(&images.images[0].0, 8, 8);
+    assert!((127..=128).contains(&red), "{red}");
+    assert_eq!((red, red, alpha), (green, blue, 255));
+}
+
+#[test]
+fn a_polygon_fills_inside_its_points_only() {
+    let area = Rect::new(0, 0, 4, 2);
+    let mut grid = Grid::new(4, 2);
+    let mut clusters = ClusterTable::new();
+    backdrop(&mut grid, &mut clusters, area, BACK);
+    let mut images = capture();
+    assert!(paint(
+        RenderMode::Graphite,
+        &mut images,
+        &mut grid,
+        &mut clusters,
+        area,
+        0,
+        |px| {
+            assert!(px.polygon(&[(16.0, 0.0), (32.0, 16.0), (16.0, 32.0), (0.0, 16.0)], RED));
+            assert!(!px.polygon(&[(0.0, 0.0), (32.0, 32.0)], RED));
+            assert!(!px.polygon(&[], RED));
+        },
+    ));
+    let image = &images.images[0].0;
+    assert_eq!(pixel(image, 16, 16), [220, 40, 30, 255], "the middle");
+    assert_eq!(pixel(image, 2, 2), [10, 20, 30, 255], "outside a corner");
+    assert_eq!(
+        pixel(image, 30, 30),
+        [10, 20, 30, 255],
+        "outside the opposite corner"
+    );
+    assert_eq!(
+        pixel(image, 30, 3),
+        [10, 20, 30, 255],
+        "outside the top right"
+    );
+}

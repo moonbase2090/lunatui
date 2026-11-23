@@ -194,35 +194,77 @@ impl<'a> RenderCx<'a> {
         depth: i32,
         paint: impl FnOnce(&mut crate::PixelCx<'_>),
     ) -> bool {
+        let underlay = depth < 0;
+        let Some(source) = self.paint_source(area, underlay, underlay, paint) else {
+            return false;
+        };
+        self.submit_raster(&source, area, depth)
+    }
+
+    /// Paints pixels over `area` with `paint` in place of the cells there, as a widget's Graphite
+    /// form.
+    ///
+    /// The same conditions as [`paint_pixels`](Self::paint_pixels) apply, except that the cells
+    /// need not be blank: the surface starts as each cell's background, whatever its text. Once
+    /// the image is accepted, every cell in `area` becomes a space on its own background, so no
+    /// cell text shows over the image.
+    ///
+    /// Returns `false`, having drawn nothing and changed no cell, when any condition fails or the
+    /// sink declines the image. The widget then draws its cell form, which is the same as in Cell
+    /// mode.
+    #[cfg(feature = "pixel-cx")]
+    pub fn replace_with_pixels(
+        &mut self,
+        area: Rect,
+        paint: impl FnOnce(&mut crate::PixelCx<'_>),
+    ) -> bool {
+        let Some(source) = self.paint_source(area, false, true, paint) else {
+            return false;
+        };
+        if !self.submit_raster(&source, area, 0) {
+            return false;
+        }
+        for y in area.y..area.y.saturating_add(area.height) {
+            for x in area.x..area.x.saturating_add(area.width) {
+                let Some(cell) = self.grid.get(x, y) else {
+                    continue;
+                };
+                let background = cell.style().bg;
+                self.grid
+                    .put_char(x, y, Style::new().bg(background), ' ', self.clusters);
+            }
+        }
+        true
+    }
+
+    #[cfg(feature = "pixel-cx")]
+    fn paint_source(
+        &self,
+        area: Rect,
+        underlay: bool,
+        ignore_text: bool,
+        paint: impl FnOnce(&mut crate::PixelCx<'_>),
+    ) -> Option<lunatui_image::ImageSource> {
         if self.mode != lunatui_runtime::RenderMode::Graphite
             || area.width == 0
             || area.height == 0
             || !self.pixel_area_in_grid(area)
         {
-            return false;
+            return None;
         }
-        let Some(target) = self.pixel_target(area) else {
-            return false;
-        };
-        let underlay = depth < 0;
+        let target = self.pixel_target(area)?;
         if underlay && !target.text_underlay() {
-            return false;
+            return None;
         }
         #[cfg(feature = "graphite-text")]
         let fallback: &dyn crate::graphite::TextMetrics = self.bundled_text;
         #[cfg(not(feature = "graphite-text"))]
-        let cells = match crate::pixel_cx::cell_size(area, target.size()) {
-            Some(cell) => crate::graphite::CellTextMetrics::new(cell),
-            None => return false,
-        };
+        let cells =
+            crate::graphite::CellTextMetrics::new(crate::pixel_cx::cell_size(area, target.size())?);
         #[cfg(not(feature = "graphite-text"))]
         let fallback: &dyn crate::graphite::TextMetrics = &cells;
         let metrics = self.text_metrics.unwrap_or(fallback);
-        let Some(source) = crate::pixel_cx::paint(self, area, target, underlay, metrics, paint)
-        else {
-            return false;
-        };
-        self.submit_raster(&source, area, depth)
+        crate::pixel_cx::paint(self, area, target, ignore_text, metrics, paint)
     }
 
     #[cfg(feature = "image")]
@@ -286,7 +328,7 @@ impl<'a> RenderCx<'a> {
         &self,
         area: Rect,
         default: Option<[u8; 3]>,
-        text_underlay: bool,
+        ignore_text: bool,
     ) -> Option<Vec<[u8; 3]>> {
         let mut colors = Vec::with_capacity(usize::from(area.width) * usize::from(area.height));
         for y in area.y..area.y.checked_add(area.height)? {
@@ -295,8 +337,7 @@ impl<'a> RenderCx<'a> {
                 if cell.style().attrs.reverse() {
                     return None;
                 }
-                if !text_underlay
-                    && cell.glyph().decode() != lunatui_core::DecodedGlyph::Inline(' ')
+                if !ignore_text && cell.glyph().decode() != lunatui_core::DecodedGlyph::Inline(' ')
                 {
                     return None;
                 }

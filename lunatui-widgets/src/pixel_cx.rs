@@ -65,20 +65,23 @@ impl PixelCx<'_> {
 
     /// Fills `rect` with `color`, rounding its corners by `radius` pixels.
     pub fn fill_rect(&mut self, rect: Rect, radius: f32, color: Color) -> bool {
+        self.fill_rect_with_opacity(rect, radius, color, 1.0)
+    }
+
+    /// Fills `rect` with `color` at `opacity`, from 0.0 (nothing) to 1.0 (solid), over what is
+    /// already drawn there, rounding its corners by `radius` pixels. Draws nothing for an opacity
+    /// outside that range.
+    pub fn fill_rect_with_opacity(
+        &mut self,
+        rect: Rect,
+        radius: f32,
+        color: Color,
+        opacity: f32,
+    ) -> bool {
         let Some(path) = rect_f32(rect).and_then(|r| rounded(r, radius)) else {
             return false;
         };
-        let Some(paint) = self.paint(color) else {
-            return false;
-        };
-        self.pixmap.fill_path(
-            &path,
-            &paint,
-            FillRule::Winding,
-            Transform::identity(),
-            None,
-        );
-        true
+        self.fill_path(&path, color, opacity)
     }
 
     /// Strokes the inside edge of `rect` with a line `width` pixels wide, rounding its corners by
@@ -147,19 +150,51 @@ impl PixelCx<'_> {
         }
         builder.line_to(last.0, baseline);
         builder.close();
-        let Some(path) = builder.finish() else {
+        builder
+            .finish()
+            .is_some_and(|path| self.fill_path(&path, color, 1.0))
+    }
+
+    /// Fills the polygon through `points`, closing it from the last point back to the first.
+    /// Needs at least three points.
+    pub fn polygon(&mut self, points: &[(f32, f32)], color: Color) -> bool {
+        let [first, rest @ ..] = points else {
             return false;
         };
-        let Some(paint) = self.paint(color) else {
+        if rest.len() < 2 {
+            return false;
+        }
+        let mut builder = PathBuilder::new();
+        builder.move_to(first.0, first.1);
+        for &(x, y) in rest {
+            builder.line_to(x, y);
+        }
+        builder.close();
+        builder
+            .finish()
+            .is_some_and(|path| self.fill_path(&path, color, 1.0))
+    }
+
+    fn fill_path(&mut self, path: &Path, color: Color, opacity: f32) -> bool {
+        if !(0.0..=1.0).contains(&opacity) {
+            return false;
+        }
+        let Some([red, green, blue]) = (self.resolve)(color) else {
             return false;
         };
-        self.pixmap.fill_path(
-            &path,
-            &paint,
-            FillRule::Winding,
-            Transform::identity(),
-            None,
-        );
+        let Some(solid) = tiny_skia::Color::from_rgba(
+            f32::from(red) / 255.0,
+            f32::from(green) / 255.0,
+            f32::from(blue) / 255.0,
+            opacity,
+        ) else {
+            return false;
+        };
+        let mut paint = Paint::default();
+        paint.set_color(solid);
+        paint.anti_alias = true;
+        self.pixmap
+            .fill_path(path, &paint, FillRule::Winding, Transform::identity(), None);
         true
     }
 
@@ -367,7 +402,7 @@ pub(crate) fn paint(
     cx: &RenderCx<'_>,
     area: CellRect,
     target: PixelTarget,
-    underlay: bool,
+    ignore_text: bool,
     metrics: &dyn TextMetrics,
     draw: impl FnOnce(&mut PixelCx<'_>),
 ) -> Option<ImageSource> {
@@ -379,7 +414,7 @@ pub(crate) fn paint(
         return None;
     }
     let cell = cell_size(area, size)?;
-    let backdrop = cx.pixel_backdrop(area, target.background(), underlay)?;
+    let backdrop = cx.pixel_backdrop(area, target.background(), ignore_text)?;
     let mut pixmap = Pixmap::new(size.width(), size.height())?;
     let width = usize::try_from(size.width()).ok()?;
     let columns = usize::from(area.width);
