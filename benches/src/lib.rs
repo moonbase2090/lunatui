@@ -18,6 +18,9 @@ pub mod dashboard_fair;
 /// instruction gate and the frame ceiling.
 #[cfg(feature = "graphite-pixels")]
 pub mod graphite_cases;
+/// The activity monitor drawn by lunatui's Graphite widgets, for the same gates.
+#[cfg(feature = "graphite-pixels")]
+pub mod graphite_monitor;
 /// A closed-form layout proposed by ADR 0002 (DD-2). Evidence for the design, not `lunatui-layout`.
 pub mod layout_prototype;
 /// A prototype of the 16-byte cell proposed by ADR 0001 (DD-1), packed from ratatui buffers

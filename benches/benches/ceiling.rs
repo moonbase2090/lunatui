@@ -11,7 +11,7 @@ use std::time::Duration;
 use lunatui_bench::calibration::{frame, truecolor_frame_bytes, write_frame};
 use lunatui_bench::ceiling::{FRAME_CEILING, FRAME_TARGET, FrameTimes, Verdict, sample};
 #[cfg(feature = "graphite-pixels")]
-use lunatui_bench::graphite_cases::{GRAPHITE_CASES, GraphiteRun, Repaint};
+use lunatui_bench::graphite_cases::{GRAPHITE_CASES, GraphiteRun};
 
 const SAMPLES: usize = 1000;
 
@@ -45,7 +45,7 @@ fn main() -> io::Result<ExitCode> {
     #[cfg(feature = "graphite-pixels")]
     for case in &GRAPHITE_CASES {
         let times = time_graphite(case)?;
-        let gated = case.repaint == Repaint::Changed;
+        let gated = case.ceiling_gated();
         let name = format!(
             "{}, {}x{}{}",
             case.name,

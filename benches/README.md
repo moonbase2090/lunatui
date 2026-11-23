@@ -40,7 +40,20 @@ Cells are 8×16 pixels at 1x.
   - the changed repaint equals the same rectangle cropped from a full repaint;
   - the image stream of a changed frame carries only that rectangle, and of a full frame only the window, pixel for pixel.
 
-When `PixelCx` and the activity monitor's Graphite mode land, they become cases here in the same way.
+### Widget cases
+
+`graphite_monitor` draws the activity monitor with lunatui's own Graphite widgets, as an application frame does: `Badge`, `Kbd`, `List` and `Sparkline` paint through `RenderCx` and `PixelCx` in Graphite mode, the cells are encoded as a diff, and each widget image goes out through the Kitty `PixelLayer` into the counting sink. The scene fits any window from 40×8 cells.
+
+| Case | Each frame |
+| --- | --- |
+| `graphite-monitor-changed-1x`, `graphite-monitor-changed-2x` | The monitor: a badge header, up to eight seat rows with lanes, a detail list and key hints. Redraws only the seat rows and their lanes, as a poll does; the other images are listed again without being resent. |
+| `graphite-monitor-full-1x`, `graphite-monitor-full-2x` | Redraws and resends the whole monitor. |
+| `graphite-dense-changed-1x`, `graphite-dense-changed-2x` | The worst case: a seat row with a lane on every row between the header and the key hints, across the whole width. Redraws every seat row. |
+| `graphite-dense-full-1x`, `graphite-dense-full-2x` | Redraws and resends the whole dense scene. |
+
+- **Instructions.** All eight cases are gated at 3% over `main` at 80×24 and 200×60, like the raster cases.
+- **Ceiling.** The monitor's changed cases are gated on the 16 ms ceiling in the 185×51 window. Full repaints are reported. The dense worst case is reported, not gated, until it fits the ceiling: its changed frame sends about 6 MB at 1x and 24 MB at 2x, and draws about a hundred widget images with text.
+- **Proof.** The `graphite_monitor` test checks that the widgets paint every cell of a full frame (no text is left in cells) with at most 256 images, the most `PixelLayer` lists in a frame; that a changed frame's seat rows match a full frame while the cells outside stay as first drawn; that a changed frame transmits fewer images and fewer bytes than a full one; that the dense scene draws more than the monitor; and that frames are deterministic and change each tick.
 
 ## Widget parity suite
 
