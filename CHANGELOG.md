@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- Graphite mode draws text with bundled fonts. The new `lunatui-fonts` crate carries Inter, IBM Plex Sans, Noto Sans, JetBrains Mono and Noto Emoji, unmodified and under the SIL Open Font License 1.1, which adds about 5 MB to a binary that draws text. `PixelCx::text` draws a run of text in a color at a baseline, and `PixelCx::line_metrics` gives ascent, descent and line gap. `graphite::BundledText` measures and draws with these fonts: Inter by default, IBM Plex Sans or Noto Sans through `RenderCx::ui_font`, and JetBrains Mono for `Face::Mono`, falling back per character to Noto Sans, JetBrains Mono and Noto Emoji. Text is neither kerned nor shaped. In Graphite mode, `PixelCx::measure` and `fit` now measure with the bundled fonts unless `RenderCx::text_metrics` supplies other metrics, for text drawn some other way, such as by host fonts. `PixelCx::text` draws nothing when `RenderCx::text_metrics` supplies other metrics, so drawn text always matches `measure` and `fit`. Sizes run from above 0 to 4096 pixels. Feature `graphite-text`, on by default. The `graphite_fonts` example writes font specimens drawn this way to PNG files.
+
 ## [0.1.37] - 2026-11-22
 
 ### Added

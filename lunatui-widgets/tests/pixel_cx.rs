@@ -4,13 +4,14 @@
 #![doc = include_str!("../README.md")]
 
 use std::cell::Cell;
+use std::num::NonZeroU16;
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_image::{ImageRequest, ImageSink, ImageSource, PixelSize, PixelTarget};
 use lunatui_runtime::RenderMode;
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::RenderCx;
-use lunatui_widgets::graphite::{Face, Rect as PixelRect, TextMetrics};
+use lunatui_widgets::graphite::{CellSize, CellTextMetrics, Face, Rect as PixelRect, TextMetrics};
 
 const CELL: (u32, u32) = (8, 16);
 const RED: Color = Color::Rgb(220, 40, 30);
@@ -415,20 +416,23 @@ fn a_color_with_no_rgb_value_draws_nothing() {
 }
 
 #[test]
-fn text_is_measured_in_cells_by_default_and_cut_with_an_ellipsis() {
+fn cell_metrics_measure_whole_cells_and_fit_cuts_with_an_ellipsis() {
     let area = Rect::new(0, 0, 8, 1);
     let mut grid = Grid::new(8, 1);
     let mut clusters = ClusterTable::new();
     backdrop(&mut grid, &mut clusters, area, BACK);
     let mut images = capture();
-    paint(
-        RenderMode::Graphite,
-        &mut images,
-        &mut grid,
-        &mut clusters,
-        area,
-        0,
-        |px| {
+    let theme = Theme::builtin(Variant::Dark);
+    let cell = CellSize::new(
+        NonZeroU16::new(8).unwrap_or(NonZeroU16::MIN),
+        NonZeroU16::new(16).unwrap_or(NonZeroU16::MIN),
+    );
+    let metrics = CellTextMetrics::new(cell);
+    let painted = RenderCx::new(&mut grid, &mut clusters, &theme)
+        .image_sink(&mut images)
+        .render_mode(RenderMode::Graphite)
+        .text_metrics(&metrics)
+        .paint_pixels(area, 0, |px| {
             assert_eq!(px.measure(Face::Regular, 13.0, "hello"), 40.0);
             assert_eq!(px.fit(Face::Regular, 13.0, "hello", 40.0), "hello");
             assert_eq!(px.fit(Face::Regular, 13.0, "hello world", 40.0), "hell…");
@@ -437,8 +441,8 @@ fn text_is_measured_in_cells_by_default_and_cut_with_an_ellipsis() {
                 "e\u{301}…"
             );
             assert_eq!(px.fit(Face::Regular, 13.0, "hello", 4.0), "");
-        },
-    );
+        });
+    assert!(painted);
     assert_eq!(images.images.len(), 1);
 }
 

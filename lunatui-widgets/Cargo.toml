@@ -11,7 +11,7 @@ repository.workspace = true
 workspace = true
 
 [features]
-default = ["input", "widget-list", "layout-debug", "native-alpha", "native-subcell", "pixel-cx", "pixel-node-graph", "pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge", "pixel-progress"]
+default = ["input", "widget-list", "layout-debug", "native-alpha", "native-subcell", "pixel-cx", "graphite-text", "pixel-node-graph", "pixel-pie-chart", "pixel-chart", "pixel-canvas", "pixel-barchart", "pixel-sparkline", "pixel-gauge", "pixel-progress"]
 color-profiles = ["lunatui-theme/color-profiles"]
 widget-state = []
 input = ["dep:lunatui-term"]
@@ -81,7 +81,8 @@ native-subcell = ["lunatui-core/native-attrs"]
 graphite-render = ["lunatui-theme/graphite-tokens"]
 text-area = ["widget-state", "lunatui-theme/graphite-extensions", "lunatui-runtime/keymap", "dep:lunatui-term"]
 symbol-font-fallback = ["graphite-render"]
-all-widgets = ["widget-list", "layout-debug", "native-alpha", "native-subcell", "pixel-cx", "node-graph", "pixel-node-graph", "file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback", "split-keys", "split-persist"]
+graphite-text = ["pixel-cx", "dep:fontdue", "dep:lunatui-fonts"]
+all-widgets = ["widget-list", "layout-debug", "native-alpha", "native-subcell", "pixel-cx", "graphite-text", "node-graph", "pixel-node-graph", "file-picker", "heatmap", "pixel-gauge", "accordion", "barchart", "pixel-barchart", "bigtext", "button", "calendar", "canvas", "pixel-canvas", "chart", "pixel-chart", "code-view", "color-picker", "combo-box", "date-picker", "diff-view", "dialog", "form", "hex-viewer", "key-hints", "line-gauge", "log-view", "markdown", "nested-menu", "notification-center", "number-input", "pie-chart", "pixel-pie-chart", "popover", "popup", "progress", "pixel-progress", "radio", "scroll-view", "search-box", "select", "slider", "sparkline", "pixel-sparkline", "tag-input", "toast", "toggle", "tooltip", "timeline", "terminal", "tree", "mermaid", "text-area", "command-palette", "symbol-font-fallback", "split-keys", "split-persist"]
 
 [dependencies]
 vt100 = { version = "=0.16.2", optional = true }
@@ -93,6 +94,8 @@ lunatui-text = { version = "0.1.37", path = "../lunatui-text" }
 lunatui-theme = { version = "0.1.37", path = "../lunatui-theme" }
 lunatui-runtime = { version = "0.1.37", path = "../lunatui-runtime", default-features = false, features = ["app"] }
 unicode-segmentation = "=1.13.3"
+lunatui-fonts = { version = "0.1.37", path = "../lunatui-fonts", optional = true }
+fontdue = { version = "=0.9.5", default-features = false, features = ["std"], optional = true }
 
 tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd"] }
 
@@ -122,6 +125,11 @@ path = "tests/block.rs"
 name = "symbol_font_fallback"
 path = "tests/symbol_font_fallback.rs"
 required-features = ["symbol-font-fallback"]
+
+[[test]]
+name = "graphite_text"
+path = "tests/graphite_text.rs"
+required-features = ["graphite-text"]
 
 [[test]]
 name = "graphite_render"

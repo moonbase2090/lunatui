@@ -84,3 +84,9 @@ another host may differ even when the canonical artifact needs no update.
 Benchmarks are separate: `cargo xtask bench` prints allocation and write metrics and runs the criterion and gungraun benchmarks in `benches/`.
 
 To verify the deployment scene keeps its cell output, run `python3 scripts/check-gauge-cells.py --base <commit-before-change> --head <commit-to-check>`. The script builds isolated checkouts and compares four complete 240-frame streams across two terminal sizes, dark and light themes, and truecolor and ANSI16 profiles.
+
+## Graphite mode fonts
+
+| Example | Command | Shows |
+|---|---|---|
+| `graphite_fonts` | `cargo run --release -p lunatui --example graphite_fonts -- OUTPUT_DIR` | A font specimen drawn by `PixelCx::text` with the bundled fonts at 2x over a `Block` background, once for each UI font (Inter, IBM Plex Sans and Noto Sans): a pangram in Regular and SemiBold, sizes from 16 to 40 pixels, digits and punctuation, a long name cut to the panel width by `PixelCx::fit`, `Face::Mono` lines, and characters that fall back to other fonts. It writes one PNG per UI font and a side-by-side sheet. |

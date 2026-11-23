@@ -32,6 +32,8 @@ pub struct RenderCx<'a> {
     mode: lunatui_runtime::RenderMode,
     #[cfg(feature = "pixel-cx")]
     text_metrics: Option<&'a dyn crate::graphite::TextMetrics>,
+    #[cfg(feature = "graphite-text")]
+    bundled_text: &'static crate::graphite::BundledText,
 }
 
 #[cfg(feature = "image")]
@@ -79,6 +81,8 @@ impl<'a> RenderCx<'a> {
             mode: lunatui_runtime::RenderMode::Cell,
             #[cfg(feature = "pixel-cx")]
             text_metrics: None,
+            #[cfg(feature = "graphite-text")]
+            bundled_text: crate::graphite::BundledText::shared(crate::graphite::UiFont::Inter),
         }
     }
 
@@ -142,13 +146,31 @@ impl<'a> RenderCx<'a> {
         self
     }
 
-    /// Measures text for [`PixelCx`](crate::PixelCx). Without this, text is measured in whole
-    /// cells with [`CellTextMetrics`](crate::graphite::CellTextMetrics).
+    /// Measures text for [`PixelCx::measure`](crate::PixelCx::measure) and
+    /// [`PixelCx::fit`](crate::PixelCx::fit), for text that something other than `PixelCx` draws,
+    /// such as host fonts. With these metrics set, `PixelCx::text` draws nothing, because its
+    /// glyphs would not match them. Without this, text is measured with the bundled fonts that
+    /// `PixelCx::text` draws with, or, without the `graphite-text` feature, in whole cells with
+    /// [`CellTextMetrics`](crate::graphite::CellTextMetrics).
     #[cfg(feature = "pixel-cx")]
     #[must_use]
     pub fn text_metrics(mut self, metrics: &'a dyn crate::graphite::TextMetrics) -> Self {
         self.text_metrics = Some(metrics);
         self
+    }
+
+    /// Sets the proportional font [`PixelCx`](crate::PixelCx) draws and measures text with. The
+    /// default is [`UiFont::Inter`](crate::graphite::UiFont::Inter).
+    #[cfg(feature = "graphite-text")]
+    #[must_use]
+    pub fn ui_font(mut self, font: crate::graphite::UiFont) -> Self {
+        self.bundled_text = crate::graphite::BundledText::shared(font);
+        self
+    }
+
+    #[cfg(feature = "graphite-text")]
+    pub(crate) fn drawing_text(&self) -> Option<&'static crate::graphite::BundledText> {
+        self.text_metrics.is_none().then_some(self.bundled_text)
     }
 
     /// Paints pixels over `area` with `paint` and submits them as one image at `depth`.
@@ -186,13 +208,16 @@ impl<'a> RenderCx<'a> {
         if underlay && !target.text_underlay() {
             return false;
         }
-        let fallback = crate::graphite::CellTextMetrics::new(
-            match crate::pixel_cx::cell_size(area, target.size()) {
-                Some(cell) => cell,
-                None => return false,
-            },
-        );
-        let metrics = self.text_metrics.unwrap_or(&fallback);
+        #[cfg(feature = "graphite-text")]
+        let fallback: &dyn crate::graphite::TextMetrics = self.bundled_text;
+        #[cfg(not(feature = "graphite-text"))]
+        let cells = match crate::pixel_cx::cell_size(area, target.size()) {
+            Some(cell) => crate::graphite::CellTextMetrics::new(cell),
+            None => return false,
+        };
+        #[cfg(not(feature = "graphite-text"))]
+        let fallback: &dyn crate::graphite::TextMetrics = &cells;
+        let metrics = self.text_metrics.unwrap_or(fallback);
         let Some(source) = crate::pixel_cx::paint(self, area, target, underlay, metrics, paint)
         else {
             return false;
@@ -557,6 +582,8 @@ impl<'a> RenderCx<'a> {
             mode: self.mode,
             #[cfg(feature = "pixel-cx")]
             text_metrics: self.text_metrics,
+            #[cfg(feature = "graphite-text")]
+            bundled_text: self.bundled_text,
         };
         draw(&mut cx);
         hits
