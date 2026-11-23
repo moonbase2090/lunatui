@@ -5,9 +5,11 @@
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_ui_tokens::{Role, Tone, surface};
+#[cfg(feature = "graphite-text")]
 use lunatui_widgets::graphite::Face;
 use lunatui_widgets::{RenderCx, Widget};
 
+#[cfg(feature = "graphite-text")]
 mod graphite;
 
 /// How a [`Badge`] is filled.
@@ -157,7 +159,10 @@ impl Badge<'_> {
         }
     }
 
-    fn paint(&self, area: Rect, style: Style, cx: &mut RenderCx<'_>) -> bool {
+    #[cfg(feature = "graphite-text")]
+    fn paint(&self, area: Rect, shown: &str, style: Style, cx: &mut RenderCx<'_>) -> bool {
+        let cells = u16::try_from(width(shown)).unwrap_or(u16::MAX);
+        let area = Rect::new(area.x, area.y, cells, 1);
         let tinted = self.look == Look::Subtle && self.tone != Tone::Neutral;
         let (fill, face) = match self.look {
             Look::Subtle if tinted => (style.fg, Face::Regular),
@@ -178,8 +183,8 @@ impl Widget for Badge<'_> {
         let style = self.style(cx);
         let label = self.label();
         let shown = clip_display_prefix(&label, area.width);
-        let cells = u16::try_from(width(shown)).unwrap_or(u16::MAX);
-        if self.paint(Rect::new(area.x, area.y, cells, 1), style, cx) {
+        #[cfg(feature = "graphite-text")]
+        if self.paint(area, shown, style, cx) {
             return;
         }
         cx.put_str(area.x, area.y, shown, style);
@@ -228,6 +233,7 @@ impl Kbd<'_> {
         slots
     }
 
+    #[cfg(feature = "graphite-text")]
     fn paint(&self, area: Rect, chip: Style, cx: &mut RenderCx<'_>) -> bool {
         let slots = self.slots(area);
         let Some(&(_, last, cells)) = slots.last() else {
@@ -249,6 +255,7 @@ impl Widget for Kbd<'_> {
             return;
         }
         let chip = surface(cx, Role::Card).with_attrs(Attrs::new().set_bold(true));
+        #[cfg(feature = "graphite-text")]
         if self.paint(area, chip, cx) {
             return;
         }

@@ -11,6 +11,10 @@ is a tint of its tone. A [`Marker`] before the text is a glyph in cells and a dr
 Graphite mode. A [`Kbd`] key is a rounded keycap. Both cover the same cells as in Cell mode, and
 when the frame cannot show pixels they draw exactly their Cell mode cells.
 
+The Graphite form needs the `graphite-text` feature, on by default, which links the fonts bundled
+in `lunatui-fonts` (about 5 MB). With `default-features = false` and without that feature, badges
+and keys draw their Cell mode cells in every mode.
+
 ![Badges and key hints in Graphite mode, real output of the `graphite_chips` example](../docs/media/graphite-chips.gif)
 
 The same frame in Cell mode (top) and Graphite mode (bottom):
