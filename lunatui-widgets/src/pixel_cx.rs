@@ -84,6 +84,57 @@ impl PixelCx<'_> {
         self.fill_path(&path, color, opacity)
     }
 
+    pub(crate) fn is_uniform(&self, rect: Rect) -> bool {
+        let Some(rows) = self.rows(rect) else {
+            return false;
+        };
+        let data = self.pixmap.data();
+        let Some(first) = rows
+            .clone()
+            .next()
+            .and_then(|row| data.get(row..row + 4))
+            .and_then(|pixel| <[u8; 4]>::try_from(pixel).ok())
+        else {
+            return true;
+        };
+        rows.into_iter().all(|row| {
+            data.get(row..row + rect.w * 4)
+                .is_some_and(|line| line.as_chunks::<4>().0.iter().all(|pixel| *pixel == first))
+        })
+    }
+
+    pub(crate) fn copy_block(&mut self, from: Rect, x: usize) -> bool {
+        let (Some(rows), Some(_)) = (
+            self.rows(from),
+            self.rows(Rect {
+                x,
+                y: from.y,
+                w: from.w,
+                h: from.h,
+            }),
+        ) else {
+            return false;
+        };
+        let data = self.pixmap.data_mut();
+        let shift = x * 4;
+        for row in rows {
+            let start = row - from.x * 4;
+            data.copy_within(row..row + from.w * 4, start + shift);
+        }
+        true
+    }
+
+    fn rows(&self, rect: Rect) -> Option<std::iter::StepBy<std::ops::Range<usize>>> {
+        let width = usize::try_from(self.pixmap.width()).ok()?;
+        let height = usize::try_from(self.pixmap.height()).ok()?;
+        if rect.x.checked_add(rect.w)? > width || rect.y.checked_add(rect.h)? > height {
+            return None;
+        }
+        let stride = width * 4;
+        let start = rect.y * stride + rect.x * 4;
+        Some((start..start + rect.h * stride).step_by(stride))
+    }
+
     /// Strokes the inside edge of `rect` with a line `width` pixels wide, rounding its corners by
     /// `radius` pixels.
     pub fn stroke_rect(&mut self, rect: Rect, radius: f32, width: f32, color: Color) -> bool {
