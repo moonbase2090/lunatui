@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.39] - 2026-11-23
+
 ### Added
 
 - `Sparkline` and `List` have a Graphite form. In Graphite mode a sparkline is a lane of rounded bars, one per sample in its own color, rising from a hairline baseline. A list row draws its icon, text and right-aligned mark in proportional text, and the selected row is a rounded band with a focus bar when a highlight symbol is set. Both cover the same cells as in Cell mode, and when pixels are not available the cells are exactly the Cell mode cells. `Sparkline::pixels(false)` keeps the cells in Graphite mode too. The `activity_monitor` example draws an activity monitor in both modes from these widgets and `Badge` and `Kbd`, and `scripts/record-graphite.py monitor` records it. `scripts/record-graphite.py` replaces `scripts/record-graphite-chips.py`, and `scripts/record-graphite.py chips` records the badge example.
