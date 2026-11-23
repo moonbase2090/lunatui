@@ -15,7 +15,7 @@ lunatui-runtime = { version = "0.1.37", path = "../lunatui-runtime", default-fea
 lunatui-core = { version = "0.1.37", path = "../lunatui-core" }
 lunatui-term = { version = "0.1.37", path = "../lunatui-term" }
 lunatui-ui-tokens = { version = "0.1.37", path = "../lunatui-ui-tokens" }
-lunatui-widgets = { version = "0.1.37", path = "../lunatui-widgets", features = ["widget-state"] }
+lunatui-widgets = { version = "0.1.37", path = "../lunatui-widgets", default-features = false, features = ["widget-state"] }
 
 [dev-dependencies]
 lunatui-test = { version = "0.1.37", path = "../lunatui-test" }
