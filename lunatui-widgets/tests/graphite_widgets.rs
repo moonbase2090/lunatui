@@ -160,6 +160,21 @@ fn a_sparkline_draws_the_cell_mode_cells_when_pixels_are_not_shown() {
 }
 
 #[test]
+fn a_sparkline_without_pixels_keeps_its_cells_in_graphite_mode() {
+    let data = bars(&[Some(0), Some(3), None, Some(8), Some(5)], RED);
+    let chart = Sparkline::new(&data).pixels(false);
+    let area = Rect::new(1, 1, 5, 2);
+    let (expected, _) = render(&chart, area, RenderMode::Cell, None);
+    let mut host = Host::new(true);
+    let (graphite, _) = render(&chart, area, RenderMode::Graphite, Some(&mut host));
+    assert!(
+        host.images.is_empty(),
+        "no image for a cells-only sparkline"
+    );
+    assert_eq!(cells(&graphite), cells(&expected));
+}
+
+#[test]
 fn graphite_lane_bars_rise_from_a_hairline_in_their_own_colors() {
     let mut data = bars(&[Some(0), Some(4), Some(8)], RED);
     data.push(SparklineBar::value(8).style(Style::new().fg(GREEN)));
