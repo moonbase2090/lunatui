@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.38] - 2026-11-23
+
 ### Added
 
 - `Badge` and `Kbd` have a Graphite form. In Graphite mode a badge is a rounded pill with proportional text, and a subtle badge's pill is a tint of its tone; a key is a rounded keycap. Both cover the same cells as in Cell mode, and when pixels are not available the cells are exactly the Cell mode cells. `Badge::marker` puts a state mark before the text (`Marker::Dot`, `Ring`, `Diamond`, `Cross`, `Square` or `Bang`): a glyph in cells, a drawn shape in Graphite mode. The Graphite form draws text with the bundled fonts, under the badge crate's `graphite-text` feature, on by default; without it badges and keys draw their Cell mode cells in every mode. The `graphite_chips` example draws badges and key hints in both modes, and `scripts/record-graphite-chips.py` records them.
