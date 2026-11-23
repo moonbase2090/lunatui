@@ -701,17 +701,26 @@ fn push_decimal(out: &mut Vec<u8>, value: u64) {
 }
 
 fn push_base64(out: &mut Vec<u8>, data: &[u8]) {
-    for group in data.chunks(3) {
-        let first = u32::from(group[0]);
-        let second = u32::from(group.get(1).copied().unwrap_or(0));
-        let third = u32::from(group.get(2).copied().unwrap_or(0));
-        let word = first << 16 | second << 8 | third;
-        let sextet =
-            |shift: u32| BASE64[usize::from(u8::try_from((word >> shift) & 63).unwrap_or(0))];
-        out.push(sextet(18));
-        out.push(sextet(12));
-        out.push(if group.len() > 1 { sextet(6) } else { b'=' });
-        out.push(if group.len() > 2 { sextet(0) } else { b'=' });
+    let symbol = |index: u8| BASE64[usize::from(index & 63)];
+    let start = out.len();
+    out.resize(start + data.len().div_ceil(3) * 4, b'=');
+    let (groups, rest) = data.as_chunks::<3>();
+    let (quads, _) = out[start..].as_chunks_mut::<4>();
+    for (&[a, b, c], quad) in groups.iter().zip(quads.iter_mut()) {
+        *quad = [
+            symbol(a >> 2),
+            symbol(a << 4 | b >> 4),
+            symbol(b << 2 | c >> 6),
+            symbol(c),
+        ];
+    }
+    if let (Some(&a), Some(quad)) = (rest.first(), quads.last_mut()) {
+        let b = rest.get(1).copied();
+        quad[0] = symbol(a >> 2);
+        quad[1] = symbol(a << 4 | b.unwrap_or(0) >> 4);
+        if let Some(b) = b {
+            quad[2] = symbol(b << 2);
+        }
     }
 }
 
