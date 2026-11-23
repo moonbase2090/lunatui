@@ -10,7 +10,7 @@ Widgets for lunatui (PRD §8). **v0.1.0** includes the Phase 4 set used by `exam
 - `KeyHintBar` is behind the `key-hints` feature. Construct it from the keymap active for the current screen or mode; it renders the first chord registered for each command.
 - `TextArea` is available behind the off-by-default `text-area` feature. It owns a UTF-8 document, grapheme cursor, directed selection, bounded undo/redo, search, and Emacs/Vim input handling. Loaded and typed tabs remain literal tabs in the document and render to the next four-column stop. Cursor movement, scrolling and selection use those same expanded columns. Enable it with `lunatui-widgets = { version = "0.1.37", features = ["text-area"] }`.
 - [`Size`](https://github.com/moonbase2090/lunatui/blob/main/lunatui-core/src/size.rs) lives in `lunatui-core` and is re-exported here.
-- The default `graphite-text` feature draws and measures `PixelCx` text with the fonts bundled in `lunatui-fonts`; see `graphite::BundledText`. It adds about 5 MB to a binary that draws text.
+- The default `graphite-text` feature draws and measures `PixelCx` text with the fonts bundled in `lunatui-fonts`; see `graphite::BundledText`. It adds about 5 MB to a binary that draws text. To build without the fonts, depend on `lunatui-widgets` with `default-features = false` and list the features you use without `graphite-text`; the component crates do not turn it back on.
 - The default-off `symbol-font-fallback` feature adds host-owned font selection and pixel measurement to the `graphite` bridge. It also enables `graphite-render` and is included in `all-widgets`. See [host-provided symbol fonts](../docs/symbol-font-fallback.md).
 
 ## Widgets (v0.1.0)

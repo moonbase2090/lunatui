@@ -10,6 +10,7 @@ import { homedir } from 'node:os';
 
 const WASM_BINDGEN_VERSION = '0.2.129';
 const WASM_GZIP_BUDGET = 400 * 1024;
+const FONT_PACKAGES = ['lunatui-fonts', 'fontdue'];
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const site = join(root, 'site');
 const output = join(site, 'assets', 'sandbox');
@@ -32,6 +33,25 @@ function run(command, args, options = {}) {
 
 mkdirSync(output, { recursive: true });
 if (!skipRust) {
+  const packages = run('cargo', [
+    'tree',
+    '--locked',
+    '--package',
+    'lunatui-web',
+    '--target',
+    'wasm32-unknown-unknown',
+    '--edges',
+    'normal',
+    '--prefix',
+    'none',
+    '--format',
+    '{p}',
+  ], { capture: true }).split('\n').map((line) => line.split(' ')[0]);
+  const fonts = [...new Set(packages.filter((name) => FONT_PACKAGES.includes(name)))];
+  if (fonts.length > 0) {
+    throw new Error(`the sandbox must not link the bundled fonts, found ${fonts.join(', ')}`);
+  }
+
   const installedVersion = run('wasm-bindgen', ['--version'], { capture: true });
   if (installedVersion !== `wasm-bindgen ${WASM_BINDGEN_VERSION}`) {
     throw new Error(`expected wasm-bindgen ${WASM_BINDGEN_VERSION}, found ${installedVersion}`);

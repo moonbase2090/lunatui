@@ -13,7 +13,7 @@ workspace = true
 [dependencies]
 lunatui-core = { version = "0.1.37", path = "../lunatui-core" }
 lunatui-ui-tokens = { version = "0.1.37", path = "../lunatui-ui-tokens" }
-lunatui-widgets = { version = "0.1.37", path = "../lunatui-widgets" }
+lunatui-widgets = { version = "0.1.37", path = "../lunatui-widgets", default-features = false }
 
 [dev-dependencies]
 lunatui-theme = { version = "0.1.37", path = "../lunatui-theme" }
