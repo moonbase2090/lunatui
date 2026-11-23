@@ -309,6 +309,17 @@ fn a_graphite_selected_row_is_rounded_with_a_focus_bar() {
         "the selection spans the row"
     );
     assert_eq!(pixel(selected, 200, 0), rgb(BACK), "above the selection");
+    let (right, top) = (20 * CELL.0 - 1, CELL.1 / 16);
+    assert_eq!(
+        pixel(selected, right, top),
+        rgb(BACK),
+        "the band's right corner is rounded"
+    );
+    assert_eq!(
+        pixel(selected, right, middle),
+        rgb(SELECTED),
+        "the band reaches the right edge"
+    );
     let plain = &host.images[0].1;
     assert_eq!(
         pixel(plain, 1, middle),
