@@ -163,6 +163,7 @@ pub struct PixelLayer {
     retired: Vec<u32>,
     placed: Vec<Placed>,
     frame: Vec<Placed>,
+    restacked: Vec<Rect>,
     frame_pixels: u64,
     raster_slots: Vec<CachedRaster>,
     raster_cursor: usize,
@@ -183,6 +184,7 @@ impl PixelLayer {
             retired: Vec::new(),
             placed: Vec::new(),
             frame: Vec::new(),
+            restacked: Vec::new(),
             frame_pixels: 0,
             raster_slots: Vec::new(),
             raster_cursor: 0,
@@ -266,14 +268,20 @@ impl PixelLayer {
             self.frame.clear();
             return &self.out;
         }
+        self.restacked.clear();
         for placed in &self.frame {
             let unchanged = !placed.fresh
                 && self
                     .placed
                     .iter()
                     .any(|old| old.id == placed.id && old.rect == placed.rect && old.z == placed.z);
-            if !unchanged {
+            let above_a_new_placement = self
+                .restacked
+                .iter()
+                .any(|below| overlaps(*below, placed.rect));
+            if !unchanged || above_a_new_placement {
                 write_place(&mut self.out, placed);
+                self.restacked.push(placed.rect);
             }
         }
         for old in &self.placed {
@@ -670,6 +678,13 @@ fn write_transmit(out: &mut Vec<u8>, id: u32, image: &PixelImage<'_>) {
         out.extend_from_slice(b"\x1b\\");
         first = false;
     }
+}
+
+fn overlaps(a: Rect, b: Rect) -> bool {
+    a.x < b.x.saturating_add(b.width)
+        && b.x < a.x.saturating_add(a.width)
+        && a.y < b.y.saturating_add(b.height)
+        && b.y < a.y.saturating_add(a.height)
 }
 
 fn write_place(out: &mut Vec<u8>, placed: &Placed) {
