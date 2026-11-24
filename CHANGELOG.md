@@ -13,6 +13,10 @@ Every PR adds its entry under **Unreleased**.
 - `run()` draws in Graphite mode on terminals that can show it. It resolves the application's `ModePolicy` against the probed terminal instead of a cell-only backend: Graphite when the terminal draws pixel images and reports its cell size, Cell otherwise, with `LUNATUI_MODE` still overriding. An application draws Graphite by building its `RenderCx` from `RenderFrame::parts` in `RenderFrame::mode`; one that only implements `render` keeps drawing cells. `PixelLayer::cell_pixels` and `set_cell_pixels` expose the cell size images are drawn at, and `run()` updates it from the terminal's window-size report on resize. The new `activity_monitor_live` example draws the activity monitor live this way.
 - Pointer events can carry where they fall inside a cell. The capability probe asks whether the terminal reports the mouse in pixels (mode 1016, `DecModes::sgr_pixel_mouse`). When it does and the cell size is known, `run()` turns the reports on with `MouseTracking::SgrPixels` and converts each event with `MouseEvent::in_cells`, so applications still get cell coordinates, now with `MouseEvent::inside` holding the pixel inside the cell. The cell size follows the terminal's window-size report on resize, through `terminal_cell_pixels`. `HitMap::pick_point` returns the same hit as `pick`, with where the pointer is inside the region, and `Slider::value_at_across` gives a value that moves smoothly across a cell and equals `value_at` at a cell's centre. Terminals without mode 1016 or a cell size keep cell reports, and Windows console input stays in cells.
 
+### Changed
+
+- In Kitty, an image listed later in a frame now stays above an earlier image at the same depth. Kitty stacks images with the same z-index by image id, so a row image uploaded again with a higher id could cover a badge drawn over it. `PixelLayer` sends `256 × depth` plus the image's place in the frame as the z-index, so depth still decides first and negative depths stay under text.
+
 ## [0.1.39] - 2026-11-23
 
 ### Added
