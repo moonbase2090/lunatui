@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- Graphite text can start fast on a tight CPU budget. `UiFont::InterCompact` draws with compact copies of Inter and JetBrains Mono that keep Latin with Latin-1 and Latin Extended-A, punctuation, currency, arrows, mathematical and technical symbols, box drawing, block elements and geometric shapes, and it has no fallback fonts, so any other character draws as the missing-glyph box. The three files it uses parse in under 3 ms on a developer machine, against about 30 ms for full Inter, JetBrains Mono and the Noto Sans fallback that box drawing and block elements reach through. `BundledText::load` parses every font file a text can draw with, and `BundledText::loaded` says whether that is done, so a program can draw its first frame in cells and load the fonts in a later call. `lunatui_fonts::Family::compact` returns the compact files, `COMPACT_RANGES` lists what they keep, and `scripts/subset-fonts.py` writes them. They add about 200 KB. The `graphite_fonts` example draws a fourth specimen with the compact fonts.
+
 ## [0.1.40] - 2026-11-24
 
 ### Added

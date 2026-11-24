@@ -292,3 +292,77 @@ fn sizes_above_4096_are_rejected() {
         assert!(px.line_metrics(Face::Regular, 4097.0).is_none());
     });
 }
+
+fn compact_chars() -> impl Iterator<Item = char> {
+    lunatui_fonts::COMPACT_RANGES
+        .into_iter()
+        .flat_map(|(first, last)| first..=last)
+}
+
+#[test]
+fn compact_text_measures_every_character_it_keeps_like_the_full_fonts() -> Result<(), &'static str>
+{
+    use lunatui_fonts::{Family, Weight};
+    let full = BundledText::shared(UiFont::Inter);
+    let compact = BundledText::shared(UiFont::InterCompact);
+    let faces = [
+        (Face::Regular, Family::Inter, Weight::Regular),
+        (Face::SemiBold, Family::Inter, Weight::Bold),
+        (Face::Mono, Family::JetBrainsMono, Weight::Regular),
+    ];
+    for (face, family, weight) in faces {
+        let font =
+            fontdue::Font::from_bytes(family.data(weight), fontdue::FontSettings::default())?;
+        let mut kept = 0;
+        for character in compact_chars().filter(|c| font.lookup_glyph_index(*c) != 0) {
+            let text = character.to_string();
+            assert_eq!(
+                compact.width(face, 20.0, &text),
+                full.width(face, 20.0, &text),
+                "{face:?} {character:?} U+{:04X}",
+                u32::from(character)
+            );
+            kept += 1;
+        }
+        assert!(kept > 400, "{face:?} kept {kept}");
+    }
+    Ok(())
+}
+
+#[test]
+fn compact_text_draws_the_same_pixels_as_inter() {
+    let line = |px: &mut PixelCx<'_>| {
+        let red = Color::Rgb(220, 40, 30);
+        assert!(px.text(Face::Regular, 18.0, (2.0, 20.0), "Seats 12:04 → idle", red));
+        assert!(px.text(Face::SemiBold, 18.0, (2.0, 40.0), "Graphite ■ ✓", red));
+        assert!(px.text(Face::Mono, 18.0, (2.0, 60.0), "cargo ├─ ▁▃▅", red));
+    };
+    let inter = paint(Some([0, 0, 0]), Some(UiFont::Inter), line);
+    let compact = paint(Some([0, 0, 0]), Some(UiFont::InterCompact), line);
+    assert!(inter.rgba8_pixels().contains(&220));
+    assert_eq!(inter.rgba8_pixels(), compact.rgba8_pixels());
+}
+
+#[test]
+fn compact_text_draws_characters_outside_its_set_as_the_missing_glyph() {
+    let full = BundledText::shared(UiFont::Inter);
+    let compact = BundledText::shared(UiFont::InterCompact);
+    let missing = compact.width(Face::Regular, 20.0, "\u{10FFFD}");
+    assert!(missing > 0.0);
+    for text in ["Ж", "λ", "ǅ", "🙂"] {
+        assert_eq!(compact.width(Face::Regular, 20.0, text), missing, "{text}");
+        assert_ne!(full.width(Face::Regular, 20.0, text), missing, "{text}");
+    }
+}
+
+#[test]
+fn load_parses_every_font_file_ahead_of_text() {
+    for ui in [UiFont::InterCompact, UiFont::Inter] {
+        let text = BundledText::new(ui);
+        assert!(!text.loaded(), "{ui:?}");
+        assert!(text.width(Face::Regular, 20.0, "a") > 0.0);
+        assert!(!text.loaded(), "{ui:?} after one face");
+        text.load();
+        assert!(text.loaded(), "{ui:?}");
+    }
+}
