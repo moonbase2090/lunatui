@@ -311,3 +311,9 @@ test = true
 name = "activity_monitor"
 path = "../examples/activity_monitor.rs"
 test = true
+
+[[example]]
+name = "activity_monitor_live"
+path = "../examples/activity_monitor_live.rs"
+test = true
+required-features = ["image-presenter"]
