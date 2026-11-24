@@ -122,6 +122,7 @@ fn map_mouse(raw: event::MouseEvent) -> MouseEvent {
         row: raw.row,
         modifiers: map_modifiers(raw.modifiers),
         unit: MouseUnit::Cells,
+        inside: None,
     }
 }
 

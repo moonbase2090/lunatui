@@ -7,6 +7,6 @@ mod parser;
 mod paste;
 
 pub use keys::{KeyCode, KeyEvent, KeyKind, Modifiers};
-pub use mouse::{MouseButton, MouseEvent, MouseKind, MouseUnit, Scroll};
+pub use mouse::{MouseButton, MouseEvent, MouseKind, MouseUnit, Scroll, SubCell};
 pub use parser::{Event, Focus, Parser, fuzz_input_parser};
 pub use paste::Paste;
