@@ -172,7 +172,7 @@ impl<'a> Slider<'a> {
         } else {
             0.5
         };
-        let position = f64::from(column.saturating_sub(track.x)) + across - 0.5;
+        let position = f64::from(column) - f64::from(track.x) + across - 0.5;
         let fraction = (position / last).clamp(0.0, 1.0);
         self.snap(self.min + fraction * (self.max - self.min))
     }

@@ -331,6 +331,26 @@ fn value_at_across_matches_value_at_at_cell_centres_and_moves_between_them() {
 }
 
 #[test]
+fn value_at_across_gives_the_nearest_end_outside_the_track() {
+    let slider = Slider::new(0.0, 10.0);
+    let track = Rect::new(4, 0, 11, 1);
+    for across in [0.0, 0.5, 0.9, 1.0] {
+        for column in [0, 3] {
+            assert!(
+                slider.value_at_across(track, column, across).abs() < 1e-9,
+                "column {column} across {across} is left of the track"
+            );
+        }
+        for column in [15, 40] {
+            assert!(
+                (slider.value_at_across(track, column, across) - 10.0).abs() < 1e-9,
+                "column {column} across {across} is right of the track"
+            );
+        }
+    }
+}
+
+#[test]
 fn value_at_across_snaps_to_the_step() {
     let slider = Slider::new(0.0, 10.0).step(1.0);
     let track = Rect::new(0, 0, 3, 1);
