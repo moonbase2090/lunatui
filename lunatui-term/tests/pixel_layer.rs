@@ -648,7 +648,7 @@ fn protocol_choice_and_rejection_keep_unsupported_paths_on_cells()
 fn an_image_above_a_replaced_one_is_placed_again_to_stay_on_top() {
     let mut layer = PixelLayer::new(PixelMode::Kitty);
     let image = PixelImage::new(1, 1, &PIXEL);
-    let scene = |layer: &mut PixelLayer, row_generation: u64| {
+    let mut scene = |layer: &mut PixelLayer, row_generation: u64| {
         frame(layer, |layer| {
             if let Some(image) = image {
                 layer.image(1, row_generation, &image, Rect::new(0, 0, 10, 1), 0);
