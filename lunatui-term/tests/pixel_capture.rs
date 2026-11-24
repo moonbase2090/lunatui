@@ -219,8 +219,13 @@ fn moving_and_changing_depth_places_without_transmitting() -> Result<(), String>
     if place.keys.get("a").map(String::as_str) != Some("p") || number(place, "i") != Some(6) {
         return Err(format!("placement is not for image 6: {:?}", place.keys));
     }
-    if place.keys.get("z").map(String::as_str) != Some("-2") {
-        return Err("depth -2 was not written as a signed value".to_owned());
+    let z: i32 = place
+        .keys
+        .get("z")
+        .and_then(|value| value.parse().ok())
+        .ok_or("no z-index")?;
+    if z.div_euclid(256) != -2 {
+        return Err(format!("depth -2 was not written as a signed z-index: {z}"));
     }
     Ok(())
 }
@@ -331,8 +336,8 @@ impl Screen {
     }
 
     fn at(&self, area: Rect, depth: i32) -> Option<&[u8]> {
-        self.placements.iter().find_map(|(id, placement)| {
-            (*placement == (area, depth))
+        self.placements.iter().find_map(|(id, &(rect, z))| {
+            (rect == area && z.div_euclid(256) == depth)
                 .then(|| self.visible.get(id).map(Vec::as_slice))
                 .flatten()
         })

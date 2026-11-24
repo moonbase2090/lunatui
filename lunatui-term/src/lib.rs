@@ -30,7 +30,7 @@ pub use input::{
     MouseUnit, Parser, Paste, Scroll, SubCell, fuzz_input_parser,
 };
 #[cfg(feature = "pixel-layer")]
-pub use pixel::{PixelImage, PixelLayer, PixelMode};
+pub use pixel::{PIXEL_DEPTHS, PixelImage, PixelLayer, PixelMode};
 pub use session::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
 pub use size::{SIZE_POLL, terminal_cell_pixels, terminal_size, watch_size};
 
