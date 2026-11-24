@@ -6,7 +6,8 @@
 use lunatui_core::Rect;
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};
 use lunatui_term::{
-    Caps, GraphicsProtocol, Multiplexer, PixelImage, PixelLayer, PixelMode, ProbeEnv, ProbeReply,
+    Caps, GraphicsProtocol, Multiplexer, PIXEL_DEPTHS, PixelImage, PixelLayer, PixelMode, ProbeEnv,
+    ProbeReply,
 };
 
 const PIXEL: [u8; 4] = [1, 2, 3, 4];
@@ -97,7 +98,7 @@ fn a_new_image_is_transmitted_then_placed() {
     assert_eq!(
         text(&bytes),
         "\x1b_Ga=t,i=7,f=32,s=1,v=1,q=2;AQIDBA==\x1b\\\
-         \x1b[3;4H\x1b_Ga=p,i=7,p=1,c=10,r=4,z=-1,C=1,q=2\x1b\\"
+         \x1b[3;4H\x1b_Ga=p,i=7,p=1,c=10,r=4,z=-256,C=1,q=2\x1b\\"
     );
 }
 
@@ -127,7 +128,7 @@ fn moving_or_changing_depth_places_again_without_transmitting() {
     let deeper = one(&mut layer, 7, 1, Rect::new(5, 2, 10, 4), 3);
     assert_eq!(
         text(&deeper),
-        "\x1b[3;6H\x1b_Ga=p,i=7,p=1,c=10,r=4,z=3,C=1,q=2\x1b\\"
+        "\x1b[3;6H\x1b_Ga=p,i=7,p=1,c=10,r=4,z=768,C=1,q=2\x1b\\"
     );
     let resized = one(&mut layer, 7, 1, Rect::new(5, 2, 12, 4), 3);
     assert!(text(&resized).contains("c=12,r=4"));
@@ -271,9 +272,61 @@ fn three_chunks_mark_the_middle_one_as_more_to_come() {
 fn depth_is_written_signed() {
     let mut layer = PixelLayer::new(PixelMode::Kitty);
     assert!(
-        text(&one(&mut layer, 1, 1, Rect::new(0, 0, 1, 1), i32::MIN)).contains("z=-2147483648,")
+        text(&one(
+            &mut layer,
+            1,
+            1,
+            Rect::new(0, 0, 1, 1),
+            *PIXEL_DEPTHS.start()
+        ))
+        .contains("z=-2147483648,")
     );
     assert!(text(&one(&mut layer, 1, 1, Rect::new(0, 0, 1, 1), 0)).contains("z=0,"));
+}
+
+#[test]
+fn extreme_depths_keep_their_order_and_depths_beyond_them_are_refused() {
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    let image = PixelImage::new(1, 1, &PIXEL);
+    let (top, bottom) = (*PIXEL_DEPTHS.end(), *PIXEL_DEPTHS.start());
+    let bytes = text(&frame(&mut layer, |layer| {
+        if let Some(image) = image {
+            layer.image(1, 1, &image, Rect::new(0, 0, 2, 1), top);
+            layer.image(2, 1, &image, Rect::new(0, 0, 2, 1), top - 1);
+            layer.image(3, 1, &image, Rect::new(0, 0, 2, 1), bottom + 1);
+            layer.image(4, 1, &image, Rect::new(0, 0, 2, 1), bottom);
+            layer.image(5, 1, &image, Rect::new(0, 0, 2, 1), top + 1);
+            layer.image(6, 1, &image, Rect::new(0, 0, 2, 1), bottom - 1);
+            layer.image(7, 1, &image, Rect::new(0, 0, 2, 1), i32::MAX);
+        }
+    }));
+    let z = |id| placed_z(&bytes, id);
+    assert_eq!(z(1), Some(2_147_483_392));
+    assert!(z(1) > z(2), "a deeper image listed first stays above");
+    assert!(z(3) > z(4), "the lowest depths keep their order too");
+    assert_eq!(z(4), Some(-2_147_483_645));
+    for refused in [5, 6, 7] {
+        assert_eq!(
+            z(refused),
+            None,
+            "depth outside the range is refused: image {refused}"
+        );
+    }
+    let source = ImageSource::rgba8(1, 1, PIXEL.to_vec().into_boxed_slice());
+    let mut measured = PixelLayer::from_caps(&{
+        let mut caps = Caps::default();
+        caps.protocols.graphics = GraphicsProtocol::Kitty;
+        caps.cell_pixels = lunatui_term::CellPixels::new(1, 1);
+        caps
+    });
+    measured.begin_frame();
+    let accepted = source
+        .as_ref()
+        .is_ok_and(|source| measured.submit_raster(source, Rect::new(0, 0, 1, 1), top + 1));
+    assert!(
+        !accepted,
+        "a widget raster beyond the depth range is refused"
+    );
 }
 
 #[test]
@@ -296,7 +349,7 @@ fn widget_image_request_crops_and_applies_opacity_before_kitty_upload()
     assert_eq!(
         text(layer.finish_frame()),
         "\x1b_Ga=t,i=13,f=32,s=1,v=1,q=2;AQIDAg==\x1b\\\
-         \x1b[4;3H\x1b_Ga=p,i=13,p=1,c=1,r=1,z=-1,C=1,q=2\x1b\\"
+         \x1b[4;3H\x1b_Ga=p,i=13,p=1,c=1,r=1,z=-256,C=1,q=2\x1b\\"
     );
     layer.begin_frame();
     assert!(layer.submit(request));
@@ -642,4 +695,57 @@ fn protocol_choice_and_rejection_keep_unsupported_paths_on_cells()
         );
     }
     Ok(())
+}
+
+fn placed_z(bytes: &str, id: u32) -> Option<i64> {
+    let start = bytes.find(&format!("a=p,i={id},"))?;
+    let rest = &bytes[start..];
+    let z = rest.find("z=")? + 2;
+    rest[z..].split(',').next()?.parse().ok()
+}
+
+#[test]
+fn a_later_image_at_the_same_depth_stays_above_one_that_is_uploaded_again() {
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    let image = PixelImage::new(1, 1, &PIXEL);
+    let scene = |layer: &mut PixelLayer, row_generation: u64| {
+        text(&frame(layer, |layer| {
+            if let Some(image) = image {
+                layer.image(1, row_generation, &image, Rect::new(0, 0, 10, 1), 0);
+                layer.image(2, 1, &image, Rect::new(4, 0, 3, 1), 0);
+            }
+        }))
+    };
+    let first = scene(&mut layer, 1);
+    assert_eq!(placed_z(&first, 1), Some(0), "{first:?}");
+    assert_eq!(placed_z(&first, 2), Some(1), "{first:?}");
+    let second = scene(&mut layer, 2);
+    assert!(
+        second.contains("a=t,i=3,"),
+        "the row is uploaded again with a higher id: {second:?}"
+    );
+    assert_eq!(placed_z(&second, 3), Some(0), "{second:?}");
+    assert!(
+        !second.contains("a=p,i=2,"),
+        "the unchanged badge keeps its z-index above the row"
+    );
+}
+
+#[test]
+fn depth_orders_images_before_their_place_in_the_frame() {
+    let mut layer = PixelLayer::new(PixelMode::Kitty);
+    let image = PixelImage::new(1, 1, &PIXEL);
+    let bytes = text(&frame(&mut layer, |layer| {
+        if let Some(image) = image {
+            layer.image(1, 1, &image, Rect::new(0, 0, 2, 1), 1);
+            layer.image(2, 1, &image, Rect::new(0, 0, 2, 1), 0);
+            layer.image(3, 1, &image, Rect::new(0, 0, 2, 1), -1);
+        }
+    }));
+    let (deep, middle, under) = (
+        placed_z(&bytes, 1),
+        placed_z(&bytes, 2),
+        placed_z(&bytes, 3),
+    );
+    assert_eq!((deep, middle, under), (Some(256), Some(1), Some(-254)));
 }
