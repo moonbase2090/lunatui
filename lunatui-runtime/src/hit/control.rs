@@ -5,7 +5,7 @@ use std::fmt;
 
 use lunatui_core::Rect;
 
-use crate::LayerId;
+use crate::{ChangeDetails, LayerId};
 
 use super::HitId;
 
@@ -68,6 +68,7 @@ pub struct ControlMetadata {
     invalid: bool,
     shortcut: Option<String>,
     mnemonic: Option<char>,
+    change: Option<ChangeDetails>,
 }
 
 impl ControlMetadata {
@@ -92,6 +93,7 @@ impl ControlMetadata {
             invalid: false,
             shortcut: None,
             mnemonic: None,
+            change: None,
         }
     }
 
@@ -154,6 +156,15 @@ impl ControlMetadata {
         self
     }
 
+    /// The change the application applied to this control since the last frame, as its
+    /// [`Change`](crate::Change) reported it. An agent [`Subscription`](crate::Subscription)
+    /// reports its reason and source with the control's new value. For an agent only.
+    #[must_use]
+    pub const fn changed(mut self, details: ChangeDetails) -> Self {
+        self.change = Some(details);
+        self
+    }
+
     pub(super) fn record(&self, id: HitId, area: Rect, z: u16) -> Control<'_> {
         Control {
             id,
@@ -169,6 +180,7 @@ impl ControlMetadata {
             invalid: self.invalid,
             shortcut: self.shortcut.as_deref(),
             mnemonic: self.mnemonic,
+            change: self.change,
         }
     }
 }
@@ -204,6 +216,8 @@ pub struct Control<'a> {
     pub shortcut: Option<&'a str>,
     /// The mnemonic letter of this control. For an agent only.
     pub mnemonic: Option<char>,
+    /// The change the application recorded for this frame with [`ControlMetadata::changed`].
+    pub change: Option<ChangeDetails>,
 }
 
 /// More than one control matched the same role, name and layer.

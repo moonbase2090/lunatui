@@ -6,7 +6,7 @@
 use std::borrow::Cow;
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
-use lunatui_runtime::{AccessibilityRole, ControlMetadata, HitId, LayerId};
+use lunatui_runtime::{AccessibilityRole, ChangeDetails, ControlMetadata, HitId, LayerId};
 use lunatui_ui_tokens::{Role, surface, text};
 use lunatui_widgets::{RenderCx, Widget};
 
@@ -49,6 +49,7 @@ pub struct Field<'a> {
     value_shown: ValueShown,
     body: Option<&'a dyn Widget>,
     on: Role,
+    change: Option<ChangeDetails>,
 }
 
 impl<'a> Field<'a> {
@@ -79,7 +80,17 @@ impl<'a> Field<'a> {
             value_shown: ValueShown::Yes,
             body: None,
             on: Role::Background,
+            change: None,
         }
+    }
+
+    /// The change the application applied to this field's value since the last frame, as its
+    /// [`Change`](lunatui_runtime::Change) reported it, so an agent subscription reports its
+    /// reason and source. See [`ControlMetadata::changed`].
+    #[must_use]
+    pub const fn changed(mut self, details: ChangeDetails) -> Self {
+        self.change = Some(details);
+        self
     }
 
     /// Muted help text under the control, shown while there is no error.
@@ -231,6 +242,10 @@ impl<'a> Field<'a> {
             .layer(self.layer)
             .checked(self.body.and_then(Widget::control_checked))
             .invalid(self.error.is_some());
+            let metadata = match self.change {
+                Some(details) => metadata.changed(details),
+                None => metadata,
+            };
             match self.body.and_then(Widget::control_value) {
                 Some(value) if self.value_shown == ValueShown::Yes => metadata.value(value),
                 _ => metadata,
