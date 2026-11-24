@@ -213,6 +213,18 @@ impl PixelLayer {
         self.mode
     }
 
+    /// The size of a cell in pixels that images are drawn at, when the terminal reported one.
+    #[must_use]
+    pub const fn cell_pixels(&self) -> Option<CellPixels> {
+        self.cell_pixels
+    }
+
+    /// Draws later images at `cell` pixels per cell, as after the terminal's font changed. Images
+    /// already placed keep their pixels until they are drawn again.
+    pub const fn set_cell_pixels(&mut self, cell: CellPixels) {
+        self.cell_pixels = Some(cell);
+    }
+
     /// Starts a frame; call before the first [`image`](Self::image).
     pub fn begin_frame(&mut self) {
         self.out.clear();

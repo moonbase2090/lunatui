@@ -95,11 +95,15 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         #[cfg(feature = "image-presenter")]
         images,
         #[cfg(feature = "image-presenter")]
-        mode: options
+        mode: RenderMode::Cell,
+    };
+    #[cfg(feature = "image-presenter")]
+    {
+        frames.mode = options
             .mode
             .with_env_override()
-            .resolve(&Capabilities::CELL_ONLY),
-    };
+            .resolve(&capabilities(&frames.images));
+    }
     let mut sched = Scheduler::idle();
     sched.on_input();
     let epoch = Instant::now();
@@ -160,8 +164,14 @@ fn dispatch<A: App>(
     for event in events {
         if let Event::Resize(width, height) = event {
             frames.resize(area, width, height);
-            if let (Some(cell), Some(now)) = (frames.pointer.as_mut(), terminal_cell_pixels()) {
-                *cell = now;
+            if let Some(now) = terminal_cell_pixels() {
+                if let Some(cell) = frames.pointer.as_mut() {
+                    *cell = now;
+                }
+                #[cfg(feature = "image-presenter")]
+                if frames.images.mode().is_pixels() {
+                    frames.images.set_cell_pixels(now);
+                }
             }
         }
         let event = match (event, frames.pointer) {
@@ -289,6 +299,26 @@ pub fn render_once<A: App>(app: &mut A, width: u16, height: u16) -> (Grid, Clust
     #[cfg(not(feature = "image-presenter"))]
     app.render(&mut grid, area, &mut clusters);
     (grid, clusters)
+}
+
+#[cfg(feature = "image-presenter")]
+pub(crate) fn capabilities(layer: &PixelLayer) -> Capabilities {
+    use std::num::NonZeroU16;
+
+    use crate::mode::GraphiteCaps;
+
+    let cell = layer.cell_pixels().filter(|_| layer.mode().is_pixels());
+    cell.and_then(|cell| {
+        Some(Capabilities::with_graphite(
+            GraphiteCaps::new(
+                NonZeroU16::new(cell.width())?,
+                NonZeroU16::new(cell.height())?,
+            )
+            .proportional_text(true)
+            .alpha(layer.mode() == PixelMode::Kitty),
+        ))
+    })
+    .unwrap_or(Capabilities::CELL_ONLY)
 }
 
 #[cfg(all(feature = "image-presenter", unix))]
