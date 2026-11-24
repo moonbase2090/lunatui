@@ -609,6 +609,17 @@ impl Agent {
         Ok(ticket)
     }
 
+    /// Watches the controls `query` matches; see [`Subscription`].
+    #[must_use]
+    pub fn subscribe(query: ControlQuery<'_>) -> Subscription {
+        Subscription {
+            text: query.text.map(str::to_owned),
+            kind: query.kind,
+            layer: query.layer,
+            seen: None,
+        }
+    }
+
     /// The oldest request that was not cancelled.
     pub fn take(&mut self) -> Option<Request> {
         while let Some(request) = self.queue.pop_front() {
@@ -623,6 +634,129 @@ impl Agent {
     #[must_use]
     pub fn pending(&self) -> usize {
         self.queue.len()
+    }
+}
+
+/// What a [`Subscription`] compares for one control between frames.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ControlValue {
+    /// The value, when the control has one that is not secret.
+    pub value: Option<String>,
+    /// Whether an on/off control is on.
+    pub checked: Option<bool>,
+    /// Disabled, focused, selected and invalid, in that order, for those that hold.
+    pub states: Vec<ControlState>,
+}
+
+/// One subscribed control that changed between two observed frames.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct ControlChange {
+    /// Application-defined identity.
+    pub id: HitId,
+    /// Accessible name in the newer frame, or the last one seen when the control went away.
+    pub name: String,
+    /// Semantic role.
+    pub role: AccessibilityRole,
+    /// The overlay layer that owns the control, or `None` for the base layer.
+    pub parent: Option<LayerId>,
+    /// The control before the change, or `None` when it appeared.
+    pub previous: Option<ControlValue>,
+    /// The control after the change, or `None` when it went away.
+    pub current: Option<ControlValue>,
+    /// Why it changed, when the application recorded the change with
+    /// [`ControlMetadata::changed`](crate::ControlMetadata::changed).
+    pub reason: Option<ChangeReason>,
+    /// Where the change came from, under the same condition as [`reason`](Self::reason).
+    pub source: Option<ChangeSource>,
+}
+
+/// Watches the controls a [`ControlQuery`] matches and reports what changed between frames.
+///
+/// The first [`observe`](Self::observe) only records the controls; each later one returns the
+/// controls whose value, checked state or states differ from the previous frame, and those that
+/// appeared or went away, in registration order.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Subscription {
+    text: Option<String>,
+    kind: Option<AccessibilityRole>,
+    layer: LayerFilter,
+    seen: Option<Vec<Seen>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Seen {
+    id: HitId,
+    name: String,
+    role: AccessibilityRole,
+    parent: Option<LayerId>,
+    value: ControlValue,
+}
+
+impl Subscription {
+    /// Compares the controls in `hits` with those of the previous call and returns the changes.
+    pub fn observe(&mut self, hits: &HitMap, focused: Option<HitId>) -> Vec<ControlChange> {
+        let query = ControlQuery {
+            text: self.text.as_deref(),
+            kind: self.kind,
+            layer: self.layer,
+        };
+        let text = self.text.as_deref().map(str::to_lowercase);
+        let mut now = Vec::new();
+        let mut changes = Vec::new();
+        for control in hits
+            .controls()
+            .filter(|control| query.matches(*control, text.as_deref()))
+        {
+            let agent = agent_control(control, focused);
+            let value = ControlValue {
+                value: agent.value,
+                checked: agent.checked,
+                states: agent.states,
+            };
+            if let Some(seen) = &self.seen {
+                let before = seen.iter().find(|old| old.id == control.id);
+                if before.is_none_or(|old| old.value != value) {
+                    changes.push(ControlChange {
+                        id: control.id,
+                        name: agent.name.clone(),
+                        role: control.role,
+                        parent: control.layer,
+                        previous: before.map(|old| old.value.clone()),
+                        current: Some(value.clone()),
+                        reason: control.change.map(|change| change.reason()),
+                        source: control.change.map(|change| change.source()),
+                    });
+                }
+            }
+            now.push(Seen {
+                id: control.id,
+                name: agent.name,
+                role: control.role,
+                parent: control.layer,
+                value,
+            });
+        }
+        if let Some(seen) = &self.seen {
+            for gone in seen
+                .iter()
+                .filter(|old| now.iter().all(|new| new.id != old.id))
+            {
+                changes.push(ControlChange {
+                    id: gone.id,
+                    name: gone.name.clone(),
+                    role: gone.role,
+                    parent: gone.parent,
+                    previous: Some(gone.value.clone()),
+                    current: None,
+                    reason: None,
+                    source: None,
+                });
+            }
+        }
+        self.seen = Some(now);
+        changes
     }
 }
 
