@@ -60,6 +60,25 @@ fn session_enables_sgr_mouse_when_requested() {
         output.windows(8).any(|w| w == b"\x1b[?1006l"),
         "expected SGR mouse disable on restore"
     );
+    assert!(
+        !output.windows(8).any(|w| w == b"\x1b[?1016h"),
+        "SGR tracking leaves pixel reports off"
+    );
+}
+
+#[test]
+fn session_enables_pixel_mouse_reports_after_sgr_and_turns_them_off_first() {
+    let output = run_probe_in_pty("mouse-pixels");
+    let at = |sequence: &[u8]| output.windows(sequence.len()).position(|w| w == sequence);
+    let sgr_on = at(b"\x1b[?1006h").unwrap_or(usize::MAX);
+    let pixels_on = at(b"\x1b[?1016h").unwrap_or(usize::MAX);
+    let pixels_off = at(b"\x1b[?1016l").unwrap_or(usize::MAX);
+    let sgr_off = at(b"\x1b[?1006l").unwrap_or(usize::MAX);
+    assert!(sgr_on < pixels_on, "1016 is enabled after 1006");
+    assert!(
+        pixels_on < pixels_off && pixels_off < sgr_off && sgr_off != usize::MAX,
+        "1016 is disabled before 1006 on restore"
+    );
 }
 
 #[test]

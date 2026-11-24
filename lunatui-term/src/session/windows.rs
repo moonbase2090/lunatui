@@ -31,6 +31,8 @@ pub enum MouseTracking {
     Disabled,
     /// SGR mouse modes 1000, 1002, 1003, and 1006.
     Sgr,
+    /// The same as `Sgr` here: console mouse input arrives in cells, so mode 1016 is not used.
+    SgrPixels,
 }
 
 /// Options for [`Session::enter`].
@@ -203,7 +205,7 @@ impl<W: Write> Session<W> {
         let marks = ConsoleMarks {
             alt: true,
             hidden_cursor: true,
-            mouse: self.mouse_tracking == MouseTracking::Sgr,
+            mouse: self.mouse_tracking != MouseTracking::Disabled,
         };
         undo_console_start(&mut self.writer, marks);
         let _ = disable_raw_mode();
@@ -230,7 +232,7 @@ fn apply_console_start<W: Write>(
         return Err(SessionError::Io(io::Error::other("hide cursor")));
     }
     marks.hidden_cursor = true;
-    if mouse_tracking == MouseTracking::Sgr {
+    if mouse_tracking != MouseTracking::Disabled {
         if writer.write_all(MOUSE_ENABLE).is_err() {
             undo_console_start(writer, marks);
             return Err(SessionError::Io(io::Error::other("enable mouse")));

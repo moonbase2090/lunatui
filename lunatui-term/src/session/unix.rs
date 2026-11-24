@@ -20,6 +20,8 @@ const SYNC_BEGIN: &[u8] = b"\x1b[?2026h";
 const SYNC_END: &[u8] = b"\x1b[?2026l";
 const MOUSE_ENABLE: &[u8] = b"\x1b[?1000h\x1b[?1002h\x1b[?1003h\x1b[?1006h";
 const MOUSE_DISABLE: &[u8] = b"\x1b[?1006l\x1b[?1003l\x1b[?1002l\x1b[?1000l";
+const PIXELS_ENABLE: &[u8] = b"\x1b[?1016h";
+const PIXELS_DISABLE: &[u8] = b"\x1b[?1016l";
 
 /// Whether the session enables extended mouse reporting.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -29,6 +31,12 @@ pub enum MouseTracking {
     Disabled,
     /// SGR mouse modes 1000, 1002, 1003, and 1006.
     Sgr,
+    /// The SGR modes plus mode 1016, so reports carry pixels instead of cells. Read them with a
+    /// [`Parser`](crate::Parser) in pixel mode and convert each event with
+    /// [`MouseEvent::in_cells`](crate::MouseEvent::in_cells). Use it only when the terminal
+    /// reports mode 1016, since a terminal without it sends cells. On Windows, mouse input comes
+    /// from console events in cells, so this is the same as `Sgr`.
+    SgrPixels,
 }
 
 /// Whether frame payloads are wrapped in synchronized-update sequences.
@@ -208,8 +216,11 @@ impl<W> Session<W> {
     fn write_startup(&mut self) -> Result<(), SessionError> {
         write_tty(&self.tty, ENTER_ALT)?;
         write_tty(&self.tty, HIDE_CURSOR)?;
-        if self.mouse_tracking == MouseTracking::Sgr {
+        if self.mouse_tracking != MouseTracking::Disabled {
             write_tty(&self.tty, MOUSE_ENABLE)?;
+        }
+        if self.mouse_tracking == MouseTracking::SgrPixels {
+            write_tty(&self.tty, PIXELS_ENABLE)?;
         }
         Ok(())
     }
@@ -219,7 +230,10 @@ impl<W> Session<W> {
             return;
         }
         self.active = false;
-        if self.mouse_tracking == MouseTracking::Sgr {
+        if self.mouse_tracking == MouseTracking::SgrPixels {
+            let _ = write_tty(&self.tty, PIXELS_DISABLE);
+        }
+        if self.mouse_tracking != MouseTracking::Disabled {
             let _ = write_tty(&self.tty, MOUSE_DISABLE);
         }
         let _ = write_tty(&self.tty, SHOW_CURSOR);
