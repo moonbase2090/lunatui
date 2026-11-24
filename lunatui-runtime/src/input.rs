@@ -134,18 +134,22 @@ impl Input {
     }
 
     #[cfg(feature = "image-presenter")]
-    pub(crate) fn open_prefixed(bytes: Vec<u8>) -> io::Result<Self> {
+    pub(crate) fn open_prefixed(bytes: Vec<u8>, mouse_pixels: bool) -> io::Result<Self> {
         #[cfg(unix)]
         {
-            Self::from_reader_sized(
+            let mut parser = Parser::new();
+            parser.mouse_pixels(mouse_pixels);
+            Self::from_reader_timed(
                 io::Cursor::new(bytes).chain(io::stdin()),
-                Box::new(terminal_size),
-                SIZE_POLL,
+                Arc::new(Clock(ESCAPE_TIMEOUT)),
+                Some((Box::new(terminal_size), SIZE_POLL)),
+                parser,
             )
         }
         #[cfg(not(unix))]
         {
             drop(bytes);
+            let _ = mouse_pixels;
             Self::open()
         }
     }
@@ -166,7 +170,7 @@ impl Input {
     where
         R: Read + Send + 'static,
     {
-        Self::from_reader_timed(reader, Arc::new(Clock(escape_timeout)), None)
+        Self::from_reader_timed(reader, Arc::new(Clock(escape_timeout)), None, Parser::new())
     }
 
     /// Starts a worker that reads terminal bytes from `reader` and also delivers an [`Event::Resize`] first and whenever `size` reports a new value, checked every `poll`.
@@ -178,13 +182,19 @@ impl Input {
     where
         R: Read + Send + 'static,
     {
-        Self::from_reader_timed(reader, Arc::new(Clock(ESCAPE_TIMEOUT)), Some((size, poll)))
+        Self::from_reader_timed(
+            reader,
+            Arc::new(Clock(ESCAPE_TIMEOUT)),
+            Some((size, poll)),
+            Parser::new(),
+        )
     }
 
     fn from_reader_timed<R>(
         mut reader: R,
         timer: Arc<dyn Timer>,
         size: Option<(SizeReader, Duration)>,
+        parser: Parser,
     ) -> io::Result<Self>
     where
         R: Read + Send + 'static,
@@ -192,7 +202,7 @@ impl Input {
         let (sender, receiver) = mpsc::channel();
         let shared = Arc::new(Shared {
             state: Mutex::new(Held {
-                parser: Parser::new(),
+                parser,
                 generation: 0,
                 closed: false,
             }),
@@ -853,8 +863,13 @@ mod tests {
             fire: Arc::clone(&fire),
             armed: Mutex::new(armed_sender),
         };
-        let input = Input::from_reader_timed(ChannelSource { bytes }, Arc::new(timer), None)
-            .map_err(|error| error.to_string())?;
+        let input = Input::from_reader_timed(
+            ChannelSource { bytes },
+            Arc::new(timer),
+            None,
+            Parser::new(),
+        )
+        .map_err(|error| error.to_string())?;
         let wait = |armed: &Receiver<u64>| {
             armed
                 .recv_timeout(LIMIT)

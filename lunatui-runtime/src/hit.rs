@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::Rect;
+use lunatui_term::MouseEvent;
 
 mod accessibility;
 pub(crate) use accessibility::write_string;
@@ -38,6 +39,19 @@ struct HitRegion {
     area: Rect,
     z: u16,
     annotation: Annotation,
+}
+
+/// A hit and where the pointer is inside its region.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HitPoint {
+    /// The hit, the same one [`HitMap::pick`] returns for the pointer's cell.
+    pub id: HitId,
+    /// The region's cells.
+    pub area: Rect,
+    /// How far across the region the pointer is, from 0.0 at its left edge to 1.0 at its right.
+    pub across: f64,
+    /// How far down the region the pointer is, from 0.0 at its top edge to 1.0 at its bottom.
+    pub down: f64,
 }
 
 /// Flat hit map for a single frame. Later entries with the same `z` win ties.
@@ -174,6 +188,32 @@ impl HitMap {
     /// and the layers above it.
     #[must_use]
     pub fn pick_from(&self, column: u16, row: u16, floor: u16) -> Option<HitId> {
+        self.region_at(column, row, floor).map(|region| region.id)
+    }
+
+    /// The hit [`pick`](Self::pick) returns for the event's cell, with where inside the hit
+    /// region the pointer is. An event converted from pixels with
+    /// [`MouseEvent::in_cells`] places the pointer at its pixel; any other event places it at
+    /// the centre of its cell.
+    #[must_use]
+    pub fn pick_point(&self, event: &MouseEvent) -> Option<HitPoint> {
+        let region = self.region_at(event.column, event.row, 0)?;
+        let area = region.area;
+        let (inside_x, inside_y) = event
+            .inside
+            .map_or((0.5, 0.5), |inside| (inside.across(), inside.down()));
+        let fraction = |offset: u16, inside: f64, size: u16| {
+            ((f64::from(offset) + inside) / f64::from(size)).clamp(0.0, 1.0)
+        };
+        Some(HitPoint {
+            id: region.id,
+            area,
+            across: fraction(event.column - area.x, inside_x, area.width),
+            down: fraction(event.row - area.y, inside_y, area.height),
+        })
+    }
+
+    fn region_at(&self, column: u16, row: u16, floor: u16) -> Option<&HitRegion> {
         let mut best: Option<&HitRegion> = None;
         for region in &self.regions {
             if region.z < floor || !contains(region.area, column, row) {
@@ -185,13 +225,11 @@ impl HitMap {
                 Some(prev) => prev,
             });
         }
-        best.and_then(|region| match &region.annotation {
-            Annotation::Control(metadata)
-                if metadata.record(region.id, region.area, region.z).disabled =>
-            {
-                None
+        best.filter(|region| match &region.annotation {
+            Annotation::Control(metadata) => {
+                !metadata.record(region.id, region.area, region.z).disabled
             }
-            Annotation::Control(_) | Annotation::Geometry | Annotation::Role(_) => Some(region.id),
+            Annotation::Geometry | Annotation::Role(_) => true,
         })
     }
 }

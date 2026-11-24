@@ -154,6 +154,7 @@ fn apply_decrpm(caps: &mut Caps, params: &[u8]) {
         2027 => &mut caps.modes.grapheme_clusters,
         2004 => &mut caps.modes.bracketed_paste,
         1004 => &mut caps.modes.focus_events,
+        1016 => &mut caps.modes.sgr_pixel_mouse,
         _ => return,
     };
     *slot = state;

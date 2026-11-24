@@ -66,7 +66,9 @@ pub use focus::{FocusDirection, FocusGroup, FocusManager};
 #[cfg(feature = "image-presenter")]
 pub use frame::RenderFrame;
 #[cfg(feature = "app")]
-pub use hit::{AccessibilityRole, AmbiguousControl, Control, ControlMetadata, HitId, HitMap};
+pub use hit::{
+    AccessibilityRole, AmbiguousControl, Control, ControlMetadata, HitId, HitMap, HitPoint,
+};
 pub use input::Input;
 #[cfg(feature = "app")]
 pub use interact::{

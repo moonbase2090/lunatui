@@ -27,12 +27,12 @@ pub use caps::{
 pub use encode::{ColorMode, Encoder, write_cursor_state};
 pub use input::{
     Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
-    MouseUnit, Parser, Paste, Scroll, fuzz_input_parser,
+    MouseUnit, Parser, Paste, Scroll, SubCell, fuzz_input_parser,
 };
 #[cfg(feature = "pixel-layer")]
 pub use pixel::{PixelImage, PixelLayer, PixelMode};
 pub use session::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
-pub use size::{SIZE_POLL, terminal_size, watch_size};
+pub use size::{SIZE_POLL, terminal_cell_pixels, terminal_size, watch_size};
 
 #[cfg(all(feature = "pty", unix))]
 pub use pty::PtyProcess;

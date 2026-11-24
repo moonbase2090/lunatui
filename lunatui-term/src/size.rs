@@ -15,6 +15,26 @@ pub fn terminal_size() -> Option<(u16, u16)> {
     (columns > 0 && rows > 0).then_some((columns, rows))
 }
 
+/// The cell size in pixels from the terminal's window-size report, when it gives one.
+#[must_use]
+pub fn terminal_cell_pixels() -> Option<crate::CellPixels> {
+    platform_cell_pixels()
+}
+
+#[cfg(unix)]
+fn platform_cell_pixels() -> Option<crate::CellPixels> {
+    let size = rustix::termios::tcgetwinsize(std::io::stdout())
+        .or_else(|_| rustix::termios::tcgetwinsize(std::io::stderr()))
+        .or_else(|_| rustix::termios::tcgetwinsize(std::io::stdin()))
+        .ok()?;
+    crate::CellPixels::from_window(size.ws_col, size.ws_row, size.ws_xpixel, size.ws_ypixel)
+}
+
+#[cfg(not(unix))]
+fn platform_cell_pixels() -> Option<crate::CellPixels> {
+    None
+}
+
 #[cfg(unix)]
 fn platform_size() -> Option<(u16, u16)> {
     let size = rustix::termios::tcgetwinsize(std::io::stdout())

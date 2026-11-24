@@ -8,6 +8,10 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- Pointer events can carry where they fall inside a cell. The capability probe asks whether the terminal reports the mouse in pixels (mode 1016, `DecModes::sgr_pixel_mouse`). When it does and the cell size is known, `run()` turns the reports on with `MouseTracking::SgrPixels` and converts each event with `MouseEvent::in_cells`, so applications still get cell coordinates, now with `MouseEvent::inside` holding the pixel inside the cell. The cell size follows the terminal's window-size report on resize, through `terminal_cell_pixels`. `HitMap::pick_point` returns the same hit as `pick`, with where the pointer is inside the region, and `Slider::value_at_across` gives a value that moves smoothly across a cell and equals `value_at` at a cell's centre. Terminals without mode 1016 or a cell size keep cell reports, and Windows console input stays in cells.
+
 ## [0.1.39] - 2026-11-23
 
 ### Added

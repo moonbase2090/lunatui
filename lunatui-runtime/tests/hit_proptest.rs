@@ -6,6 +6,7 @@
 
 use lunatui_core::Rect;
 use lunatui_runtime::{HitId, HitMap};
+use lunatui_term::{CellPixels, MouseEvent, MouseKind, MouseUnit};
 use proptest::prelude::*;
 
 #[derive(Clone, Copy)]
@@ -59,5 +60,32 @@ proptest! {
             map.push(entry.id, entry.area, entry.z);
         }
         prop_assert_eq!(map.pick(column, row), brute_pick(&entries, column, row));
+    }
+
+    #[test]
+    fn a_refined_pick_is_the_cell_pick_with_the_pointer_inside_its_cell(
+        regions in prop::collection::vec((1_u32..30, 0_u16..30, 0_u16..15, 1_u16..8, 1_u16..6, 0_u16..4), 1..16),
+        column in 0_u16..30,
+        row in 0_u16..15,
+        x in 0_u16..8,
+        y in 0_u16..16,
+    ) {
+        let mut map = HitMap::new();
+        for (id, left, top, width, height, z) in regions {
+            map.push(HitId(id), Rect::new(left, top, width, height), z);
+        }
+        let cell = CellPixels::new(8, 16).ok_or_else(|| TestCaseError::fail("no cell size"))?;
+        let event = MouseEvent::new(MouseKind::Move, column * 8 + x, row * 16 + y)
+            .unit(MouseUnit::Pixels)
+            .in_cells(cell);
+        let point = map.pick_point(&event);
+        prop_assert_eq!(point.map(|point| point.id), map.pick(column, row));
+        if let Some(point) = point {
+            let across = point.across * f64::from(point.area.width);
+            let down = point.down * f64::from(point.area.height);
+            let (left, top) = (f64::from(column - point.area.x), f64::from(row - point.area.y));
+            prop_assert!(left < across && across < left + 1.0, "across {across} outside cell {left}");
+            prop_assert!(top < down && down < top + 1.0, "down {down} outside cell {top}");
+        }
     }
 }
