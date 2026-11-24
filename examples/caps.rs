@@ -253,6 +253,7 @@ mod tests {
 │ clusters    unreported     │
 │ paste       unreported     │
 │ focus       unreported     │
+│ pixel mouse unreported     │
 │ keyboard    unknown        │
 │ graphics    unknown        │
 │ links       osc8           │
