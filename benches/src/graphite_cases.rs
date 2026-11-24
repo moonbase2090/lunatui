@@ -7,6 +7,7 @@ use graphite_core::{DARK, DEFAULT_ACCENT, PixelBuffer, Rect, Rgba, accent};
 use lunatui_core::Rect as CellRect;
 use lunatui_term::{PixelImage, PixelLayer, PixelMode};
 
+use crate::graphite_monitor::{Density, MonitorRun};
 use crate::{CountingWriter, WriteStats};
 
 /// Width of one cell in pixels at 1x.
@@ -26,11 +27,22 @@ pub enum Repaint {
     Changed,
 }
 
-/// One Graphite case: a repaint at a scale.
+/// What a case draws.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Scene {
+    /// An activity-monitor-shaped scene rasterized directly into a `graphite-core` buffer.
+    Raster,
+    /// The activity monitor drawn by lunatui's Graphite widgets through `RenderCx` and `PixelCx`.
+    Widgets(Density),
+}
+
+/// One Graphite case: a scene and a repaint at a scale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GraphiteCase {
     /// Name used by the instruction worker and reports.
     pub name: &'static str,
+    /// What the case draws.
+    pub scene: Scene,
     /// What each frame repaints.
     pub repaint: Repaint,
     /// Device pixels per logical pixel: 1 or 2.
@@ -38,28 +50,94 @@ pub struct GraphiteCase {
 }
 
 /// Every Graphite case, in report order.
-pub const GRAPHITE_CASES: [GraphiteCase; 4] = [
+pub const GRAPHITE_CASES: [GraphiteCase; 12] = [
     GraphiteCase {
         name: "graphite-changed-1x",
+        scene: Scene::Raster,
         repaint: Repaint::Changed,
         scale: 1,
     },
     GraphiteCase {
         name: "graphite-changed-2x",
+        scene: Scene::Raster,
         repaint: Repaint::Changed,
         scale: 2,
     },
     GraphiteCase {
         name: "graphite-full-1x",
+        scene: Scene::Raster,
         repaint: Repaint::Full,
         scale: 1,
     },
     GraphiteCase {
         name: "graphite-full-2x",
+        scene: Scene::Raster,
+        repaint: Repaint::Full,
+        scale: 2,
+    },
+    GraphiteCase {
+        name: "graphite-monitor-changed-1x",
+        scene: Scene::Widgets(Density::Monitor),
+        repaint: Repaint::Changed,
+        scale: 1,
+    },
+    GraphiteCase {
+        name: "graphite-monitor-changed-2x",
+        scene: Scene::Widgets(Density::Monitor),
+        repaint: Repaint::Changed,
+        scale: 2,
+    },
+    GraphiteCase {
+        name: "graphite-monitor-full-1x",
+        scene: Scene::Widgets(Density::Monitor),
+        repaint: Repaint::Full,
+        scale: 1,
+    },
+    GraphiteCase {
+        name: "graphite-monitor-full-2x",
+        scene: Scene::Widgets(Density::Monitor),
+        repaint: Repaint::Full,
+        scale: 2,
+    },
+    GraphiteCase {
+        name: "graphite-dense-changed-1x",
+        scene: Scene::Widgets(Density::Dense),
+        repaint: Repaint::Changed,
+        scale: 1,
+    },
+    GraphiteCase {
+        name: "graphite-dense-changed-2x",
+        scene: Scene::Widgets(Density::Dense),
+        repaint: Repaint::Changed,
+        scale: 2,
+    },
+    GraphiteCase {
+        name: "graphite-dense-full-1x",
+        scene: Scene::Widgets(Density::Dense),
+        repaint: Repaint::Full,
+        scale: 1,
+    },
+    GraphiteCase {
+        name: "graphite-dense-full-2x",
+        scene: Scene::Widgets(Density::Dense),
         repaint: Repaint::Full,
         scale: 2,
     },
 ];
+
+impl GraphiteCase {
+    /// Whether the frame ceiling fails the run when this case goes over it.
+    ///
+    /// Changed frames are gated, including the dense worst case at 1x. Full repaints are
+    /// reported, since the design lets them spread over several frames. The dense worst case at
+    /// 2x is reported: it sends about 24 MB of base64 a frame, which does not fit the ceiling on
+    /// the CI runner.
+    #[must_use]
+    pub const fn ceiling_gated(&self) -> bool {
+        matches!(self.repaint, Repaint::Changed)
+            && !(matches!(self.scene, Scene::Widgets(Density::Dense)) && self.scale == 2)
+    }
+}
 
 /// Looks up a case by name.
 #[must_use]
@@ -364,10 +442,17 @@ impl Frames {
     }
 }
 
+enum Runner {
+    Raster {
+        frames: Box<Frames>,
+        sink: CountingWriter<io::Sink>,
+    },
+    Widgets(Box<MonitorRun>),
+}
+
 /// One Graphite case at one window size, reusing its buffers across frames.
 pub struct GraphiteRun {
-    frames: Frames,
-    sink: CountingWriter<io::Sink>,
+    runner: Runner,
 }
 
 impl GraphiteRun {
@@ -377,39 +462,57 @@ impl GraphiteRun {
     ///
     /// Returns an error when the window is too small or a buffer cannot be allocated.
     pub fn new(case: &'static GraphiteCase, cols: u16, rows: u16) -> Result<Self, String> {
-        Ok(Self {
-            frames: Frames {
-                case,
-                layout: Layout::new(cols, rows)?,
-                layer: PixelLayer::new(PixelMode::Kitty),
-                window: render_full(cols, rows, case.scale, 0)?,
-                changed: render_changed(cols, rows, case.scale, 0)?,
-                tick: 0,
+        let runner = match case.scene {
+            Scene::Raster => Runner::Raster {
+                frames: Box::new(Frames {
+                    case,
+                    layout: Layout::new(cols, rows)?,
+                    layer: PixelLayer::new(PixelMode::Kitty),
+                    window: render_full(cols, rows, case.scale, 0)?,
+                    changed: render_changed(cols, rows, case.scale, 0)?,
+                    tick: 0,
+                }),
+                sink: CountingWriter::new(io::sink()),
             },
-            sink: CountingWriter::new(io::sink()),
-        })
+            Scene::Widgets(density) => Runner::Widgets(Box::new(MonitorRun::new(
+                density,
+                case.repaint,
+                case.scale,
+                cols,
+                rows,
+            )?)),
+        };
+        Ok(Self { runner })
     }
 
     /// Frames drawn so far; frame `n` draws the scene at tick `n`.
     #[must_use]
     pub fn tick(&self) -> u32 {
-        self.frames.tick
+        match &self.runner {
+            Runner::Raster { frames, .. } => frames.tick,
+            Runner::Widgets(run) => run.tick(),
+        }
     }
 
     /// Bytes and `write()` calls sent to the counting sink so far.
     #[must_use]
     pub fn stats(&self) -> WriteStats {
-        self.sink.stats()
+        match &self.runner {
+            Runner::Raster { sink, .. } => sink.stats(),
+            Runner::Widgets(run) => run.stats(),
+        }
     }
 
-    /// Rasterizes the next tick, encodes what changed as terminal images and writes it to the
-    /// counting sink.
+    /// Draws the next tick, encodes what changed and writes it to the counting sink.
     ///
     /// # Errors
     ///
     /// Returns an error if the image is invalid or writing fails.
     pub fn frame(&mut self) -> io::Result<()> {
-        self.frames.frame_into(&mut self.sink)
+        match &mut self.runner {
+            Runner::Raster { frames, sink } => frames.frame_into(sink),
+            Runner::Widgets(run) => run.frame(),
+        }
     }
 
     /// Like [`frame`](Self::frame), but writes the frame's bytes to `out` instead.
@@ -418,6 +521,9 @@ impl GraphiteRun {
     ///
     /// Returns an error if the image is invalid or writing fails.
     pub fn frame_into<W: Write>(&mut self, out: &mut W) -> io::Result<()> {
-        self.frames.frame_into(out)
+        match &mut self.runner {
+            Runner::Raster { frames, .. } => frames.frame_into(out),
+            Runner::Widgets(run) => run.frame_into(out),
+        }
     }
 }

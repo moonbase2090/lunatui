@@ -393,3 +393,76 @@ fn graphite_rows_draw_the_icon_text_and_a_right_aligned_mark() {
         .count();
     assert!(text_ink > 20, "the row text is drawn: {text_ink} columns");
 }
+
+fn lane_image(values: &[Option<u64>], striped: bool) -> ImageSource {
+    let data = bars(values, RED);
+    let chart = Sparkline::new(&data).max(8);
+    let area = Rect::new(0, 0, u16::try_from(values.len()).unwrap_or(0), 2);
+    let theme = Theme::builtin(Variant::Dark);
+    let mut grid = Grid::new(area.width, area.height);
+    let mut clusters = ClusterTable::new();
+    for column in 0..area.width {
+        let back = if striped && column % 2 == 1 {
+            Color::Rgb(30, 40, 60)
+        } else {
+            BACK
+        };
+        grid.fill(
+            Rect::new(column, 0, 1, area.height),
+            Style::new().bg(back),
+            ' ',
+            &mut clusters,
+        );
+    }
+    let mut host = Host::new(true);
+    {
+        let mut cx = RenderCx::new(&mut grid, &mut clusters, &theme)
+            .render_mode(RenderMode::Graphite)
+            .image_sink(&mut host);
+        chart.render(area, &mut cx);
+    }
+    assert_eq!(host.images.len(), 1, "one image for the lane");
+    host.images.remove(0).1
+}
+
+fn column_block(image: &ImageSource, column: u32) -> Vec<[u8; 3]> {
+    (0..image.size().height())
+        .flat_map(|y| (column * CELL.0..(column + 1) * CELL.0).map(move |x| (x, y)))
+        .map(|(x, y)| pixel(image, x, y))
+        .collect()
+}
+
+#[test]
+fn repeated_lane_bars_match_bars_drawn_alone() {
+    let values = [
+        Some(5),
+        Some(5),
+        Some(8),
+        Some(5),
+        Some(8),
+        Some(2),
+        Some(5),
+        None,
+        Some(8),
+        Some(2),
+    ];
+    for striped in [false, true] {
+        let lane = lane_image(&values, striped);
+        assert_eq!(
+            pixel(&lane, 0, 0) != pixel(&lane, CELL.0, 0),
+            striped,
+            "the backdrop under the lane is striped: {striped}"
+        );
+        for column in 0..values.len() {
+            let alone: Vec<Option<u64>> = (0..values.len())
+                .map(|index| if index == column { values[index] } else { None })
+                .collect();
+            let single = lane_image(&alone, striped);
+            let at = u32::try_from(column).unwrap_or(0);
+            assert!(
+                column_block(&lane, at) == column_block(&single, at),
+                "striped {striped}: column {column} differs from the bar drawn alone"
+            );
+        }
+    }
+}
