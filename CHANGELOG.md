@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.39] - 2026-11-23
+
 ### Added
 
 - The benchmark suite has Graphite cases drawn by lunatui's own widgets: `graphite-monitor-*` draws the activity monitor with `Badge`, `Kbd`, `List` and `Sparkline` through `RenderCx` and `PixelCx`, and `graphite-dense-*` is the worst case, a seat row with a lane on every row. Each has a changed frame that redraws the seat rows and a full repaint, at 1x and 2x, with the cells encoded as a diff and the images sent through `PixelLayer`. All eight are gated on instruction counts against `main`. The frame-ceiling bench gates the changed frames on the 16 ms ceiling, except the dense worst case at 2x, and reports the rest. Measurement only; no product code changes.
