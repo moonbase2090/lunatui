@@ -97,7 +97,7 @@ impl RenderCx<'_> {
 - `PixelCx` offers the primitives: filled and stroked rounded rectangles, lines and areas, with text measured and fitted by a `TextMetrics` and drawn by `PixelCx::text`. Bars and images come next. A Graphite widget also writes its Cell approximation into the cells underneath, as the alpha work does, so a frame that has to fall back loses detail and not layout.
 - Text is measured with the same `TextMetrics` trait that exists now. Cell mode uses `CellTextMetrics`. Graphite measures with the same bundled fonts `PixelCx::text` draws with (Inter for UI text, JetBrains Mono for `Face::Mono`, then Noto Sans, JetBrains Mono and Noto Emoji as fallbacks), unless the application supplies other metrics such as host fonts. A label that does not fit is cut by pixel width with an ellipsis, not by column count.
 - Named controls, the agent API and the accessibility export are mode-independent. They read the registry, not the pixels.
-- Hit testing stays on the cell hit map. Pointer events that carry pixel coordinates refine it with a pixel offset inside the hit cell, for controls that need it (sliders, resize handles).
+- Hit testing stays on the cell hit map. Pointer events that carry pixel coordinates refine it with a pixel offset inside the hit cell, for controls that need it. `run()` asks the terminal for mode 1016 and, when it reports the mode and the cell size, turns on pixel mouse reports and hands the application each event in cells with `MouseEvent::inside` set. `HitMap::pick_point` returns the cell pick's hit with where the pointer is inside the region, and `Slider::value_at_across` uses it so a drag moves smoothly across a cell. Split dividers stay on whole cells, since a divider is one cell wide.
 
 ## The 8 ms frame ceiling
 
