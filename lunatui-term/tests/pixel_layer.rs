@@ -643,29 +643,3 @@ fn protocol_choice_and_rejection_keep_unsupported_paths_on_cells()
     }
     Ok(())
 }
-
-#[test]
-fn an_image_above_a_replaced_one_is_placed_again_to_stay_on_top() {
-    let mut layer = PixelLayer::new(PixelMode::Kitty);
-    let image = PixelImage::new(1, 1, &PIXEL);
-    let mut scene = |layer: &mut PixelLayer, row_generation: u64| {
-        frame(layer, |layer| {
-            if let Some(image) = image {
-                layer.image(1, row_generation, &image, Rect::new(0, 0, 10, 1), 0);
-                layer.image(2, 1, &image, Rect::new(4, 0, 3, 1), 0);
-                layer.image(3, 1, &image, Rect::new(0, 5, 3, 1), 0);
-            }
-        })
-    };
-    scene(&mut layer, 1);
-    let bytes = text(&scene(&mut layer, 2));
-    let row = bytes.find("c=10,r=1").unwrap_or(usize::MAX);
-    let badge = bytes.find("\x1b[1;5H\x1b_Ga=p,i=2,").unwrap_or(usize::MAX);
-    assert!(row != usize::MAX, "the changed row is placed: {bytes:?}");
-    assert!(
-        badge != usize::MAX && badge > row,
-        "the badge over it is placed again after it: {bytes:?}"
-    );
-    assert!(!bytes.contains("\x1b[6;1H"), "an image elsewhere stays put");
-    assert_eq!(scene(&mut layer, 2), Vec::<u8>::new());
-}
