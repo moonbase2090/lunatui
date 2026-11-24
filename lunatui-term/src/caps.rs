@@ -369,6 +369,22 @@ impl CellPixels {
     pub const fn height(self) -> u16 {
         self.height.get()
     }
+
+    /// The cell size of a window `width_px`×`height_px` pixels showing `columns`×`rows` cells,
+    /// as a terminal's window-size report gives it. `None` when any value is zero, as when the
+    /// terminal does not report pixels.
+    #[must_use]
+    pub const fn from_window(
+        columns: u16,
+        rows: u16,
+        width_px: u16,
+        height_px: u16,
+    ) -> Option<Self> {
+        if columns == 0 || rows == 0 {
+            return None;
+        }
+        Self::new(width_px / columns, height_px / rows)
+    }
 }
 
 /// Capability result: color, modes, protocols, and the width fallback.

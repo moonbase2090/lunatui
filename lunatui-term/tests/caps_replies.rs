@@ -4,8 +4,8 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_term::{
-    Caps, ColorDepth, GraphicsProtocol, Hyperlinks, KeyboardProtocol, PrivateMode, ProbeEnv,
-    ProbeReply, QUERIES, RecordedTerminal, WidthPolicy,
+    Caps, CellPixels, ColorDepth, GraphicsProtocol, Hyperlinks, KeyboardProtocol, PrivateMode,
+    ProbeEnv, ProbeReply, QUERIES, RecordedTerminal, WidthPolicy,
 };
 
 fn env_256() -> ProbeEnv {
@@ -413,4 +413,20 @@ fn the_probe_records_pixel_mouse_reports() {
         assert_eq!(reply.caps.modes.sgr_pixel_mouse, state, "{replies:?}");
         assert_eq!(reply.caps.modes.focus_events, PrivateMode::Unreported);
     }
+}
+
+#[test]
+fn a_window_size_report_gives_the_cell_size() {
+    assert_eq!(
+        CellPixels::from_window(80, 24, 640, 384),
+        CellPixels::new(8, 16)
+    );
+    assert_eq!(
+        CellPixels::from_window(80, 24, 645, 390),
+        CellPixels::new(8, 16),
+        "leftover border pixels do not change the cell"
+    );
+    assert_eq!(CellPixels::from_window(80, 24, 0, 0), None);
+    assert_eq!(CellPixels::from_window(0, 24, 640, 384), None);
+    assert_eq!(CellPixels::from_window(80, 24, 40, 384), None);
 }

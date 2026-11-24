@@ -32,7 +32,7 @@ pub use input::{
 #[cfg(feature = "pixel-layer")]
 pub use pixel::{PixelImage, PixelLayer, PixelMode};
 pub use session::{MouseTracking, Session, SessionError, SessionOptions, SyncOutput};
-pub use size::{SIZE_POLL, terminal_size, watch_size};
+pub use size::{SIZE_POLL, terminal_cell_pixels, terminal_size, watch_size};
 
 #[cfg(all(feature = "pty", unix))]
 pub use pty::PtyProcess;
