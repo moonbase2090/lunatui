@@ -13,8 +13,16 @@ the same on every host.
 
 The nine files add about 5 MB to a binary that uses this crate.
 
-The files are unmodified upstream releases. They are licensed under the SIL Open Font License 1.1,
-and each family's license text is in `fonts/licenses/` and available through
+Inter and JetBrains Mono also have compact files, in `fonts/compact/`, through
+[`Family::compact`]. Each keeps only the characters in [`COMPACT_RANGES`] (Latin with Latin-1 and
+Latin Extended-A, punctuation, currency, arrows, mathematical and technical symbols, box drawing,
+block elements and geometric shapes) and has no hinting or layout tables. They are a quarter to a
+tenth the size of the full files and parse several times faster, for programs that must draw
+their first text quickly on a tight CPU budget, such as plug-ins in a sandbox. The four compact
+files add about 200 KB. `scripts/subset-fonts.py` writes them from the full files.
+
+The full files are unmodified upstream releases, and the compact files are subsets of them. All
+are licensed under the SIL Open Font License 1.1, and each family's license text is in `fonts/licenses/` and available through
 [`Family::license`]. The Rust code in this crate is MIT licensed.
 
 ```rust
