@@ -84,6 +84,57 @@ impl PixelCx<'_> {
         self.fill_path(&path, color, opacity)
     }
 
+    pub(crate) fn is_uniform(&self, rect: Rect) -> bool {
+        let Some(rows) = self.rows(rect) else {
+            return false;
+        };
+        let data = self.pixmap.data();
+        let Some(first) = rows
+            .clone()
+            .next()
+            .and_then(|row| data.get(row..row + 4))
+            .and_then(|pixel| <[u8; 4]>::try_from(pixel).ok())
+        else {
+            return true;
+        };
+        rows.into_iter().all(|row| {
+            data.get(row..row + rect.w * 4)
+                .is_some_and(|line| line.as_chunks::<4>().0.iter().all(|pixel| *pixel == first))
+        })
+    }
+
+    pub(crate) fn copy_block(&mut self, from: Rect, x: usize) -> bool {
+        let (Some(rows), Some(_)) = (
+            self.rows(from),
+            self.rows(Rect {
+                x,
+                y: from.y,
+                w: from.w,
+                h: from.h,
+            }),
+        ) else {
+            return false;
+        };
+        let data = self.pixmap.data_mut();
+        let shift = x * 4;
+        for row in rows {
+            let start = row - from.x * 4;
+            data.copy_within(row..row + from.w * 4, start + shift);
+        }
+        true
+    }
+
+    fn rows(&self, rect: Rect) -> Option<std::iter::StepBy<std::ops::Range<usize>>> {
+        let width = usize::try_from(self.pixmap.width()).ok()?;
+        let height = usize::try_from(self.pixmap.height()).ok()?;
+        if rect.x.checked_add(rect.w)? > width || rect.y.checked_add(rect.h)? > height {
+            return None;
+        }
+        let stride = width * 4;
+        let start = rect.y * stride + rect.x * 4;
+        Some((start..start + rect.h * stride).step_by(stride))
+    }
+
     /// Strokes the inside edge of `rect` with a line `width` pixels wide, rounding its corners by
     /// `radius` pixels.
     pub fn stroke_rect(&mut self, rect: Rect, radius: f32, width: f32, color: Color) -> bool {
@@ -398,6 +449,29 @@ pub(crate) fn cell_size(area: CellRect, size: PixelSize) -> Option<CellSize> {
     Some(CellSize::new(width, height))
 }
 
+fn fill_backdrop(
+    data: &mut [u8],
+    backdrop: &[[u8; 3]],
+    columns: usize,
+    cell_w: usize,
+    cell_h: usize,
+) -> Option<()> {
+    let line = columns * cell_w * 4;
+    for (row, band) in data.chunks_exact_mut(line * cell_h).enumerate() {
+        let (first, _) = band.split_at_mut(line);
+        for (column, span) in first.chunks_exact_mut(cell_w * 4).enumerate() {
+            let [red, green, blue] = *backdrop.get(row * columns + column)?;
+            for pixel in span.as_chunks_mut::<4>().0 {
+                *pixel = [red, green, blue, 255];
+            }
+        }
+        for copy in 1..cell_h {
+            band.copy_within(0..line, copy * line);
+        }
+    }
+    Some(())
+}
+
 pub(crate) fn paint(
     cx: &RenderCx<'_>,
     area: CellRect,
@@ -419,16 +493,22 @@ pub(crate) fn paint(
     let width = usize::try_from(size.width()).ok()?;
     let columns = usize::from(area.width);
     let (cell_w, cell_h) = (usize::from(cell.width_px()), usize::from(cell.height_px()));
-    for (index, pixel) in pixmap
-        .data_mut()
-        .as_chunks_mut::<4>()
-        .0
-        .iter_mut()
-        .enumerate()
-    {
-        let (column, row) = (index % width / cell_w, index / width / cell_h);
-        let [red, green, blue] = *backdrop.get(row * columns + column)?;
-        *pixel = [red, green, blue, 255];
+    let rows = usize::from(area.height);
+    let height = usize::try_from(size.height()).ok()?;
+    if width == columns * cell_w && height == rows * cell_h {
+        fill_backdrop(pixmap.data_mut(), &backdrop, columns, cell_w, cell_h)?;
+    } else {
+        for (index, pixel) in pixmap
+            .data_mut()
+            .as_chunks_mut::<4>()
+            .0
+            .iter_mut()
+            .enumerate()
+        {
+            let (column, row) = (index % width / cell_w, index / width / cell_h);
+            let [red, green, blue] = *backdrop.get(row * columns + column)?;
+            *pixel = [red, green, blue, 255];
+        }
     }
     let background = target.background();
     let resolve = |color: Color| cx.pixel_rgb(color, background);

@@ -89,21 +89,36 @@ pub(super) fn paint<T: SparklineValue>(
             baseline,
             BASELINE_OPACITY,
         );
+        let reuse = px.is_uniform(PixelRect {
+            x: 0,
+            y: 0,
+            w: width,
+            h: base,
+        });
+        let mut drawn: Vec<(usize, Color, usize)> = Vec::new();
         for &(column, value, color) in &bars {
             let rise = value.map_or(0, |value| scaled(value, scale, room));
             if rise == 0 {
                 continue;
             }
-            px.fill_rect(
-                PixelRect {
-                    x: column * cell_w + inset,
-                    y: base - rise,
-                    w: bar,
-                    h: rise,
-                },
-                pixels(bar) / 2.0,
-                color,
-            );
+            let rect = PixelRect {
+                x: column * cell_w + inset,
+                y: base - rise,
+                w: bar,
+                h: rise,
+            };
+            let earlier = drawn
+                .iter()
+                .find(|&&(height, ink, _)| height == rise && ink == color);
+            if let Some(&(_, _, x)) = earlier
+                && px.copy_block(PixelRect { x, ..rect }, rect.x)
+            {
+                continue;
+            }
+            px.fill_rect(rect, pixels(bar) / 2.0, color);
+            if reuse {
+                drawn.push((rise, color, rect.x));
+            }
         }
     })
 }

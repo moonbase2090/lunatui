@@ -52,7 +52,7 @@ Cells are 8×16 pixels at 1x.
 | `graphite-dense-full-1x`, `graphite-dense-full-2x` | Redraws and resends the whole dense scene. |
 
 - **Instructions.** All eight cases are gated at 3% over `main` at 80×24 and 200×60, like the raster cases.
-- **Ceiling.** The monitor's changed cases are gated on the 16 ms ceiling in the 185×51 window. Full repaints are reported. The dense worst case is reported, not gated, until it fits the ceiling: its changed frame sends about 6 MB at 1x and 24 MB at 2x, and draws about a hundred widget images with text.
+- **Ceiling.** The changed cases are gated on the 16 ms ceiling in the 185×51 window, including the dense worst case at 1x. Full repaints are reported. The dense worst case at 2x is reported, not gated: its changed frame sends about 24 MB of base64, which fits on a developer machine (about 8 ms) but not on the CI runner, which is about three times slower.
 - **Proof.** The `graphite_monitor` test checks that the widgets paint every cell of a full frame (no text is left in cells) with at most 256 images, the most `PixelLayer` lists in a frame; that a changed frame's seat rows match a full frame while the cells outside stay as first drawn; that a changed frame transmits fewer images and fewer bytes than a full one; that the dense scene draws more than the monitor; and that frames are deterministic and change each tick.
 
 ## Widget parity suite
