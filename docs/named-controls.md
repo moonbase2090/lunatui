@@ -139,6 +139,29 @@ hint the row clips, and a command with no chord, are left out. `Action::Activate
 request for that id, which the app maps back to its command. Both facets are for the agent only: the
 accessibility export does not write them.
 
+An agent that waits for something to change subscribes instead of comparing snapshots itself.
+`Agent::subscribe(query)` returns a `Subscription` for the controls a `ControlQuery` matches. Call
+`Subscription::observe(&hits, focused)` once per frame: the first call only records the controls,
+and each later call returns a `ControlChange` for every matched control whose value, checked state
+or states (disabled, focused, selected, invalid) differ from the previous frame, plus those that
+appeared (`previous` is `None`) or went away (`current` is `None`), in registration order. A frame
+that changes nothing returns nothing.
+
+A change carries its `reason` and `source` when the application recorded them. Every `Change` an
+accepted operation returns has `details()`, the `ChangeDetails` with its reason and source; pass
+them to the control in the next frame with `ControlMetadata::changed`, or `Field::changed` for a
+field. A key that picks a radio option then reports `source` `Keyboard`, a click `Mouse`, and an
+`Agent::act` the app applies with `ChangeContext::new(ChangeSource::Agent)` reports `Agent`. A
+value that changed without a recorded change, such as a reload, reports `None` for both.
+
+```rust,ignore
+let mut watch = Agent::subscribe(ControlQuery::kind(AccessibilityRole::Checkbox));
+// each frame, after rendering into `hits`:
+for change in watch.observe(&hits, focus.focused()) {
+    println!("{} {:?} by {:?}", change.name, change.reason, change.source);
+}
+```
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.
