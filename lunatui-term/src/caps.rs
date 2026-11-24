@@ -17,7 +17,7 @@ use std::time::Duration;
 pub const PROBE_BUDGET: Duration = Duration::from_millis(200);
 
 /// Startup queries in one write, ending with primary device attributes (`CSI c`).
-pub const QUERIES: &[u8] = b"\x1b[>0q\x1b[?2026$p\x1b[?2027$p\x1b[?2004$p\x1b[?1004$p\x1b[?u\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b]1337;Capabilities\x1b\\\x1b]1337;ReportCellSize\x1b\\\x1b[16t\x1b]10;?\x1b\\\x1b]11;?\x1b\\\x1b[c";
+pub const QUERIES: &[u8] = b"\x1b[>0q\x1b[?2026$p\x1b[?2027$p\x1b[?2004$p\x1b[?1004$p\x1b[?1016$p\x1b[?u\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b]1337;Capabilities\x1b\\\x1b]1337;ReportCellSize\x1b\\\x1b[16t\x1b]10;?\x1b\\\x1b]11;?\x1b\\\x1b[c";
 
 /// `CSI ? 2027 h`, sent when grapheme-cluster mode is supported and currently reset.
 pub const GRAPHEME_ENABLE: &[u8] = b"\x1b[?2027h";
@@ -98,7 +98,7 @@ pub enum PrivateMode {
 /// use lunatui_term::DecModes;
 ///
 /// fn destructures(value: DecModes) {
-///     let DecModes { synchronized_output: _, grapheme_clusters: _, bracketed_paste: _, focus_events: _ } = value;
+///     let DecModes { synchronized_output: _, grapheme_clusters: _, bracketed_paste: _, focus_events: _, sgr_pixel_mouse: _ } = value;
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -113,6 +113,8 @@ pub struct DecModes {
     pub bracketed_paste: PrivateMode,
     /// Mode 1004, focus events.
     pub focus_events: PrivateMode,
+    /// Mode 1016, SGR mouse reports in pixels instead of cells.
+    pub sgr_pixel_mouse: PrivateMode,
 }
 
 /// Keyboard protocol the probe recognized.

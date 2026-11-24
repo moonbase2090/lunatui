@@ -31,6 +31,7 @@ fn queries_batch_private_modes_and_end_with_device_attributes() {
         &b"\x1b[?2027$p"[..],
         &b"\x1b[?2004$p"[..],
         &b"\x1b[?1004$p"[..],
+        &b"\x1b[?1016$p"[..],
         &b"\x1b[?u"[..],
         &b"\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\"[..],
         &b"\x1b]10;?\x1b\\"[..],
@@ -396,4 +397,20 @@ fn graphics_metrics_and_background_may_arrive_after_device_attributes()
     assert_eq!(reply.caps.background_rgb, Some([0, 0, 0]));
     assert_eq!(reply.pending_input, []);
     Ok(())
+}
+
+#[test]
+fn the_probe_records_pixel_mouse_reports() {
+    let cases: [(&[u8], PrivateMode); 4] = [
+        (b"\x1b[?1016;2$y\x1b[?62c", PrivateMode::Reset),
+        (b"\x1b[?1016;1$y\x1b[?62c", PrivateMode::Set),
+        (b"\x1b[?1016;0$y\x1b[?62c", PrivateMode::Unrecognized),
+        (b"\x1b[?62c", PrivateMode::Unreported),
+    ];
+    for (replies, state) in cases {
+        let reply = ProbeReply::from_replies(&env_256(), replies);
+        assert!(reply.saw_device_attributes);
+        assert_eq!(reply.caps.modes.sgr_pixel_mouse, state, "{replies:?}");
+        assert_eq!(reply.caps.modes.focus_events, PrivateMode::Unreported);
+    }
 }
