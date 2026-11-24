@@ -234,7 +234,9 @@ impl PixelLayer {
     }
 
     /// Lists `image` for this frame at the cell rectangle `at` and depth `z` (negative draws
-    /// under text).
+    /// under text). At the same depth, an image listed later in the frame is drawn above one
+    /// listed earlier: Kitty stacks equal z-indexes by image id, so the layer sends
+    /// `256 × z` plus the image's place in the frame as the z-index.
     ///
     /// `generation` identifies the content: send a new number whenever the pixels change and
     /// keep it while they do not, so unchanged images reuse their encoded content. Kitty
@@ -359,11 +361,12 @@ impl PixelLayer {
             write_transmit(&mut self.out, wire_id, image);
         }
         self.frame_pixels += u64::from(image.width) * u64::from(image.height);
+        let z = stacked(depth, self.frame.len());
         self.frame.push(Placed {
             id,
             wire_id,
             rect: area,
-            z: depth,
+            z,
             fresh,
         });
         true
@@ -495,7 +498,7 @@ impl PixelLayer {
             id: ImageKey::Caller(request.id().get()),
             wire_id,
             rect: destination,
-            z: request.depth(),
+            z: stacked(request.depth(), self.frame.len()),
             fresh,
         });
         true
@@ -670,6 +673,11 @@ fn write_transmit(out: &mut Vec<u8>, id: u32, image: &PixelImage<'_>) {
         out.extend_from_slice(b"\x1b\\");
         first = false;
     }
+}
+
+fn stacked(depth: i32, order: usize) -> i32 {
+    let order = i32::try_from(order).unwrap_or(i32::MAX).min(255);
+    depth.saturating_mul(256).saturating_add(order)
 }
 
 fn write_place(out: &mut Vec<u8>, placed: &Placed) {
