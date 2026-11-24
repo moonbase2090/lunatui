@@ -236,7 +236,8 @@ impl PixelLayer {
     /// Lists `image` for this frame at the cell rectangle `at` and depth `z` (negative draws
     /// under text). At the same depth, an image listed later in the frame is drawn above one
     /// listed earlier: Kitty stacks equal z-indexes by image id, so the layer sends
-    /// `256 × z` plus the image's place in the frame as the z-index.
+    /// `256 × z` plus the image's place in the frame as the z-index. A depth outside
+    /// [`PIXEL_DEPTHS`] is ignored; depths below −4,194,304 draw under cell backgrounds.
     ///
     /// `generation` identifies the content: send a new number whenever the pixels change and
     /// keep it while they do not, so unchanged images reuse their encoded content. Kitty
@@ -246,6 +247,7 @@ impl PixelLayer {
         if !self.mode.is_pixels()
             || self.frame.len() >= 256
             || id == 0
+            || !PIXEL_DEPTHS.contains(&z)
             || at.width == 0
             || at.height == 0
             || self
@@ -536,7 +538,8 @@ impl ImageSink for PixelLayer {
 
     fn submit_raster(&mut self, source: &ImageSource, area: Rect, depth: i32) -> bool {
         let size = source.size();
-        if size.width() > 4096
+        if !PIXEL_DEPTHS.contains(&depth)
+            || size.width() > 4096
             || size.height() > 4096
             || size
                 .width()
@@ -589,6 +592,7 @@ impl ImageSink for PixelLayer {
             || area.width == 0
             || area.height == 0
             || self.frame.len() >= 256
+            || !PIXEL_DEPTHS.contains(&request.depth())
             || (self.mode != PixelMode::Kitty && request.depth() < 0)
         {
             return false;
@@ -675,9 +679,13 @@ fn write_transmit(out: &mut Vec<u8>, id: u32, image: &PixelImage<'_>) {
     }
 }
 
+/// The depths a layer accepts. Kitty gets `256 × depth` plus the image's place in the frame as
+/// its z-index, and every depth in this range keeps that value distinct within an `i32`.
+pub const PIXEL_DEPTHS: std::ops::RangeInclusive<i32> = -8_388_608..=8_388_607;
+
 fn stacked(depth: i32, order: usize) -> i32 {
-    let order = i32::try_from(order).unwrap_or(i32::MAX).min(255);
-    depth.saturating_mul(256).saturating_add(order)
+    let order = i32::try_from(order).unwrap_or(255).min(255);
+    depth.clamp(*PIXEL_DEPTHS.start(), *PIXEL_DEPTHS.end()) * 256 + order
 }
 
 fn write_place(out: &mut Vec<u8>, placed: &Placed) {
