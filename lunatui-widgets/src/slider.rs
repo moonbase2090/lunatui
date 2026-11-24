@@ -156,6 +156,27 @@ impl<'a> Slider<'a> {
         self.snap(self.min + fraction * (self.max - self.min))
     }
 
+    /// The value at a point inside `column` of a track at `track`, where `across` is how far
+    /// across that cell the pointer is, from 0.0 at its left edge to 1.0 at its right, as a
+    /// pointer event in pixels gives it. At the centre of a cell (0.5) this is
+    /// [`value_at`](Self::value_at); between centres the value moves smoothly before it is
+    /// snapped to the step. Points outside the track give the nearest end.
+    #[must_use]
+    pub fn value_at_across(&self, track: Rect, column: u16, across: f64) -> f64 {
+        if track.width <= 1 {
+            return self.min;
+        }
+        let last = f64::from(track.width - 1);
+        let across = if across.is_finite() {
+            across.clamp(0.0, 1.0)
+        } else {
+            0.5
+        };
+        let position = f64::from(column.saturating_sub(track.x)) + across - 0.5;
+        let fraction = (position / last).clamp(0.0, 1.0);
+        self.snap(self.min + fraction * (self.max - self.min))
+    }
+
     fn texts(&self) -> (String, String) {
         let label = self
             .label
