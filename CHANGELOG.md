@@ -15,7 +15,7 @@ Every PR adds its entry under **Unreleased**.
 
 ### Changed
 
-- In Kitty, an image listed later in a frame now stays above an earlier image at the same depth. Kitty stacks images with the same z-index by image id, so a row image uploaded again with a higher id could cover a badge drawn over it. `PixelLayer` sends `256 × depth` plus the image's place in the frame as the z-index, so depth still decides first and negative depths stay under text.
+- In Kitty, an image listed later in a frame now stays above an earlier image at the same depth. Kitty stacks images with the same z-index by image id, so a row image uploaded again with a higher id could cover a badge drawn over it. `PixelLayer` sends `256 × depth` plus the image's place in the frame as the z-index, so depth still decides first and negative depths stay under text. Depths must lie in `PIXEL_DEPTHS`, −8,388,608 to 8,388,607, where that z-index cannot saturate; an image at a depth outside it is refused, and a widget then draws its cells. Depths below −4,194,304 draw under cell backgrounds.
 
 ## [0.1.39] - 2026-11-23
 
