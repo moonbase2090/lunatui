@@ -103,8 +103,7 @@ impl Component for App {
 
 type Test = Result<(), Box<dyn std::error::Error>>;
 
-const fn send_and_sync<T: Send + Sync>() {}
-const _: () = send_and_sync::<Agent>();
+fn send_and_sync<T: Send + Sync>(_: &T) {}
 
 fn mount() -> Harness<App> {
     Harness::mount(App::new(), 48, 10)
@@ -275,6 +274,7 @@ fn an_allow_hook_can_deny_and_fall_back_on_the_default() -> Test {
             Permission::default_for(control, action)
         }
     });
+    send_and_sync(&harness.component().agent);
     assert_eq!(
         act(&mut harness, "Save", Action::Activate),
         Err(ActError::Denied)
