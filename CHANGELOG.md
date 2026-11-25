@@ -8,6 +8,14 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+### Added
+
+- An application decides what an agent may do. Mark a control whose action destroys work with `ControlMetadata::destructive(true)` or `Field::destructive(true)`; the agent snapshot shows it as `destructive`. By default `Agent::act` holds a request that would change such a control and returns `ActError::NeedsConfirmation(id)`; `Agent::awaiting()` lists held requests for the app to put to the person, `Agent::confirm(&hits, id)` queues one after checking that the same control is still there and enabled, and `Agent::decline(id)` drops it. `Agent::allow(hook)` replaces the default with the app's own rule: the hook answers `Permission::Allow`, `Deny` (`ActError::Denied`, nothing queued) or `Confirm`, and can fall back on `Permission::default_for`. Focusing a control never needs confirmation.
+
+### Changed
+
+- Breaking: `AgentControl` has a `destructive` field, and `ActError` has `Denied` and `NeedsConfirmation`. Code that builds an `AgentControl` with a struct literal adds `destructive: false`; a `match` on `ActError` already needs a wildcard arm.
+
 ## [0.1.41] - 2026-11-24
 
 ### Added
