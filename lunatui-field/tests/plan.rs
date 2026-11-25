@@ -26,8 +26,6 @@ const ARCHIVE: HitId = HitId(5);
 const DELETE: HitId = HitId(6);
 const PROMPT_ROW: u16 = 18;
 
-/// A sign-up form whose Submit enables only once a name is typed and the terms are accepted,
-/// a More button that shows an Archive button, and a destructive Delete draft.
 #[derive(Default)]
 struct App {
     name: String,
