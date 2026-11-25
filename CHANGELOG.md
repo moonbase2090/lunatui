@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.41] - 2026-11-24
+
 ### Added
 
 - An agent can subscribe to control changes. `Agent::subscribe(query)` returns a `Subscription` for the controls a `ControlQuery` matches; each frame, `Subscription::observe` returns a `ControlChange` for every control whose value, checked state or states changed, or that appeared or went away, with its previous and current `ControlValue`. When the application records the change it applied with `ControlMetadata::changed` or `Field::changed`, the change also carries its `ChangeReason` and `ChangeSource`, so an agent can tell a keyboard edit from a click or its own action.
