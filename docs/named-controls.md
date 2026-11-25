@@ -187,6 +187,34 @@ agent.allow(|control, action| match control.name {
 let ticket = agent.confirm(&hits, waiting.id)?; // or agent.decline(waiting.id)
 ```
 
+An agent that needs several steps gives them all at once. `Agent::plan(steps)` takes `Step`s
+(`Step::new(selector, action)`) and returns a `PlanId`; nothing is checked yet. Call
+`Agent::advance(&hits)` once after each render. It checks the plan's current step against that
+frame as `act` would, the allow hook and confirmation included, and queues it. The next step waits
+until the app has taken that request and drawn again, so a step can name a control an earlier step
+made appear, such as a menu item, or enabled, such as a Submit button that needs the fields above
+it. `Agent::plan_status(id)` answers `Running { step }`, `Waiting { step, confirm }` while the
+application asks the person, `Done` once the app has taken every step, `Failed { step, error }`,
+or `Cancelled`; steps count from 0. The plan stops at the first step that fails: the steps before
+it stay applied and none after it is queued. A declined step fails with `ActError::Denied`.
+`Agent::cancel_plan(id)` stops a plan, cancelling its queued request or dropping its waiting one.
+One plan runs at a time; `plan` returns `ActError::Busy` until the current one ends, and only the
+latest plan has a status. A step counts as done when the app takes its request, so a request the
+app's guard refuses does not fail the plan.
+
+```rust,ignore
+let plan = agent.plan([
+    Step::new(Selector::new(AccessibilityRole::TextInput, "Name"), Action::SetValue("Ada".into())),
+    Step::new(Selector::new(AccessibilityRole::Checkbox, "Accept terms"), Action::Toggle),
+    Step::new(Selector::new(AccessibilityRole::Button, "Submit"), Action::Activate),
+])?;
+// each frame, after rendering into `hits`:
+agent.advance(&hits);
+if let Some(PlanStatus::Failed { step, error }) = agent.plan_status(plan) {
+    println!("step {step} failed: {error}");
+}
+```
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.
