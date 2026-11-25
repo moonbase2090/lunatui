@@ -32,12 +32,20 @@ pub enum UiFont {
     IbmPlexSans,
     /// Noto Sans.
     NotoSans,
+    /// Inter with JetBrains Mono for [`Face::Mono`], from their compact files
+    /// ([`lunatui_fonts::Family::compact`]), and no fallback fonts.
+    ///
+    /// The compact files keep Latin, punctuation, arrows, symbols, box drawing and shapes
+    /// ([`lunatui_fonts::COMPACT_RANGES`]) and parse several times faster than the full set, so
+    /// the first text draws quickly on a tight CPU budget, such as a plug-in in a sandbox. Any
+    /// other character is drawn as the missing-glyph box instead of from a fallback font.
+    InterCompact,
 }
 
 impl UiFont {
     const fn family(self) -> Family {
         match self {
-            Self::Inter => Family::Inter,
+            Self::Inter | Self::InterCompact => Family::Inter,
             Self::IbmPlexSans => Family::IbmPlexSans,
             Self::NotoSans => Family::NotoSans,
         }
@@ -68,8 +76,12 @@ pub struct LineMetrics {
 ///
 /// Sizes are in pixels and must be finite, above 0 and at most 4096.
 ///
-/// Fonts are parsed the first time a character needs them. Glyph images are cached, up to 4 MiB
-/// in all; a single glyph image larger than that is drawn without being cached.
+/// With [`UiFont::InterCompact`], text uses the compact Inter and JetBrains Mono files and has no
+/// fallback fonts.
+///
+/// Fonts are parsed the first time a character needs them, or all at once by
+/// [`BundledText::load`]. Glyph images are cached, up to 4 MiB in all; a single glyph image larger
+/// than that is drawn without being cached.
 pub struct BundledText {
     ui: UiFont,
     fonts: [OnceLock<Option<Font>>; SLOTS],
@@ -79,6 +91,7 @@ pub struct BundledText {
 static INTER: BundledText = BundledText::new(UiFont::Inter);
 static IBM_PLEX_SANS: BundledText = BundledText::new(UiFont::IbmPlexSans);
 static NOTO_SANS: BundledText = BundledText::new(UiFont::NotoSans);
+static INTER_COMPACT: BundledText = BundledText::new(UiFont::InterCompact);
 
 type GlyphKey = (usize, u16, u32);
 
@@ -125,7 +138,30 @@ impl BundledText {
             UiFont::Inter => &INTER,
             UiFont::IbmPlexSans => &IBM_PLEX_SANS,
             UiFont::NotoSans => &NOTO_SANS,
+            UiFont::InterCompact => &INTER_COMPACT,
         }
+    }
+
+    /// Parses every font file this text can draw with that is not parsed yet, so later text
+    /// draws without that cost.
+    ///
+    /// Parsing the full set takes tens of milliseconds natively; [`UiFont::InterCompact`] takes a
+    /// few. A program on a per-call CPU budget can draw its first frames without this text and
+    /// call `load` in a later call.
+    pub fn load(&self) {
+        for slot in 0..SLOTS {
+            let _ = self.font(slot);
+        }
+    }
+
+    /// Whether every font file this text can draw with is parsed, by [`BundledText::load`] or by
+    /// text that needed it.
+    #[must_use]
+    pub fn loaded(&self) -> bool {
+        self.fonts
+            .iter()
+            .enumerate()
+            .all(|(slot, font)| font.get().is_some() || self.file(slot).is_none())
     }
 
     /// The proportional font.
@@ -228,18 +264,30 @@ impl BundledText {
     }
 
     fn font(&self, slot: usize) -> Option<&Font> {
+        let file = self.file(slot)?;
+        self.fonts
+            .get(slot)?
+            .get_or_init(|| Font::from_bytes(file, FontSettings::default()).ok())
+            .as_ref()
+    }
+
+    fn file(&self, slot: usize) -> Option<&'static [u8]> {
         let (family, weight) = match slot {
             UI_REGULAR => (self.ui.family(), Weight::Regular),
             UI_BOLD => (self.ui.family(), Weight::Bold),
             MONO => (Family::JetBrainsMono, Weight::Regular),
             NOTO_REGULAR => (Family::NotoSans, Weight::Regular),
             NOTO_BOLD => (Family::NotoSans, Weight::Bold),
-            _ => (Family::NotoEmoji, Weight::Regular),
+            EMOJI => (Family::NotoEmoji, Weight::Regular),
+            _ => return None,
         };
-        self.fonts
-            .get(slot)?
-            .get_or_init(|| Font::from_bytes(family.data(weight), FontSettings::default()).ok())
-            .as_ref()
+        if self.ui == UiFont::InterCompact {
+            return match slot {
+                UI_REGULAR | UI_BOLD | MONO => family.compact(weight),
+                _ => None,
+            };
+        }
+        Some(family.data(weight))
     }
 }
 

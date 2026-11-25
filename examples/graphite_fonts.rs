@@ -31,10 +31,11 @@ const TEXT: Rgb = (0xe6, 0xe9, 0xee);
 const STRONG: Rgb = (0xff, 0xff, 0xff);
 const MUTED: Rgb = (0xa3, 0xab, 0xb8);
 
-const PANELS: [(UiFont, &str, &str); 3] = [
+const PANELS: [(UiFont, &str, &str); 4] = [
     (UiFont::Inter, "Inter", "inter"),
     (UiFont::IbmPlexSans, "IBM Plex Sans", "ibm-plex-sans"),
     (UiFont::NotoSans, "Noto Sans", "noto-sans"),
+    (UiFont::InterCompact, "Inter compact", "inter-compact"),
 ];
 
 const PANGRAM: &str = "The quick brown fox jumps over the lazy dog.";

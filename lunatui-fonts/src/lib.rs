@@ -3,6 +3,27 @@
 
 #![doc = include_str!("../README.md")]
 
+/// The characters a compact file keeps, as inclusive ranges: Latin with Latin-1 and Latin
+/// Extended-A, general punctuation, currency, letterlike symbols, arrows, mathematical operators,
+/// technical symbols, box drawing, block elements, geometric shapes, check marks and the
+/// replacement character.
+///
+/// A compact file has exactly the characters in these ranges that its full file has.
+pub const COMPACT_RANGES: [(char, char); 12] = [
+    ('\u{0020}', '\u{007E}'),
+    ('\u{00A0}', '\u{017F}'),
+    ('\u{2000}', '\u{206F}'),
+    ('\u{20A0}', '\u{20CF}'),
+    ('\u{2100}', '\u{214F}'),
+    ('\u{2190}', '\u{21FF}'),
+    ('\u{2200}', '\u{22FF}'),
+    ('\u{2300}', '\u{23FF}'),
+    ('\u{2500}', '\u{259F}'),
+    ('\u{25A0}', '\u{25FF}'),
+    ('\u{2713}', '\u{2718}'),
+    ('\u{FFFD}', '\u{FFFD}'),
+];
+
 /// A font family bundled with this crate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -75,6 +96,29 @@ impl Family {
         }
     }
 
+    /// A smaller copy of the font file for `weight` that keeps only the characters in
+    /// [`COMPACT_RANGES`], or `None` when the family has none. Inter and JetBrains Mono have
+    /// compact files.
+    ///
+    /// A compact file is a quarter to a tenth the size of the full file and is parsed several times
+    /// faster, for programs that must draw their first text quickly on a tight CPU budget.
+    #[must_use]
+    pub const fn compact(self, weight: Weight) -> Option<&'static [u8]> {
+        match (self, weight) {
+            (Self::Inter, Weight::Regular) => {
+                Some(include_bytes!("../fonts/compact/Inter-Regular.ttf"))
+            }
+            (Self::Inter, Weight::Bold) => Some(include_bytes!("../fonts/compact/Inter-Bold.ttf")),
+            (Self::JetBrainsMono, Weight::Regular) => {
+                Some(include_bytes!("../fonts/compact/JetBrainsMono-Regular.ttf"))
+            }
+            (Self::JetBrainsMono, Weight::Bold) => {
+                Some(include_bytes!("../fonts/compact/JetBrainsMono-Bold.ttf"))
+            }
+            _ => None,
+        }
+    }
+
     /// The SIL Open Font License text for this family, with its copyright line.
     #[must_use]
     pub const fn license(self) -> &'static str {
@@ -90,7 +134,7 @@ impl Family {
 
 #[cfg(test)]
 mod tests {
-    use super::{Family, Weight};
+    use super::{COMPACT_RANGES, Family, Weight};
 
     const SFNT_TRUETYPE: [u8; 4] = [0, 1, 0, 0];
 
@@ -103,6 +147,43 @@ mod tests {
                     "{family:?} {weight:?}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn only_inter_and_jetbrains_mono_have_compact_truetype_files() {
+        for family in Family::ALL {
+            for weight in [Weight::Regular, Weight::Bold] {
+                let compact = family.compact(weight);
+                let expected = matches!(family, Family::Inter | Family::JetBrainsMono);
+                assert_eq!(compact.is_some(), expected, "{family:?} {weight:?}");
+                if let Some(bytes) = compact {
+                    assert!(bytes.starts_with(&SFNT_TRUETYPE), "{family:?} {weight:?}");
+                    assert!(
+                        bytes.len() * 4 < family.data(weight).len(),
+                        "{family:?} {weight:?} is {} bytes",
+                        bytes.len()
+                    );
+                    assert_ne!(Some(bytes), family.compact(other(weight)), "{family:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn compact_ranges_are_sorted_and_disjoint() {
+        for (first, last) in COMPACT_RANGES {
+            assert!(first <= last, "{first:?}..={last:?}");
+        }
+        for pair in COMPACT_RANGES.windows(2) {
+            assert!(pair[0].1 < pair[1].0, "{pair:?}");
+        }
+    }
+
+    const fn other(weight: Weight) -> Weight {
+        match weight {
+            Weight::Regular => Weight::Bold,
+            Weight::Bold => Weight::Regular,
         }
     }
 
