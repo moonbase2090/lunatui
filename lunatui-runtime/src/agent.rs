@@ -198,6 +198,8 @@ pub enum ActError {
     /// The request waits for the application to [`confirm`](Agent::confirm) or
     /// [`decline`](Agent::decline) it; nothing is queued yet.
     NeedsConfirmation(ConfirmId),
+    /// [`Agent::plan`] was called while another plan is still running or waiting.
+    Busy,
 }
 
 impl fmt::Display for ActError {
@@ -213,6 +215,7 @@ impl fmt::Display for ActError {
             Self::NeedsConfirmation(_) => {
                 f.write_str("the action waits for the application to confirm it")
             }
+            Self::Busy => f.write_str("another plan is still running"),
         }
     }
 }
@@ -271,6 +274,109 @@ pub struct AwaitingConfirmation {
     pub action: Action,
     /// Who asked.
     pub source: Source,
+}
+
+/// One step of a plan given to [`Agent::plan`]: which control and what to do with it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct Step {
+    /// Semantic role of the control.
+    pub role: AccessibilityRole,
+    /// Its exact accessible name.
+    pub name: String,
+    /// The overlay layer that owns it, or `None` for the base layer.
+    pub layer: Option<LayerId>,
+    /// What to do.
+    pub action: Action,
+}
+
+impl Step {
+    /// Asks for `action` on the control `selector` names.
+    #[must_use]
+    pub fn new(selector: Selector<'_>, action: Action) -> Self {
+        Self {
+            role: selector.role,
+            name: selector.name.to_owned(),
+            layer: selector.layer,
+            action,
+        }
+    }
+}
+
+/// Names one plan started with [`Agent::plan`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct PlanId(u64);
+
+/// Where a plan is, as answered by [`Agent::plan_status`]. `step` counts from 0 in the order
+/// the steps were given.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanStatus {
+    /// The plan is on `step`: the next [`Agent::advance`] checks it, or its request waits for
+    /// the app to [`take`](Agent::take) it.
+    Running {
+        /// The step the plan is on.
+        step: usize,
+    },
+    /// `step` waits for the application to [`confirm`](Agent::confirm) or
+    /// [`decline`](Agent::decline) the request `confirm`.
+    Waiting {
+        /// The step that waits.
+        step: usize,
+        /// The request listed in [`Agent::awaiting`].
+        confirm: ConfirmId,
+    },
+    /// The app took the request of every step.
+    Done,
+    /// `step` failed with `error`. The steps before it were taken by the app; no step after
+    /// it was queued.
+    Failed {
+        /// The step that failed.
+        step: usize,
+        /// Why it failed. A declined step fails with [`ActError::Denied`].
+        error: ActError,
+    },
+    /// [`Agent::cancel_plan`] stopped the plan.
+    Cancelled,
+}
+
+struct Plan {
+    id: PlanId,
+    steps: Vec<Step>,
+    step: usize,
+    phase: Phase,
+}
+
+enum Phase {
+    Ready,
+    Queued(Ticket),
+    Waiting(ConfirmId),
+    Finished(PlanStatus),
+}
+
+impl Plan {
+    const fn status(&self) -> PlanStatus {
+        match self.phase {
+            Phase::Ready | Phase::Queued(_) => PlanStatus::Running { step: self.step },
+            Phase::Waiting(confirm) => PlanStatus::Waiting {
+                step: self.step,
+                confirm,
+            },
+            Phase::Finished(status) => status,
+        }
+    }
+
+    fn fail(&mut self, error: ActError) {
+        self.phase = Phase::Finished(PlanStatus::Failed {
+            step: self.step,
+            error,
+        });
+    }
+}
+
+enum Checked {
+    Queued(Ticket),
+    Waiting(ConfirmId),
 }
 
 type AllowHook = Box<dyn FnMut(&Control<'_>, &Action) -> Permission + Send + Sync>;
@@ -597,12 +703,19 @@ fn write_control(writer: &mut impl Write, control: &AgentControl) -> io::Result<
 /// that needs confirmation waits in [`awaiting`](Self::awaiting) until the application, on the
 /// person's word, calls [`confirm`](Self::confirm) or [`decline`](Self::decline); an agent has
 /// no way to confirm its own request.
+///
+/// [`plan`](Self::plan) gives several steps at once. The app calls [`advance`](Self::advance)
+/// after each render, and the agent checks and queues one step per frame, so a step can name a
+/// control that an earlier step made appear or enabled. The plan stops at the first step that
+/// fails and [`plan_status`](Self::plan_status) says which one and why.
 #[derive(Default)]
 pub struct Agent {
     queue: VecDeque<Request>,
     allow: Option<AllowHook>,
     awaiting: Vec<AwaitingConfirmation>,
     next_confirm: u64,
+    plan: Option<Plan>,
+    next_plan: u64,
 }
 
 impl fmt::Debug for Agent {
@@ -611,6 +724,10 @@ impl fmt::Debug for Agent {
             .field("queue", &self.queue)
             .field("allow", &self.allow.as_ref().map(|_| "hook"))
             .field("awaiting", &self.awaiting)
+            .field(
+                "plan",
+                &self.plan.as_ref().map(|plan| (plan.id, plan.status())),
+            )
             .finish_non_exhaustive()
     }
 }
@@ -624,6 +741,8 @@ impl Agent {
             allow: None,
             awaiting: Vec::new(),
             next_confirm: 0,
+            plan: None,
+            next_plan: 0,
         }
     }
 
@@ -689,6 +808,18 @@ impl Agent {
         selector: Selector<'_>,
         action: Action,
     ) -> Result<Ticket, ActError> {
+        match self.check(hits, selector, action)? {
+            Checked::Queued(ticket) => Ok(ticket),
+            Checked::Waiting(id) => Err(ActError::NeedsConfirmation(id)),
+        }
+    }
+
+    fn check(
+        &mut self,
+        hits: &HitMap,
+        selector: Selector<'_>,
+        action: Action,
+    ) -> Result<Checked, ActError> {
         let control = hits
             .find_control(selector.role, selector.name, selector.layer)
             .map_err(ActError::Ambiguous)?
@@ -705,7 +836,7 @@ impl Agent {
             None => Permission::default_for(&control, &action),
         };
         match permission {
-            Permission::Allow => Ok(self.queue_request(control.id, action)),
+            Permission::Allow => Ok(Checked::Queued(self.queue_request(control.id, action))),
             Permission::Deny => Err(ActError::Denied),
             Permission::Confirm => {
                 let id = ConfirmId(self.next_confirm);
@@ -719,9 +850,89 @@ impl Agent {
                     action,
                     source: Source::Agent,
                 });
-                Err(ActError::NeedsConfirmation(id))
+                Ok(Checked::Waiting(id))
             }
         }
+    }
+
+    /// Starts a plan of `steps`. Nothing is checked or queued until the next
+    /// [`advance`](Self::advance); a plan with no steps is [`PlanStatus::Done`] at once.
+    ///
+    /// # Errors
+    ///
+    /// [`ActError::Busy`] while an earlier plan is still running or waiting.
+    pub fn plan(&mut self, steps: impl IntoIterator<Item = Step>) -> Result<PlanId, ActError> {
+        if self
+            .plan
+            .as_ref()
+            .is_some_and(|plan| !matches!(plan.phase, Phase::Finished(_)))
+        {
+            return Err(ActError::Busy);
+        }
+        let id = PlanId(self.next_plan);
+        self.next_plan += 1;
+        let steps: Vec<Step> = steps.into_iter().collect();
+        let phase = if steps.is_empty() {
+            Phase::Finished(PlanStatus::Done)
+        } else {
+            Phase::Ready
+        };
+        self.plan = Some(Plan {
+            id,
+            steps,
+            step: 0,
+            phase,
+        });
+        Ok(id)
+    }
+
+    /// Checks the plan's current step against `hits` and queues it, as [`act`](Self::act)
+    /// would. Call it once after each render. It does nothing while the step's request waits
+    /// for the app to [`take`](Self::take) it or for the application's confirmation, so one
+    /// step goes out per frame. A step that fails ends the plan.
+    pub fn advance(&mut self, hits: &HitMap) {
+        let Some(mut plan) = self.plan.take() else {
+            return;
+        };
+        if matches!(plan.phase, Phase::Ready) {
+            let step = &plan.steps[plan.step];
+            let selector = Selector::new(step.role, &step.name).layer(step.layer);
+            match self.check(hits, selector, step.action.clone()) {
+                Ok(Checked::Queued(ticket)) => plan.phase = Phase::Queued(ticket),
+                Ok(Checked::Waiting(id)) => plan.phase = Phase::Waiting(id),
+                Err(error) => plan.fail(error),
+            }
+        }
+        self.plan = Some(plan);
+    }
+
+    /// Where the plan `id` is, or `None` when `id` is not the latest plan.
+    #[must_use]
+    pub fn plan_status(&self, id: PlanId) -> Option<PlanStatus> {
+        self.plan
+            .as_ref()
+            .filter(|plan| plan.id == id)
+            .map(Plan::status)
+    }
+
+    /// Stops the plan `id`: its queued request is cancelled, its waiting one leaves
+    /// [`awaiting`](Self::awaiting), and no later step is queued. Answers whether the plan was
+    /// still running or waiting.
+    pub fn cancel_plan(&mut self, id: PlanId) -> bool {
+        let Some(plan) = self.plan.as_mut().filter(|plan| plan.id == id) else {
+            return false;
+        };
+        match &plan.phase {
+            Phase::Finished(_) => return false,
+            Phase::Ready => {}
+            Phase::Queued(ticket) => ticket.cancel(),
+            Phase::Waiting(confirm) => {
+                let confirm = *confirm;
+                self.awaiting.retain(|waiting| waiting.id != confirm);
+            }
+        }
+        plan.phase = Phase::Finished(PlanStatus::Cancelled);
+        true
     }
 
     /// Requests that wait for the application's confirmation, oldest first.
@@ -732,7 +943,8 @@ impl Agent {
 
     /// Queues the waiting request `id` once the person agrees. Call it from the application's
     /// own confirmation, never on an agent's behalf. The request leaves
-    /// [`awaiting`](Self::awaiting) whatever the result.
+    /// [`awaiting`](Self::awaiting) whatever the result. A plan step that waited on it goes on
+    /// when it is queued and fails with the error when it is not.
     ///
     /// # Errors
     ///
@@ -740,6 +952,17 @@ impl Agent {
     /// under the same name, role, layer and identity; [`ActError::Ambiguous`] when several
     /// controls now match; [`ActError::Disabled`] when the control became disabled.
     pub fn confirm(&mut self, hits: &HitMap, id: ConfirmId) -> Result<Ticket, ActError> {
+        let result = self.confirm_waiting(hits, id);
+        if let Some(plan) = self.waiting_plan(id) {
+            match &result {
+                Ok(ticket) => plan.phase = Phase::Queued(ticket.clone()),
+                Err(error) => plan.fail(*error),
+            }
+        }
+        result
+    }
+
+    fn confirm_waiting(&mut self, hits: &HitMap, id: ConfirmId) -> Result<Ticket, ActError> {
         let index = self
             .awaiting
             .iter()
@@ -757,11 +980,21 @@ impl Agent {
         Ok(self.queue_request(control.id, waiting.action))
     }
 
-    /// Drops the waiting request `id`, answering whether it was waiting.
+    /// Drops the waiting request `id`, answering whether it was waiting. A plan step that
+    /// waited on it fails with [`ActError::Denied`].
     pub fn decline(&mut self, id: ConfirmId) -> bool {
         let before = self.awaiting.len();
         self.awaiting.retain(|waiting| waiting.id != id);
+        if let Some(plan) = self.waiting_plan(id) {
+            plan.fail(ActError::Denied);
+        }
         self.awaiting.len() != before
+    }
+
+    fn waiting_plan(&mut self, id: ConfirmId) -> Option<&mut Plan> {
+        self.plan
+            .as_mut()
+            .filter(|plan| matches!(plan.phase, Phase::Waiting(waiting) if waiting == id))
     }
 
     fn queue_request(&mut self, id: HitId, action: Action) -> Ticket {
@@ -792,6 +1025,17 @@ impl Agent {
     pub fn take(&mut self) -> Option<Request> {
         while let Some(request) = self.queue.pop_front() {
             if !request.ticket.is_cancelled() {
+                if let Some(plan) = self.plan.as_mut().filter(|plan| {
+                    matches!(&plan.phase, Phase::Queued(ticket)
+                        if Arc::ptr_eq(&ticket.cancelled, &request.ticket.cancelled))
+                }) {
+                    plan.step += 1;
+                    plan.phase = if plan.step == plan.steps.len() {
+                        Phase::Finished(PlanStatus::Done)
+                    } else {
+                        Phase::Ready
+                    };
+                }
                 return Some(request);
             }
         }

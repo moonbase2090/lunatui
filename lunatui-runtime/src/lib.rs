@@ -51,7 +51,8 @@ mod sched;
 pub use agent::{
     Act, ActError, Action, ActionKind, Agent, AgentControl, AwaitingConfirmation,
     CONTROL_QUERY_LIMIT, ConfirmId, ControlChange, ControlQuery, ControlQueryResult, ControlState,
-    ControlValue, Permission, Request, Selector, Snapshot, Source, Subscription, Ticket,
+    ControlValue, Permission, PlanId, PlanStatus, Request, Selector, Snapshot, Source, Step,
+    Subscription, Ticket,
 };
 pub use anim::{Clock, Ease, Spring, Tween};
 #[cfg(feature = "motion")]
