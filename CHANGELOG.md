@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.43] - 2026-11-25
+
 ### Added
 
 - An agent can give several steps in one call. `Agent::plan(steps)` takes `Step`s and the app calls `Agent::advance(&hits)` after each render; the agent checks and queues one step per frame, as `Agent::act` would, so a step can name a control an earlier step made appear or enabled. The plan stops at the first failing step, and `Agent::plan_status(id)` reports `Running`, `Waiting` (for the application's confirmation), `Done`, `Failed { step, error }` or `Cancelled`. `Agent::cancel_plan(id)` stops it. A second plan while one runs returns the new `ActError::Busy`.
