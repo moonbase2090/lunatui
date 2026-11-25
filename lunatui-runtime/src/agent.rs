@@ -193,6 +193,11 @@ pub enum ActError {
     Disabled,
     /// The control does not take this kind of action.
     Unsupported(ActionKind),
+    /// The application's [`Agent::allow`] hook refused the action.
+    Denied,
+    /// The request waits for the application to [`confirm`](Agent::confirm) or
+    /// [`decline`](Agent::decline) it; nothing is queued yet.
+    NeedsConfirmation(ConfirmId),
 }
 
 impl fmt::Display for ActError {
@@ -204,11 +209,71 @@ impl fmt::Display for ActError {
             Self::Unsupported(kind) => {
                 write!(f, "the control does not take the {} action", kind.name())
             }
+            Self::Denied => f.write_str("the application does not allow this action"),
+            Self::NeedsConfirmation(_) => {
+                f.write_str("the action waits for the application to confirm it")
+            }
         }
     }
 }
 
 impl std::error::Error for ActError {}
+
+/// What the application lets an agent do with one action, as answered by the hook given to
+/// [`Agent::allow`].
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Permission {
+    /// Queue the request.
+    Allow,
+    /// Refuse it with [`ActError::Denied`].
+    Deny,
+    /// Hold it until the application confirms or declines it, and answer
+    /// [`ActError::NeedsConfirmation`].
+    Confirm,
+}
+
+impl Permission {
+    /// The answer without a hook: [`Confirm`](Self::Confirm) for an action that would change a
+    /// control marked [`destructive`](crate::ControlMetadata::destructive), and
+    /// [`Allow`](Self::Allow) for everything else, focus included. A hook can call it for the
+    /// controls it has no rule for.
+    #[must_use]
+    pub const fn default_for(control: &Control<'_>, action: &Action) -> Self {
+        if control.is_destructive() && !matches!(action, Action::Focus) {
+            Self::Confirm
+        } else {
+            Self::Allow
+        }
+    }
+}
+
+/// Names one request that waits for the application's confirmation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ConfirmId(u64);
+
+/// A request held by [`Agent::act`] until the application confirms or declines it, as listed by
+/// [`Agent::awaiting`]. It has what the application needs to ask the person.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct AwaitingConfirmation {
+    /// What [`Agent::confirm`] and [`Agent::decline`] take.
+    pub id: ConfirmId,
+    /// The control the request is for.
+    pub control: HitId,
+    /// Its accessible name.
+    pub name: String,
+    /// Its semantic role.
+    pub role: AccessibilityRole,
+    /// The overlay layer that owns it, or `None` for the base layer.
+    pub layer: Option<LayerId>,
+    /// What the agent asked for.
+    pub action: Action,
+    /// Who asked.
+    pub source: Source,
+}
+
+type AllowHook = Box<dyn FnMut(&Control<'_>, &Action) -> Permission + Send + Sync>;
 
 /// Cancels a queued [`Request`] before the app applies it.
 #[derive(Clone, Debug)]
@@ -286,6 +351,9 @@ pub struct AgentControl {
     pub shortcut: Option<String>,
     /// The letter that chooses the control while its menu is open.
     pub mnemonic: Option<char>,
+    /// Whether acting on the control destroys work. By default [`Agent::act`] holds a request
+    /// that would change it until the application confirms it.
+    pub destructive: bool,
     /// Disabled, focused, selected and invalid, in that order, for those that hold.
     pub states: Vec<ControlState>,
     /// What [`Agent::act`] accepts. Empty when the control is disabled.
@@ -489,6 +557,7 @@ fn write_control(writer: &mut impl Write, control: &AgentControl) -> io::Result<
         Some(mnemonic) => write_string(writer, mnemonic.encode_utf8(&mut [0; 4]))?,
         None => writer.write_all(b"null")?,
     }
+    write!(writer, ",\"destructive\":{}", control.destructive)?;
     writer.write_all(b",\"states\":[")?;
     for (index, state) in control.states.iter().enumerate() {
         if index > 0 {
@@ -522,9 +591,28 @@ fn write_control(writer: &mut impl Write, control: &AgentControl) -> io::Result<
 /// [`Request`]. The app takes requests with [`take`](Self::take) in its update step, applies each
 /// to the state behind [`Request::id`] and redraws, so an agent never types keys and nothing
 /// waits on time. The returned [`Ticket`] cancels a request the app has not taken yet.
-#[derive(Debug, Default)]
+///
+/// Before queueing, [`act`](Self::act) asks the hook set with [`allow`](Self::allow), or
+/// [`Permission::default_for`] when there is none, whether the action may go ahead. A request
+/// that needs confirmation waits in [`awaiting`](Self::awaiting) until the application, on the
+/// person's word, calls [`confirm`](Self::confirm) or [`decline`](Self::decline); an agent has
+/// no way to confirm its own request.
+#[derive(Default)]
 pub struct Agent {
     queue: VecDeque<Request>,
+    allow: Option<AllowHook>,
+    awaiting: Vec<AwaitingConfirmation>,
+    next_confirm: u64,
+}
+
+impl fmt::Debug for Agent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Agent")
+            .field("queue", &self.queue)
+            .field("allow", &self.allow.as_ref().map(|_| "hook"))
+            .field("awaiting", &self.awaiting)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Agent {
@@ -533,7 +621,20 @@ impl Agent {
     pub const fn new() -> Self {
         Self {
             queue: VecDeque::new(),
+            allow: None,
+            awaiting: Vec::new(),
+            next_confirm: 0,
         }
+    }
+
+    /// Decides what [`act`](Self::act) does with each action on an enabled control that takes
+    /// it, in place of [`Permission::default_for`]. The hook sees the control as registered in
+    /// the frame and the action, and replaces any earlier hook.
+    pub fn allow(
+        &mut self,
+        hook: impl FnMut(&Control<'_>, &Action) -> Permission + Send + Sync + 'static,
+    ) {
+        self.allow = Some(Box::new(hook));
     }
 
     /// Every named control in `hits`, with `focused` marking the one with focus.
@@ -578,8 +679,10 @@ impl Agent {
     /// # Errors
     ///
     /// [`ActError::NotFound`] and [`ActError::Ambiguous`] when the selector does not name exactly
-    /// one control, [`ActError::Disabled`] for a disabled control, and
-    /// [`ActError::Unsupported`] when its role does not take the action.
+    /// one control, [`ActError::Disabled`] for a disabled control,
+    /// [`ActError::Unsupported`] when its role does not take the action, [`ActError::Denied`]
+    /// when the application refuses it, and [`ActError::NeedsConfirmation`] when the request
+    /// waits for the application's confirmation.
     pub fn act(
         &mut self,
         hits: &HitMap,
@@ -597,16 +700,81 @@ impl Agent {
         if !ActionKind::for_role(control.role).contains(&kind) {
             return Err(ActError::Unsupported(kind));
         }
+        let permission = match &mut self.allow {
+            Some(hook) => hook(&control, &action),
+            None => Permission::default_for(&control, &action),
+        };
+        match permission {
+            Permission::Allow => Ok(self.queue_request(control.id, action)),
+            Permission::Deny => Err(ActError::Denied),
+            Permission::Confirm => {
+                let id = ConfirmId(self.next_confirm);
+                self.next_confirm += 1;
+                self.awaiting.push(AwaitingConfirmation {
+                    id,
+                    control: control.id,
+                    name: control.name.to_owned(),
+                    role: control.role,
+                    layer: control.layer,
+                    action,
+                    source: Source::Agent,
+                });
+                Err(ActError::NeedsConfirmation(id))
+            }
+        }
+    }
+
+    /// Requests that wait for the application's confirmation, oldest first.
+    #[must_use]
+    pub fn awaiting(&self) -> &[AwaitingConfirmation] {
+        &self.awaiting
+    }
+
+    /// Queues the waiting request `id` once the person agrees. Call it from the application's
+    /// own confirmation, never on an agent's behalf. The request leaves
+    /// [`awaiting`](Self::awaiting) whatever the result.
+    ///
+    /// # Errors
+    ///
+    /// [`ActError::NotFound`] when `id` is not waiting, or when `hits` no longer has its control
+    /// under the same name, role, layer and identity; [`ActError::Ambiguous`] when several
+    /// controls now match; [`ActError::Disabled`] when the control became disabled.
+    pub fn confirm(&mut self, hits: &HitMap, id: ConfirmId) -> Result<Ticket, ActError> {
+        let index = self
+            .awaiting
+            .iter()
+            .position(|waiting| waiting.id == id)
+            .ok_or(ActError::NotFound)?;
+        let waiting = self.awaiting.remove(index);
+        let control = hits
+            .find_control(waiting.role, &waiting.name, waiting.layer)
+            .map_err(ActError::Ambiguous)?
+            .filter(|control| control.id == waiting.control)
+            .ok_or(ActError::NotFound)?;
+        if control.disabled {
+            return Err(ActError::Disabled);
+        }
+        Ok(self.queue_request(control.id, waiting.action))
+    }
+
+    /// Drops the waiting request `id`, answering whether it was waiting.
+    pub fn decline(&mut self, id: ConfirmId) -> bool {
+        let before = self.awaiting.len();
+        self.awaiting.retain(|waiting| waiting.id != id);
+        self.awaiting.len() != before
+    }
+
+    fn queue_request(&mut self, id: HitId, action: Action) -> Ticket {
         let ticket = Ticket {
             cancelled: Arc::new(AtomicBool::new(false)),
         };
         self.queue.push_back(Request {
-            id: control.id,
+            id,
             action,
             source: Source::Agent,
             ticket: ticket.clone(),
         });
-        Ok(ticket)
+        ticket
     }
 
     /// Watches the controls `query` matches; see [`Subscription`].
@@ -769,6 +937,7 @@ fn agent_control(control: Control<'_>, focused: Option<HitId>) -> AgentControl {
         checked: control.checked,
         shortcut: control.shortcut.map(str::to_owned),
         mnemonic: control.mnemonic,
+        destructive: control.is_destructive(),
         states: [
             (ControlState::Disabled, control.disabled),
             (ControlState::Focused, focused == Some(control.id)),

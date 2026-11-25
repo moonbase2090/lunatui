@@ -23,6 +23,12 @@ enum ValueShown {
     No,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Consequence {
+    Ordinary,
+    Destructive,
+}
+
 /// A label, a control widget, and a help or error line under it.
 ///
 /// # Panics
@@ -49,6 +55,7 @@ pub struct Field<'a> {
     value_shown: ValueShown,
     body: Option<&'a dyn Widget>,
     on: Role,
+    consequence: Consequence,
     change: Option<ChangeDetails>,
 }
 
@@ -80,6 +87,7 @@ impl<'a> Field<'a> {
             value_shown: ValueShown::Yes,
             body: None,
             on: Role::Background,
+            consequence: Consequence::Ordinary,
             change: None,
         }
     }
@@ -90,6 +98,19 @@ impl<'a> Field<'a> {
     #[must_use]
     pub const fn changed(mut self, details: ChangeDetails) -> Self {
         self.change = Some(details);
+        self
+    }
+
+    /// Marks the field's control as one whose action destroys work, so an agent's request to
+    /// change it waits for the application's confirmation by default. See
+    /// [`ControlMetadata::destructive`].
+    #[must_use]
+    pub const fn destructive(mut self, destructive: bool) -> Self {
+        self.consequence = if destructive {
+            Consequence::Destructive
+        } else {
+            Consequence::Ordinary
+        };
         self
     }
 
@@ -241,7 +262,8 @@ impl<'a> Field<'a> {
             .disabled(self.is_disabled())
             .layer(self.layer)
             .checked(self.body.and_then(Widget::control_checked))
-            .invalid(self.error.is_some());
+            .invalid(self.error.is_some())
+            .destructive(self.consequence == Consequence::Destructive);
             let metadata = match self.change {
                 Some(details) => metadata.changed(details),
                 None => metadata,

@@ -162,6 +162,31 @@ for change in watch.observe(&hits, focus.focused()) {
 }
 ```
 
+Some actions should not happen on an agent's word alone. Mark a control whose action destroys
+work with `ControlMetadata::destructive(true)`, or `Field::destructive(true)` for a field; the
+snapshot shows it as `destructive`. By default `act` then holds any request that would change the
+control (anything but `Action::Focus`) and returns `ActError::NeedsConfirmation(id)` instead of
+queueing it. `Agent::awaiting()` lists the held requests with the control's name, role and the
+action, so the app can ask the person. On their yes, `Agent::confirm(&hits, id)` queues the request
+and returns its `Ticket`, after checking that the same control is still there and enabled; on their
+no, `Agent::decline(id)` drops it. A request leaves the list either way, and an agent that asks
+again gets a new request to wait on, so only the app can let it through.
+
+`Agent::allow(hook)` replaces that rule. The hook sees each registered control (its name, role,
+layer and `is_destructive()`) and action that passed the other checks and answers `Permission::Allow`, `Deny` (`act` returns `ActError::Denied`
+and queues nothing) or `Confirm`. Call `Permission::default_for(control, action)` for the controls
+the hook has no rule for.
+
+```rust,ignore
+agent.allow(|control, action| match control.name {
+    "Save" => Permission::Allow,
+    "Send payment" => Permission::Deny,
+    _ => Permission::default_for(control, action),
+});
+// when the person answers the prompt for `waiting.id`:
+let ticket = agent.confirm(&hits, waiting.id)?; // or agent.decline(waiting.id)
+```
+
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the
 snapshot as well.

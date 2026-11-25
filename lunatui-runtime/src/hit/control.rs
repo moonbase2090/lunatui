@@ -52,6 +52,12 @@ impl AccessibilityRole {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Consequence {
+    Ordinary,
+    Destructive,
+}
+
 /// A control's public identity and availability.
 ///
 /// The optional value, checked, selected and invalid facets are for
@@ -68,6 +74,7 @@ pub struct ControlMetadata {
     invalid: bool,
     shortcut: Option<String>,
     mnemonic: Option<char>,
+    consequence: Consequence,
     change: Option<ChangeDetails>,
 }
 
@@ -93,6 +100,7 @@ impl ControlMetadata {
             invalid: false,
             shortcut: None,
             mnemonic: None,
+            consequence: Consequence::Ordinary,
             change: None,
         }
     }
@@ -142,6 +150,20 @@ impl ControlMetadata {
         self
     }
 
+    /// Whether acting on the control destroys work, such as a Delete or Discard button. An agent
+    /// sees the mark in its snapshot, and by default [`crate::Agent::act`] holds a request that
+    /// would change such a control until the application confirms it; see
+    /// [`crate::Permission`]. For an agent only; the accessibility export never writes it.
+    #[must_use]
+    pub const fn destructive(mut self, destructive: bool) -> Self {
+        self.consequence = if destructive {
+            Consequence::Destructive
+        } else {
+            Consequence::Ordinary
+        };
+        self
+    }
+
     /// Whether the control is unavailable for activation.
     #[must_use]
     pub const fn disabled(mut self, disabled: bool) -> Self {
@@ -180,6 +202,7 @@ impl ControlMetadata {
             invalid: self.invalid,
             shortcut: self.shortcut.as_deref(),
             mnemonic: self.mnemonic,
+            consequence: self.consequence,
             change: self.change,
         }
     }
@@ -216,8 +239,18 @@ pub struct Control<'a> {
     pub shortcut: Option<&'a str>,
     /// The mnemonic letter of this control. For an agent only.
     pub mnemonic: Option<char>,
+    consequence: Consequence,
     /// The change the application recorded for this frame with [`ControlMetadata::changed`].
     pub change: Option<ChangeDetails>,
+}
+
+impl Control<'_> {
+    /// Whether acting on the control destroys work, as marked with
+    /// [`ControlMetadata::destructive`]. For an agent only.
+    #[must_use]
+    pub const fn is_destructive(&self) -> bool {
+        matches!(self.consequence, Consequence::Destructive)
+    }
 }
 
 /// More than one control matched the same role, name and layer.
