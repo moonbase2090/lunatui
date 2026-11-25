@@ -6,6 +6,8 @@ use std::borrow::Cow;
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 
+use lunatui_runtime::{Action, Outcome};
+
 use crate::{RenderCx, Widget, WidgetState};
 
 const FULL: &str = "━";
@@ -141,6 +143,26 @@ impl<'a> Slider<'a> {
     pub fn nudge(&self, value: f64, steps: i32) -> f64 {
         let step = self.step.unwrap_or((self.max - self.min) / 100.0);
         self.snap(self.clamp(value) + f64::from(steps) * step)
+    }
+
+    /// Applies an agent's [`Action::SetValue`] to the app's value for this slider: the decimal
+    /// text is parsed, clamped into the bounds and snapped to the step, like a click on the track.
+    /// [`Outcome::Changed`] when the value moved, [`Outcome::Handled`] when it was already there,
+    /// and [`Outcome::Ignored`] for any other action and for text that is not a finite number.
+    pub fn act(&self, value: &mut f64, action: &Action) -> Outcome {
+        let Action::SetValue(text) = action else {
+            return Outcome::Ignored;
+        };
+        let Some(wanted) = text.trim().parse::<f64>().ok().filter(|v| v.is_finite()) else {
+            return Outcome::Ignored;
+        };
+        let wanted = self.snap(wanted);
+        if (wanted - *value).abs() <= f64::EPSILON {
+            Outcome::Handled
+        } else {
+            *value = wanted;
+            Outcome::Changed
+        }
     }
 
     /// The value at `column` of a track at `track`: the first cell is the minimum and the last

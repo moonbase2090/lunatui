@@ -4,6 +4,8 @@
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 
+use lunatui_runtime::{Action, Outcome};
+
 use crate::{RenderCx, Widget, WidgetState};
 
 const INDENT: u16 = 2;
@@ -168,6 +170,27 @@ impl Accordion {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.sections.is_empty()
+    }
+
+    /// Whether the section at `index` is open. `false` for an index past the last section.
+    #[must_use]
+    pub fn is_open(&self, index: usize) -> bool {
+        self.sections.get(index).is_some_and(|section| section.open)
+    }
+
+    /// Applies an agent's [`Action::Toggle`] to the section at `index`: an open section closes
+    /// and a closed one opens, with its body fully hidden or shown at once. [`Outcome::Ignored`]
+    /// for any other action, for an index past the last section and for a disabled section.
+    pub fn act(&mut self, index: usize, action: &Action) -> Outcome {
+        let Some(section) = self.sections.get_mut(index) else {
+            return Outcome::Ignored;
+        };
+        if section.disabled || !matches!(action, Action::Toggle) {
+            return Outcome::Ignored;
+        }
+        section.open = !section.open;
+        section.reveal = if section.open { 1.0 } else { 0.0 };
+        Outcome::Changed
     }
 
     /// The header after (or before) `from`, wrapping around and skipping disabled sections. From

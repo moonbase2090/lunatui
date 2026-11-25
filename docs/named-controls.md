@@ -123,6 +123,25 @@ stays on a character boundary, and selection and edit history are dropped. The s
 changes nothing (`Outcome::Handled`). Mark the control `secret` to keep the text out of the
 snapshot.
 
+The other value widgets take an agent's action through the state the app already keeps. In each
+case wrap the widget in a `NamedControl` with the role below and apply the request in the update
+step; the same value again is `Outcome::Handled`, and text the widget would not accept is
+`Outcome::Ignored`.
+
+| Widget | Role (actions) | Applied with |
+| --- | --- | --- |
+| `Slider` | `Slider` (`SetValue`) | `slider.act(&mut value, &action)`: a decimal, clamped and snapped to the step |
+| `NumberInput` | `TextInput` (`SetValue`) | `input.act(&mut value, &action)`: held to `NumberInput::parse`, so it rounds and clamps |
+| `Accordion` | `Disclosure` (`Toggle`), one per header | `accordion.act(index, &action)`: opens or closes the section; a disabled section is refused |
+| `Tree` | `ListItem` (`Select`, `Activate`), one per visible row | `tree_state.act(&path, &action)`: `Activate` opens or closes a branch and selects a leaf |
+| `TagInput` | `TagInput` (`SetValue`, `Activate`) | `TagState`: `SetValue` replaces the typed text, `Activate` commits it as a tag |
+| `Monthly` | `Calendar` (`SetValue`) | `Date`: text as `YYYY-MM-DD`; a day that does not exist is ignored |
+
+`Slider::act` and `NumberInput::act` bound a plain `f64` that the app owns, so they are not `Act`
+themselves. `ActWith` lends `Act` to a closure for `Request::apply`:
+`request.apply(&mut ActWith(|action| slider.act(&mut value, action)), request.context())`. A tree
+branch that is closed hides its children, so they have no controls until `Activate` opens it.
+
 An application can refuse what an agent asks for. `Request::apply(&mut state, request.context().guard(&mut guard))`
 asks the guard before the state changes, whatever type implements `Act`: the guard runs in the library, so a
 state cannot skip it. The guard sees the reason (`Edit` for a value, `Toggle`, `Select`, `Activate` or `Navigate`) and

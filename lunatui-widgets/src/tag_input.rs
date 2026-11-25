@@ -6,6 +6,8 @@ use std::borrow::Cow;
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 
+use lunatui_runtime::{Act, Action, Outcome};
+
 use crate::{RenderCx, Widget, WidgetState};
 
 const CHIP_CHROME: u16 = 4;
@@ -18,6 +20,60 @@ struct Slot {
     x: u16,
     row: u16,
     width: u16,
+}
+
+/// The tags and typed text behind a [`TagInput`], for an app that lets an agent drive the field.
+///
+/// [`Action::SetValue`] replaces the typed text and [`Action::Activate`] commits it as a tag with
+/// [`TagInput::commit`], the way Enter does.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct TagState {
+    tags: Vec<String>,
+    text: String,
+}
+
+impl TagState {
+    /// A field holding `tags` with no typed text.
+    #[must_use]
+    pub fn new(tags: impl IntoIterator<Item = String>) -> Self {
+        Self {
+            tags: tags.into_iter().collect(),
+            text: String::new(),
+        }
+    }
+
+    /// The committed tags, in order.
+    #[must_use]
+    pub fn tags(&self) -> &[String] {
+        &self.tags
+    }
+
+    /// The text typed so far and not yet committed.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+}
+
+impl Act for TagState {
+    fn act(&mut self, action: &Action) -> Outcome {
+        match action {
+            Action::SetValue(value) if *value == self.text => Outcome::Handled,
+            Action::SetValue(value) => {
+                value.clone_into(&mut self.text);
+                Outcome::Changed
+            }
+            Action::Activate => {
+                let had_text = !self.text.is_empty();
+                if TagInput::<String>::commit(&mut self.tags, &mut self.text) || had_text {
+                    Outcome::Changed
+                } else {
+                    Outcome::Handled
+                }
+            }
+            _ => Outcome::Ignored,
+        }
+    }
 }
 
 /// Tags drawn as chips that wrap across rows, followed by a text field for the next one.

@@ -6,6 +6,8 @@ use std::collections::BTreeSet;
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 
+use lunatui_runtime::{Action, Outcome};
+
 use crate::{RenderCx, Widget};
 
 const OPEN: &str = "▾";
@@ -179,6 +181,28 @@ impl TreeState {
             self.close(path)
         } else {
             self.open(path)
+        }
+    }
+
+    /// Applies an agent's action to the node at `path`: [`Action::Select`] selects it, and
+    /// [`Action::Activate`] opens or closes a node that has children and selects a leaf. A node
+    /// that is not visible or is disabled, and any other action, give [`Outcome::Ignored`]. A
+    /// node that is already selected, or that cannot change, gives [`Outcome::Handled`].
+    pub fn act(&mut self, path: &[usize], action: &Action) -> Outcome {
+        if !self.is_selectable(path) {
+            return Outcome::Ignored;
+        }
+        let changed = match action {
+            Action::Activate if self.item_at(path).is_some_and(TreeItem::has_children) => {
+                self.toggle(path)
+            }
+            Action::Select | Action::Activate => self.select(path),
+            _ => return Outcome::Ignored,
+        };
+        if changed {
+            Outcome::Changed
+        } else {
+            Outcome::Handled
         }
     }
 
