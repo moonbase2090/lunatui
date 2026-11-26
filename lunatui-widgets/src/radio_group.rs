@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
+use lunatui_runtime::{Action, Outcome};
 use lunatui_theme::Token;
 
 use crate::{RenderCx, Widget, WidgetState};
@@ -122,6 +123,23 @@ impl RadioGroup {
         index < self.options.len()
             && !matches!(self.state, WidgetState::Disabled)
             && !self.disabled.contains(&index)
+    }
+
+    /// Applies an agent's [`Action::Select`] to the option at `index`, setting `selected`.
+    ///
+    /// [`Outcome::Changed`] when the choice moves, [`Outcome::Handled`] when that option is
+    /// already chosen, and [`Outcome::Ignored`] for an option that does not exist or is disabled
+    /// and for any other action.
+    pub fn act(&self, selected: &mut Option<usize>, index: usize, action: &Action) -> Outcome {
+        if !matches!(action, Action::Select) || !self.is_enabled(index) {
+            return Outcome::Ignored;
+        }
+        if *selected == Some(index) {
+            Outcome::Handled
+        } else {
+            *selected = Some(index);
+            Outcome::Changed
+        }
     }
 
     /// The option after (or before) `from`, wrapping around and skipping disabled options.
