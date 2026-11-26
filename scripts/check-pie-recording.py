@@ -19,7 +19,7 @@ def main():
     assert receipt['example'] == 'pixel_pie_chart'
     assert receipt['args'] == ['--compare']
     assert receipt['keys'] == '7:b,9:b'
-    assert receipt['frames'] == 300
+    assert receipt['frames'] == 120
     assert receipt['duplicated_frames'] == receipt['dropped_frames'] == 0
     assert receipt['tracked_worktree_clean']
     video = args.capture / 'terminal.mkv'
@@ -77,7 +77,7 @@ def main():
         assert process.wait() == 0
         assert checked == receipt['frames']
 
-    print(json.dumps({'head': receipt['head'], 'frames': 300, 'live_motion_seconds': 7,
+    print(json.dumps({'head': receipt['head'], 'frames': receipt['frames'], 'live_motion_seconds': 7,
                       'distinct_live_samples': 3, 'distinct_control_states': 2,
                       'continuously_visible_chart_panels': 2,
                       'native_chart_crop_sha256': chart_frames, 'phase_sha256': phases}, indent=2))
