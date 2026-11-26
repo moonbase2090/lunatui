@@ -1034,7 +1034,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "image",
  "libc",
@@ -1063,7 +1063,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-badge"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "image",
  "lunatui-card",
@@ -1079,7 +1079,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-bench"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "criterion",
  "graphite-core",
@@ -1113,7 +1113,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-button"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-badge",
  "lunatui-card",
@@ -1126,7 +1126,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-card"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "lunatui-term",
@@ -1138,7 +1138,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-choice"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-badge",
  "lunatui-button",
@@ -1152,7 +1152,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-core"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "libm",
  "lunatui-test",
@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-data-table"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "lunatui-term",
@@ -1174,7 +1174,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-dialog"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-badge",
  "lunatui-button",
@@ -1189,7 +1189,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-field"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-badge",
  "lunatui-button",
@@ -1206,11 +1206,11 @@ dependencies = [
 
 [[package]]
 name = "lunatui-fonts"
-version = "0.1.43"
+version = "0.1.44"
 
 [[package]]
 name = "lunatui-image"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "image",
  "lunatui-core",
@@ -1218,7 +1218,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-layout"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "num-bigint",
@@ -1229,14 +1229,14 @@ dependencies = [
 
 [[package]]
 name = "lunatui-prismattyc"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
 ]
 
 [[package]]
 name = "lunatui-ratatui"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-bench",
  "lunatui-core",
@@ -1249,7 +1249,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-runtime"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "lunatui-image",
@@ -1260,7 +1260,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-term"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "crossterm",
  "libc",
@@ -1276,7 +1276,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-test"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "lunatui-term",
@@ -1286,7 +1286,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-text"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "proptest",
@@ -1295,7 +1295,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-theme"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "lunatui-test",
@@ -1306,7 +1306,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-ui-tokens"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "lunatui-theme",
@@ -1328,7 +1328,7 @@ dependencies = [
 
 [[package]]
 name = "lunatui-widgets"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "fontdue",
  "lunatui-core",
@@ -2931,7 +2931,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "xtask"
-version = "0.1.43"
+version = "0.1.44"
 dependencies = [
  "proc-macro2",
  "syn 2.0.119",
