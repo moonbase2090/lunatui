@@ -4,6 +4,7 @@
 use std::cmp::Ordering;
 use std::ops::RangeInclusive;
 
+use lunatui_runtime::{Action, Outcome};
 use lunatui_text::source::{RowBuilder, RowSource};
 
 /// Which way a sorted [`Table`](crate::Table) column runs.
@@ -247,6 +248,41 @@ impl TableState {
             _ => SortDirection::Ascending,
         };
         self.sort(source, column, direction);
+    }
+
+    /// Applies an agent's `action` to the row shown at `row`.
+    ///
+    /// [`Action::Select`] and [`Action::Activate`] put the cursor on the row and drop any range.
+    /// A row that does not exist and any other action give [`Outcome::Ignored`]; a row that
+    /// already holds the cursor alone gives [`Outcome::Handled`].
+    pub fn act(&mut self, row: usize, action: &Action) -> Outcome {
+        if !matches!(action, Action::Select | Action::Activate) || row >= self.len {
+            return Outcome::Ignored;
+        }
+        if self.cursor == Some(row) && self.anchor.is_none() {
+            return Outcome::Handled;
+        }
+        self.set_cursor(Some(row));
+        Outcome::Changed
+    }
+
+    /// Applies an agent's `action` to the header of `column`, one of `columns`.
+    ///
+    /// [`Action::Activate`] sorts by the column, or reverses it when it is already sorted, as
+    /// [`toggle_sort`](Self::toggle_sort) does. A column past `columns` and any other action
+    /// give [`Outcome::Ignored`].
+    pub fn act_header<S: RowSource>(
+        &mut self,
+        source: &S,
+        column: usize,
+        columns: usize,
+        action: &Action,
+    ) -> Outcome {
+        if !matches!(action, Action::Activate) || column >= columns {
+            return Outcome::Ignored;
+        }
+        self.toggle_sort(source, column);
+        Outcome::Changed
     }
 
     /// Returns to source order, keeping the cursor on the same source row.
