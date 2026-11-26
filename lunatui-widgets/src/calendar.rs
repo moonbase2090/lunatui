@@ -671,7 +671,7 @@ impl Act for Date {
     }
 }
 
-fn parse_iso(text: &str) -> Option<Date> {
+pub(crate) fn parse_iso(text: &str) -> Option<Date> {
     let (negative, rest) = match text.strip_prefix('-') {
         Some(rest) => (true, rest),
         None => (false, text),
