@@ -13,7 +13,7 @@ use rustix::termios::{Termios, isatty, tcgetattr, tcsetattr};
 use super::parse::{from_replies, has_device_attributes};
 use super::{GraphicsProtocol, PROBE_BUDGET, ProbeEnv, ProbeReply, QUERIES};
 
-/// Writes [`QUERIES`] to `fd`, reads until it can select the Kitty pixel layer or reaches [`PROBE_BUDGET`], and enables mode 2027 when it is reset.
+/// Writes [`QUERIES`] to `fd`, reads until it can select a pixel layer or reaches [`PROBE_BUDGET`], and enables mode 2027 when it is reset.
 ///
 /// On a terminal, local echo is cleared for the probe and restored before this returns.
 /// A timeout is not an error: [`ProbeReply::saw_device_attributes`] is false.
@@ -94,8 +94,8 @@ fn exchange(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
 }
 
 fn has_pixel_layer_capabilities(reply: &ProbeReply) -> bool {
-    // PixelLayer selection needs the graphics protocol and physical cell size. Background RGB
-    // is useful metadata, but its absence should not keep startup in the probe for the full budget.
+    // Device attributes end the query batch. PixelLayer selection needs the graphics protocol
+    // and physical cell size; absent optional background RGB should not consume the full budget.
     reply.saw_device_attributes
         && matches!(
             reply.caps.protocols.graphics,
