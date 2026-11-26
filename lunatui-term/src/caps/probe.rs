@@ -94,8 +94,6 @@ fn exchange(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
 }
 
 fn has_pixel_layer_capabilities(reply: &ProbeReply) -> bool {
-    // Device attributes end the query batch. PixelLayer selection needs the graphics protocol
-    // and physical cell size; absent optional background RGB should not consume the full budget.
     reply.saw_device_attributes
         && matches!(
             reply.caps.protocols.graphics,
