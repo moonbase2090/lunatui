@@ -135,6 +135,7 @@ step; the same value again is `Outcome::Handled`, and text the widget would not 
 | `Accordion` | `Disclosure` (`Toggle`), one per header | `accordion.act(index, &action)`: opens or closes the section; a disabled section is refused |
 | `Tree` | `ListItem` (`Select`, `Activate`), one per visible row | `tree_state.act(&path, &action)`: `Activate` opens or closes a branch and selects a leaf |
 | `Table` | `ListItem` (`Select`, `Activate`) per visible row; `Button` (`Activate`) per header | `state.act(row, &action)` puts the cursor on a row; `state.act_header(&source, column, columns, &action)` sorts by the column or reverses it |
+| `RadioGroup` | `RadioButton` (`Select`), one per option | `group.act(&mut selected, index, &action)`: the option's index from `option_areas`; a disabled option is refused |
 | `Select` | `ComboBox` (`SetValue`) | `select.act(&mut chosen, &action)`: the exact option label; `Activate` is the app's layer, so it is ignored |
 | `TagInput` | `TagInput` (`SetValue`, `Activate`) | `TagState`: `SetValue` replaces the typed text, `Activate` commits it as a tag |
 | `Monthly` | `Calendar` (`SetValue`) | `Date`: text as `YYYY-MM-DD`; a day that does not exist is ignored |
