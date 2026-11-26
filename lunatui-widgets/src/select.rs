@@ -4,7 +4,7 @@
 use std::borrow::Cow;
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix};
-use lunatui_runtime::{HitId, Layer};
+use lunatui_runtime::{Action, HitId, Layer, Outcome};
 use lunatui_theme::Token;
 
 use crate::{RenderCx, Widget, WidgetState};
@@ -59,6 +59,30 @@ impl<'a, S: AsRef<str>> Select<'a, S> {
     pub fn placeholder(mut self, placeholder: impl Into<Cow<'a, str>>) -> Self {
         self.placeholder = placeholder.into();
         self
+    }
+
+    /// Applies an agent's [`Action::SetValue`] to the app's choice: the text must equal one
+    /// option's label exactly, and that option becomes the chosen one. [`Outcome::Changed`] when
+    /// the choice moved, [`Outcome::Handled`] when it was already chosen, and
+    /// [`Outcome::Ignored`] for any other action and for text that names no option. Opening the
+    /// list belongs to the app's layer, so [`Action::Activate`] is ignored here.
+    pub fn act(&self, selected: &mut Option<usize>, action: &Action) -> Outcome {
+        let Action::SetValue(text) = action else {
+            return Outcome::Ignored;
+        };
+        let Some(index) = self
+            .options
+            .iter()
+            .position(|option| option.as_ref() == text.as_str())
+        else {
+            return Outcome::Ignored;
+        };
+        if *selected == Some(index) {
+            Outcome::Handled
+        } else {
+            *selected = Some(index);
+            Outcome::Changed
+        }
     }
 
     /// Whether the list of options is drawn below the field.
