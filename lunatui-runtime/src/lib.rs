@@ -49,7 +49,7 @@ mod sched;
 
 #[cfg(feature = "app")]
 pub use agent::{
-    Act, ActError, Action, ActionKind, Agent, AgentControl, AwaitingConfirmation,
+    Act, ActError, ActWith, Action, ActionKind, Agent, AgentControl, AwaitingConfirmation,
     CONTROL_QUERY_LIMIT, ConfirmId, ControlChange, ControlQuery, ControlQueryResult, ControlState,
     ControlValue, Permission, PlanId, PlanStatus, Request, Selector, Snapshot, Source, Step,
     Subscription, Ticket,

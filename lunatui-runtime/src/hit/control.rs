@@ -33,6 +33,12 @@ pub enum AccessibilityRole {
     ComboBox,
     /// One entry of a menu bar or a menu panel, a leaf or a group that opens a submenu.
     MenuItem,
+    /// A header that opens or closes a section of content, such as an accordion header.
+    Disclosure,
+    /// A field of removable tags with a text box that adds the next one.
+    TagInput,
+    /// A month of days with one date selected.
+    Calendar,
 }
 
 impl AccessibilityRole {
@@ -48,6 +54,9 @@ impl AccessibilityRole {
             Self::ProgressBar => "progress_bar",
             Self::ComboBox => "combo_box",
             Self::MenuItem => "menu_item",
+            Self::Disclosure => "disclosure",
+            Self::TagInput => "tag_input",
+            Self::Calendar => "calendar",
         }
     }
 }

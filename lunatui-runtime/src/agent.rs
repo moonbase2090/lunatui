@@ -57,7 +57,11 @@ impl ActionKind {
             AccessibilityRole::TextInput | AccessibilityRole::Slider => {
                 &[Self::Focus, Self::SetValue]
             }
-            AccessibilityRole::Checkbox => &[Self::Focus, Self::Toggle],
+            AccessibilityRole::Checkbox | AccessibilityRole::Disclosure => {
+                &[Self::Focus, Self::Toggle]
+            }
+            AccessibilityRole::TagInput => &[Self::Focus, Self::SetValue, Self::Activate],
+            AccessibilityRole::Calendar => &[Self::Focus, Self::SetValue],
             AccessibilityRole::ComboBox => &[Self::Focus, Self::Activate, Self::SetValue],
             _ => &[],
         }
@@ -1205,6 +1209,17 @@ fn agent_control(control: Control<'_>, focused: Option<HitId>) -> AgentControl {
 pub trait Act {
     /// Applies `action`, answering [`Outcome::Ignored`] for one this state does not take.
     fn act(&mut self, action: &Action) -> Outcome;
+}
+
+/// Lends [`Act`] to a closure, for state whose rules live beside it rather than in it, such as
+/// a number held as a plain value and bounded by a widget: `request.apply(&mut ActWith(|action|
+/// slider.act(&mut value, action)), context)`.
+pub struct ActWith<F>(pub F);
+
+impl<F: FnMut(&Action) -> Outcome> Act for ActWith<F> {
+    fn act(&mut self, action: &Action) -> Outcome {
+        (self.0)(action)
+    }
 }
 
 impl Act for bool {
