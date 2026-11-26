@@ -17,6 +17,7 @@ use lunatui_runtime::{App, ControlFlow, RenderFrame, RunOptions, is_quit, run};
 use lunatui_term::{Event, PtyProcess, PtySize};
 
 const CHILD: &str = "LUNATUI_GRAPHITE_LOG";
+const CHILD_START: &str = "LUNATUI_GRAPHITE_START";
 const QUERIES_END: &[u8] = b"\x1b[c";
 const PLACED: &[u8] = b"a=p";
 
@@ -70,6 +71,11 @@ fn child_app() -> io::Result<()> {
     let Some(log) = std::env::var_os(CHILD) else {
         return Ok(());
     };
+    if let Some(start) = std::env::var_os(CHILD_START).map(PathBuf::from) {
+        while !start.exists() {
+            thread::sleep(Duration::from_millis(1));
+        }
+    }
     run(
         Painter {
             log: log.into(),
@@ -105,27 +111,36 @@ fn session(
         "lunatui-graphite-{name}-{}.log",
         std::process::id()
     ));
+    let start = log.with_extension("start");
     let _ = fs::remove_file(&log);
+    let _ = fs::remove_file(&start);
     let mut command = Command::new(std::env::current_exe()?);
     command
         .args(["child_app", "--exact", "--test-threads=1", "--nocapture"])
-        .env(CHILD, &log);
+        .env(CHILD, &log)
+        .env(CHILD_START, &start);
     let mut process = PtyProcess::spawn(command, PtySize::new(40, 10)?)?;
+    let mut reply = probe_reply.to_vec();
+    reply.push(b'\n');
+    process.queue_input(&reply)?;
+    process.flush_input()?;
+    fs::write(&start, b"probe reply ready")?;
     let mut output = Vec::new();
     let deadline = Instant::now() + Duration::from_secs(10);
     while !contains(&output, QUERIES_END) {
         pump(&mut process, &mut output)?;
         if Instant::now() >= deadline {
             process.terminate()?;
+            let _ = fs::remove_file(&start);
             return Err("the app never probed the terminal".into());
         }
     }
-    process.queue_input(probe_reply)?;
     let probed = output.len();
     while fs::metadata(&log).map_or(true, |meta| meta.len() == 0) {
         pump(&mut process, &mut output)?;
         if Instant::now() >= deadline {
             process.terminate()?;
+            let _ = fs::remove_file(&start);
             return Err("the app drew no frame".into());
         }
     }
@@ -138,11 +153,13 @@ fn session(
         pump(&mut process, &mut output)?;
         if Instant::now() >= deadline {
             process.terminate()?;
+            let _ = fs::remove_file(&start);
             return Err("the app did not quit".into());
         }
     }
     let notes = fs::read_to_string(&log)?;
     let _ = fs::remove_file(&log);
+    let _ = fs::remove_file(&start);
     Ok((output.split_off(probed), notes))
 }
 

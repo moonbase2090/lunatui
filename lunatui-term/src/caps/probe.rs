@@ -11,9 +11,9 @@ use rustix::termios::OptionalActions;
 use rustix::termios::{Termios, isatty, tcgetattr, tcsetattr};
 
 use super::parse::{from_replies, has_device_attributes};
-use super::{PROBE_BUDGET, ProbeEnv, ProbeReply, QUERIES};
+use super::{GraphicsProtocol, PROBE_BUDGET, ProbeEnv, ProbeReply, QUERIES};
 
-/// Writes [`QUERIES`] to `fd`, reads until device attributes or [`PROBE_BUDGET`], and enables mode 2027 when it is reset.
+/// Writes [`QUERIES`] to `fd`, reads until it can select the Kitty pixel layer or reaches [`PROBE_BUDGET`], and enables mode 2027 when it is reset.
 ///
 /// On a terminal, local echo is cleared for the probe and restored before this returns.
 /// A timeout is not an error: [`ProbeReply::saw_device_attributes`] is false.
@@ -62,10 +62,7 @@ fn exchange(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
     loop {
         if has_device_attributes(&buf) {
             let reply = from_replies(env, &buf);
-            if reply.caps.protocols.graphics == super::GraphicsProtocol::Kitty
-                && reply.caps.cell_pixels.is_some()
-                && reply.caps.background_rgb.is_some()
-            {
+            if has_pixel_layer_capabilities(&reply) {
                 return finish(fd, env, &buf);
             }
         }
@@ -94,6 +91,17 @@ fn exchange(fd: BorrowedFd<'_>, env: &ProbeEnv) -> io::Result<ProbeReply> {
             Wait::Interrupted => {}
         }
     }
+}
+
+fn has_pixel_layer_capabilities(reply: &ProbeReply) -> bool {
+    // PixelLayer selection needs the graphics protocol and physical cell size. Background RGB
+    // is useful metadata, but its absence should not keep startup in the probe for the full budget.
+    reply.saw_device_attributes
+        && matches!(
+            reply.caps.protocols.graphics,
+            GraphicsProtocol::Kitty | GraphicsProtocol::Iterm2 | GraphicsProtocol::Sixel
+        )
+        && reply.caps.cell_pixels.is_some()
 }
 
 fn finish(fd: BorrowedFd<'_>, env: &ProbeEnv, buf: &[u8]) -> io::Result<ProbeReply> {
@@ -163,5 +171,32 @@ fn wait_read(fd: BorrowedFd<'_>, timeout_ms: i32) -> io::Result<Wait> {
         Ok(Wait::Timeout)
     } else {
         Ok(Wait::Ready)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::has_pixel_layer_capabilities;
+    use crate::caps::ProbeEnv;
+    use crate::caps::parse::from_replies;
+
+    #[test]
+    fn pixel_mode_probe_finishes_on_graphics_and_cell_replies_without_background() {
+        let env = ProbeEnv::default().term("xterm-256color");
+        let reply = from_replies(&env, b"\x1b_Gi=31;OK\x1b\\\x1b[6;16;8t\x1b[?62c");
+
+        assert!(reply.saw_device_attributes);
+        assert!(reply.caps.background_rgb.is_none());
+        assert!(has_pixel_layer_capabilities(&reply));
+    }
+
+    #[test]
+    fn pixel_mode_probe_still_requires_graphics_and_cell_replies() {
+        let env = ProbeEnv::default().term("xterm-256color");
+        let no_cell = from_replies(&env, b"\x1b_Gi=31;OK\x1b\\\x1b[?62c");
+        let no_graphics = from_replies(&env, b"\x1b[6;16;8t\x1b[?62c");
+
+        assert!(!has_pixel_layer_capabilities(&no_cell));
+        assert!(!has_pixel_layer_capabilities(&no_graphics));
     }
 }
