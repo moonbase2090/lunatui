@@ -322,6 +322,52 @@ impl Input {
         Ok(Some(events))
     }
 
+    #[cfg(all(unix, feature = "app", feature = "image-presenter"))]
+    pub(crate) fn next_frame_timeout(
+        &mut self,
+        timeout: Duration,
+    ) -> io::Result<Option<Vec<Event>>> {
+        if let Some(error) = self.pending_error.take() {
+            self.finished = true;
+            return Err(error);
+        }
+        if self.finished {
+            return Ok(None);
+        }
+        let mut events = match self.receiver.recv_timeout(timeout) {
+            Ok(Ok(events)) => events,
+            Ok(Err(error)) => {
+                self.finished = true;
+                return Err(error);
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => return Ok(None),
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                self.finished = true;
+                return Ok(None);
+            }
+        };
+        loop {
+            match self.receiver.try_recv() {
+                Ok(Ok(mut batch)) => events.append(&mut batch),
+                Ok(Err(error)) => {
+                    self.pending_error = Some(error);
+                    break;
+                }
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => {
+                    self.finished = true;
+                    break;
+                }
+            }
+        }
+        Ok(Some(events))
+    }
+
+    #[cfg(all(unix, feature = "app", feature = "image-presenter"))]
+    pub(crate) const fn is_finished(&self) -> bool {
+        self.finished
+    }
+
     /// Returns coalesced input when a burst is already queued; otherwise `Ok(None)`.
     ///
     /// # Errors

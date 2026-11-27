@@ -8,7 +8,7 @@ use std::io;
 use lunatui::{App, ControlFlow, RunOptions, is_quit, run};
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style};
 use lunatui_runtime::RenderFrame;
-use lunatui_term::{Event, KeyCode};
+use lunatui_term::{Event, KeyCode, terminal_size};
 use lunatui_theme::{Theme, Variant};
 use lunatui_widgets::{Block, Image, ImageFit, ImageId, ImageSource, Paragraph, RenderCx, Widget};
 
@@ -18,12 +18,13 @@ const HEIGHT: u16 = 32;
 fn main() -> io::Result<()> {
     let source = ImageSource::decode(include_bytes!("../site/assets/earth.jpg"))
         .map_err(|error| io::Error::other(error.to_string()))?;
+    let (width, height) = terminal_size().unwrap_or((WIDTH, HEIGHT));
     run(
         KittyImage {
             source,
             fit: ImageFit::Contain,
         },
-        RunOptions::new(WIDTH, HEIGHT),
+        RunOptions::new(width, height),
     )
 }
 

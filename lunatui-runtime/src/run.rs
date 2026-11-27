@@ -11,6 +11,16 @@ use lunatui_term::{
     terminal_cell_pixels,
 };
 
+#[cfg(all(feature = "image-presenter", unix))]
+use lunatui_image::ImageSource;
+#[cfg(all(feature = "image-presenter", unix))]
+use lunatui_prismattyc::native_image::{
+    ImageKey, ImagePresenter as NativeImagePresenter, ImageSession as NativeImageSession,
+    PreparedImage,
+};
+#[cfg(all(feature = "image-presenter", unix))]
+use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
+
 #[cfg(feature = "image-presenter")]
 use lunatui_term::{PixelLayer, PixelMode};
 
@@ -31,6 +41,8 @@ struct FrameState {
     pointer: Option<CellPixels>,
     #[cfg(feature = "image-presenter")]
     images: PixelLayer,
+    #[cfg(all(feature = "image-presenter", unix))]
+    native_images: Option<NativeImagePresenter>,
     #[cfg(feature = "image-presenter")]
     mode: RenderMode,
 }
@@ -55,6 +67,10 @@ impl FrameState {
 ///
 /// Returns I/O, session, or encoder errors from the host loop.
 #[cfg(any(unix, windows))]
+#[expect(
+    clippy::too_many_lines,
+    reason = "The terminal event loop keeps frame rendering, input, and native image lifecycle ordered in one loop."
+)]
 pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
     if !io::stdout().is_terminal() {
         return Err(io::Error::new(
@@ -68,10 +84,10 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
     } else {
         (PixelLayer::new(PixelMode::Cells), Vec::new(), None)
     };
-    #[cfg(feature = "image-presenter")]
-    let mut input = Input::open_prefixed(pending_input, pointer.is_some())?;
+    #[cfg(all(feature = "image-presenter", unix))]
+    let mut pending_input = pending_input;
     #[cfg(not(feature = "image-presenter"))]
-    let (mut input, pointer) = (Input::open()?, None::<CellPixels>);
+    let pointer = None::<CellPixels>;
     let tracking = if pointer.is_some() {
         MouseTracking::SgrPixels
     } else {
@@ -83,6 +99,18 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
             .sync_output(SyncOutput::Enabled)
             .mouse_tracking(tracking),
     )?;
+    #[cfg(all(feature = "image-presenter", unix))]
+    let mut native_session = activate_native_images(options, &mut pending_input);
+    #[cfg(all(feature = "image-presenter", unix))]
+    let mut native_last_ping = Instant::now();
+    #[cfg(all(feature = "image-presenter", unix))]
+    let mut native_preparation = native_session
+        .as_ref()
+        .and_then(|_| NativePreparation::start().ok());
+    #[cfg(feature = "image-presenter")]
+    let mut input = Input::open_prefixed(pending_input, pointer.is_some())?;
+    #[cfg(not(feature = "image-presenter"))]
+    let mut input = Input::open()?;
     let mut area = Rect::new(0, 0, options.width, options.height);
     let mut frames = FrameState {
         prev: Grid::new(options.width, options.height),
@@ -94,6 +122,10 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         pointer,
         #[cfg(feature = "image-presenter")]
         images,
+        #[cfg(all(feature = "image-presenter", unix))]
+        native_images: native_session
+            .as_ref()
+            .map(|native| NativeImagePresenter::new(native.cell_pixels())),
         #[cfg(feature = "image-presenter")]
         mode: RenderMode::Cell,
     };
@@ -110,18 +142,146 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
     let mut quit = false;
     while !quit {
         let now = epoch.elapsed();
+        #[cfg(all(feature = "image-presenter", unix))]
+        if let (Some(native), Some(preparation)) =
+            (native_session.as_mut(), native_preparation.as_mut())
+            && let Some((key, source, prepared)) = preparation.try_result()
+        {
+            if let Ok(prepared) = prepared {
+                let result = native
+                    .upload_prepared(key, &source, prepared)
+                    .and_then(|reply| {
+                        frames
+                            .native_images
+                            .as_mut()
+                            .ok_or_else(|| io::Error::other("native image sink ended"))?
+                            .admission(key, &reply)
+                    });
+                if result.is_err() {
+                    fail_native_session(
+                        &mut native_session,
+                        &mut frames,
+                        &mut session,
+                        &mut sched,
+                    )?;
+                    native_preparation = None;
+                    continue;
+                }
+            } else if let Some(images) = frames.native_images.as_mut() {
+                images.decline_preparation(key);
+            }
+            sched.on_input();
+        }
+        #[cfg(all(feature = "image-presenter", unix))]
+        if native_session.is_some() && native_last_ping.elapsed() >= Duration::from_millis(100) {
+            native_last_ping = Instant::now();
+            let heartbeat = native_session
+                .as_mut()
+                .and_then(|native| native.ping().ok());
+            let pong = heartbeat.and_then(|reply| {
+                frames
+                    .native_images
+                    .as_mut()
+                    .map(|images| images.pong(&reply.bytes))
+            });
+            let Some(pong) = pong else {
+                fail_native_session(&mut native_session, &mut frames, &mut session, &mut sched)?;
+                native_preparation = None;
+                continue;
+            };
+            match pong {
+                Ok(true) => sched.on_input(),
+                Ok(false) => {}
+                Err(_) => {
+                    fail_native_session(
+                        &mut native_session,
+                        &mut frames,
+                        &mut session,
+                        &mut sched,
+                    )?;
+                    native_preparation = None;
+                    continue;
+                }
+            }
+        }
         sync_scheduler(&mut sched, &app, now);
         match sched.poll(now, false) {
             SchedulePoll::Render => {
                 let present_start = epoch.elapsed();
-                render_present(&mut app, area, &mut frames, |parts| {
-                    session.present_frame_parts(parts).map_err(io::Error::from)
-                })?;
+                let mut ansi_present =
+                    |parts: &[&[u8]]| session.present_frame_parts(parts).map_err(io::Error::from);
+                #[cfg(all(feature = "image-presenter", unix))]
+                let native_result = render_present_with_native(
+                    &mut app,
+                    area,
+                    &mut frames,
+                    &mut ansi_present,
+                    native_session.as_mut(),
+                );
+                #[cfg(all(feature = "image-presenter", unix))]
+                if let Err(error) = native_result {
+                    if native_session.is_some() {
+                        fail_native_session(
+                            &mut native_session,
+                            &mut frames,
+                            &mut session,
+                            &mut sched,
+                        )?;
+                        native_preparation = None;
+                        continue;
+                    }
+                    return Err(error);
+                }
+                #[cfg(not(all(feature = "image-presenter", unix)))]
+                render_present(&mut app, area, &mut frames, &mut ansi_present)?;
+                #[cfg(all(feature = "image-presenter", unix))]
+                let native_result = (|| -> io::Result<()> {
+                    if let (Some(native), Some(images)) =
+                        (native_session.as_mut(), frames.native_images.as_mut())
+                    {
+                        if let Some(preparation) = native_preparation.as_mut() {
+                            if !preparation.is_busy()
+                                && let Some((key, source)) = images.take_request()
+                            {
+                                preparation.submit(key, source)?;
+                            }
+                        } else if let Some((key, _source)) = images.take_request() {
+                            images.decline_preparation(key);
+                        }
+                        if let Some((key, handle)) = images.retirement() {
+                            let response = native
+                                .retire(handle, native.frame_sequence())
+                                .map_err(io::Error::other)?;
+                            images.retired(key, &response.bytes)?;
+                        }
+                    }
+                    Ok(())
+                })();
+                #[cfg(all(feature = "image-presenter", unix))]
+                if let Err(error) = native_result {
+                    if native_session.is_some() {
+                        fail_native_session(
+                            &mut native_session,
+                            &mut frames,
+                            &mut session,
+                            &mut sched,
+                        )?;
+                        continue;
+                    }
+                    return Err(error);
+                }
                 let present_done = epoch.elapsed();
                 sched.after_present(present_start, present_done.saturating_sub(present_start));
             }
             SchedulePoll::SleepUntil(deadline) => {
-                thread::sleep(deadline.saturating_sub(now));
+                let wait = deadline.saturating_sub(now);
+                #[cfg(all(feature = "image-presenter", unix))]
+                let wait = if native_session.is_some() {
+                    wait.min(Duration::from_millis(100))
+                } else {
+                    wait
+                };
+                thread::sleep(wait);
             }
             SchedulePoll::WaitInput => {}
         }
@@ -136,13 +296,31 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
             continue;
         }
 
-        match input.next_frame()? {
-            None => break,
+        #[cfg(all(feature = "image-presenter", unix))]
+        let next_input = if native_session.is_some() {
+            input.next_frame_timeout(Duration::from_millis(100))?
+        } else {
+            input.next_frame()?
+        };
+        #[cfg(not(all(feature = "image-presenter", unix)))]
+        let next_input = input.next_frame()?;
+        match next_input {
+            None => {
+                #[cfg(all(feature = "image-presenter", unix))]
+                if native_session.is_some() && !input.is_finished() {
+                    continue;
+                }
+                break;
+            }
             Some(events) => {
                 quit |= dispatch(&mut app, events, &mut area, &mut frames);
                 sched.on_input();
             }
         }
+    }
+    #[cfg(all(feature = "image-presenter", unix))]
+    if let Some(mut native) = native_session.take() {
+        let _ = native.release();
     }
     #[cfg(feature = "image-presenter")]
     {
@@ -152,6 +330,121 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+fn activate_native_images(
+    options: RunOptions,
+    pending_input: &mut Vec<u8>,
+) -> Option<NativeImageSession> {
+    use std::fs::OpenOptions;
+
+    let stream = lunatui_prismattyc::native_image::inherited_stream()
+        .ok()
+        .flatten()?;
+    if !options.pixel_images {
+        return None;
+    }
+    let mut tty = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")
+        .ok()?;
+    let discovery = lunatui_prismattyc::native_image::discover(&mut tty).ok()?;
+    pending_input.extend(discovery.preserved_input);
+    let offer = discovery.offer?;
+    let grid = Grid::new(options.width, options.height);
+    let clusters = ClusterTable::new();
+    NativeImageSession::activate(stream, &offer, &grid, &clusters, Vec::new()).ok()
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+trait FallbackTerminal {
+    fn present_fallback(&mut self, bytes: &[u8]) -> io::Result<()>;
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+impl<W: std::io::Write> FallbackTerminal for Session<W> {
+    fn present_fallback(&mut self, bytes: &[u8]) -> io::Result<()> {
+        self.present_frame(bytes).map_err(io::Error::other)
+    }
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+fn fail_native_session<T>(
+    native: &mut Option<T>,
+    frames: &mut FrameState,
+    terminal: &mut impl FallbackTerminal,
+    scheduler: &mut Scheduler,
+) -> io::Result<()> {
+    native.take();
+    frames.native_images = None;
+    frames.repaint = true;
+    terminal.present_fallback(lunatui_prismattyc::ansi_fallback_repaint_prefix())?;
+    scheduler.on_input();
+    Ok(())
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+struct NativePreparation {
+    sender: Sender<(ImageKey, ImageSource)>,
+    receiver: Receiver<(ImageKey, ImageSource, io::Result<PreparedImage>)>,
+    pending: bool,
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+impl NativePreparation {
+    fn start() -> io::Result<Self> {
+        let (sender, jobs) = mpsc::channel::<(ImageKey, ImageSource)>();
+        let (results, receiver) = mpsc::channel();
+        thread::Builder::new()
+            .name(String::from("lunatui-image-prepare"))
+            .spawn(move || {
+                while let Ok((key, source)) = jobs.recv() {
+                    let prepared = PreparedImage::prepare(source.rgba8_pixels());
+                    if results.send((key, source, prepared)).is_err() {
+                        break;
+                    }
+                }
+            })?;
+        Ok(Self {
+            sender,
+            receiver,
+            pending: false,
+        })
+    }
+
+    fn submit(&mut self, key: ImageKey, source: ImageSource) -> io::Result<()> {
+        if self.pending {
+            return Err(io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "native image preparation is busy",
+            ));
+        }
+        self.sender
+            .send((key, source))
+            .map_err(|_| io::Error::other("native image preparation stopped"))?;
+        self.pending = true;
+        Ok(())
+    }
+
+    fn is_busy(&self) -> bool {
+        self.pending
+    }
+
+    fn try_result(&mut self) -> Option<(ImageKey, ImageSource, io::Result<PreparedImage>)> {
+        match self.receiver.try_recv() {
+            Ok(result) => {
+                self.pending = false;
+                Some(result)
+            }
+            Err(TryRecvError::Empty) => None,
+            Err(TryRecvError::Disconnected) => {
+                self.pending = false;
+                None
+            }
+        }
+    }
 }
 
 fn dispatch<A: App>(
@@ -204,11 +497,25 @@ pub fn run<A: App>(_app: A, _options: RunOptions) -> io::Result<()> {
     ))
 }
 
+#[cfg(any(not(all(feature = "image-presenter", unix)), test))]
 fn render_present<A: App>(
     app: &mut A,
     area: Rect,
     frames: &mut FrameState,
     mut present: impl FnMut(&[&[u8]]) -> io::Result<()>,
+) -> io::Result<()> {
+    #[cfg(all(feature = "image-presenter", unix))]
+    return render_present_with_native(app, area, frames, &mut present, None);
+    #[cfg(not(all(feature = "image-presenter", unix)))]
+    render_present_with_native(app, area, frames, &mut present)
+}
+
+fn render_present_with_native<A: App>(
+    app: &mut A,
+    area: Rect,
+    frames: &mut FrameState,
+    present: &mut impl FnMut(&[&[u8]]) -> io::Result<()>,
+    #[cfg(all(feature = "image-presenter", unix))] mut native: Option<&mut NativeImageSession>,
 ) -> io::Result<()> {
     frames.next.fill(
         area,
@@ -219,10 +526,20 @@ fn render_present<A: App>(
     #[cfg(feature = "image-presenter")]
     {
         frames.images.begin_frame();
+        #[cfg(all(feature = "image-presenter", unix))]
+        let image_sink: &mut dyn lunatui_image::ImageSink =
+            if let Some(images) = frames.native_images.as_mut() {
+                images.begin_frame();
+                images
+            } else {
+                &mut frames.images
+            };
+        #[cfg(not(all(feature = "image-presenter", unix)))]
+        let image_sink: &mut dyn lunatui_image::ImageSink = &mut frames.images;
         let mut render_frame = crate::frame::RenderFrame::new(
             &mut frames.next,
             &mut frames.clusters,
-            &mut frames.images,
+            image_sink,
             frames.mode,
         );
         app.render_frame(&mut render_frame, area);
@@ -270,6 +587,23 @@ fn render_present<A: App>(
     }
     #[cfg(not(feature = "image-presenter"))]
     let has_images = false;
+    #[cfg(all(feature = "image-presenter", unix))]
+    if let Some(native) = native.as_mut() {
+        native.set_token_palette(frames.last_palette.clone().unwrap_or_default());
+        let placements = frames
+            .native_images
+            .as_ref()
+            .map_or(&[][..], NativeImagePresenter::placements);
+        native
+            .present(&frames.next, &frames.clusters, placements)
+            .map_err(io::Error::other)?;
+    } else if has_cells || has_images {
+        #[cfg(feature = "image-presenter")]
+        present(&payloads)?;
+        #[cfg(not(feature = "image-presenter"))]
+        present(&[cell_bytes])?;
+    }
+    #[cfg(not(all(feature = "image-presenter", unix)))]
     if has_cells || has_images {
         #[cfg(feature = "image-presenter")]
         present(&payloads)?;
@@ -459,6 +793,8 @@ mod tests {
             last_palette: None,
             repaint: false,
             pointer: None,
+            #[cfg(all(feature = "image-presenter", unix))]
+            native_images: None,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
             #[cfg(feature = "image-presenter")]
@@ -542,6 +878,8 @@ mod tests {
             last_palette: None,
             repaint: false,
             pointer: None,
+            #[cfg(all(feature = "image-presenter", unix))]
+            native_images: None,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
             #[cfg(feature = "image-presenter")]
@@ -595,6 +933,8 @@ mod tests {
             last_palette: None,
             repaint: false,
             pointer: None,
+            #[cfg(all(feature = "image-presenter", unix))]
+            native_images: None,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
             #[cfg(feature = "image-presenter")]

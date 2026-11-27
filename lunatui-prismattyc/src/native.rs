@@ -16,6 +16,9 @@ pub const NATIVE_GRID_FEATURE: &str = "native.grid.v1";
 /// alpha and sub-cell attributes.
 pub const NATIVE_ALPHA_FEATURE: &str = "native.alpha.v1";
 
+/// Feature identifier that advertises native image resources on ring ABI 1.2.
+pub const NATIVE_IMAGES_FEATURE: &str = "native.images.v1";
+
 /// Maximum printable-ASCII APC body accepted by the dedicated decoder.
 pub const MAX_APC_BODY: usize = 4096;
 
@@ -30,7 +33,7 @@ pub enum NativePolicy {
     DirectLocal,
 }
 
-/// Result of parsing host capability traffic for native.grid.v1.
+/// Result of parsing host capability traffic for supported native features.
 ///
 /// Downstream code must keep a wildcard arm, because new values can be added:
 ///
@@ -50,7 +53,7 @@ pub enum NativePolicy {
 pub enum NativeDiscovery {
     /// Native setup is not available. ANSI remains the only renderer.
     Unavailable,
-    /// Host advertised native.grid.v1 under capability 0.4 with authority keys.
+    /// Host advertised one or more native features under capability 0.4 with authority keys.
     ///
     /// This is discovery only. It never grants active native ownership.
     Advertised {
@@ -85,9 +88,27 @@ pub struct DiscoveryResult {
     /// Whether the advertised features also list `native.alpha.v1`. Always false unless
     /// [`discovery`](Self::discovery) is [`NativeDiscovery::Advertised`].
     pub alpha_offered: bool,
+    /// Whether the host advertised the legacy grid transport.
+    pub grid_offered: bool,
+    /// Whether the host advertised native image resources.
+    pub images_offered: bool,
 }
 
 impl DiscoveryResult {
+    /// Ring ABI minor selected from the advertised features, if a supported transport exists.
+    #[must_use]
+    pub const fn ring_minor(&self) -> Option<u16> {
+        if self.images_offered {
+            Some(2)
+        } else if self.grid_offered && self.alpha_offered {
+            Some(1)
+        } else if self.grid_offered {
+            Some(0)
+        } else {
+            None
+        }
+    }
+
     /// Rendering always uses ANSI in this cut. Native transport stays off.
     #[must_use]
     pub const fn uses_ansi(&self) -> bool {
@@ -146,13 +167,15 @@ impl DiscoveryDecoder {
 
     /// Current discovery state after every complete sequence seen so far.
     pub fn snapshot(&self) -> DiscoveryResult {
-        let (discovery, alpha_offered, mut preserved, pending) =
+        let (discovery, grid_offered, alpha_offered, images_offered, mut preserved, pending) =
             drain(self.expected_id, &self.bytes);
         preserved.extend_from_slice(&pending);
         DiscoveryResult {
             discovery,
             preserved_input: preserved,
             alpha_offered,
+            grid_offered,
+            images_offered,
         }
     }
 
@@ -178,6 +201,8 @@ pub fn discover_from_input(
             discovery: NativeDiscovery::Unavailable,
             preserved_input: input.to_vec(),
             alpha_offered: false,
+            grid_offered: false,
+            images_offered: false,
         };
     }
     let mut decoder = DiscoveryDecoder::new(expected_id);
@@ -185,11 +210,17 @@ pub fn discover_from_input(
     decoder.finish()
 }
 
-fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, Vec<u8>, Vec<u8>) {
+#[expect(
+    clippy::too_many_lines,
+    reason = "Discovery drains an ordered byte stream while preserving incomplete and unrelated terminal input."
+)]
+fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, bool, bool, Vec<u8>, Vec<u8>) {
     let mut preserved = Vec::new();
     let mut i = 0;
     let mut discovery = NativeDiscovery::Unavailable;
+    let mut grid = false;
     let mut alpha = false;
+    let mut images = false;
     while i < input.len() {
         if input[i] != 0x1b {
             preserved.push(input[i]);
@@ -197,7 +228,14 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, Vec<u8>, Vec
             continue;
         }
         if i + 1 >= input.len() {
-            return (discovery, alpha, preserved, input[i..].to_vec());
+            return (
+                discovery,
+                grid,
+                alpha,
+                images,
+                preserved,
+                input[i..].to_vec(),
+            );
         }
         match input[i + 1] {
             b'_' => match take_apc(&input[i..]) {
@@ -207,9 +245,13 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, Vec<u8>, Vec
                             id,
                             offer,
                             generation,
+                            grid: grid_offered,
                             alpha: offered,
+                            images: images_offered,
                         } => {
+                            grid = grid_offered;
                             alpha = offered;
+                            images = images_offered;
                             discovery = NativeDiscovery::Advertised {
                                 id,
                                 offer,
@@ -226,18 +268,29 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, Vec<u8>, Vec
                         }
                         CapClass::Malformed => {
                             discovery = NativeDiscovery::Unavailable;
+                            grid = false;
                             alpha = false;
+                            images = false;
                             i += total;
                         }
                     }
                 }
                 ApcTake::Malformed { total } => {
                     discovery = NativeDiscovery::Unavailable;
+                    grid = false;
                     alpha = false;
+                    images = false;
                     i += total;
                 }
                 ApcTake::Incomplete => {
-                    return (discovery, alpha, preserved, input[i..].to_vec());
+                    return (
+                        discovery,
+                        grid,
+                        alpha,
+                        images,
+                        preserved,
+                        input[i..].to_vec(),
+                    );
                 }
             },
             b'P' => match take_string_seq(&input[i..], b'P') {
@@ -245,21 +298,48 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, Vec<u8>, Vec
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, alpha, preserved, input[i..].to_vec()),
+                None => {
+                    return (
+                        discovery,
+                        grid,
+                        alpha,
+                        images,
+                        preserved,
+                        input[i..].to_vec(),
+                    );
+                }
             },
             b']' => match take_string_seq(&input[i..], b']') {
                 Some(total) => {
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, alpha, preserved, input[i..].to_vec()),
+                None => {
+                    return (
+                        discovery,
+                        grid,
+                        alpha,
+                        images,
+                        preserved,
+                        input[i..].to_vec(),
+                    );
+                }
             },
             b'[' => match take_csi(&input[i..]) {
                 Some(total) => {
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, alpha, preserved, input[i..].to_vec()),
+                None => {
+                    return (
+                        discovery,
+                        grid,
+                        alpha,
+                        images,
+                        preserved,
+                        input[i..].to_vec(),
+                    );
+                }
             },
             _ => {
                 preserved.push(input[i]);
@@ -267,7 +347,7 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, Vec<u8>, Vec
             }
         }
     }
-    (discovery, alpha, preserved, Vec::new())
+    (discovery, grid, alpha, images, preserved, Vec::new())
 }
 
 enum ApcTake<'a> {
@@ -347,7 +427,9 @@ enum CapClass {
         id: u32,
         offer: [u8; 16],
         generation: u64,
+        grid: bool,
         alpha: bool,
+        images: bool,
     },
     MatchedUnavailable,
     StaleMatched,
@@ -461,8 +543,9 @@ fn finish_cap_class(
     if ver != "0.4" {
         return CapClass::MatchedUnavailable;
     }
-    let has_native = feat.split(',').any(|f| f == NATIVE_GRID_FEATURE);
-    if !has_native {
+    let grid = feat.split(',').any(|f| f == NATIVE_GRID_FEATURE);
+    let images = feat.split(',').any(|f| f == NATIVE_IMAGES_FEATURE);
+    if !grid && !images {
         return CapClass::MatchedUnavailable;
     }
     let (Some(offer), Some(generation)) = (offer, generation) else {
@@ -472,7 +555,9 @@ fn finish_cap_class(
         id: got_id,
         offer,
         generation,
+        grid,
         alpha: feat.split(',').any(|f| f == NATIVE_ALPHA_FEATURE),
+        images,
     }
 }
 
