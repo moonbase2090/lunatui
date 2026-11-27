@@ -178,6 +178,71 @@ impl App for ImageSwitch {
     }
 }
 
+#[cfg(unix)]
+#[test]
+fn native_failure_repaints_and_presents_the_next_image_with_kitty() -> Result<(), String> {
+    use std::time::Duration;
+
+    #[derive(Default)]
+    struct Terminal(Vec<u8>);
+
+    impl super::FallbackTerminal for Terminal {
+        fn present_fallback(&mut self, bytes: &[u8]) -> std::io::Result<()> {
+            self.0.extend_from_slice(bytes);
+            Ok(())
+        }
+    }
+
+    let area = Rect::new(0, 0, 6, 4);
+    let mut caps = Caps::default();
+    caps.protocols.graphics = GraphicsProtocol::Kitty;
+    caps.cell_pixels = CellPixels::new(1, 1);
+    let mut frames = FrameState {
+        prev: Grid::new(6, 4),
+        next: Grid::new(6, 4),
+        clusters: ClusterTable::new(),
+        encoder: Encoder::new(),
+        last_palette: None,
+        repaint: false,
+        pointer: None,
+        native_images: Some(super::NativeImagePresenter::new([1, 1])),
+        images: PixelLayer::from_caps(&caps),
+        mode: RenderMode::Cell,
+    };
+    let mut native = Some(());
+    let mut terminal = Terminal::default();
+    let mut scheduler = crate::sched::Scheduler::animating(Duration::from_millis(16));
+    super::fail_native_session(&mut native, &mut frames, &mut terminal, &mut scheduler)
+        .map_err(|error| error.to_string())?;
+    assert!(native.is_none());
+    assert!(frames.repaint);
+    assert_eq!(
+        terminal.0,
+        lunatui_prismattyc::ansi_fallback_repaint_prefix()
+    );
+    assert_eq!(
+        scheduler.poll(Duration::ZERO, false),
+        crate::sched::SchedulePoll::Render
+    );
+
+    let mut app = ImageSwitch {
+        position: Some(Rect::new(2, 1, 2, 2)),
+        id: ImageId::new(1).ok_or("nonzero image identity")?,
+        pixels: ImageSource::rgba8(2, 2, [255, 0, 0, 255].repeat(4).into_boxed_slice())
+            .map_err(|error| error.to_string())?,
+    };
+    render_present(&mut app, area, &mut frames, |parts| {
+        for part in parts {
+            terminal.0.extend_from_slice(part);
+        }
+        Ok(())
+    })
+    .map_err(|error| error.to_string())?;
+    let uploaded = command_id(&terminal.0, "a=t")?;
+    assert_eq!(command_id(&terminal.0, "a=p")?, uploaded);
+    Ok(())
+}
+
 fn immediate_image_repaints_blank_cells(
     graphics: GraphicsProtocol,
     image_command: &str,
