@@ -1,8 +1,9 @@
 # Verify native image presentation
 
 The native image transport is experimental and is advertised only by an eligible direct local
-Prismattyc session started with `--experimental-rich`. A normal terminal, forwarded session, or
-host without that capability uses the existing Kitty, iTerm2, Sixel, or cell fallback.
+Prismattyc session started with `--experimental-rich --experimental-native`. A normal terminal,
+forwarded session, or host without that capability uses the existing Kitty, iTerm2, Sixel, or
+cell fallback.
 
 ## Automated checks
 
@@ -25,7 +26,8 @@ enabled. Build the example at the revision under review and run it as a direct l
 that host:
 
 ```sh
-cargo run --release -p lunatui --features image-presenter,image-decode --example kitty_image
+cargo build --release -p lunatui --features image-presenter,image-decode --example kitty_image
+prismattyc-host --experimental-rich --experimental-native --no-splash -- target/release/examples/kitty_image
 ```
 
 The example starts at the attached terminal's current dimensions. Wait for the Blue Marble image
