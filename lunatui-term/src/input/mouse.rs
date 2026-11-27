@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use super::keys::{Modifiers, decimal};
+use crate::CellPixels;
 
 /// A mouse button.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -57,6 +58,46 @@ pub enum MouseUnit {
     Pixels,
 }
 
+/// Where a pixel-precise pointer event fell inside its cell.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SubCell {
+    x: u16,
+    y: u16,
+    cell: CellPixels,
+}
+
+impl SubCell {
+    /// The pixel column inside the cell, from 0 to one less than the cell width.
+    #[must_use]
+    pub const fn x(self) -> u16 {
+        self.x
+    }
+
+    /// The pixel row inside the cell, from 0 to one less than the cell height.
+    #[must_use]
+    pub const fn y(self) -> u16 {
+        self.y
+    }
+
+    /// The size of a cell in pixels.
+    #[must_use]
+    pub const fn cell(self) -> CellPixels {
+        self.cell
+    }
+
+    /// How far across the cell the pixel's centre is, above 0.0 and below 1.0.
+    #[must_use]
+    pub fn across(self) -> f64 {
+        (f64::from(self.x) + 0.5) / f64::from(self.cell.width())
+    }
+
+    /// How far down the cell the pixel's centre is, above 0.0 and below 1.0.
+    #[must_use]
+    pub fn down(self) -> f64 {
+        (f64::from(self.y) + 0.5) / f64::from(self.cell.height())
+    }
+}
+
 /// One decoded pointer event.
 ///
 /// Downstream code cannot list every field without `..`, because fields can be added:
@@ -65,7 +106,7 @@ pub enum MouseUnit {
 /// use lunatui_term::MouseEvent;
 ///
 /// fn destructures(value: MouseEvent) {
-///     let MouseEvent { kind: _, column: _, row: _, modifiers: _, unit: _ } = value;
+///     let MouseEvent { kind: _, column: _, row: _, modifiers: _, unit: _, inside: _ } = value;
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -81,6 +122,9 @@ pub struct MouseEvent {
     pub modifiers: Modifiers,
     /// Cells or pixels, from the parser's mode.
     pub unit: MouseUnit,
+    /// For an event converted from pixels by [`in_cells`](Self::in_cells), where inside the cell
+    /// the pointer is.
+    pub inside: Option<SubCell>,
 }
 
 impl MouseEvent {
@@ -93,6 +137,28 @@ impl MouseEvent {
             row,
             modifiers: Modifiers::new(),
             unit: MouseUnit::Cells,
+            inside: None,
+        }
+    }
+
+    /// This event in cells. A pixel report becomes the cell its pixel falls in, with the pixel's
+    /// place inside that cell in [`inside`](Self::inside). A cell report is returned unchanged.
+    #[must_use]
+    pub const fn in_cells(self, cell: CellPixels) -> Self {
+        if !matches!(self.unit, MouseUnit::Pixels) {
+            return self;
+        }
+        let (width, height) = (cell.width(), cell.height());
+        Self {
+            column: self.column / width,
+            row: self.row / height,
+            unit: MouseUnit::Cells,
+            inside: Some(SubCell {
+                x: self.column % width,
+                y: self.row % height,
+                cell,
+            }),
+            ..self
         }
     }
 
@@ -123,6 +189,7 @@ pub(crate) fn mouse_from_sgr(body: &str, release: bool, pixels: bool) -> Option<
         row,
         modifiers,
         unit: unit(pixels),
+        inside: None,
     })
 }
 
@@ -137,6 +204,7 @@ pub(crate) fn mouse_from_x10(bytes: [u8; 3], pixels: bool) -> Option<MouseEvent>
         row,
         modifiers,
         unit: unit(pixels),
+        inside: None,
     })
 }
 

@@ -10,8 +10,8 @@ use lunatui_choice::{CheckState, Checkbox};
 use lunatui_core::{ClusterTable, Grid, Rect};
 use lunatui_field::{Field, Form, FormState};
 use lunatui_runtime::{
-    AccessibilityRole as Role, Act, ActError, Action, ActionKind, Agent, ControlState, HitId,
-    HitMap, Outcome, Selector, Source,
+    AccessibilityRole as Role, Act, ActError, Action, ActionKind, Agent, ControlQuery,
+    ControlState, HitId, HitMap, Outcome, Selector, Source,
 };
 use lunatui_test::{Component, Harness};
 use lunatui_theme::{Theme, Variant};
@@ -280,7 +280,47 @@ fn the_snapshot_lists_name_role_value_state_actions_and_layer_of_every_control()
 }
 
 #[test]
-fn a_secret_value_reaches_neither_the_snapshot_nor_its_json() -> Test {
+fn an_agent_queries_real_controls_by_text_kind_and_layer() {
+    let harness = mount();
+    let app = harness.component();
+    let names = |query| {
+        Agent::query(&app.hits, None, query)
+            .controls()
+            .iter()
+            .map(|control| control.name.clone())
+            .collect::<Vec<_>>()
+    };
+
+    assert_eq!(names(ControlQuery::text("TERmS")), ["Accept terms"]);
+    assert_eq!(
+        names(ControlQuery::kind(Role::Checkbox)),
+        ["Notifications", "Accept terms"]
+    );
+    assert_eq!(
+        names(ControlQuery::kind(Role::TextInput).with_text("mail")),
+        ["Email"]
+    );
+    assert_eq!(
+        names(ControlQuery::layer(None)),
+        [
+            "Name",
+            "Token",
+            "Notifications",
+            "Accept terms",
+            "Plan",
+            "Save",
+            "Locked",
+            "Email"
+        ]
+    );
+    assert_eq!(
+        Agent::query(&app.hits, None, ControlQuery::text("missing")).more(),
+        0
+    );
+}
+
+#[test]
+fn a_secret_value_reaches_neither_snapshot_nor_query_json() -> Test {
     let harness = mount();
     let app = harness.component();
     let snapshot = Agent::snapshot(&app.hits, None);
@@ -290,6 +330,13 @@ fn a_secret_value_reaches_neither_the_snapshot_nor_its_json() -> Test {
     assert!(!json.contains("hunter2"));
     assert!(json.contains("\"name\":\"Token\",\"role\":\"text_input\",\"value\":null"));
     assert!(json.contains("\"name\":\"Plan\",\"role\":\"combo_box\",\"value\":\"Free\""));
+
+    let query = Agent::query(&app.hits, None, ControlQuery::text("Token"));
+    let mut query_json = Vec::new();
+    query.write_json(&mut query_json)?;
+    let query_json = String::from_utf8(query_json)?;
+    assert!(!query_json.contains("hunter2"));
+    assert!(query_json.contains("\"name\":\"Token\",\"role\":\"text_input\",\"value\":null"));
     Ok(())
 }
 

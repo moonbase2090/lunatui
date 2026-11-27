@@ -68,6 +68,19 @@ python3 scripts/check-pixel-recording.py target/pixel-capture/terminal.webp \
 
 The committed Canvas recording comes from clean code commit `2c45e6a1d57b4c0ca5cce5ed89b95ac90e8cdfc7`, with Kitty 0.32.2, a 120×36 cell configuration, 16-point font, and an actual 1561×901 pixel window. All 720 source frames and eight displayed WebP frames retain graph pixels. The lossless WebP is 292,106 bytes. A previous capture exposed a 166 ms blank when returning from cells to pixels; the same rectangle check rejects that frame. The runtime now uploads Kitty data before changing cells, then presents cells and placements in a new synchronized frame.
 
+## The activity monitor drawn live
+
+`activity_monitor_live` draws the activity monitor through `run()`, which picks Graphite mode on a terminal that draws pixel images and reports its cell size. Record it in Graphite mode, and in Cell mode for comparison through the same window with `LUNATUI_MODE=cell`:
+
+```sh
+EXAMPLE=activity_monitor_live FEATURES=image-presenter \
+WIDTH=96 HEIGHT=26 FONT_SIZE=16 FPS=30 SECONDS_TO_RECORD=11 scripts/record-pixels.sh
+LUNATUI_MODE=cell EXAMPLE=activity_monitor_live FEATURES=image-presenter \
+WIDTH=96 HEIGHT=26 FONT_SIZE=16 FPS=30 SECONDS_TO_RECORD=11 OUT=target/pixel-capture-cell scripts/record-pixels.sh
+```
+
+The committed recording comes from clean code commit `71d39477820f2794bc13a88e83a15f83559f2a68` in a fresh Ubuntu arm64 Tart VM with Kitty 0.32.2, 96×26 cells, a 16-point font, and an actual 1249×651 pixel window, 11 seconds at 30 fps with 10 distinct states. [graphite-activity-monitor-live.webp](media/graphite-activity-monitor-live.webp) is the lossless WebP ffmpeg derived from the capture. [graphite-activity-monitor-live.png](media/graphite-activity-monitor-live.png) and [cell-activity-monitor-live.png](media/cell-activity-monitor-live.png) are unmodified frames at 1.5 seconds from the Graphite and Cell captures. An earlier capture showed a badge vanishing in some seconds: Kitty stacks images with the same z-index by image id, so a row image uploaded again with a higher id covered the unchanged badge above it. `PixelLayer` now sends each image's place in the frame in its z-index, and the badge column of the committed capture shows all three badges at every half second.
+
 ## Graphite pixel frames
 
 `examples/graphite_pixels.rs` presents a frame that Graphite's CPU pixel buffer drew, a command palette over a status bar, through the same `Image` and `PixelLayer` path as any other picture. The frame is committed as 320×96 straight-alpha RGBA8 bytes in `examples/data/graphite-status-palette.rgba`, so the example needs no Graphite dependency.

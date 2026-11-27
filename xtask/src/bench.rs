@@ -64,7 +64,7 @@ fn bench_plan(valgrind: bool) -> Vec<BenchStep> {
         },
         BenchStep::Cargo {
             target: "ceiling",
-            feature: None,
+            feature: Some("graphite-pixels"),
             after: &[],
         },
         BenchStep::Cargo {
@@ -135,7 +135,7 @@ mod tests {
     };
     const CEILING: BenchStep = BenchStep::Cargo {
         target: "ceiling",
-        feature: None,
+        feature: Some("graphite-pixels"),
         after: &[],
     };
     const CRITERION: BenchStep = BenchStep::Cargo {
@@ -199,6 +199,31 @@ mod tests {
                 "--",
                 "--gate",
             ]
+        );
+    }
+
+    #[test]
+    fn ceiling_step_includes_the_graphite_cases() {
+        let ceiling = bench_plan(false).into_iter().find(|step| {
+            matches!(
+                step,
+                BenchStep::Cargo {
+                    target: "ceiling",
+                    ..
+                }
+            )
+        });
+        assert_eq!(
+            ceiling.map(BenchStep::args),
+            Some(vec![
+                "bench",
+                "--package",
+                "lunatui-bench",
+                "--features",
+                "graphite-pixels",
+                "--bench",
+                "ceiling"
+            ])
         );
     }
 

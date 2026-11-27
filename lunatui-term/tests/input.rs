@@ -4,8 +4,8 @@
 #![doc = include_str!("../README.md")]
 
 use lunatui_term::{
-    Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent, MouseKind,
-    MouseUnit, Parser, Paste, Scroll, fuzz_input_parser,
+    CellPixels, Event, Focus, KeyCode, KeyEvent, KeyKind, Modifiers, MouseButton, MouseEvent,
+    MouseKind, MouseUnit, Parser, Paste, Scroll, fuzz_input_parser,
 };
 
 fn parse(bytes: &[u8]) -> Vec<Event> {
@@ -492,4 +492,52 @@ fn whole_csi_and_ss3_sequences_are_never_held_or_expired() {
         assert!(!parser.holds_escape(), "{bytes:?}");
         assert_eq!(parser.expire(), vec![], "{bytes:?}");
     }
+}
+
+#[test]
+fn a_pixel_report_converts_to_its_cell_and_the_pixel_inside_it() -> Result<(), String> {
+    let cell = CellPixels::new(8, 16).ok_or("no cell size")?;
+    let mut parser = Parser::new();
+    parser.mouse_pixels(true);
+    let events = parser.push(b"\x1b[<0;36;51M");
+    let [Event::Mouse(pixels)] = events.as_slice() else {
+        return Err(format!("one mouse event, got {events:?}"));
+    };
+    assert_eq!(
+        (pixels.unit, pixels.column, pixels.row),
+        (MouseUnit::Pixels, 35, 50)
+    );
+    let cells = pixels.in_cells(cell);
+    assert_eq!(cells.unit, MouseUnit::Cells);
+    assert_eq!((cells.column, cells.row), (4, 3));
+    assert_eq!(cells.kind, MouseKind::Down(MouseButton::Left));
+    let inside = cells.inside.ok_or("no offset inside the cell")?;
+    assert_eq!((inside.x(), inside.y(), inside.cell()), (3, 2, cell));
+    assert!((inside.across() - 3.5 / 8.0).abs() < 1e-12);
+    assert!((inside.down() - 2.5 / 16.0).abs() < 1e-12);
+    Ok(())
+}
+
+#[test]
+fn cell_edges_split_pixels_exactly() -> Result<(), String> {
+    let cell = CellPixels::new(8, 16).ok_or("no cell size")?;
+    for (x, column, inside) in [(0, 0, 0), (7, 0, 7), (8, 1, 0), (15, 1, 7), (16, 2, 0)] {
+        let event = MouseEvent::new(MouseKind::Move, x, 31)
+            .unit(MouseUnit::Pixels)
+            .in_cells(cell);
+        assert_eq!(event.column, column, "pixel {x}");
+        assert_eq!(event.row, 1, "pixel row 31");
+        let at = event.inside.ok_or("no offset")?;
+        assert_eq!((at.x(), at.y()), (inside, 15), "pixel {x}");
+    }
+    Ok(())
+}
+
+#[test]
+fn a_cell_report_is_unchanged_by_in_cells() -> Result<(), String> {
+    let cell = CellPixels::new(8, 16).ok_or("no cell size")?;
+    let event = MouseEvent::new(MouseKind::Down(MouseButton::Left), 12, 5);
+    assert_eq!(event.in_cells(cell), event);
+    assert_eq!(event.inside, None);
+    Ok(())
 }

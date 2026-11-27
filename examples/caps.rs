@@ -64,6 +64,7 @@ fn picture(caps: &Caps, probe: &str) -> String {
         field("clusters", mode_name(caps.modes.grapheme_clusters)),
         field("paste", mode_name(caps.modes.bracketed_paste)),
         field("focus", mode_name(caps.modes.focus_events)),
+        field("pixel mouse", mode_name(caps.modes.sgr_pixel_mouse)),
         field("keyboard", keyboard_name(caps.protocols.keyboard)),
         field("graphics", graphics_name(caps.protocols.graphics)),
         field("links", hyperlink_name(caps.protocols.hyperlinks)),
@@ -252,6 +253,7 @@ mod tests {
 │ clusters    unreported     │
 │ paste       unreported     │
 │ focus       unreported     │
+│ pixel mouse unreported     │
 │ keyboard    unknown        │
 │ graphics    unknown        │
 │ links       osc8           │

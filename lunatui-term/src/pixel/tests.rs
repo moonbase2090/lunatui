@@ -26,3 +26,11 @@ fn base64_uses_the_url_unsafe_alphabet_ends() {
     assert_eq!(encoded(&[0xff, 0xff, 0xff]), "////");
     assert_eq!(encoded(&[0x00, 0x00, 0x00]), "AAAA");
 }
+
+#[test]
+fn base64_appends_after_what_the_buffer_holds() {
+    let mut out = b"a=t;".to_vec();
+    push_base64(&mut out, b"fooba");
+    push_base64(&mut out, b"r");
+    assert_eq!(out, b"a=t;Zm9vYmE=cg==");
+}

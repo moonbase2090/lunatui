@@ -10,17 +10,37 @@ repository.workspace = true
 [lints]
 workspace = true
 
+[features]
+default = ["graphite-text"]
+# Draws badges and keycaps as pixels in Graphite mode, with the fonts bundled in lunatui-fonts.
+graphite-text = ["lunatui-widgets/graphite-text"]
+
 [dependencies]
-lunatui-core = { version = "0.1.36", path = "../lunatui-core" }
-lunatui-ui-tokens = { version = "0.1.36", path = "../lunatui-ui-tokens" }
-lunatui-widgets = { version = "0.1.36", path = "../lunatui-widgets" }
+lunatui-core = { version = "0.1.44", path = "../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.44", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.44", path = "../lunatui-widgets", default-features = false }
 
 [dev-dependencies]
-lunatui-card = { version = "0.1.36", path = "../lunatui-card" }
-lunatui-term = { version = "0.1.36", path = "../lunatui-term" }
-lunatui-theme = { version = "0.1.36", path = "../lunatui-theme" }
+image = { version = "=0.25.10", default-features = false, features = ["png"] }
+lunatui-card = { version = "0.1.44", path = "../lunatui-card" }
+lunatui-image = { version = "0.1.44", path = "../lunatui-image" }
+lunatui-runtime = { version = "0.1.44", path = "../lunatui-runtime" }
+lunatui-term = { version = "0.1.44", path = "../lunatui-term" }
+lunatui-theme = { version = "0.1.44", path = "../lunatui-theme", features = ["graphite-extensions"] }
+serde_json = "1.0.149"
 
 [[example]]
 name = "ui_badge"
 path = "examples/ui_badge.rs"
 test = true
+
+[[example]]
+name = "graphite_chips"
+path = "examples/graphite_chips.rs"
+test = true
+required-features = ["graphite-text"]
+
+[[test]]
+name = "graphite"
+path = "tests/graphite.rs"
+required-features = ["graphite-text"]

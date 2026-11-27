@@ -8,8 +8,82 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.44] - 2026-11-26
+
 ### Added
 
+- `DatePicker::act` lets an agent select a date with `Action::SetValue` text as `YYYY-MM-DD`, answering `Outcome::Changed`, `Outcome::Handled` when it was already selected, and `Outcome::Ignored` for text that is not a real date, a date outside the bounds, a disabled picker and any other action.
+- `RadioGroup::act` lets an agent choose an option with `Action::Select`, answering `Outcome::Changed`, `Outcome::Handled` when it was already chosen, and `Outcome::Ignored` for a disabled or missing option and for any other action.
+- `Select::act` lets an agent choose an option by its exact label with `Action::SetValue` for the app's choice, answering `Outcome::Changed`, `Outcome::Handled` when it was already chosen, and `Outcome::Ignored` for a label that names no option and for any other action. Opening the list stays with the app's layer.
+- `TableState::act` lets an agent put the table's cursor on a row with `Action::Select` or `Action::Activate`, and `TableState::act_header` sorts by a column header with `Action::Activate`, reversing the order when the column is already sorted. A row or column that does not exist, and any other action, give `Outcome::Ignored`.
+- An agent can act on more widgets. `Slider::act` and `NumberInput::act` set a value from `Action::SetValue` (clamped, and snapped to the step or rounded to the decimals), `Accordion::act` opens or closes a section on `Action::Toggle`, `TreeState::act` selects a node or opens a branch on `Action::Select` and `Action::Activate`, `TagState` (new) takes typed text with `SetValue` and commits it as a tag with `Activate`, and `Date` implements `Act` for a `YYYY-MM-DD` value. `ActWith` lends `Act` to a closure so `Request::apply` can drive state that a widget bounds. Three roles are new, `AccessibilityRole::Disclosure` (`disclosure`), `TagInput` (`tag_input`) and `Calendar` (`calendar`), with their action lists in the snapshot. `docs/named-controls.md` has a table of widgets, roles and actions. A control the widget would not accept, such as text that is not a number or a date that does not exist, is `Outcome::Ignored` and changes nothing.
+
+## [0.1.43] - 2026-11-25
+
+### Added
+
+- An agent can give several steps in one call. `Agent::plan(steps)` takes `Step`s and the app calls `Agent::advance(&hits)` after each render; the agent checks and queues one step per frame, as `Agent::act` would, so a step can name a control an earlier step made appear or enabled. The plan stops at the first failing step, and `Agent::plan_status(id)` reports `Running`, `Waiting` (for the application's confirmation), `Done`, `Failed { step, error }` or `Cancelled`. `Agent::cancel_plan(id)` stops it. A second plan while one runs returns the new `ActError::Busy`.
+
+## [0.1.42] - 2026-11-25
+
+### Added
+
+- An application decides what an agent may do. Mark a control whose action destroys work with `ControlMetadata::destructive(true)` or `Field::destructive(true)`; the agent snapshot shows it as `destructive`. By default `Agent::act` holds a request that would change such a control and returns `ActError::NeedsConfirmation(id)`; `Agent::awaiting()` lists held requests for the app to put to the person, `Agent::confirm(&hits, id)` queues one after checking that the same control is still there and enabled, and `Agent::decline(id)` drops it. `Agent::allow(hook)` replaces the default with the app's own rule: the hook answers `Permission::Allow`, `Deny` (`ActError::Denied`, nothing queued) or `Confirm`, and can fall back on `Permission::default_for`. Focusing a control never needs confirmation.
+
+### Changed
+
+- Breaking: `AgentControl` has a `destructive` field, and `ActError` has `Denied` and `NeedsConfirmation`. Code that builds an `AgentControl` with a struct literal adds `destructive: false`; a `match` on `ActError` already needs a wildcard arm.
+
+## [0.1.41] - 2026-11-24
+
+### Added
+
+- An agent can subscribe to control changes. `Agent::subscribe(query)` returns a `Subscription` for the controls a `ControlQuery` matches; each frame, `Subscription::observe` returns a `ControlChange` for every control whose value, checked state or states changed, or that appeared or went away, with its previous and current `ControlValue`. When the application records the change it applied with `ControlMetadata::changed` or `Field::changed`, the change also carries its `ChangeReason` and `ChangeSource`, so an agent can tell a keyboard edit from a click or its own action.
+- `run()` draws in Graphite mode on terminals that can show it. It resolves the application's `ModePolicy` against the probed terminal instead of a cell-only backend: Graphite when the terminal draws pixel images and reports its cell size, Cell otherwise, with `LUNATUI_MODE` still overriding. An application draws Graphite by building its `RenderCx` from `RenderFrame::parts` in `RenderFrame::mode`; one that only implements `render` keeps drawing cells. `PixelLayer::cell_pixels` and `set_cell_pixels` expose the cell size images are drawn at, and `run()` updates it from the terminal's window-size report on resize. The new `activity_monitor_live` example draws the activity monitor live this way.
+- Graphite text can start fast on a tight CPU budget. `UiFont::InterCompact` draws with compact copies of Inter and JetBrains Mono that keep Latin with Latin-1 and Latin Extended-A, punctuation, currency, arrows, mathematical and technical symbols, box drawing, block elements and geometric shapes, and it has no fallback fonts, so any other character draws as the missing-glyph box. The three files it uses parse in under 3 ms on a developer machine, against about 30 ms for full Inter, JetBrains Mono and the Noto Sans fallback that box drawing and block elements reach through. `BundledText::load` parses every font file a text can draw with, and `BundledText::loaded` says whether that is done, so a program can draw its first frame in cells and load the fonts in a later call. `lunatui_fonts::Family::compact` returns the compact files, `COMPACT_RANGES` lists what they keep, and `scripts/subset-fonts.py` writes them. They add about 200 KB. The `graphite_fonts` example draws a fourth specimen with the compact fonts.
+
+### Changed
+
+- In Kitty, an image listed later in a frame now stays above an earlier image at the same depth. Kitty stacks images with the same z-index by image id, so a row image uploaded again with a higher id could cover a badge drawn over it. `PixelLayer` sends `256 × depth` plus the image's place in the frame as the z-index, so depth still decides first and negative depths stay under text. Depths must lie in `PIXEL_DEPTHS`, −8,388,608 to 8,388,607, where that z-index cannot saturate; an image at a depth outside it is refused, and a widget then draws its cells. Depths below −4,194,304 draw under cell backgrounds.
+
+## [0.1.40] - 2026-11-24
+
+### Added
+
+- Pointer events can carry where they fall inside a cell. The capability probe asks whether the terminal reports the mouse in pixels (mode 1016, `DecModes::sgr_pixel_mouse`). When it does and the cell size is known, `run()` turns the reports on with `MouseTracking::SgrPixels` and converts each event with `MouseEvent::in_cells`, so applications still get cell coordinates, now with `MouseEvent::inside` holding the pixel inside the cell. The cell size follows the terminal's window-size report on resize, through `terminal_cell_pixels`. `HitMap::pick_point` returns the same hit as `pick`, with where the pointer is inside the region, and `Slider::value_at_across` gives a value that moves smoothly across a cell and equals `value_at` at a cell's centre. Terminals without mode 1016 or a cell size keep cell reports, and Windows console input stays in cells.
+
+## [0.1.39] - 2026-11-23
+
+### Added
+
+- The benchmark suite has Graphite cases drawn by lunatui's own widgets: `graphite-monitor-*` draws the activity monitor with `Badge`, `Kbd`, `List` and `Sparkline` through `RenderCx` and `PixelCx`, and `graphite-dense-*` is the worst case, a seat row with a lane on every row. Each has a changed frame that redraws the seat rows and a full repaint, at 1x and 2x, with the cells encoded as a diff and the images sent through `PixelLayer`. All eight are gated on instruction counts against `main`. The frame-ceiling bench gates the changed frames on the 16 ms ceiling, except the dense worst case at 2x, and reports the rest. Measurement only; no product code changes.
+- `Sparkline` and `List` have a Graphite form. In Graphite mode a sparkline is a lane of rounded bars, one per sample in its own color, rising from a hairline baseline. A list row draws its icon, text and right-aligned mark in proportional text, and the selected row is a rounded band with a focus bar when a highlight symbol is set. Both cover the same cells as in Cell mode, and when pixels are not available the cells are exactly the Cell mode cells. `Sparkline::pixels(false)` keeps the cells in Graphite mode too. The `activity_monitor` example draws an activity monitor in both modes from these widgets and `Badge` and `Kbd`, and `scripts/record-graphite.py monitor` records it. `scripts/record-graphite.py` replaces `scripts/record-graphite-chips.py`, and `scripts/record-graphite.py chips` records the badge example.
+
+### Changed
+
+- Graphite frames are faster to build, with the same pixels and bytes: `PixelLayer` encodes Kitty image data in whole base64 groups, a Graphite image's backdrop is filled one pixel line per cell row, and a `Sparkline` lane draws each distinct bar once and copies it when the lane's backdrop is one color. On the dense worst-case bench at 185×51, a changed frame went from about 12.6 ms to 2.7 ms at 1x and from 30 ms to 8.1 ms at 2x on a developer machine. The frame-ceiling bench now gates the dense worst case at 1x; at 2x it is still reported.
+
+## [0.1.38] - 2026-11-23
+
+### Added
+
+- `Badge` and `Kbd` have a Graphite form. In Graphite mode a badge is a rounded pill with proportional text, and a subtle badge's pill is a tint of its tone; a key is a rounded keycap. Both cover the same cells as in Cell mode, and when pixels are not available the cells are exactly the Cell mode cells. `Badge::marker` puts a state mark before the text (`Marker::Dot`, `Ring`, `Diamond`, `Cross`, `Square` or `Bang`): a glyph in cells, a drawn shape in Graphite mode. The Graphite form draws text with the bundled fonts, under the badge crate's `graphite-text` feature, on by default; without it badges and keys draw their Cell mode cells in every mode. The `graphite_chips` example draws badges and key hints in both modes, and `scripts/record-graphite-chips.py` records them.
+- `RenderCx::replace_with_pixels` paints a widget's Graphite form in place of the cells under it, whatever their text, and leaves those cells as spaces on their own backgrounds once the image is accepted. It changes no cell when the frame is not in Graphite mode or the sink declines. `PixelCx::fill_rect_with_opacity` fills with a translucent color over what is already drawn, and `PixelCx::polygon` fills a closed shape.
+- Graphite mode draws text with bundled fonts. The new `lunatui-fonts` crate carries Inter, IBM Plex Sans, Noto Sans, JetBrains Mono and Noto Emoji, unmodified and under the SIL Open Font License 1.1, which adds about 5 MB to a binary that draws text. `PixelCx::text` draws a run of text in a color at a baseline, and `PixelCx::line_metrics` gives ascent, descent and line gap. `graphite::BundledText` measures and draws with these fonts: Inter by default, IBM Plex Sans or Noto Sans through `RenderCx::ui_font`, and JetBrains Mono for `Face::Mono`, falling back per character to Noto Sans, JetBrains Mono and Noto Emoji. Text is neither kerned nor shaped. In Graphite mode, `PixelCx::measure` and `fit` now measure with the bundled fonts unless `RenderCx::text_metrics` supplies other metrics, for text drawn some other way, such as by host fonts. `PixelCx::text` draws nothing when `RenderCx::text_metrics` supplies other metrics, so drawn text always matches `measure` and `fit`. Sizes run from above 0 to 4096 pixels. Feature `graphite-text`, on by default. The `graphite_fonts` example writes font specimens drawn this way to PNG files.
+
+### Changed
+
+- The component crates (`lunatui-badge`, `lunatui-button`, `lunatui-card`, `lunatui-choice`, `lunatui-data-table`, `lunatui-dialog`, `lunatui-field`, `lunatui-ratatui` and `lunatui-ui-tokens`) depend on `lunatui-widgets` without its default features and turn on only the features they use. An app that depends on `lunatui-widgets` without default features, and leaves out `graphite-text`, now builds without the bundled fonts even when it also uses those crates. An app that depends on `lunatui-widgets` with default features still gets the fonts. The web sandbox builds this way, and its build fails if the bundled fonts come back into its dependencies.
+
+## [0.1.37] - 2026-11-22
+
+### Added
+
+- `RenderCx::paint_pixels` and `PixelCx` (feature `pixel-cx`, on by default) let a widget paint pixels over a cell area in Graphite mode. The primitives are rounded fill and stroke rectangles, lines, filled areas, and text measured and cut with an ellipsis by pixel width. `RenderCx::render_mode` sets the mode and defaults to Cell, and `RenderCx::text_metrics` supplies text metrics. Painting happens only in Graphite mode with a sink that takes pixels and an area within the pixel limits. Otherwise nothing is drawn and the cells are unchanged. No backend reports Graphite yet, so output does not change.
+- The benchmark suite has Graphite pixel cases (`graphite-changed-1x/2x` and `graphite-full-1x/2x`). Each frame rasterizes an activity-monitor-shaped scene with `graphite-core`'s CPU pixel buffer and encodes it as a terminal image through `PixelLayer`. The changed cases redraw and send only the seat rows; the full cases repaint the window. All four are gated on instruction counts against `main`. The frame-ceiling bench gates the changed cases on the 16 ms ceiling at 1x and 2x, and reports the full repaints. Measurement only; no product code changes.
+- `Agent::query` finds controls by case-insensitive accessible-name text, semantic kind, exact
+  layer, or combined filters. Results preserve registration order, stop at 100 controls and
+  report the number of additional matches.
 - A control's snapshot also carries its keyboard `shortcut` (as a person sees it, such as `Ctrl+S`) and its `mnemonic` letter (`ControlMetadata::shortcut`, `ControlMetadata::mnemonic`, `AgentControl::shortcut` and `mnemonic`, and the two keys in `Snapshot::write_json`; the accessibility export is unchanged). Menu items report their mnemonic on their own, and `KeyHintBar::controls` registers each hint it draws in full as a button named by the command's title with its chord as the shortcut, so an agent can read how a person reaches a control and activate it by name.
 
 ## [0.1.36] - 2026-11-20

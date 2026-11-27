@@ -2,7 +2,7 @@
 
 lunatui is a hyperspeed Rust TUI library being built from scratch, keeping a simple "render widgets into a rectangle" model while fixing its structural costs with a 16-byte packed cell, damage-tracked diffing and a single-write output encoder, plus first-class input, focus, animation, capability and theme layers. It is open source under the [MIT](LICENSE) license.
 
-**Status: v0.1.36 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
+**Status: v0.1.44 preview** — first usable release on the roadmap (Phase 4 widgets, encoder, runtime, tests). APIs and backends still evolve before 1.0. Start with [Getting started](docs/getting-started.md), the [architecture overview](docs/architecture.md), and the [PRD](docs/PRD.md).
 
 ## Performance
 
@@ -200,9 +200,9 @@ A cluster overview of live traffic: a high-resolution braille pie of requests by
 For antialiased pixels, wrap the chart in `PixelPieChart` and attach the frame's image sink. Pixel support is enabled by default. Use `.pixels(false)` on the widget or `RunOptions` to select Braille explicitly. Kitty, iTerm2 inline images, and Sixel use the shared presenter; unsupported terminals and multiplexers use Braille. Try `cargo run --release -p lunatui --features image-presenter --example pixel_pie_chart`. Add `-- --compare --hold 96` for two complete cluster views at the same held tick, including the regions table, detail line and trend. The native side renders the pie, legend swatches and trend in pixels. Press `b` to switch its graphs to cells, Space to hide or restore both panes, arrows to change region, and `u` to advance a held tick. See the [widget reference](lunatui-widgets/README.md) for text-layering and resource limits.
 
 
-<img src="docs/media/pixel-pie-chart.webp" alt="Complete cluster twins in a real Kitty terminal: Braille pie and trend on the left, antialiased pie, legend swatches and trend on the right" width="1028">
+<img src="docs/media/pixel-pie-chart.gif" alt="Complete cluster twins in a real Kitty terminal: Braille pie and trend on the left, antialiased pie, legend swatches and trend on the right" width="1028">
 
-Pixel comparison screenshot: [docs/media/pixel-pie-chart.png](docs/media/pixel-pie-chart.png). The animated WebP is a 10-second, 30 fps capture from a real Kitty 0.32.2 window in a clean Linux VM at 248×44 and font size 12. It shows seven seconds of live reveal and share redraws, then switches between native and Braille, hides and restores both charts. `scripts/check-pie-recording.py` checks decoded frames across the motion and control states. Both files come from the terminal capture; the still is a video frame.
+Pixel comparison screenshot: [docs/media/pixel-pie-chart.png](docs/media/pixel-pie-chart.png). The 10-second, 10 fps GIF is converted from a real Kitty 0.26.5 terminal capture at 248×44 cells and font size 12; it is 1.4 MiB and 2481×837 pixels. The capture shows seven seconds of live reveal and share redraws, then switches between native and Braille while both charts remain visible. The full-resolution 12 fps WebP from the same capture is also available at [docs/media/pixel-pie-chart.webp](docs/media/pixel-pie-chart.webp). Run `python3 scripts/check-pie-recording.py <capture-dir> --gif docs/media/pixel-pie-chart.gif` to verify live motion and ensure both panels stay visible in every source and GIF frame. The still is a frame from that terminal capture.
 
 <img src="docs/media/pie-chart.webp" alt="PieChart: a braille pie of live request shares by region, with a regions table and a request trend, on a cluster overview screen in the dark theme" width="1028">
 

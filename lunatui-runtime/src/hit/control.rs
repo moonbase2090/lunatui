@@ -5,7 +5,7 @@ use std::fmt;
 
 use lunatui_core::Rect;
 
-use crate::LayerId;
+use crate::{ChangeDetails, LayerId};
 
 use super::HitId;
 
@@ -33,6 +33,12 @@ pub enum AccessibilityRole {
     ComboBox,
     /// One entry of a menu bar or a menu panel, a leaf or a group that opens a submenu.
     MenuItem,
+    /// A header that opens or closes a section of content, such as an accordion header.
+    Disclosure,
+    /// A field of removable tags with a text box that adds the next one.
+    TagInput,
+    /// A month of days with one date selected.
+    Calendar,
 }
 
 impl AccessibilityRole {
@@ -48,8 +54,17 @@ impl AccessibilityRole {
             Self::ProgressBar => "progress_bar",
             Self::ComboBox => "combo_box",
             Self::MenuItem => "menu_item",
+            Self::Disclosure => "disclosure",
+            Self::TagInput => "tag_input",
+            Self::Calendar => "calendar",
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Consequence {
+    Ordinary,
+    Destructive,
 }
 
 /// A control's public identity and availability.
@@ -68,6 +83,8 @@ pub struct ControlMetadata {
     invalid: bool,
     shortcut: Option<String>,
     mnemonic: Option<char>,
+    consequence: Consequence,
+    change: Option<ChangeDetails>,
 }
 
 impl ControlMetadata {
@@ -92,6 +109,8 @@ impl ControlMetadata {
             invalid: false,
             shortcut: None,
             mnemonic: None,
+            consequence: Consequence::Ordinary,
+            change: None,
         }
     }
 
@@ -140,6 +159,20 @@ impl ControlMetadata {
         self
     }
 
+    /// Whether acting on the control destroys work, such as a Delete or Discard button. An agent
+    /// sees the mark in its snapshot, and by default [`crate::Agent::act`] holds a request that
+    /// would change such a control until the application confirms it; see
+    /// [`crate::Permission`]. For an agent only; the accessibility export never writes it.
+    #[must_use]
+    pub const fn destructive(mut self, destructive: bool) -> Self {
+        self.consequence = if destructive {
+            Consequence::Destructive
+        } else {
+            Consequence::Ordinary
+        };
+        self
+    }
+
     /// Whether the control is unavailable for activation.
     #[must_use]
     pub const fn disabled(mut self, disabled: bool) -> Self {
@@ -151,6 +184,15 @@ impl ControlMetadata {
     #[must_use]
     pub const fn layer(mut self, layer: Option<LayerId>) -> Self {
         self.layer = layer;
+        self
+    }
+
+    /// The change the application applied to this control since the last frame, as its
+    /// [`Change`](crate::Change) reported it. An agent [`Subscription`](crate::Subscription)
+    /// reports its reason and source with the control's new value. For an agent only.
+    #[must_use]
+    pub const fn changed(mut self, details: ChangeDetails) -> Self {
+        self.change = Some(details);
         self
     }
 
@@ -169,6 +211,8 @@ impl ControlMetadata {
             invalid: self.invalid,
             shortcut: self.shortcut.as_deref(),
             mnemonic: self.mnemonic,
+            consequence: self.consequence,
+            change: self.change,
         }
     }
 }
@@ -204,6 +248,18 @@ pub struct Control<'a> {
     pub shortcut: Option<&'a str>,
     /// The mnemonic letter of this control. For an agent only.
     pub mnemonic: Option<char>,
+    consequence: Consequence,
+    /// The change the application recorded for this frame with [`ControlMetadata::changed`].
+    pub change: Option<ChangeDetails>,
+}
+
+impl Control<'_> {
+    /// Whether acting on the control destroys work, as marked with
+    /// [`ControlMetadata::destructive`]. For an agent only.
+    #[must_use]
+    pub const fn is_destructive(&self) -> bool {
+        matches!(self.consequence, Consequence::Destructive)
+    }
 }
 
 /// More than one control matched the same role, name and layer.

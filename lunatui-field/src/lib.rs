@@ -6,7 +6,7 @@
 use std::borrow::Cow;
 
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
-use lunatui_runtime::{AccessibilityRole, ControlMetadata, HitId, LayerId};
+use lunatui_runtime::{AccessibilityRole, ChangeDetails, ControlMetadata, HitId, LayerId};
 use lunatui_ui_tokens::{Role, surface, text};
 use lunatui_widgets::{RenderCx, Widget};
 
@@ -21,6 +21,12 @@ const MARKER: &str = " *";
 enum ValueShown {
     Yes,
     No,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Consequence {
+    Ordinary,
+    Destructive,
 }
 
 /// A label, a control widget, and a help or error line under it.
@@ -49,6 +55,8 @@ pub struct Field<'a> {
     value_shown: ValueShown,
     body: Option<&'a dyn Widget>,
     on: Role,
+    consequence: Consequence,
+    change: Option<ChangeDetails>,
 }
 
 impl<'a> Field<'a> {
@@ -79,7 +87,31 @@ impl<'a> Field<'a> {
             value_shown: ValueShown::Yes,
             body: None,
             on: Role::Background,
+            consequence: Consequence::Ordinary,
+            change: None,
         }
+    }
+
+    /// The change the application applied to this field's value since the last frame, as its
+    /// [`Change`](lunatui_runtime::Change) reported it, so an agent subscription reports its
+    /// reason and source. See [`ControlMetadata::changed`].
+    #[must_use]
+    pub const fn changed(mut self, details: ChangeDetails) -> Self {
+        self.change = Some(details);
+        self
+    }
+
+    /// Marks the field's control as one whose action destroys work, so an agent's request to
+    /// change it waits for the application's confirmation by default. See
+    /// [`ControlMetadata::destructive`].
+    #[must_use]
+    pub const fn destructive(mut self, destructive: bool) -> Self {
+        self.consequence = if destructive {
+            Consequence::Destructive
+        } else {
+            Consequence::Ordinary
+        };
+        self
     }
 
     /// Muted help text under the control, shown while there is no error.
@@ -230,7 +262,12 @@ impl<'a> Field<'a> {
             .disabled(self.is_disabled())
             .layer(self.layer)
             .checked(self.body.and_then(Widget::control_checked))
-            .invalid(self.error.is_some());
+            .invalid(self.error.is_some())
+            .destructive(self.consequence == Consequence::Destructive);
+            let metadata = match self.change {
+                Some(details) => metadata.changed(details),
+                None => metadata,
+            };
             match self.body.and_then(Widget::control_value) {
                 Some(value) if self.value_shown == ValueShown::Yes => metadata.value(value),
                 _ => metadata,

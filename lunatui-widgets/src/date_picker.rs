@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 use lunatui_core::{Attrs, Rect, Size, Style, UnderlineStyle, clip_display_prefix};
+use lunatui_runtime::{Action, Outcome};
 use lunatui_theme::Token;
 
-use crate::calendar::{month_label, month_length};
+use crate::calendar::{month_label, month_length, parse_iso};
 use crate::{Date, RenderCx, WeekStart, Widget, WidgetState};
 
 const WIDTH: u16 = 21;
@@ -113,6 +114,31 @@ impl DatePicker {
     #[must_use]
     pub fn allows(&self, date: Date) -> bool {
         self.min.is_none_or(|min| date >= min) && self.max.is_none_or(|max| date <= max)
+    }
+
+    /// Applies an agent's [`Action::SetValue`] to the selected date, taking text as
+    /// `YYYY-MM-DD`. The cursor moves to the date too, so its month is the one shown.
+    ///
+    /// [`Outcome::Changed`] when the selection or cursor moves, [`Outcome::Handled`] when that
+    /// date is already selected under the cursor, and [`Outcome::Ignored`] for text that is not a real date, a date
+    /// outside the bounds, a disabled picker and any other action.
+    pub fn act(&self, cursor: &mut Date, selected: &mut Option<Date>, action: &Action) -> Outcome {
+        let Action::SetValue(text) = action else {
+            return Outcome::Ignored;
+        };
+        let Some(date) = parse_iso(text.trim()) else {
+            return Outcome::Ignored;
+        };
+        if matches!(self.state, WidgetState::Disabled) || !self.allows(date) {
+            return Outcome::Ignored;
+        }
+        if *selected == Some(date) && *cursor == date {
+            Outcome::Handled
+        } else {
+            *selected = Some(date);
+            *cursor = date;
+            Outcome::Changed
+        }
     }
 
     /// `date` moved to the nearest date within the bounds.

@@ -64,7 +64,7 @@ Two ways to get pixels onto the screen, with different costs:
 
 ## API sketch
 
-The mode, policy and capability types below are implemented in `lunatui-runtime` (`RenderMode`, `ModePolicy`, `GraphiteCaps`, `Capabilities`, `RunOptions::mode` and `RenderFrame::mode`), with no behavior change: no backend reports Graphite yet, so every frame is Cell. `PixelCx` and `render_graphite` are still a sketch.
+The mode, policy and capability types below are implemented in `lunatui-runtime` (`RenderMode`, `ModePolicy`, `GraphiteCaps`, `Capabilities`, `RunOptions::mode` and `RenderFrame::mode`), with no behavior change: no backend reports Graphite yet, so every frame is Cell. `PixelCx` and `RenderCx::paint_pixels` are implemented in `lunatui-widgets` (feature `pixel-cx`, on by default) and paint only in Graphite mode. `PixelCx::text` draws glyphs with the fonts bundled in `lunatui-fonts` (feature `graphite-text`, on by default).
 
 ```rust,ignore
 pub enum RenderMode { Cell, Graphite }
@@ -80,19 +80,25 @@ pub struct GraphiteCaps {
     pub alpha: bool,
 }
 
-pub trait Widget {
-    fn render(&self, area: Rect, cx: &mut RenderCx<'_>);
-    fn render_graphite(&self, area: Rect, px: &mut PixelCx<'_>) {
-        self.render(area, px.cells());
-    }
+impl RenderCx<'_> {
+    pub fn render_mode(self, mode: RenderMode) -> Self;
+    pub fn paint_pixels(
+        &mut self,
+        area: Rect,
+        depth: i32,
+        paint: impl FnOnce(&mut PixelCx<'_>),
+    ) -> bool;
 }
 ```
 
-- `render_graphite` has a default that calls `render`, so every existing widget works in Graphite mode on day one, drawn in cells inside a pixel frame. Widgets then adopt pixels one at a time, each by overriding `render_graphite`.
-- `PixelCx` offers the primitives: filled and stroked rounded rectangles, lines, bars and areas, images, and text runs measured by a `TextMetrics`. A Graphite widget also writes its Cell approximation into the cells underneath, as the alpha work does, so a frame that has to fall back loses detail and not layout.
-- Text is measured with the same `TextMetrics` trait that exists now. Cell mode uses `CellTextMetrics`; Graphite uses host metrics, or a bundled font under option A. A label that does not fit is cut by pixel width with an ellipsis, not by column count.
+- The mode travels in `RenderCx`, not in a second `Widget` method. Applications render their own widget trees by calling `render` on children, so nothing could call a separate `render_graphite`. A widget calls `paint_pixels` from `render`. Every existing widget keeps working in Graphite mode unchanged, drawn in cells. Widgets adopt pixels one at a time.
+- `paint_pixels` paints only when the frame is in Graphite mode, the image sink takes pixels and the area is within the pixel limits. Otherwise it returns `false` having drawn nothing and changed no cell, and the widget draws its Cell form.
+- `run()` resolves the mode against the terminal it probed: Graphite when the terminal draws pixel images (Kitty, iTerm2 or Sixel, outside a multiplexer) and reports its cell size, Cell otherwise, within the application's `ModePolicy` and the `LUNATUI_MODE` override. An application draws Graphite by building its `RenderCx` from `RenderFrame::parts` in `RenderFrame::mode`, as the `activity_monitor_live` example does; one that only implements `render` keeps drawing cells. The cell size follows the terminal's window-size report on resize.
+- `replace_with_pixels` is the form a widget uses for itself: it paints over the cells the widget would have written, then blanks them to their backgrounds once the sink has taken the image. `Badge` and `Kbd` in `lunatui-badge`, and `Sparkline` and `List`, are drawn this way. The `activity_monitor` example puts them together ([real output](media/graphite-activity-monitor.png), Cell mode beside Graphite mode, compared with the mockup above).
+- `PixelCx` offers the primitives: filled and stroked rounded rectangles, lines and areas, with text measured and fitted by a `TextMetrics` and drawn by `PixelCx::text`. Bars and images come next. A Graphite widget also writes its Cell approximation into the cells underneath, as the alpha work does, so a frame that has to fall back loses detail and not layout.
+- Text is measured with the same `TextMetrics` trait that exists now. Cell mode uses `CellTextMetrics`. Graphite measures with the same bundled fonts `PixelCx::text` draws with (Inter for UI text, JetBrains Mono for `Face::Mono`, then Noto Sans, JetBrains Mono and Noto Emoji as fallbacks), unless the application supplies other metrics such as host fonts. A label that does not fit is cut by pixel width with an ellipsis, not by column count.
 - Named controls, the agent API and the accessibility export are mode-independent. They read the registry, not the pixels.
-- Hit testing stays on the cell hit map. Pointer events that carry pixel coordinates refine it with a pixel offset inside the hit cell, for controls that need it (sliders, resize handles).
+- Hit testing stays on the cell hit map. Pointer events that carry pixel coordinates refine it with a pixel offset inside the hit cell, for controls that need it. `run()` asks the terminal for mode 1016 and, when it reports the mode and the cell size, turns on pixel mouse reports and hands the application each event in cells with `MouseEvent::inside` set. `HitMap::pick_point` returns the cell pick's hit with where the pointer is inside the region, and `Slider::value_at_across` uses it so a drag moves smoothly across a cell. Split dividers stay on whole cells, since a divider is one cell wide.
 
 ## The 8 ms frame ceiling
 
@@ -138,7 +144,7 @@ The compiled-in feature and the API ship on by default, as every lunatui feature
 ## Questions for the owner
 
 1. **Option A first, then B**, or wait for B only? A means lunatui carries a font.
-2. **Which font** for option A: a bundled open-licensed UI font, the platform font, or host fonts only (which limits A to the native host)?
+2. **Which font** for option A: a bundled open-licensed UI font, the platform font, or host fonts only (which limits A to the native host)? Answered: bundle five open-licensed families, with Inter as the default UI font plus IBM Plex Sans, Noto Sans, JetBrains Mono and Noto Emoji. [Font specimens](media/graphite-fonts.png), drawn by `PixelCx` with each UI font by the `graphite_fonts` example.
 3. **Which backends count** for the first demo: the native host only, or also terminals with a pixel protocol?
 4. **Amend D11** as described above?
 5. **The frame ceiling for a full repaint**: is a tiled or faded mode change acceptable, or must a full repaint fit in one frame?

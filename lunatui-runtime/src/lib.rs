@@ -49,8 +49,10 @@ mod sched;
 
 #[cfg(feature = "app")]
 pub use agent::{
-    Act, ActError, Action, ActionKind, Agent, AgentControl, ControlState, Request, Selector,
-    Snapshot, Source, Ticket,
+    Act, ActError, ActWith, Action, ActionKind, Agent, AgentControl, AwaitingConfirmation,
+    CONTROL_QUERY_LIMIT, ConfirmId, ControlChange, ControlQuery, ControlQueryResult, ControlState,
+    ControlValue, Permission, PlanId, PlanStatus, Request, Selector, Snapshot, Source, Step,
+    Subscription, Ticket,
 };
 pub use anim::{Clock, Ease, Spring, Tween};
 #[cfg(feature = "motion")]
@@ -66,7 +68,9 @@ pub use focus::{FocusDirection, FocusGroup, FocusManager};
 #[cfg(feature = "image-presenter")]
 pub use frame::RenderFrame;
 #[cfg(feature = "app")]
-pub use hit::{AccessibilityRole, AmbiguousControl, Control, ControlMetadata, HitId, HitMap};
+pub use hit::{
+    AccessibilityRole, AmbiguousControl, Control, ControlMetadata, HitId, HitMap, HitPoint,
+};
 pub use input::Input;
 #[cfg(feature = "app")]
 pub use interact::{

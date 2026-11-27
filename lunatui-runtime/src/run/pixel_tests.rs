@@ -62,6 +62,7 @@ fn switching_saturation_to_latency_finishes_upload_before_the_new_title_and_reti
         encoder: Encoder::new(),
         last_palette: None,
         repaint: false,
+        pointer: None,
         images: PixelLayer::from_caps(&caps),
         mode: RenderMode::Cell,
     };
@@ -191,6 +192,7 @@ fn immediate_image_repaints_blank_cells(
         encoder: Encoder::new(),
         last_palette: None,
         repaint: false,
+        pointer: None,
         images: PixelLayer::from_caps(&caps),
         mode: RenderMode::Cell,
     };
@@ -264,4 +266,32 @@ fn moved_sixel_images_repaint_default_blank_cells() -> Result<(), String> {
         "\x1bP0;1;0q",
         Some(Rect::new(0, 0, 2, 2)),
     )
+}
+
+#[test]
+fn a_pixel_terminal_with_a_cell_size_resolves_to_graphite_and_others_to_cells() {
+    use crate::ModePolicy;
+
+    let kitty = |cell: Option<CellPixels>| {
+        let mut caps = Caps::default();
+        caps.protocols.graphics = GraphicsProtocol::Kitty;
+        caps.cell_pixels = cell;
+        PixelLayer::from_caps(&caps)
+    };
+    let sized = super::capabilities(&kitty(CellPixels::new(8, 16)));
+    let graphite = sized.graphite();
+    assert_eq!(
+        graphite.map(|caps| (caps.cell_width_px.get(), caps.cell_height_px.get())),
+        Some((8, 16))
+    );
+    assert_eq!(ModePolicy::Auto.resolve(&sized), RenderMode::Graphite);
+    assert_eq!(ModePolicy::Cell.resolve(&sized), RenderMode::Cell);
+
+    let unsized_layer = super::capabilities(&kitty(None));
+    assert_eq!(ModePolicy::Auto.resolve(&unsized_layer), RenderMode::Cell);
+
+    let mut plain = Caps::default();
+    plain.cell_pixels = CellPixels::new(8, 16);
+    let cells = super::capabilities(&PixelLayer::from_caps(&plain));
+    assert_eq!(ModePolicy::Graphite.resolve(&cells), RenderMode::Cell);
 }

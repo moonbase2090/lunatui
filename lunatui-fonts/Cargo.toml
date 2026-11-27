@@ -1,0 +1,13 @@
+[package]
+name = "lunatui-fonts"
+description = "Open-licensed fonts bundled for Lunatui Graphite mode."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MIT AND OFL-1.1"
+repository.workspace = true
+include = ["Cargo.toml", "README.md", "src/**", "fonts/**"]
+
+[lints]
+workspace = true
+

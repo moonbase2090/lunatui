@@ -6,7 +6,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use lunatui_core::{ClusterTable, Color, Grid, Rect, Style, diff_runs_visible_into};
-use lunatui_term::{ColorMode, Encoder, Event, MouseTracking, Session, SessionOptions, SyncOutput};
+use lunatui_term::{
+    CellPixels, ColorMode, Encoder, Event, MouseTracking, Session, SessionOptions, SyncOutput,
+    terminal_cell_pixels,
+};
 
 #[cfg(feature = "image-presenter")]
 use lunatui_term::{PixelLayer, PixelMode};
@@ -25,6 +28,7 @@ struct FrameState {
     encoder: Encoder,
     last_palette: Option<Vec<Color>>,
     repaint: bool,
+    pointer: Option<CellPixels>,
     #[cfg(feature = "image-presenter")]
     images: PixelLayer,
     #[cfg(feature = "image-presenter")]
@@ -59,20 +63,25 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         ));
     }
     #[cfg(feature = "image-presenter")]
-    let (images, pending_input) = if options.pixel_images {
+    let (images, pending_input, pointer) = if options.pixel_images {
         probe_pixel_layer()
     } else {
-        (PixelLayer::new(PixelMode::Cells), Vec::new())
+        (PixelLayer::new(PixelMode::Cells), Vec::new(), None)
     };
     #[cfg(feature = "image-presenter")]
-    let mut input = Input::open_prefixed(pending_input)?;
+    let mut input = Input::open_prefixed(pending_input, pointer.is_some())?;
     #[cfg(not(feature = "image-presenter"))]
-    let mut input = Input::open()?;
+    let (mut input, pointer) = (Input::open()?, None::<CellPixels>);
+    let tracking = if pointer.is_some() {
+        MouseTracking::SgrPixels
+    } else {
+        MouseTracking::Sgr
+    };
     let mut session = Session::enter_with_options(
         io::stdout(),
         SessionOptions::default()
             .sync_output(SyncOutput::Enabled)
-            .mouse_tracking(MouseTracking::Sgr),
+            .mouse_tracking(tracking),
     )?;
     let mut area = Rect::new(0, 0, options.width, options.height);
     let mut frames = FrameState {
@@ -82,14 +91,19 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         encoder: Encoder::new(),
         last_palette: None,
         repaint: false,
+        pointer,
         #[cfg(feature = "image-presenter")]
         images,
         #[cfg(feature = "image-presenter")]
-        mode: options
+        mode: RenderMode::Cell,
+    };
+    #[cfg(feature = "image-presenter")]
+    {
+        frames.mode = options
             .mode
             .with_env_override()
-            .resolve(&Capabilities::CELL_ONLY),
-    };
+            .resolve(&capabilities(&frames.images));
+    }
     let mut sched = Scheduler::idle();
     sched.on_input();
     let epoch = Instant::now();
@@ -150,7 +164,20 @@ fn dispatch<A: App>(
     for event in events {
         if let Event::Resize(width, height) = event {
             frames.resize(area, width, height);
+            if let Some(now) = terminal_cell_pixels() {
+                if let Some(cell) = frames.pointer.as_mut() {
+                    *cell = now;
+                }
+                #[cfg(feature = "image-presenter")]
+                if frames.images.mode().is_pixels() {
+                    frames.images.set_cell_pixels(now);
+                }
+            }
         }
+        let event = match (event, frames.pointer) {
+            (Event::Mouse(mouse), Some(cell)) => Event::Mouse(mouse.in_cells(cell)),
+            (event, _) => event,
+        };
         if app.update(&event) == ControlFlow::Break {
             quit = true;
         }
@@ -274,26 +301,58 @@ pub fn render_once<A: App>(app: &mut A, width: u16, height: u16) -> (Grid, Clust
     (grid, clusters)
 }
 
+#[cfg(feature = "image-presenter")]
+pub(crate) fn capabilities(layer: &PixelLayer) -> Capabilities {
+    use std::num::NonZeroU16;
+
+    use crate::mode::GraphiteCaps;
+
+    let cell = layer.cell_pixels().filter(|_| layer.mode().is_pixels());
+    cell.and_then(|cell| {
+        Some(Capabilities::with_graphite(
+            GraphiteCaps::new(
+                NonZeroU16::new(cell.width())?,
+                NonZeroU16::new(cell.height())?,
+            )
+            .proportional_text(true)
+            .alpha(layer.mode() == PixelMode::Kitty),
+        ))
+    })
+    .unwrap_or(Capabilities::CELL_ONLY)
+}
+
 #[cfg(all(feature = "image-presenter", unix))]
-fn probe_pixel_layer() -> (PixelLayer, Vec<u8>) {
+fn probe_pixel_layer() -> (PixelLayer, Vec<u8>, Option<CellPixels>) {
     use std::fs::OpenOptions;
     use std::os::fd::AsFd;
 
-    use lunatui_term::{ProbeEnv, probe_fd};
+    use lunatui_term::{PrivateMode, ProbeEnv, probe_fd};
 
     let Ok(tty) = OpenOptions::new().read(true).write(true).open("/dev/tty") else {
-        return (PixelLayer::new(PixelMode::Cells), Vec::new());
+        return (PixelLayer::new(PixelMode::Cells), Vec::new(), None);
     };
     let environment = ProbeEnv::from_process();
     probe_fd(tty.as_fd(), &environment).map_or_else(
-        |_| (PixelLayer::new(PixelMode::Cells), Vec::new()),
-        |reply| (PixelLayer::from_caps(&reply.caps), reply.pending_input),
+        |_| (PixelLayer::new(PixelMode::Cells), Vec::new(), None),
+        |reply| {
+            let pointer = reply.caps.cell_pixels.filter(|_| {
+                matches!(
+                    reply.caps.modes.sgr_pixel_mouse,
+                    PrivateMode::Set | PrivateMode::Reset
+                )
+            });
+            (
+                PixelLayer::from_caps(&reply.caps),
+                reply.pending_input,
+                pointer,
+            )
+        },
     )
 }
 
 #[cfg(all(feature = "image-presenter", not(unix)))]
-fn probe_pixel_layer() -> (PixelLayer, Vec<u8>) {
-    (PixelLayer::new(PixelMode::Cells), Vec::new())
+fn probe_pixel_layer() -> (PixelLayer, Vec<u8>, Option<CellPixels>) {
+    (PixelLayer::new(PixelMode::Cells), Vec::new(), None)
 }
 
 #[cfg(test)]
@@ -399,6 +458,7 @@ mod tests {
             encoder: Encoder::new(),
             last_palette: None,
             repaint: false,
+            pointer: None,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
             #[cfg(feature = "image-presenter")]
@@ -481,6 +541,7 @@ mod tests {
             encoder: Encoder::new(),
             last_palette: None,
             repaint: false,
+            pointer: None,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
             #[cfg(feature = "image-presenter")]
@@ -533,6 +594,7 @@ mod tests {
             encoder: Encoder::new(),
             last_palette: None,
             repaint: false,
+            pointer: None,
             #[cfg(feature = "image-presenter")]
             images: super::PixelLayer::new(super::PixelMode::Cells),
             #[cfg(feature = "image-presenter")]
@@ -623,6 +685,39 @@ mod tests {
             fresh.mismatches(&frames.prev, &frames.clusters, true),
             Vec::<String>::new()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn pixel_reports_reach_the_app_in_cells_with_the_offset_inside_the_cell() -> Result<(), String>
+    {
+        use lunatui_term::{CellPixels, MouseButton, MouseEvent, MouseKind, MouseUnit};
+
+        let report =
+            MouseEvent::new(MouseKind::Down(MouseButton::Left), 35, 50).unit(MouseUnit::Pixels);
+        let mut area = Rect::new(0, 0, 20, 4);
+        let mut frames = fresh_frames(20, 4);
+        frames.pointer = CellPixels::new(8, 16);
+        let mut app = Frame {
+            areas: Vec::new(),
+            events: Vec::new(),
+        };
+        super::dispatch(&mut app, vec![Event::Mouse(report)], &mut area, &mut frames);
+        let [Event::Mouse(seen)] = app.events.as_slice() else {
+            return Err(format!("one mouse event, got {:?}", app.events));
+        };
+        assert_eq!((seen.unit, seen.column, seen.row), (MouseUnit::Cells, 4, 3));
+        let inside = seen.inside.ok_or("no offset inside the cell")?;
+        assert_eq!((inside.x(), inside.y()), (3, 2));
+
+        let mut frames = fresh_frames(20, 4);
+        let mut app = Frame {
+            areas: Vec::new(),
+            events: Vec::new(),
+        };
+        let cells = MouseEvent::new(MouseKind::Down(MouseButton::Left), 4, 3);
+        super::dispatch(&mut app, vec![Event::Mouse(cells)], &mut area, &mut frames);
+        assert_eq!(app.events, vec![Event::Mouse(cells)]);
         Ok(())
     }
 

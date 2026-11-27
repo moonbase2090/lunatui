@@ -10,8 +10,15 @@ use std::time::Duration;
 
 use lunatui_bench::calibration::{frame, truecolor_frame_bytes, write_frame};
 use lunatui_bench::ceiling::{FRAME_CEILING, FRAME_TARGET, FrameTimes, Verdict, sample};
+#[cfg(feature = "graphite-pixels")]
+use lunatui_bench::graphite_cases::{GRAPHITE_CASES, GraphiteRun};
 
 const SAMPLES: usize = 1000;
+
+#[cfg(feature = "graphite-pixels")]
+const GRAPHITE_WINDOW: (u16, u16) = (185, 51);
+#[cfg(feature = "graphite-pixels")]
+const GRAPHITE_SAMPLES: usize = 200;
 
 const WORST_CASES: [(&str, usize, usize); 2] = [
     ("truecolor repaint write, 400x120 (stand-in)", 400, 120),
@@ -33,17 +40,20 @@ fn main() -> io::Result<ExitCode> {
     let mut over_ceiling = false;
     for (name, cols, rows) in WORST_CASES {
         let times = time_truecolor_write(cols, rows)?;
-        let verdict = times.verdict();
-        over_ceiling |= verdict == Verdict::OverCeiling;
-        println!(
-            "{name:<45}{:>8}{:>11}{:>11}{:>11}{:>11}  {}",
-            times.samples,
-            millis(times.p50),
-            millis(times.p95),
-            millis(times.p99),
-            millis(times.max),
-            verdict_label(verdict)
+        over_ceiling |= report(name, &times, true);
+    }
+    #[cfg(feature = "graphite-pixels")]
+    for case in &GRAPHITE_CASES {
+        let times = time_graphite(case)?;
+        let gated = case.ceiling_gated();
+        let name = format!(
+            "{}, {}x{}{}",
+            case.name,
+            GRAPHITE_WINDOW.0,
+            GRAPHITE_WINDOW.1,
+            if gated { "" } else { " (reported)" }
         );
+        over_ceiling |= report(&name, &times, gated);
     }
     if over_ceiling {
         eprintln!(
@@ -54,6 +64,31 @@ fn main() -> io::Result<ExitCode> {
     } else {
         Ok(ExitCode::SUCCESS)
     }
+}
+
+fn report(name: &str, times: &FrameTimes, gated: bool) -> bool {
+    let verdict = times.verdict();
+    println!(
+        "{name:<45}{:>8}{:>11}{:>11}{:>11}{:>11}  {}",
+        times.samples,
+        millis(times.p50),
+        millis(times.p95),
+        millis(times.p99),
+        millis(times.max),
+        verdict_label(verdict)
+    );
+    gated && verdict == Verdict::OverCeiling
+}
+
+#[cfg(feature = "graphite-pixels")]
+fn time_graphite(
+    case: &'static lunatui_bench::graphite_cases::GraphiteCase,
+) -> io::Result<FrameTimes> {
+    let (cols, rows) = GRAPHITE_WINDOW;
+    let mut run = GraphiteRun::new(case, cols, rows).map_err(io::Error::other)?;
+    run.frame()?;
+    let samples = sample(GRAPHITE_SAMPLES, || run.frame())?;
+    FrameTimes::from_samples(&samples).ok_or_else(|| io::Error::other("no frame-time samples"))
 }
 
 fn verdict_label(verdict: Verdict) -> &'static str {

@@ -6,6 +6,8 @@ use std::borrow::Cow;
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 
+use lunatui_runtime::{Action, Outcome};
+
 use crate::{RenderCx, Widget, WidgetState};
 
 const BUTTON: u16 = 3;
@@ -177,6 +179,26 @@ impl<'a> NumberInput<'a> {
         }
         let value: f64 = text.parse().ok()?;
         Some(self.clamp(self.round(value)))
+    }
+
+    /// Applies an agent's [`Action::SetValue`] to the app's value for this field: the text goes
+    /// through [`parse`](Self::parse), so it is held to the same rules as typing, rounded to the
+    /// decimals and clamped into the range. [`Outcome::Changed`] when the value moved,
+    /// [`Outcome::Handled`] when it was already there, and [`Outcome::Ignored`] for any other
+    /// action and for text that is not a number this field accepts.
+    pub fn act(&self, value: &mut f64, action: &Action) -> Outcome {
+        let Action::SetValue(text) = action else {
+            return Outcome::Ignored;
+        };
+        let Some(wanted) = self.parse(text.trim()) else {
+            return Outcome::Ignored;
+        };
+        if (wanted - *value).abs() <= f64::EPSILON {
+            Outcome::Handled
+        } else {
+            *value = wanted;
+            Outcome::Changed
+        }
     }
 
     /// Whether the value is at the lower bound, so the minus button is spent.

@@ -6,6 +6,8 @@ use std::borrow::Cow;
 use lunatui_core::{Attrs, Rect, Size, Style, clip_display_prefix, width};
 use lunatui_theme::Token;
 
+use lunatui_runtime::{Action, Outcome};
+
 use crate::{RenderCx, Widget, WidgetState};
 
 const FULL: &str = "━";
@@ -143,6 +145,26 @@ impl<'a> Slider<'a> {
         self.snap(self.clamp(value) + f64::from(steps) * step)
     }
 
+    /// Applies an agent's [`Action::SetValue`] to the app's value for this slider: the decimal
+    /// text is parsed, clamped into the bounds and snapped to the step, like a click on the track.
+    /// [`Outcome::Changed`] when the value moved, [`Outcome::Handled`] when it was already there,
+    /// and [`Outcome::Ignored`] for any other action and for text that is not a finite number.
+    pub fn act(&self, value: &mut f64, action: &Action) -> Outcome {
+        let Action::SetValue(text) = action else {
+            return Outcome::Ignored;
+        };
+        let Some(wanted) = text.trim().parse::<f64>().ok().filter(|v| v.is_finite()) else {
+            return Outcome::Ignored;
+        };
+        let wanted = self.snap(wanted);
+        if (wanted - *value).abs() <= f64::EPSILON {
+            Outcome::Handled
+        } else {
+            *value = wanted;
+            Outcome::Changed
+        }
+    }
+
     /// The value at `column` of a track at `track`: the first cell is the minimum and the last
     /// the maximum, snapped to the step. Columns outside the track give the nearest end.
     #[must_use]
@@ -153,6 +175,27 @@ impl<'a> Slider<'a> {
         let last = track.width - 1;
         let cell = column.saturating_sub(track.x).min(last);
         let fraction = f64::from(cell) / f64::from(last);
+        self.snap(self.min + fraction * (self.max - self.min))
+    }
+
+    /// The value at a point inside `column` of a track at `track`, where `across` is how far
+    /// across that cell the pointer is, from 0.0 at its left edge to 1.0 at its right, as a
+    /// pointer event in pixels gives it. At the centre of a cell (0.5) this is
+    /// [`value_at`](Self::value_at); between centres the value moves smoothly before it is
+    /// snapped to the step. Points outside the track give the nearest end.
+    #[must_use]
+    pub fn value_at_across(&self, track: Rect, column: u16, across: f64) -> f64 {
+        if track.width <= 1 {
+            return self.min;
+        }
+        let last = f64::from(track.width - 1);
+        let across = if across.is_finite() {
+            across.clamp(0.0, 1.0)
+        } else {
+            0.5
+        };
+        let position = f64::from(column) - f64::from(track.x) + across - 0.5;
+        let fraction = (position / last).clamp(0.0, 1.0);
         self.snap(self.min + fraction * (self.max - self.min))
     }
 

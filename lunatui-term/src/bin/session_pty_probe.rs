@@ -16,7 +16,8 @@ fn main() {
     let code = std::panic::catch_unwind(|| match mode.as_str() {
         "normal" => run_normal(),
         "panic" => run_panic(),
-        "mouse" => run_mouse(),
+        "mouse" => run_mouse(MouseTracking::Sgr),
+        "mouse-pixels" => run_mouse(MouseTracking::SgrPixels),
         "buffered" => run_buffered(),
         #[cfg(unix)]
         "flush-error" => run_flush_error(),
@@ -54,13 +55,13 @@ fn run_normal() -> i32 {
     0
 }
 
-fn run_mouse() -> i32 {
+fn run_mouse(tracking: MouseTracking) -> i32 {
     let stdout = io::stdout();
     let Ok(mut session) = Session::enter_with_options(
         stdout,
         SessionOptions::default()
             .sync_output(SyncOutput::Disabled)
-            .mouse_tracking(MouseTracking::Sgr),
+            .mouse_tracking(tracking),
     ) else {
         return 2;
     };

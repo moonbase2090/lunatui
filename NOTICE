@@ -13,4 +13,13 @@ Bundled image `site/assets/earth.jpg` is “Earth” (PIA18033), a 1920 × 1920
 Blue Marble image by NASA from the Suomi NPP / VIIRS instrument. Source:
 https://images.nasa.gov/details/PIA18033
 
+Bundled fonts in `lunatui-fonts/fonts/` are unmodified releases licensed under
+the SIL Open Font License, Version 1.1. Each family's license text, with its
+copyright line, is in `lunatui-fonts/fonts/licenses/`:
+- Inter 4.000, Copyright (c) 2016 The Inter Project Authors
+- IBM Plex Sans 3.006, Copyright © 2017 IBM Corp., with Reserved Font Name "Plex"
+- Noto Sans 2.015, Copyright 2022 The Noto Project Authors
+- JetBrains Mono 2.304, Copyright 2020 The JetBrains Mono Project Authors
+- Noto Emoji 3.002, Copyright 2013 Google LLC
+
 Moonbase 2090 LLC

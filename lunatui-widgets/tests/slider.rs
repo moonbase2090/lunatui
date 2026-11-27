@@ -303,3 +303,58 @@ fn a_label_is_not_drawn_into_an_empty_area() {
     let (grid, clusters) = draw(&slider, Rect::new(0, 0, 0, 1), 6);
     assert_eq!(grid.row_display(0, &clusters), "      ");
 }
+
+#[test]
+fn value_at_across_matches_value_at_at_cell_centres_and_moves_between_them() {
+    let slider = Slider::new(0.0, 10.0);
+    let track = Rect::new(4, 0, 11, 1);
+    for column in 0..20 {
+        assert!(
+            (slider.value_at_across(track, column, 0.5) - slider.value_at(track, column)).abs()
+                < 1e-9,
+            "column {column}"
+        );
+    }
+    assert!((slider.value_at_across(track, 9, 0.75) - 5.25).abs() < 1e-9);
+    assert!((slider.value_at_across(track, 9, 0.25) - 4.75).abs() < 1e-9);
+    let mut previous = slider.value_at_across(track, 4, 0.0);
+    for column in 4..15 {
+        for step in 0..=8 {
+            let value = slider.value_at_across(track, column, f64::from(step) / 8.0);
+            assert!(value >= previous, "column {column} step {step}");
+            previous = value;
+        }
+    }
+    assert!((slider.value_at_across(track, 4, 0.0) - 0.0).abs() < 1e-9);
+    assert!((slider.value_at_across(track, 14, 1.0) - 10.0).abs() < 1e-9);
+    assert!((slider.value_at_across(track, 9, f64::NAN) - 5.0).abs() < 1e-9);
+}
+
+#[test]
+fn value_at_across_gives_the_nearest_end_outside_the_track() {
+    let slider = Slider::new(0.0, 10.0);
+    let track = Rect::new(4, 0, 11, 1);
+    for across in [0.0, 0.5, 0.9, 1.0] {
+        for column in [0, 3] {
+            assert!(
+                slider.value_at_across(track, column, across).abs() < 1e-9,
+                "column {column} across {across} is left of the track"
+            );
+        }
+        for column in [15, 40] {
+            assert!(
+                (slider.value_at_across(track, column, across) - 10.0).abs() < 1e-9,
+                "column {column} across {across} is right of the track"
+            );
+        }
+    }
+}
+
+#[test]
+fn value_at_across_snaps_to_the_step() {
+    let slider = Slider::new(0.0, 10.0).step(1.0);
+    let track = Rect::new(0, 0, 3, 1);
+    assert!((slider.value_at_across(track, 1, 0.5) - 5.0).abs() < 1e-9);
+    assert!((slider.value_at_across(track, 1, 0.95) - 7.0).abs() < 1e-9);
+    assert!((slider.value_at_across(track, 0, 0.9) - 2.0).abs() < 1e-9);
+}

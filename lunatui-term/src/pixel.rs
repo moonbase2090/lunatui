@@ -213,6 +213,18 @@ impl PixelLayer {
         self.mode
     }
 
+    /// The size of a cell in pixels that images are drawn at, when the terminal reported one.
+    #[must_use]
+    pub const fn cell_pixels(&self) -> Option<CellPixels> {
+        self.cell_pixels
+    }
+
+    /// Draws later images at `cell` pixels per cell, as after the terminal's font changed. Images
+    /// already placed keep their pixels until they are drawn again.
+    pub const fn set_cell_pixels(&mut self, cell: CellPixels) {
+        self.cell_pixels = Some(cell);
+    }
+
     /// Starts a frame; call before the first [`image`](Self::image).
     pub fn begin_frame(&mut self) {
         self.out.clear();
@@ -222,7 +234,10 @@ impl PixelLayer {
     }
 
     /// Lists `image` for this frame at the cell rectangle `at` and depth `z` (negative draws
-    /// under text).
+    /// under text). At the same depth, an image listed later in the frame is drawn above one
+    /// listed earlier: Kitty stacks equal z-indexes by image id, so the layer sends
+    /// `256 × z` plus the image's place in the frame as the z-index. A depth outside
+    /// [`PIXEL_DEPTHS`] is ignored; depths below −4,194,304 draw under cell backgrounds.
     ///
     /// `generation` identifies the content: send a new number whenever the pixels change and
     /// keep it while they do not, so unchanged images reuse their encoded content. Kitty
@@ -232,6 +247,7 @@ impl PixelLayer {
         if !self.mode.is_pixels()
             || self.frame.len() >= 256
             || id == 0
+            || !PIXEL_DEPTHS.contains(&z)
             || at.width == 0
             || at.height == 0
             || self
@@ -347,11 +363,12 @@ impl PixelLayer {
             write_transmit(&mut self.out, wire_id, image);
         }
         self.frame_pixels += u64::from(image.width) * u64::from(image.height);
+        let z = stacked(depth, self.frame.len());
         self.frame.push(Placed {
             id,
             wire_id,
             rect: area,
-            z: depth,
+            z,
             fresh,
         });
         true
@@ -483,7 +500,7 @@ impl PixelLayer {
             id: ImageKey::Caller(request.id().get()),
             wire_id,
             rect: destination,
-            z: request.depth(),
+            z: stacked(request.depth(), self.frame.len()),
             fresh,
         });
         true
@@ -521,7 +538,8 @@ impl ImageSink for PixelLayer {
 
     fn submit_raster(&mut self, source: &ImageSource, area: Rect, depth: i32) -> bool {
         let size = source.size();
-        if size.width() > 4096
+        if !PIXEL_DEPTHS.contains(&depth)
+            || size.width() > 4096
             || size.height() > 4096
             || size
                 .width()
@@ -574,6 +592,7 @@ impl ImageSink for PixelLayer {
             || area.width == 0
             || area.height == 0
             || self.frame.len() >= 256
+            || !PIXEL_DEPTHS.contains(&request.depth())
             || (self.mode != PixelMode::Kitty && request.depth() < 0)
         {
             return false;
@@ -660,6 +679,15 @@ fn write_transmit(out: &mut Vec<u8>, id: u32, image: &PixelImage<'_>) {
     }
 }
 
+/// The depths a layer accepts. Kitty gets `256 × depth` plus the image's place in the frame as
+/// its z-index, and every depth in this range keeps that value distinct within an `i32`.
+pub const PIXEL_DEPTHS: std::ops::RangeInclusive<i32> = -8_388_608..=8_388_607;
+
+fn stacked(depth: i32, order: usize) -> i32 {
+    let order = i32::try_from(order).unwrap_or(255).min(255);
+    depth.clamp(*PIXEL_DEPTHS.start(), *PIXEL_DEPTHS.end()) * 256 + order
+}
+
 fn write_place(out: &mut Vec<u8>, placed: &Placed) {
     write_cup(out, placed.rect.x, placed.rect.y);
     out.extend_from_slice(b"\x1b_Ga=p,i=");
@@ -701,17 +729,26 @@ fn push_decimal(out: &mut Vec<u8>, value: u64) {
 }
 
 fn push_base64(out: &mut Vec<u8>, data: &[u8]) {
-    for group in data.chunks(3) {
-        let first = u32::from(group[0]);
-        let second = u32::from(group.get(1).copied().unwrap_or(0));
-        let third = u32::from(group.get(2).copied().unwrap_or(0));
-        let word = first << 16 | second << 8 | third;
-        let sextet =
-            |shift: u32| BASE64[usize::from(u8::try_from((word >> shift) & 63).unwrap_or(0))];
-        out.push(sextet(18));
-        out.push(sextet(12));
-        out.push(if group.len() > 1 { sextet(6) } else { b'=' });
-        out.push(if group.len() > 2 { sextet(0) } else { b'=' });
+    let symbol = |index: u8| BASE64[usize::from(index & 63)];
+    let start = out.len();
+    out.resize(start + data.len().div_ceil(3) * 4, b'=');
+    let (groups, rest) = data.as_chunks::<3>();
+    let (quads, _) = out[start..].as_chunks_mut::<4>();
+    for (&[a, b, c], quad) in groups.iter().zip(quads.iter_mut()) {
+        *quad = [
+            symbol(a >> 2),
+            symbol(a << 4 | b >> 4),
+            symbol(b << 2 | c >> 6),
+            symbol(c),
+        ];
+    }
+    if let (Some(&a), Some(quad)) = (rest.first(), quads.last_mut()) {
+        let b = rest.get(1).copied();
+        quad[0] = symbol(a >> 2);
+        quad[1] = symbol(a << 4 | b.unwrap_or(0) >> 4);
+        if let Some(b) = b {
+            quad[2] = symbol(b << 2);
+        }
     }
 }
 

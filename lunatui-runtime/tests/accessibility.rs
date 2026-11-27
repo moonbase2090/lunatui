@@ -52,6 +52,9 @@ fn every_role_has_a_distinct_version_two_wire_name() -> io::Result<()> {
         (Role::ProgressBar, "progress_bar"),
         (Role::ComboBox, "combo_box"),
         (Role::MenuItem, "menu_item"),
+        (Role::Disclosure, "disclosure"),
+        (Role::TagInput, "tag_input"),
+        (Role::Calendar, "calendar"),
     ] {
         let mut map = HitMap::new();
         map.push_with_role(HitId(1), Rect::new(0, 0, 1, 1), 0, role);

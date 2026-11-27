@@ -58,7 +58,11 @@ default and needs nothing beyond the registration above.
 
 ```rust,ignore
 let snapshot = Agent::snapshot(&hits, focus.focused());
-let ticket = agent.act(&hits, Selector::new(Role::Checkbox, "Notifications"), Action::Toggle)?;
+let ticket = agent.act(
+    &hits,
+    Selector::new(AccessibilityRole::Checkbox, "Notifications"),
+    Action::Toggle,
+)?;
 
 while let Some(request) = agent.take() {
     match request.id.index_in(first, count) {
@@ -75,6 +79,22 @@ that action. Otherwise it queues a `Request` with `source: Source::Agent` and re
 `Ticket::cancel` drops the request if the app has not taken it. The app takes requests with
 `Agent::take` during its update step, applies each to the state behind `request.id` and redraws.
 `Act` applies the common cases: `bool` toggles and `String` sets its value.
+
+Use `Agent::query` when an agent needs a smaller view than the complete snapshot. A
+`ControlQuery` starts with accessible-name text, a semantic kind, or an exact owning layer; add
+the other filters with `with_text`, `with_kind`, and `in_layer`. Text is a case-insensitive
+substring of the accessible name, filters combine with AND, and `None` selects the base layer.
+An empty text filter matches every accessible name. Matches keep registration order. A
+`ControlQueryResult` returns the first 100 controls and its `more` count reports the rest;
+`write_json` includes both the bounded controls and that count.
+
+```rust,ignore
+let save_buttons = Agent::query(
+    &hits,
+    focus.focused(),
+    ControlQuery::text("save").with_kind(AccessibilityRole::Button),
+);
+```
 
 Tabs and lists register their items too. `Tabs::controls(ItemControls::new(first))` and
 `List::controls(ItemControls::new(first))` give each visible tab (role `Tab`) or row (role
@@ -103,6 +123,29 @@ stays on a character boundary, and selection and edit history are dropped. The s
 changes nothing (`Outcome::Handled`). Mark the control `secret` to keep the text out of the
 snapshot.
 
+The other value widgets take an agent's action through the state the app already keeps. In each
+case wrap the widget in a `NamedControl` with the role below and apply the request in the update
+step; the same value again is `Outcome::Handled`, and text the widget would not accept is
+`Outcome::Ignored`.
+
+| Widget | Role (actions) | Applied with |
+| --- | --- | --- |
+| `Slider` | `Slider` (`SetValue`) | `slider.act(&mut value, &action)`: a decimal, clamped and snapped to the step |
+| `NumberInput` | `TextInput` (`SetValue`) | `input.act(&mut value, &action)`: held to `NumberInput::parse`, so it rounds and clamps |
+| `Accordion` | `Disclosure` (`Toggle`), one per header | `accordion.act(index, &action)`: opens or closes the section; a disabled section is refused |
+| `Tree` | `ListItem` (`Select`, `Activate`), one per visible row | `tree_state.act(&path, &action)`: `Activate` opens or closes a branch and selects a leaf |
+| `Table` | `ListItem` (`Select`, `Activate`) per visible row; `Button` (`Activate`) per header | `state.act(row, &action)` puts the cursor on a row; `state.act_header(&source, column, columns, &action)` sorts by the column or reverses it |
+| `DatePicker` | `Calendar` (`SetValue`) | `picker.act(&mut cursor, &mut selected, &action)`: text as `YYYY-MM-DD`; a date outside the bounds, or a disabled picker, is refused |
+| `RadioGroup` | `RadioButton` (`Select`), one per option | `group.act(&mut selected, index, &action)`: the option's index from `option_areas`; a disabled option is refused |
+| `Select` | `ComboBox` (`SetValue`) | `select.act(&mut chosen, &action)`: the exact option label; `Activate` is the app's layer, so it is ignored |
+| `TagInput` | `TagInput` (`SetValue`, `Activate`) | `TagState`: `SetValue` replaces the typed text, `Activate` commits it as a tag |
+| `Monthly` | `Calendar` (`SetValue`) | `Date`: text as `YYYY-MM-DD`; a day that does not exist is ignored |
+
+`Slider::act` and `NumberInput::act` bound a plain `f64` that the app owns, so they are not `Act`
+themselves. `ActWith` lends `Act` to a closure for `Request::apply`:
+`request.apply(&mut ActWith(|action| slider.act(&mut value, action)), request.context())`. A tree
+branch that is closed hides its children, so they have no controls until `Activate` opens it.
+
 An application can refuse what an agent asks for. `Request::apply(&mut state, request.context().guard(&mut guard))`
 asks the guard before the state changes, whatever type implements `Act`: the guard runs in the library, so a
 state cannot skip it. The guard sees the reason (`Edit` for a value, `Toggle`, `Select`, `Activate` or `Navigate`) and
@@ -118,6 +161,82 @@ chord it shows as `shortcut` (`Ctrl+S`), and the id `first + n` for the `n`th co
 hint the row clips, and a command with no chord, are left out. `Action::Activate` on one reaches the app as a
 request for that id, which the app maps back to its command. Both facets are for the agent only: the
 accessibility export does not write them.
+
+An agent that waits for something to change subscribes instead of comparing snapshots itself.
+`Agent::subscribe(query)` returns a `Subscription` for the controls a `ControlQuery` matches. Call
+`Subscription::observe(&hits, focused)` once per frame: the first call only records the controls,
+and each later call returns a `ControlChange` for every matched control whose value, checked state
+or states (disabled, focused, selected, invalid) differ from the previous frame, plus those that
+appeared (`previous` is `None`) or went away (`current` is `None`), in registration order. A frame
+that changes nothing returns nothing.
+
+A change carries its `reason` and `source` when the application recorded them. Every `Change` an
+accepted operation returns has `details()`, the `ChangeDetails` with its reason and source; pass
+them to the control in the next frame with `ControlMetadata::changed`, or `Field::changed` for a
+field. A key that picks a radio option then reports `source` `Keyboard`, a click `Mouse`, and an
+`Agent::act` the app applies with `ChangeContext::new(ChangeSource::Agent)` reports `Agent`. A
+value that changed without a recorded change, such as a reload, reports `None` for both.
+
+```rust,ignore
+let mut watch = Agent::subscribe(ControlQuery::kind(AccessibilityRole::Checkbox));
+// each frame, after rendering into `hits`:
+for change in watch.observe(&hits, focus.focused()) {
+    println!("{} {:?} by {:?}", change.name, change.reason, change.source);
+}
+```
+
+Some actions should not happen on an agent's word alone. Mark a control whose action destroys
+work with `ControlMetadata::destructive(true)`, or `Field::destructive(true)` for a field; the
+snapshot shows it as `destructive`. By default `act` then holds any request that would change the
+control (anything but `Action::Focus`) and returns `ActError::NeedsConfirmation(id)` instead of
+queueing it. `Agent::awaiting()` lists the held requests with the control's name, role and the
+action, so the app can ask the person. On their yes, `Agent::confirm(&hits, id)` queues the request
+and returns its `Ticket`, after checking that the same control is still there and enabled; on their
+no, `Agent::decline(id)` drops it. A request leaves the list either way, and an agent that asks
+again gets a new request to wait on, so only the app can let it through.
+
+`Agent::allow(hook)` replaces that rule. The hook sees each registered control (its name, role,
+layer and `is_destructive()`) and action that passed the other checks and answers `Permission::Allow`, `Deny` (`act` returns `ActError::Denied`
+and queues nothing) or `Confirm`. Call `Permission::default_for(control, action)` for the controls
+the hook has no rule for.
+
+```rust,ignore
+agent.allow(|control, action| match control.name {
+    "Save" => Permission::Allow,
+    "Send payment" => Permission::Deny,
+    _ => Permission::default_for(control, action),
+});
+// when the person answers the prompt for `waiting.id`:
+let ticket = agent.confirm(&hits, waiting.id)?; // or agent.decline(waiting.id)
+```
+
+An agent that needs several steps gives them all at once. `Agent::plan(steps)` takes `Step`s
+(`Step::new(selector, action)`) and returns a `PlanId`; nothing is checked yet. Call
+`Agent::advance(&hits)` once after each render. It checks the plan's current step against that
+frame as `act` would, the allow hook and confirmation included, and queues it. The next step waits
+until the app has taken that request and drawn again, so a step can name a control an earlier step
+made appear, such as a menu item, or enabled, such as a Submit button that needs the fields above
+it. `Agent::plan_status(id)` answers `Running { step }`, `Waiting { step, confirm }` while the
+application asks the person, `Done` once the app has taken every step, `Failed { step, error }`,
+or `Cancelled`; steps count from 0. The plan stops at the first step that fails: the steps before
+it stay applied and none after it is queued. A declined step fails with `ActError::Denied`.
+`Agent::cancel_plan(id)` stops a plan, cancelling its queued request or dropping its waiting one.
+One plan runs at a time; `plan` returns `ActError::Busy` until the current one ends, and only the
+latest plan has a status. A step counts as done when the app takes its request, so a request the
+app's guard refuses does not fail the plan.
+
+```rust,ignore
+let plan = agent.plan([
+    Step::new(Selector::new(AccessibilityRole::TextInput, "Name"), Action::SetValue("Ada".into())),
+    Step::new(Selector::new(AccessibilityRole::Checkbox, "Accept terms"), Action::Toggle),
+    Step::new(Selector::new(AccessibilityRole::Button, "Submit"), Action::Activate),
+])?;
+// each frame, after rendering into `hits`:
+agent.advance(&hits);
+if let Some(PlanStatus::Failed { step, error }) = agent.plan_status(plan) {
+    println!("step {step} failed: {error}");
+}
+```
 
 Values are for the agent only. `write_accessibility_json` never writes them. Mark a password
 field with `Field::secret(true)` (or `NamedControl::secret`) and its value is left out of the

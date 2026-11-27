@@ -42,7 +42,7 @@ mod diff_view;
 #[cfg(feature = "file-picker")]
 mod file_picker;
 mod gauge;
-#[cfg(feature = "graphite-render")]
+#[cfg(any(feature = "graphite-render", feature = "pixel-cx"))]
 pub mod graphite;
 #[cfg(feature = "heatmap")]
 mod heatmap;
@@ -80,6 +80,8 @@ mod padding;
 mod paragraph;
 #[cfg(feature = "pie-chart")]
 mod pie_chart;
+#[cfg(feature = "pixel-cx")]
+mod pixel_cx;
 #[cfg(feature = "popover")]
 mod popover;
 #[cfg(feature = "popup")]
@@ -217,6 +219,8 @@ pub use paragraph::{Paragraph, TextView, TextWrap};
 pub use pie_chart::PixelPieChart;
 #[cfg(feature = "pie-chart")]
 pub use pie_chart::{PieChart, PieLayout, PieSlice};
+#[cfg(feature = "pixel-cx")]
+pub use pixel_cx::PixelCx;
 #[cfg(feature = "popover")]
 pub use popover::{Popover, PopoverState};
 #[cfg(feature = "popup")]
@@ -257,7 +261,7 @@ pub use table::{CellStyle, Table};
 pub use table_state::{SortDirection, TableState, TableView};
 pub use tabs::{TabMove, Tabs, TabsDrag};
 #[cfg(feature = "tag-input")]
-pub use tag_input::TagInput;
+pub use tag_input::{TagInput, TagState};
 #[cfg(feature = "text-area")]
 pub use text_area::{EditResult, KeymapMode, TextArea, TextPosition, TextSelection, VimMode};
 pub use text_input::TextInput;

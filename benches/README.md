@@ -20,6 +20,41 @@ It compares the median frame times across five paired release runs, with a 1.05�
 lunatui/Ratatui limit. See [verification commands and failure proof](../docs/verify-dashboard-fair.md)
 for its scope and tolerance.
 
+## Graphite cases
+
+`graphite_cases` (feature `graphite-pixels`) measures Graphite mode's pixel path as it exists today. Each frame does two things:
+- it rasterizes an activity-monitor-shaped scene (header chips, three seat rows with lanes, a timeline and a key row) with `graphite-core`'s CPU `PixelBuffer`;
+- it hands the result to `PixelLayer`, which encodes what changed as terminal images into a counting sink.
+
+Cells are 8×16 pixels at 1x.
+
+| Case | Each frame |
+| --- | --- |
+| `graphite-changed-1x`, `graphite-changed-2x` | Redraws only the seat rows, the rectangle a poll changes (about half the width), and sends them as their own image over the unchanged window image. This is a normal Graphite frame. |
+| `graphite-full-1x`, `graphite-full-2x` | Redraws and resends the whole window, as a first frame, a resize or a mode change does. |
+
+- **Instructions.** The instruction check runs the four cases at 80×24 and 200×60 cells with the widget cases. Each one is gated at 3% over `main`. Graphite frames are large and deterministic, so the worker warms 2 frames and collects 8, instead of 200 and 32.
+- **Ceiling.** The `ceiling` bench times 200 frames of each case in a 185×51 window, which is 1480×816 at 1x, the window the [spike](../docs/graphite-mode-spike.md) measured. The changed cases are gated on the 16 ms ceiling. The full repaints are reported but not gated, because the design lets a full repaint spread over several frames ([frame ceiling](../docs/graphite-mode-design.md#the-8-ms-frame-ceiling)).
+- **Proof.** The `graphite_cases` test checks three things:
+  - a tick changes pixels only inside the changed rectangle;
+  - the changed repaint equals the same rectangle cropped from a full repaint;
+  - the image stream of a changed frame carries only that rectangle, and of a full frame only the window, pixel for pixel.
+
+### Widget cases
+
+`graphite_monitor` draws the activity monitor with lunatui's own Graphite widgets, as an application frame does: `Badge`, `Kbd`, `List` and `Sparkline` paint through `RenderCx` and `PixelCx` in Graphite mode, the cells are encoded as a diff, and each widget image goes out through the Kitty `PixelLayer` into the counting sink. The scene fits any window from 40×8 cells.
+
+| Case | Each frame |
+| --- | --- |
+| `graphite-monitor-changed-1x`, `graphite-monitor-changed-2x` | The monitor: a badge header, up to eight seat rows with lanes, a detail list and key hints. Redraws only the seat rows and their lanes, as a poll does; the other images are listed again without being resent. |
+| `graphite-monitor-full-1x`, `graphite-monitor-full-2x` | Redraws and resends the whole monitor. |
+| `graphite-dense-changed-1x`, `graphite-dense-changed-2x` | The worst case: a seat row with a lane on every row between the header and the key hints, across the whole width. Redraws every seat row. |
+| `graphite-dense-full-1x`, `graphite-dense-full-2x` | Redraws and resends the whole dense scene. |
+
+- **Instructions.** All eight cases are gated at 3% over `main` at 80×24 and 200×60, like the raster cases.
+- **Ceiling.** The changed cases are gated on the 16 ms ceiling in the 185×51 window, including the dense worst case at 1x. Full repaints are reported. The dense worst case at 2x is reported, not gated: its changed frame sends about 24 MB of base64, which fits on a developer machine (about 8 ms) but not on the CI runner, which is about three times slower.
+- **Proof.** The `graphite_monitor` test checks that the widgets paint every cell of a full frame (no text is left in cells) with at most 256 images, the most `PixelLayer` lists in a frame; that a changed frame's seat rows match a full frame while the cells outside stay as first drawn; that a changed frame transmits fewer images and fewer bytes than a full one; that the dense scene draws more than the monitor; and that frames are deterministic and change each tick.
+
 ## Widget parity suite
 
 `widget_suite` compares each lunatui widget with its ratatui 0.30.2 equivalent on identical data. A case is one entry in `widget_suite::CASES`: a lunatui drawing function, the equivalent ratatui drawing function, and a flag saying whether the performance gate applies. Every case runs at 80×24 and 200×60 with a `tick` that changes the content a little each frame (scroll offset, ratio, selected tab), so the full-frame scope has a real diff to do.

@@ -6,6 +6,8 @@ use std::fmt::{self, Write as _};
 use lunatui_core::{Attrs, Rect, Size, Style};
 use lunatui_theme::Token;
 
+use lunatui_runtime::{Act, Action, Outcome};
+
 use crate::{Block, RenderCx, Widget, WidgetState};
 
 const MONTHS: [&str; 12] = [
@@ -40,6 +42,10 @@ pub enum WeekStart {
 /// A Gregorian calendar date.
 ///
 /// Years follow the proleptic Gregorian calendar. Month and day are 1-based.
+///
+/// A date implements [`Act`]: [`Action::SetValue`] takes a date as `YYYY-MM-DD`, with a four-digit
+/// year (and an optional leading minus sign for a negative one) and a two-digit month and day.
+/// Text that is not a date that exists, such as `2026-02-30`, is [`Outcome::Ignored`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Date {
     year: i32,
@@ -646,6 +652,47 @@ fn week_rows(date: Date, week_start: WeekStart) -> u8 {
         rows += 1;
     }
     rows
+}
+
+impl Act for Date {
+    fn act(&mut self, action: &Action) -> Outcome {
+        let Action::SetValue(text) = action else {
+            return Outcome::Ignored;
+        };
+        let Some(date) = parse_iso(text.trim()) else {
+            return Outcome::Ignored;
+        };
+        if date == *self {
+            Outcome::Handled
+        } else {
+            *self = date;
+            Outcome::Changed
+        }
+    }
+}
+
+pub(crate) fn parse_iso(text: &str) -> Option<Date> {
+    let (negative, rest) = match text.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, text),
+    };
+    let mut parts = rest.split('-');
+    let (year, month, day) = (parts.next()?, parts.next()?, parts.next()?);
+    if parts.next().is_some() || year.len() != 4 || month.len() != 2 || day.len() != 2 {
+        return None;
+    }
+    if ![year, month, day]
+        .iter()
+        .all(|part| part.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        return None;
+    }
+    let year: i32 = year.parse().ok()?;
+    Date::from_ymd(
+        if negative { -year } else { year },
+        month.parse().ok()?,
+        day.parse().ok()?,
+    )
 }
 
 pub(crate) const fn month_length(year: i32, month: u8) -> u8 {

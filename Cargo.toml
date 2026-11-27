@@ -9,6 +9,7 @@ members = [
     "lunatui-runtime",
     "lunatui-theme",
     "lunatui-image",
+    "lunatui-fonts",
     "lunatui-widgets",
     "lunatui-ui-tokens",
     "lunatui-card",
@@ -27,7 +28,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.36"
+version = "0.1.44"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
