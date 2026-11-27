@@ -100,7 +100,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
             .mouse_tracking(tracking),
     )?;
     #[cfg(all(feature = "image-presenter", unix))]
-    let mut native_session = activate_native_images(&options, &mut pending_input);
+    let mut native_session = activate_native_images(options, &mut pending_input);
     #[cfg(all(feature = "image-presenter", unix))]
     let mut native_last_ping = Instant::now();
     #[cfg(all(feature = "image-presenter", unix))]
@@ -145,41 +145,32 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         #[cfg(all(feature = "image-presenter", unix))]
         if let (Some(native), Some(preparation)) =
             (native_session.as_mut(), native_preparation.as_mut())
+            && let Some((key, source, prepared)) = preparation.try_result()
         {
-            if let Some((key, source, prepared)) = preparation.try_result() {
-                match prepared {
-                    Ok(prepared) => {
-                        let result =
-                            native
-                                .upload_prepared(key, &source, prepared)
-                                .and_then(|reply| {
-                                    frames
-                                        .native_images
-                                        .as_mut()
-                                        .ok_or_else(|| io::Error::other("native image sink ended"))?
-                                        .admission(key, &reply)
-                                        .map(|()| ())
-                                });
-                        if result.is_err() {
-                            fail_native_session(
-                                &mut native_session,
-                                &mut frames,
-                                &mut session,
-                                &mut sched,
-                            )?;
-                            native_preparation = None;
-                            continue;
-                        }
-                        sched.on_input();
-                    }
-                    Err(_) => {
-                        if let Some(images) = frames.native_images.as_mut() {
-                            images.decline_preparation(key);
-                        }
-                        sched.on_input();
-                    }
+            if let Ok(prepared) = prepared {
+                let result = native
+                    .upload_prepared(key, &source, prepared)
+                    .and_then(|reply| {
+                        frames
+                            .native_images
+                            .as_mut()
+                            .ok_or_else(|| io::Error::other("native image sink ended"))?
+                            .admission(key, &reply)
+                    });
+                if result.is_err() {
+                    fail_native_session(
+                        &mut native_session,
+                        &mut frames,
+                        &mut session,
+                        &mut sched,
+                    )?;
+                    native_preparation = None;
+                    continue;
                 }
+            } else if let Some(images) = frames.native_images.as_mut() {
+                images.decline_preparation(key);
             }
+            sched.on_input();
         }
         #[cfg(all(feature = "image-presenter", unix))]
         if native_session.is_some() && native_last_ping.elapsed() >= Duration::from_millis(100) {
@@ -187,28 +178,21 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
             let heartbeat = native_session
                 .as_mut()
                 .and_then(|native| native.ping().ok());
-            match heartbeat {
-                Some(reply) => {
-                    match frames
-                        .native_images
-                        .as_mut()
-                        .map(|images| images.pong(&reply.bytes))
-                    {
-                        Some(Ok(true)) => sched.on_input(),
-                        Some(Ok(false)) => {}
-                        Some(Err(_)) | None => {
-                            fail_native_session(
-                                &mut native_session,
-                                &mut frames,
-                                &mut session,
-                                &mut sched,
-                            )?;
-                            native_preparation = None;
-                            continue;
-                        }
-                    }
-                }
-                None => {
+            let pong = heartbeat.and_then(|reply| {
+                frames
+                    .native_images
+                    .as_mut()
+                    .map(|images| images.pong(&reply.bytes))
+            });
+            let Some(pong) = pong else {
+                fail_native_session(&mut native_session, &mut frames, &mut session, &mut sched)?;
+                native_preparation = None;
+                continue;
+            };
+            match pong {
+                Ok(true) => sched.on_input(),
+                Ok(false) => {}
+                Err(_) => {
                     fail_native_session(
                         &mut native_session,
                         &mut frames,
@@ -350,7 +334,7 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
 
 #[cfg(all(feature = "image-presenter", unix))]
 fn activate_native_images(
-    options: &RunOptions,
+    options: RunOptions,
     pending_input: &mut Vec<u8>,
 ) -> Option<NativeImageSession> {
     use std::fs::OpenOptions;
