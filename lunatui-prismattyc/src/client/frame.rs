@@ -1,4 +1,6 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
+
 use crate::{FrameEncoder, SLOT_BYTES};
 use anyhow::{Result, ensure};
 use lunatui_core::{ClusterTable, Grid};
@@ -39,15 +41,25 @@ impl Placement {
         );
         let mut bytes = [0; 64];
         put32(&mut bytes, 0, request.id().get());
-        put32(&mut bytes, 4, request.depth() as u32);
+        put32(
+            &mut bytes,
+            4,
+            u32::try_from(request.depth()).map_err(|_| crate::invalid("negative image depth"))?,
+        );
         bytes[8..16].copy_from_slice(&handle.to_le_bytes());
         for (offset, value) in [
             (16, crop.origin.x),
             (20, crop.origin.y),
             (24, crop.size.width()),
             (28, crop.size.height()),
-            (32, x as u32),
-            (36, y as u32),
+            (
+                32,
+                u32::try_from(x).map_err(|_| crate::invalid("placement x"))?,
+            ),
+            (
+                36,
+                u32::try_from(y).map_err(|_| crate::invalid("placement y"))?,
+            ),
             (40, destination.size.width()),
             (44, destination.size.height()),
             (52, ordinal),
@@ -85,12 +97,20 @@ pub fn encode(
             offset % 8 == 0 && offset + placements.len() * 64 <= SLOT_BYTES,
             "frame size"
         );
-        put32(&mut bytes, 84, placements.len() as u32);
-        put32(&mut bytes, 88, offset as u32);
+        put32(
+            &mut bytes,
+            84,
+            u32::try_from(placements.len()).map_err(|_| crate::invalid("placement count"))?,
+        );
+        put32(
+            &mut bytes,
+            88,
+            u32::try_from(offset).map_err(|_| crate::invalid("frame offset"))?,
+        );
         for placement in placements {
             bytes.extend_from_slice(&placement.bytes);
         }
-        let length = bytes.len() as u32;
+        let length = u32::try_from(bytes.len()).map_err(|_| crate::invalid("frame length"))?;
         put32(&mut bytes, 0, length);
     }
     Ok(bytes)

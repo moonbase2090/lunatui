@@ -1,5 +1,7 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
-//! Native Prismattyc image transport for direct local sessions.
+
+#![doc = include_str!("../README.md")]
 
 pub use crate::client::backing::PreparedImage;
 pub use crate::client::images::Images as ImageSink;
@@ -89,8 +91,9 @@ fn read_capability_reply(
             events: libc::POLLIN,
             revents: 0,
         };
-        // SAFETY: poll reads one initialized pollfd for a valid terminal descriptor.
-        let result = unsafe { libc::poll(&raw mut poll, 1, milliseconds) };
+        let result =
+            // SAFETY: poll reads one initialized pollfd for a valid terminal descriptor.
+            unsafe { libc::poll(&raw mut poll, 1, milliseconds) };
         if result == 0 {
             break;
         }
@@ -102,8 +105,9 @@ fn read_capability_reply(
             return Err(error);
         }
         let mut byte = 0;
-        // SAFETY: read writes at most one byte into `byte` using the borrowed TTY descriptor.
-        let count = unsafe { libc::read(descriptor, (&raw mut byte).cast(), 1) };
+        let count =
+            // SAFETY: read writes at most one byte into `byte` using the borrowed TTY descriptor.
+            unsafe { libc::read(descriptor, (&raw mut byte).cast(), 1) };
         if count == 0 {
             break;
         }

@@ -1,5 +1,7 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
-//! One outstanding operation with one absolute deadline, including fragmented writes/reads.
+
+#![doc = include_str!("../../README.md")]
 use std::{
     env, io,
     net::Shutdown,
@@ -70,9 +72,11 @@ impl Control {
                 revents: 0,
             };
             let remaining = deadline.saturating_duration_since(Instant::now());
-            let milliseconds = remaining.as_millis().max(1).min(i32::MAX as u128) as i32;
-            // SAFETY: `descriptor` is one initialized pollfd borrowing our live socket.
-            let result = unsafe { libc::poll(&raw mut descriptor, 1, milliseconds) };
+            let milliseconds = i32::try_from(remaining.as_millis().max(1).min(i32::MAX as u128))
+                .unwrap_or(i32::MAX);
+            let result =
+                // SAFETY: `descriptor` is one initialized pollfd borrowing our live socket.
+                unsafe { libc::poll(&raw mut descriptor, 1, milliseconds) };
             if result < 0 && io::Error::last_os_error().kind() != io::ErrorKind::Interrupted {
                 return Err(io::Error::last_os_error());
             }
@@ -85,8 +89,6 @@ impl Control {
 
     fn with_dialect(socket: UnixStream, legacy: bool) -> io::Result<Self> {
         verify_peer(&socket)?;
-        // Darwin sendmsg can wait despite MSG_DONTWAIT. Concurrent endpoint users
-        // are unsupported; nonblocking mode also follows the retained shell FD.
         socket.set_nonblocking(true)?;
         Ok(Self {
             socket,
@@ -161,6 +163,10 @@ impl Control {
         result
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "A control step validates reply sequence, opcode, size, and descriptor ownership before returning one record."
+    )]
     fn step_inner(&mut self, now: Instant) -> io::Result<Option<Reply>> {
         let op = self
             .operation
@@ -194,7 +200,6 @@ impl Control {
                 return Ok(None);
             }
         }
-        // At most the prefix and current record body per step. Never consume a later record.
         for _ in 0..2 {
             let received = match receive(&self.socket, &mut op.response[op.received..]) {
                 Ok(received) => received,
@@ -296,23 +301,27 @@ pub fn inherited_stream() -> io::Result<Option<UnixStream>> {
         .and_then(|text| text.parse::<i32>().ok())
         .filter(|fd| *fd >= 0)
         .ok_or_else(|| crate::invalid("invalid native descriptor environment"))?;
-    // SAFETY: the descriptor number was parsed from the inherited process environment.
-    let duplicate = unsafe { libc::fcntl(descriptor, libc::F_DUPFD_CLOEXEC, 3) };
+    let duplicate =
+        // SAFETY: the descriptor number was parsed from the inherited process environment.
+        unsafe { libc::fcntl(descriptor, libc::F_DUPFD_CLOEXEC, 3) };
     if duplicate < 0 {
         return Err(io::Error::last_os_error());
     }
-    // SAFETY: successful F_DUPFD_CLOEXEC returned a new owned descriptor.
-    let owned = unsafe { OwnedFd::from_raw_fd(duplicate) };
+    let owned =
+        // SAFETY: successful F_DUPFD_CLOEXEC returned a new owned descriptor.
+        unsafe { OwnedFd::from_raw_fd(duplicate) };
     let stream = UnixStream::from(owned);
     verify_peer(&stream)?;
-    // SAFETY: peer credentials above validated this inherited Unix socket descriptor.
-    let flags = unsafe { libc::fcntl(descriptor, libc::F_GETFD) };
+    let flags =
+        // SAFETY: peer credentials above validated this inherited Unix socket descriptor.
+        unsafe { libc::fcntl(descriptor, libc::F_GETFD) };
     if flags < 0 {
         return Err(io::Error::last_os_error());
     }
     if flags & libc::FD_CLOEXEC == 0
-        // SAFETY: the inherited descriptor is still open and peer-validated.
-        && unsafe { libc::fcntl(descriptor, libc::F_SETFD, flags | libc::FD_CLOEXEC) } < 0
+        &&
+            // SAFETY: the inherited descriptor is still open and peer-validated.
+            unsafe { libc::fcntl(descriptor, libc::F_SETFD, flags | libc::FD_CLOEXEC) } < 0
     {
         return Err(io::Error::last_os_error());
     }
@@ -324,25 +333,32 @@ struct Received {
     descriptors: Vec<OwnedFd>,
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "Ancillary descriptor validation must happen in one ordered pass before any received descriptor is returned."
+)]
 fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
     let mut ancillary = [0usize; 512];
     let mut vector = libc::iovec {
         iov_base: output.as_mut_ptr().cast(),
         iov_len: output.len(),
     };
-    // SAFETY: recvmsg writes all output fields of its C message structure.
-    // SAFETY: sendmsg reads fields initialized below from this C structure.
-    let mut message: libc::msghdr = unsafe { std::mem::zeroed() };
-    message.msg_iov = &mut vector;
+    let mut message: libc::msghdr =
+        // SAFETY: all-zero is a valid initial state for this C ABI structure.
+        unsafe { std::mem::zeroed() };
+    message.msg_iov = &raw mut vector;
     message.msg_iovlen = 1;
     message.msg_control = ancillary.as_mut_ptr().cast();
-    message.msg_controllen = std::mem::size_of_val(&ancillary) as _;
+    message.msg_controllen = std::mem::size_of_val(&ancillary)
+        .try_into()
+        .map_err(|_| crate::invalid("ancillary buffer size"))?;
     #[cfg(target_os = "linux")]
     let flags = libc::MSG_DONTWAIT | libc::MSG_CMSG_CLOEXEC;
     #[cfg(target_os = "macos")]
     let flags = libc::MSG_DONTWAIT;
-    // SAFETY: the iovec and ancillary arrays remain live and writable for this call.
-    let count = unsafe { libc::recvmsg(socket.as_raw_fd(), &raw mut message, flags) };
+    let count =
+        // SAFETY: the iovec and ancillary arrays remain live and writable for this call.
+        unsafe { libc::recvmsg(socket.as_raw_fd(), &raw mut message, flags) };
     if count < 0 {
         return Err(io::Error::last_os_error());
     }
@@ -351,11 +367,15 @@ fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
     let control_len = message.msg_controllen as usize;
     let capacity = std::mem::size_of_val(&ancillary);
     invalid |= control_len > capacity;
-    message.msg_controllen = control_len.min(capacity) as _;
+    message.msg_controllen = control_len
+        .min(capacity)
+        .try_into()
+        .map_err(|_| crate::invalid("ancillary length"))?;
     let control_start = message.msg_control as usize;
     let control_end = control_start.saturating_add(control_len.min(capacity));
-    // SAFETY: msg_control points to our initialized ancillary array with bounded length.
-    let mut header = unsafe { libc::CMSG_FIRSTHDR(&raw const message) };
+    let mut header =
+        // SAFETY: msg_control points to our initialized ancillary array with bounded length.
+        unsafe { libc::CMSG_FIRSTHDR(&raw const message) };
     while !header.is_null() {
         let position = header as usize;
         if position < control_start
@@ -366,17 +386,20 @@ fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
             invalid = true;
             break;
         }
-        // SAFETY: the pointer range check above confirms this header fits in received data.
-        let length = unsafe { (*header).cmsg_len as usize };
-        // SAFETY: CMSG_LEN is a pure layout calculation for a zero-length payload.
-        let prefix = unsafe { libc::CMSG_LEN(0) as usize };
+        let length =
+            // SAFETY: the pointer range check above confirms this header fits in received data.
+            unsafe { (*header).cmsg_len as usize };
+        let prefix =
+            // SAFETY: CMSG_LEN is a pure layout calculation for a zero-length payload.
+            unsafe { libc::CMSG_LEN(0) as usize };
         let available = control_end - position;
         let cut = length > available;
         invalid |= cut;
         let copied = length.min(available);
         if copied < prefix
-            // SAFETY: the validated header pointer refers to an initialized cmsghdr.
-            || unsafe {
+            ||
+                // SAFETY: the validated header pointer refers to an initialized cmsghdr.
+                unsafe {
                 (*header).cmsg_level != libc::SOL_SOCKET || (*header).cmsg_type != libc::SCM_RIGHTS
             }
         {
@@ -387,22 +410,27 @@ fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
         if payload % std::mem::size_of::<i32>() != 0 {
             invalid = true;
         }
-        // SAFETY: the validated header points to a complete SCM_RIGHTS record.
-        let data = unsafe { libc::CMSG_DATA(header) };
+        let data =
+            // SAFETY: the validated header points to a complete SCM_RIGHTS record.
+            unsafe { libc::CMSG_DATA(header) };
         for offset in
             (0..payload / std::mem::size_of::<i32>()).map(|n| n * std::mem::size_of::<i32>())
         {
-            // SAFETY: payload bounds and descriptor-sized element offsets were checked above.
-            let raw = unsafe { data.add(offset).cast::<i32>().read_unaligned() };
-            // SAFETY: SCM_RIGHTS delivered each raw descriptor as newly owned by this process.
-            let owned = unsafe { OwnedFd::from_raw_fd(raw) };
+            let raw =
+                // SAFETY: payload bounds and descriptor-sized element offsets were checked above.
+                unsafe { data.add(offset).cast::<i32>().read_unaligned() };
+            let owned =
+                // SAFETY: SCM_RIGHTS delivered each raw descriptor as newly owned by this process.
+                unsafe { OwnedFd::from_raw_fd(raw) };
             #[cfg(target_os = "macos")]
             {
-                // SAFETY: the received descriptor is owned and remains open.
-                let fd_flags = unsafe { libc::fcntl(owned.as_raw_fd(), libc::F_GETFD) };
-                if fd_flags < 0
+                let fd_flags =
                     // SAFETY: the received descriptor is owned and remains open.
-                    || unsafe {
+                    unsafe { libc::fcntl(owned.as_raw_fd(), libc::F_GETFD) };
+                if fd_flags < 0
+                    ||
+                        // SAFETY: the received descriptor is owned and remains open.
+                        unsafe {
                         libc::fcntl(
                             owned.as_raw_fd(),
                             libc::F_SETFD,
@@ -418,14 +446,15 @@ fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
         if cut {
             break;
         }
-        // SAFETY: libc computes the next header within the validated control length.
-        header = unsafe { libc::CMSG_NXTHDR(&raw const message, header) };
+        header =
+            // SAFETY: libc computes the next header within the validated control length.
+            unsafe { libc::CMSG_NXTHDR(&raw const message, header) };
     }
     if invalid || descriptors.len() > 16 {
         return Err(crate::invalid("invalid ancillary data"));
     }
     Ok(Received {
-        bytes: count as usize,
+        bytes: usize::try_from(count).map_err(|_| crate::invalid("negative message length"))?,
         descriptors,
     })
 }
@@ -472,18 +501,20 @@ fn send(socket: &UnixStream, bytes: &[u8], descriptor: Option<&OwnedFd>) -> io::
         iov_base: bytes.as_ptr().cast_mut().cast(),
         iov_len: bytes.len(),
     };
-    // SAFETY: sendmsg reads fields initialized below from this C structure.
-    let mut message: libc::msghdr = unsafe { std::mem::zeroed() };
+    let mut message: libc::msghdr =
+        // SAFETY: sendmsg reads fields initialized below from this C structure.
+        unsafe { std::mem::zeroed() };
     let mut ancillary = [0usize; 4];
-    message.msg_iov = &mut vector;
+    message.msg_iov = &raw mut vector;
     message.msg_iovlen = 1;
     if let Some(descriptor) = descriptor {
         message.msg_control = ancillary.as_mut_ptr().cast();
-        // SAFETY: CMSG_SPACE is a pure layout calculation for one descriptor.
-        message.msg_controllen = unsafe { libc::CMSG_SPACE(4) } as _;
+        message.msg_controllen =
+            // SAFETY: CMSG_SPACE is a pure layout calculation for one descriptor.
+            unsafe { libc::CMSG_SPACE(4) } as _;
         // SAFETY: ancillary storage has CMSG_SPACE capacity and the header is initialized below.
         unsafe {
-            let header = libc::CMSG_FIRSTHDR(&message);
+            let header = libc::CMSG_FIRSTHDR(&raw const message);
             (*header).cmsg_level = libc::SOL_SOCKET;
             (*header).cmsg_type = libc::SCM_RIGHTS;
             (*header).cmsg_len = libc::CMSG_LEN(4) as _;
@@ -492,18 +523,19 @@ fn send(socket: &UnixStream, bytes: &[u8], descriptor: Option<&OwnedFd>) -> io::
                 .write_unaligned(descriptor.as_raw_fd());
         }
     }
-    // SAFETY: the socket and iovec are live; optional ancillary data fits its buffer.
-    let n = unsafe {
+    let n =
+        // SAFETY: the socket and iovec are live; optional ancillary data fits its buffer.
+        unsafe {
         libc::sendmsg(
             socket.as_raw_fd(),
-            &message,
+            &raw const message,
             libc::MSG_DONTWAIT | libc::MSG_NOSIGNAL,
         )
     };
     if n < 0 {
         Err(io::Error::last_os_error())
     } else {
-        Ok(n as usize)
+        usize::try_from(n).map_err(|_| crate::invalid("negative send length"))
     }
 }
 
@@ -511,19 +543,22 @@ fn verify_peer(socket: &UnixStream) -> io::Result<()> {
     #[cfg(target_os = "macos")]
     let uid = {
         let (mut uid, mut gid) = (0, 0);
+        if
         // SAFETY: getpeereid writes both valid credential output pointers.
-        if unsafe { libc::getpeereid(socket.as_raw_fd(), &raw mut uid, &raw mut gid) } != 0 {
+        unsafe { libc::getpeereid(socket.as_raw_fd(), &raw mut uid, &raw mut gid) } != 0 {
             return Err(io::Error::last_os_error());
         }
         uid
     };
     #[cfg(target_os = "linux")]
     let uid = {
-        // SAFETY: getsockopt fully initializes this C output struct.
-        let mut credentials: libc::ucred = unsafe { std::mem::zeroed() };
+        let mut credentials: libc::ucred =
+            // SAFETY: getsockopt fully initializes this C output struct.
+            unsafe { std::mem::zeroed() };
         let mut length = std::mem::size_of_val(&credentials) as libc::socklen_t;
+        if
         // SAFETY: socket is a live UnixStream and output pointers reference valid storage.
-        if unsafe {
+        unsafe {
             libc::getsockopt(
                 socket.as_raw_fd(),
                 libc::SOL_SOCKET,
@@ -540,8 +575,10 @@ fn verify_peer(socket: &UnixStream) -> io::Result<()> {
         }
         credentials.uid
     };
-    // SAFETY: geteuid has no pointer arguments or preconditions.
-    if uid != unsafe { libc::geteuid() } {
+    if uid !=
+        // SAFETY: geteuid has no pointer arguments or preconditions.
+        unsafe { libc::geteuid() }
+    {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, "peer UID"));
     }
     Ok(())

@@ -365,7 +365,7 @@ fn activate_native_images(
     let offer = discovery.offer?;
     let grid = Grid::new(options.width, options.height);
     let clusters = ClusterTable::new();
-    NativeImageSession::activate(stream, offer, &grid, &clusters, Vec::new()).ok()
+    NativeImageSession::activate(stream, &offer, &grid, &clusters, Vec::new()).ok()
 }
 
 #[cfg(all(feature = "image-presenter", unix))]

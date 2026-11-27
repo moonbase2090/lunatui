@@ -34,6 +34,10 @@ Changes to this file need MB2090 sign-off (`.github/CODEOWNERS`).
 | `lunatui-widgets/src/graphite/text.rs`, `round` | `clippy::cast_possible_truncation` | Round a finite glyph position, far inside the `i64` range, to a whole pixel; the cast saturates | Graphite text |
 | `lunatui-badge/src/graphite.rs`, `whole` | `clippy::cast_possible_truncation` | Round a finite pixel length, clamped to 0 to 4096, up to whole pixels | Graphite badges and keycaps |
 | `lunatui-badge/src/graphite.rs`, `whole` | `clippy::cast_sign_loss` | The length is clamped at zero before the cast, so it cannot wrap | Graphite badges and keycaps |
+| `lunatui-prismattyc/src/client/backing.rs`, `PreparedImage::prepare_cancellable` | `clippy::too_many_lines` | Platform backing creation, pixel initialization, and validation stay ordered before descriptor admission | Native image presentation |
+| `lunatui-prismattyc/src/client/control.rs`, `Control::step_inner` | `clippy::too_many_lines` | One control step validates sequence, opcode, size, and descriptor ownership before returning a record | Native image presentation |
+| `lunatui-prismattyc/src/client/control.rs`, `receive` | `clippy::too_many_lines` | Ancillary descriptors are validated in one ordered pass before they are returned | Native image presentation |
+| `lunatui-prismattyc/src/native.rs`, `drain` | `clippy::too_many_lines` | Discovery preserves incomplete and unrelated terminal input while draining the ordered stream | Native image presentation |
 
 ## Checks
 

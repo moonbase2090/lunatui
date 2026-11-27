@@ -1,4 +1,6 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
+
 use sha2::{Digest, Sha256};
 use std::{
     io,
@@ -8,6 +10,10 @@ use std::{
 
 pub const KIND: u16 = if cfg!(target_os = "macos") { 2 } else { 1 };
 
+/// Verifies that a descriptor matches the native backing contract.
+///
+/// # Errors
+/// Returns an error if the descriptor is not owned, sized, sealed, or typed as required.
 pub fn validate(
     descriptor: BorrowedFd<'_>,
     logical: u64,
@@ -19,22 +25,26 @@ pub fn validate(
         return Err(crate::invalid("backing kind"));
     }
     let raw = descriptor.as_raw_fd();
-    // SAFETY: `raw` is borrowed from the live `BorrowedFd` above.
-    let flags = unsafe { libc::fcntl(raw, libc::F_GETFD) };
+    let flags =
+        // SAFETY: `raw` is borrowed from the live `BorrowedFd` above.
+        unsafe { libc::fcntl(raw, libc::F_GETFD) };
     if flags < 0 {
         return Err(io::Error::last_os_error());
     }
     if flags & libc::FD_CLOEXEC == 0 {
         return Err(crate::invalid("backing close-on-exec"));
     }
-    // SAFETY: `stat` is a C output struct that fstat fully initializes.
-    let mut status: libc::stat = unsafe { std::mem::zeroed() };
+    let mut status: libc::stat =
+        // SAFETY: `stat` is a C output struct that fstat fully initializes.
+        unsafe { std::mem::zeroed() };
+    if
     // SAFETY: `raw` is live and `status` is a valid writable output pointer.
-    if unsafe { libc::fstat(raw, &raw mut status) } != 0 {
+    unsafe { libc::fstat(raw, &raw mut status) } != 0 {
         return Err(io::Error::last_os_error());
     }
-    // SAFETY: geteuid has no pointer arguments or preconditions.
-    if status.st_uid != unsafe { libc::geteuid() }
+    if status.st_uid !=
+        // SAFETY: geteuid has no pointer arguments or preconditions.
+        unsafe { libc::geteuid() }
         || u64::try_from(status.st_size).ok() != Some(physical)
     {
         return Err(crate::invalid("backing owner or extent"));
@@ -43,8 +53,9 @@ pub fn validate(
     {
         let required =
             libc::F_SEAL_GROW | libc::F_SEAL_SHRINK | if image { libc::F_SEAL_WRITE } else { 0 };
-        // SAFETY: `raw` remains borrowed from the live descriptor.
-        let seals = unsafe { libc::fcntl(raw, libc::F_GET_SEALS) };
+        let seals =
+            // SAFETY: `raw` remains borrowed from the live descriptor.
+            unsafe { libc::fcntl(raw, libc::F_GET_SEALS) };
         if status.st_mode & libc::S_IFMT != libc::S_IFREG
             || physical != logical
             || seals < 0
@@ -59,19 +70,23 @@ pub fn validate(
         if !cfg!(target_arch = "aarch64") {
             return Err(crate::invalid("unproven Darwin execution mode"));
         }
-        // SAFETY: this C-layout output struct is fully initialized by proc_pidfdinfo.
-        let mut typed: PshmFdInfo = unsafe { std::mem::zeroed() };
-        // SAFETY: `raw` is live and `typed` is a valid writable buffer of its declared size.
-        let n = unsafe {
+        let mut typed: PshmFdInfo =
+            // SAFETY: this C-layout output struct is fully initialized by proc_pidfdinfo.
+            unsafe { std::mem::zeroed() };
+        let typed_size = libc::c_int::try_from(std::mem::size_of_val(&typed))
+            .map_err(|_| crate::invalid("PSHM info size"))?;
+        let n =
+            // SAFETY: `raw` is live and `typed` is a valid writable buffer of its declared size.
+            unsafe {
             libc::proc_pidfdinfo(
                 libc::getpid(),
                 raw,
                 5,
-                (&mut typed as *mut PshmFdInfo).cast(),
-                std::mem::size_of_val(&typed) as _,
+                (&raw mut typed).cast(),
+                typed_size,
             )
         };
-        if n != std::mem::size_of_val(&typed) as i32
+        if n != typed_size
             || typed.pshm.stat.vst_uid != status.st_uid
             || typed.pshm.stat.vst_size != status.st_size
             || physical < logical
@@ -98,18 +113,29 @@ pub struct PreparedImage {
 impl PreparedImage {
     /// Run on the one preparation worker, never in the heartbeat/event loop.
     /// Copies RGBA pixels into a validated platform backing object.
+    ///
+    /// # Errors
+    /// Returns an error if backing creation, pixel copying, or platform validation fails.
     pub fn prepare(pixels: &[u8]) -> io::Result<Self> {
         Self::prepare_cancellable(pixels, &AtomicBool::new(false))
     }
 
     /// Copies pixels while allowing the caller to cancel an in-progress preparation.
+    ///
+    /// # Errors
+    /// Returns an error if backing creation, pixel copying, or platform validation fails.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "Backing creation, initialization, and validation must stay ordered before the descriptor is admitted."
+    )]
     pub fn prepare_cancellable(pixels: &[u8], cancelled: &AtomicBool) -> io::Result<Self> {
         if pixels.is_empty() || pixels.len() > 64 * 1024 * 1024 {
             return Err(crate::invalid("image byte limit"));
         }
         #[cfg(target_os = "linux")]
-        // SAFETY: the name is a static NUL-terminated C string and flags are valid.
-        let raw = unsafe {
+        let raw =
+            // SAFETY: the name is a static NUL-terminated C string and flags are valid.
+            unsafe {
             libc::memfd_create(
                 c"native-client-image".as_ptr(),
                 libc::MFD_CLOEXEC | libc::MFD_ALLOW_SEALING,
@@ -119,11 +145,17 @@ impl PreparedImage {
         let raw = {
             let mut random = [0; 12];
             getrandom::fill(&mut random).map_err(|error| io::Error::other(error.to_string()))?;
-            let suffix: String = random.iter().map(|value| format!("{value:02x}")).collect();
+            let mut suffix = String::with_capacity(24);
+            for byte in random {
+                const HEX: &[u8; 16] = b"0123456789abcdef";
+                suffix.push(char::from(HEX[usize::from(byte >> 4)]));
+                suffix.push(char::from(HEX[usize::from(byte & 0x0f)]));
+            }
             let name = std::ffi::CString::new(format!("/ncp{suffix}"))
                 .map_err(|error| io::Error::other(error.to_string()))?;
-            // SAFETY: `name` is NUL terminated and shm_open copies it during this call.
-            let raw = unsafe {
+            let raw =
+                // SAFETY: `name` is NUL terminated and shm_open copies it during this call.
+                unsafe {
                 libc::shm_open(
                     name.as_ptr(),
                     libc::O_CREAT | libc::O_EXCL | libc::O_RDWR,
@@ -133,8 +165,9 @@ impl PreparedImage {
             if raw < 0 {
                 return Err(io::Error::last_os_error());
             }
+            if
             // SAFETY: `name` remains a live NUL-terminated string.
-            if unsafe { libc::shm_unlink(name.as_ptr()) } != 0 {
+            unsafe { libc::shm_unlink(name.as_ptr()) } != 0 {
                 let error = io::Error::last_os_error();
                 // SAFETY: `raw` is the newly created descriptor and is not yet owned.
                 unsafe { libc::close(raw) };
@@ -145,14 +178,19 @@ impl PreparedImage {
         if raw < 0 {
             return Err(io::Error::last_os_error());
         }
-        // SAFETY: successful memfd_create/shm_open returned a fresh owned descriptor.
-        let descriptor = unsafe { OwnedFd::from_raw_fd(raw) };
+        let descriptor =
+            // SAFETY: successful memfd_create/shm_open returned a fresh owned descriptor.
+            unsafe { OwnedFd::from_raw_fd(raw) };
+        let pixel_bytes = libc::off_t::try_from(pixels.len())
+            .map_err(|_| crate::invalid("image extent exceeds off_t"))?;
+        if
         // SAFETY: `raw` is owned above and the bounded pixel extent fits off_t on supported targets.
-        if unsafe { libc::ftruncate(raw, pixels.len() as libc::off_t) } != 0 {
+        unsafe { libc::ftruncate(raw, pixel_bytes) } != 0 {
             return Err(io::Error::last_os_error());
         }
-        // SAFETY: the descriptor has the exact size set above and the mapping length is nonzero.
-        let address = unsafe {
+        let address =
+            // SAFETY: the descriptor has the exact size set above and the mapping length is nonzero.
+            unsafe {
             libc::mmap(
                 std::ptr::null_mut(),
                 pixels.len(),
@@ -178,7 +216,7 @@ impl PreparedImage {
                     chunk.as_ptr(),
                     address.cast::<u8>().add(index * 65536),
                     chunk.len(),
-                )
+                );
             };
             digest.update(chunk);
         }
@@ -191,8 +229,9 @@ impl PreparedImage {
             ));
         }
         #[cfg(target_os = "linux")]
+        if
         // SAFETY: `raw` is a live memfd created with MFD_ALLOW_SEALING.
-        if unsafe {
+        unsafe {
             libc::fcntl(
                 raw,
                 libc::F_ADD_SEALS,
@@ -202,10 +241,12 @@ impl PreparedImage {
         {
             return Err(io::Error::last_os_error());
         }
-        // SAFETY: fstat fully initializes this C output struct.
-        let mut status: libc::stat = unsafe { std::mem::zeroed() };
+        let mut status: libc::stat =
+            // SAFETY: fstat fully initializes this C output struct.
+            unsafe { std::mem::zeroed() };
+        if
         // SAFETY: `raw` is live and `status` is a valid writable output pointer.
-        if unsafe { libc::fstat(raw, &raw mut status) } != 0 {
+        unsafe { libc::fstat(raw, &raw mut status) } != 0 {
             return Err(io::Error::last_os_error());
         }
         let physical =

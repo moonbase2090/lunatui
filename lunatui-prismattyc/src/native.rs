@@ -210,6 +210,10 @@ pub fn discover_from_input(
     decoder.finish()
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "Discovery drains an ordered byte stream while preserving incomplete and unrelated terminal input."
+)]
 fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, bool, bool, Vec<u8>, Vec<u8>) {
     let mut preserved = Vec::new();
     let mut i = 0;

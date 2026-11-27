@@ -1,5 +1,7 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
-//! Native image resource lifecycle behavior.
+
+#![doc = include_str!("../README.md")]
 
 use lunatui_core::Rect;
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};

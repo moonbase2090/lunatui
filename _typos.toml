@@ -9,6 +9,8 @@ denom = "denom"
 
 [default.extend-words]
 ratatui = "ratatui"
+# POSIX ancillary-data field name used by libc.
+controllen = "controllen"
 # RFC 4648 base64 input vector in lunatui-term/src/pixel/tests.rs.
 fo = "fo"
 

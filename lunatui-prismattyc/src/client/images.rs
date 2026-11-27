@@ -1,4 +1,6 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
+
 use crate::client::frame::Placement;
 use lunatui_core::Rect;
 use lunatui_image::{ImageRequest, ImageSink, ImageSource, PixelSize, PixelTarget};
@@ -27,6 +29,7 @@ pub struct Images {
 
 impl Images {
     /// Creates an image sink with measured physical cell dimensions.
+    #[must_use]
     pub fn new(cell: [u32; 2]) -> Self {
         Self {
             cell,
@@ -50,10 +53,12 @@ impl Images {
         self.cell
     }
     /// Placements accepted for the current frame.
+    #[must_use]
     pub fn placements(&self) -> &[Placement] {
         &self.placements
     }
     /// Whether any admitted source is awaiting renderer readiness.
+    #[must_use]
     pub fn pending(&self) -> bool {
         self.resources
             .values()
@@ -82,6 +87,9 @@ impl Images {
     }
 
     /// Applies the host's admission response to the source state.
+    ///
+    /// # Errors
+    /// Returns an error if the host response is malformed or contains an invalid admission state.
     pub fn admission(&mut self, key: Key, bytes: &[u8]) -> std::io::Result<()> {
         self.preparing.remove(&key);
         if bytes.len() != 48 || crate::u16_at(bytes, 4) != 11 || crate::u32_at(bytes, 44) != 0 {
@@ -101,6 +109,9 @@ impl Images {
 
     /// A READY response is the only path from PENDING to visible placement.
     /// Applies a heartbeat response and promotes resources reported as READY.
+    ///
+    /// # Errors
+    /// Returns an error if the heartbeat response is malformed or inconsistent.
     pub fn pong(&mut self, bytes: &[u8]) -> std::io::Result<bool> {
         if bytes.len() != 48 || crate::u16_at(bytes, 4) != 15 {
             return Err(crate::invalid("image heartbeat"));
@@ -148,6 +159,9 @@ impl Images {
     }
 
     /// Applies a host response to a resource retirement request.
+    ///
+    /// # Errors
+    /// Returns an error if the response does not match the pending retirement.
     pub fn retired(&mut self, key: Key, bytes: &[u8]) -> std::io::Result<bool> {
         if bytes.len() != 48 || crate::u16_at(bytes, 4) != 13 || crate::u32_at(bytes, 44) != 0 {
             return Err(crate::invalid("image retirement reply"));
@@ -199,8 +213,6 @@ impl ImageSink for Images {
             Some(Resource::Ready(handle)) => *handle,
             Some(_) => return false,
             None => {
-                // One coalesced candidate. A renderer repeats declined/pending images
-                // on the next scheduled render and keeps its actual fallback cells.
                 if self.requested.len() < 256
                     && !self.requested.iter().any(|(queued, _)| *queued == key)
                 {
@@ -212,9 +224,10 @@ impl ImageSink for Images {
         if self.placements.len() >= 256 || self.placed_ids.contains(&key.0) {
             return false;
         }
-        let Ok(placement) =
-            Placement::from_request(request, handle, self.cell, self.placements.len() as u32)
-        else {
+        let Ok(ordinal) = u32::try_from(self.placements.len()) else {
+            return false;
+        };
+        let Ok(placement) = Placement::from_request(request, handle, self.cell, ordinal) else {
             return false;
         };
         self.placements.push(placement);

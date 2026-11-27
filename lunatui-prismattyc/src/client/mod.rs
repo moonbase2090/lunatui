@@ -1,5 +1,7 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
-//! Native image transport client. Runtime opts into it only for direct local hosts.
+
+#![doc = include_str!("../../README.md")]
 
 pub mod backing;
 pub mod control;

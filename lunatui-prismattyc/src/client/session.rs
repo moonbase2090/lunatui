@@ -1,4 +1,6 @@
+// Copyright (c) 2026 Moonbase 2090 LLC
 // SPDX-License-Identifier: MIT
+
 use crate::FrameEncoder;
 use crate::{
     backing::{self, PreparedImage},
@@ -41,7 +43,7 @@ pub struct Session {
     control: Control,
     producer: Producer,
     encoder: FrameEncoder,
-    session: u64,
+    id: u64,
     epoch: u64,
     metrics: u64,
     request_sequence: u64,
@@ -70,6 +72,9 @@ impl Session {
     }
 
     /// Uploads one prepared immutable source and returns the host admission record.
+    ///
+    /// # Errors
+    /// Returns an error if the host rejects the upload or the control exchange fails.
     pub fn upload_prepared(
         &mut self,
         key: Key,
@@ -82,16 +87,19 @@ impl Session {
     }
 
     /// Activates the offered host endpoint and publishes its initial full grid.
+    ///
+    /// # Errors
+    /// Returns an error if the offer is rejected, setup is invalid, or the initial frame fails.
     pub fn activate(
         stream: UnixStream,
-        offer: Offer,
+        offer: &Offer,
         grid: &Grid,
         clusters: &ClusterTable,
         palette: Vec<lunatui_core::Color>,
     ) -> Result<Self> {
         let deadline = Instant::now() + Duration::from_millis(200);
         let mut control = Control::new(stream)?;
-        let mut hello = record(1, 56, 0, offer.epoch, 1);
+        let mut hello = record(1, 56, 0, offer.epoch, 1)?;
         hello[32..36].copy_from_slice(&offer.id.to_le_bytes());
         hello[36..38].copy_from_slice(&1u16.to_le_bytes());
         hello[38..40].copy_from_slice(&2u16.to_le_bytes());
@@ -115,8 +123,8 @@ impl Session {
             u32::from(grid.height()) * cell[1],
         );
         ensure!(
-            crate::u64_at(bytes, 88) == 67108864
-                && crate::u64_at(bytes, 96) == 134217728
+            crate::u64_at(bytes, 88) == 67_108_864
+                && crate::u64_at(bytes, 96) == 134_217_728
                 && crate::u32_at(bytes, 104) == 256
                 && crate::u32_at(bytes, 108) == 256,
             "setup image budgets"
@@ -131,7 +139,7 @@ impl Session {
         encoder.set_token_palette(palette);
         let frame = frame::encode(&mut encoder, grid, clusters, offer.epoch, metrics, 1, &[])?;
         producer.publish(&frame)?;
-        let mut activate = record(3, 40, session, offer.epoch, 2);
+        let mut activate = record(3, 40, session, offer.epoch, 2)?;
         activate[32..40].copy_from_slice(&1u64.to_le_bytes());
         let active = control.exchange(activate, None, deadline)?;
         ensure!(
@@ -142,7 +150,7 @@ impl Session {
             control,
             producer,
             encoder,
-            session,
+            id: session,
             epoch: offer.epoch,
             metrics,
             request_sequence: 2,
@@ -158,16 +166,13 @@ impl Session {
             .request_sequence
             .checked_add(1)
             .ok_or_else(|| crate::invalid("request sequence exhausted"))?;
-        Ok(record(
-            opcode,
-            bytes,
-            self.session,
-            self.epoch,
-            self.request_sequence,
-        ))
+        record(opcode, bytes, self.id, self.epoch, self.request_sequence)
     }
 
     /// Polls the host lease and reports any image readiness change.
+    ///
+    /// # Errors
+    /// Returns an error if the host lease ended or the heartbeat exchange fails.
     pub fn ping(&mut self) -> Result<Reply> {
         let request = self.request(7, 32)?;
         let reply =
@@ -210,6 +215,9 @@ impl Session {
     }
 
     /// Publishes a full grid and image placement snapshot.
+    ///
+    /// # Errors
+    /// Returns an error if the grid changed size or the frame cannot be encoded or published.
     pub fn present(
         &mut self,
         grid: &Grid,
@@ -239,6 +247,9 @@ impl Session {
     }
 
     /// Requests retirement after the specified omission frame.
+    ///
+    /// # Errors
+    /// Returns an error if the host rejects retirement or the exchange fails.
     pub fn retire(&mut self, handle: u64, omitting: u64) -> Result<Reply> {
         let mut request = self.request(12, 48)?;
         request[32..40].copy_from_slice(&handle.to_le_bytes());
@@ -249,6 +260,9 @@ impl Session {
     }
 
     /// Releases native ownership so the host restores its retained ANSI scene.
+    ///
+    /// # Errors
+    /// Returns an error if the host does not acknowledge the release.
     pub fn release(&mut self) -> Result<()> {
         let request = self.request(5, 32)?;
         self.control
@@ -257,12 +271,13 @@ impl Session {
     }
 }
 
-pub fn record(opcode: u16, bytes: usize, session: u64, epoch: u64, sequence: u64) -> Vec<u8> {
+fn record(opcode: u16, bytes: usize, session: u64, epoch: u64, sequence: u64) -> Result<Vec<u8>> {
+    let length = u32::try_from(bytes).map_err(|_| crate::invalid("record too large"))?;
     let mut output = vec![0; bytes];
-    output[..4].copy_from_slice(&(bytes as u32).to_le_bytes());
+    output[..4].copy_from_slice(&length.to_le_bytes());
     output[4..6].copy_from_slice(&opcode.to_le_bytes());
     for (offset, value) in [(8, session), (16, sequence), (24, epoch)] {
         output[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
     }
-    output
+    Ok(output)
 }
