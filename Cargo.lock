@@ -1231,7 +1231,12 @@ dependencies = [
 name = "lunatui-prismattyc"
 version = "0.1.44"
 dependencies = [
+ "anyhow",
+ "getrandom 0.3.4",
+ "libc",
  "lunatui-core",
+ "lunatui-image",
+ "sha2",
 ]
 
 [[package]]
@@ -1253,6 +1258,7 @@ version = "0.1.44"
 dependencies = [
  "lunatui-core",
  "lunatui-image",
+ "lunatui-prismattyc",
  "lunatui-term",
  "lunatui-test",
  "proptest",

@@ -14,7 +14,7 @@ accessibility = ["app"]
 keymap = []
 motion = []
 effects = ["motion", "lunatui-core/blit", "lunatui-core/render-color"]
-image-presenter = ["app", "dep:lunatui-image", "lunatui-term/pixel-layer"]
+image-presenter = ["app", "dep:lunatui-image", "dep:lunatui-prismattyc", "lunatui-term/pixel-layer"]
 
 [[test]]
 name = "keymap"
@@ -44,6 +44,7 @@ required-features = ["app"]
 [dependencies]
 lunatui-core = { version = "0.1.44", path = "../lunatui-core" }
 lunatui-image = { version = "0.1.44", path = "../lunatui-image", optional = true }
+lunatui-prismattyc = { version = "0.1.44", path = "../lunatui-prismattyc", optional = true }
 lunatui-term = { version = "0.1.44", path = "../lunatui-term" }
 
 [dev-dependencies]

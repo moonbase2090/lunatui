@@ -63,6 +63,8 @@ fn switching_saturation_to_latency_finishes_upload_before_the_new_title_and_reti
         last_palette: None,
         repaint: false,
         pointer: None,
+        #[cfg(all(feature = "image-presenter", unix))]
+        native_images: None,
         images: PixelLayer::from_caps(&caps),
         mode: RenderMode::Cell,
     };
@@ -193,6 +195,8 @@ fn immediate_image_repaints_blank_cells(
         last_palette: None,
         repaint: false,
         pointer: None,
+        #[cfg(all(feature = "image-presenter", unix))]
+        native_images: None,
         images: PixelLayer::from_caps(&caps),
         mode: RenderMode::Cell,
     };

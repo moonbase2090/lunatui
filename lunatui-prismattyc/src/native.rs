@@ -224,7 +224,14 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, bool, bool, 
             continue;
         }
         if i + 1 >= input.len() {
-            return (discovery, grid, alpha, images, preserved, input[i..].to_vec());
+            return (
+                discovery,
+                grid,
+                alpha,
+                images,
+                preserved,
+                input[i..].to_vec(),
+            );
         }
         match input[i + 1] {
             b'_' => match take_apc(&input[i..]) {
@@ -272,7 +279,14 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, bool, bool, 
                     i += total;
                 }
                 ApcTake::Incomplete => {
-                    return (discovery, grid, alpha, images, preserved, input[i..].to_vec());
+                    return (
+                        discovery,
+                        grid,
+                        alpha,
+                        images,
+                        preserved,
+                        input[i..].to_vec(),
+                    );
                 }
             },
             b'P' => match take_string_seq(&input[i..], b'P') {
@@ -280,21 +294,48 @@ fn drain(expected_id: u32, input: &[u8]) -> (NativeDiscovery, bool, bool, bool, 
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, grid, alpha, images, preserved, input[i..].to_vec()),
+                None => {
+                    return (
+                        discovery,
+                        grid,
+                        alpha,
+                        images,
+                        preserved,
+                        input[i..].to_vec(),
+                    );
+                }
             },
             b']' => match take_string_seq(&input[i..], b']') {
                 Some(total) => {
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, grid, alpha, images, preserved, input[i..].to_vec()),
+                None => {
+                    return (
+                        discovery,
+                        grid,
+                        alpha,
+                        images,
+                        preserved,
+                        input[i..].to_vec(),
+                    );
+                }
             },
             b'[' => match take_csi(&input[i..]) {
                 Some(total) => {
                     preserved.extend_from_slice(&input[i..i + total]);
                     i += total;
                 }
-                None => return (discovery, grid, alpha, images, preserved, input[i..].to_vec()),
+                None => {
+                    return (
+                        discovery,
+                        grid,
+                        alpha,
+                        images,
+                        preserved,
+                        input[i..].to_vec(),
+                    );
+                }
             },
             _ => {
                 preserved.push(input[i]);
