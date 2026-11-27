@@ -8,11 +8,20 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
-## [0.1.44] - 2026-11-26
+## [0.1.45] - 2026-11-27
 
 ### Added
 
 - `DatePicker::act` lets an agent select a date with `Action::SetValue` text as `YYYY-MM-DD`, answering `Outcome::Changed`, `Outcome::Handled` when it was already selected, and `Outcome::Ignored` for text that is not a real date, a date outside the bounds, a disabled picker and any other action.
+
+### Fixed
+
+- The terminal capability probe stops reading once the terminal has answered device attributes, a pixel graphics protocol (kitty, iTerm2 or sixel) and its cell size. Before, only a kitty terminal that also reported its background color ended the probe early, and other pixel terminals waited out the probe budget.
+
+## [0.1.44] - 2026-11-26
+
+### Added
+
 - `RadioGroup::act` lets an agent choose an option with `Action::Select`, answering `Outcome::Changed`, `Outcome::Handled` when it was already chosen, and `Outcome::Ignored` for a disabled or missing option and for any other action.
 - `Select::act` lets an agent choose an option by its exact label with `Action::SetValue` for the app's choice, answering `Outcome::Changed`, `Outcome::Handled` when it was already chosen, and `Outcome::Ignored` for a label that names no option and for any other action. Opening the list stays with the app's layer.
 - `TableState::act` lets an agent put the table's cursor on a row with `Action::Select` or `Action::Activate`, and `TableState::act_header` sorts by a column header with `Action::Activate`, reversing the order when the column is already sorted. A row or column that does not exist, and any other action, give `Outcome::Ignored`.
