@@ -88,8 +88,28 @@ lunatui = &quot;0.1&quot;</code></pre></div></div>
 <section class="card sandbox" data-sandbox aria-labelledby="sandbox-title">
  <div class="sandbox-copy">
   <h2 id="sandbox-title">Try it</h2>
-  <p>This terminal runs the real Rust quickstart in your browser. Pick a template, then use its keys.</p>
+  <p>Try the native activity monitor in both modes, or run a Cell template in your browser below.</p>
  </div>
+ <section class="try-modes" id="try-modes" aria-labelledby="monitor-title">
+  <h3 id="monitor-title">Run the activity monitor</h3>
+  <p>Compare the same app in Cell and Graphite. Clone this release once, then run either command in its directory. Press <kbd>q</kbd> to quit.</p>
+  <pre><code>git clone --branch v0.1.44 --depth 1 https://github.com/moonbase2090/lunatui.git
+cd lunatui</code></pre>
+  <fieldset class="mode-switch" data-mode-controls hidden><legend>Rendering mode</legend>
+  <label><input type="radio" name="mode" value="cell" checked> Cell</label>
+  <label><input type="radio" name="mode" value="graphite"> Graphite</label>
+  <label class="motion"><input type="checkbox" data-play> Play recordings</label>
+ </fieldset>
+<figure class="mode-recording" data-cell="monitor-cell" data-graphite="monitor-graphite" data-cell-alt="Activity monitor with rows of status badges and trend lines drawn in terminal cells" data-graphite-alt="Activity monitor with typeset status badges and continuous activity traces" data-graphite-caption="Graphite recording">
+  <img src="assets/media/modes/monitor-cell.png" alt="Activity monitor with rows of status badges and trend lines drawn in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure>
+  <p>Cell draws with terminal glyphs.</p>
+  <pre><code>LUNATUI_MODE=cell cargo run --locked -p lunatui --example activity_monitor_live</code></pre>
+  <p>Graphite draws pixels on a compatible terminal such as Kitty. The app falls back to Cell when the terminal lacks image support or cell dimensions.</p>
+  <pre><code>LUNATUI_MODE=graphite cargo run --locked -p lunatui --example activity_monitor_live</code></pre>
+ </section>
+ <h3 class="browser-title">Live Cell sandbox</h3>
  <div class="sandbox-toolbar" role="group" aria-label="Live quickstart controls">
   <button type="button" data-sandbox-template="minimal" aria-pressed="true">Minimal</button>
   <button type="button" data-sandbox-template="list" aria-pressed="false">List</button>
@@ -958,4 +978,5 @@ fn main() -&gt; io::Result&lt;()&gt; {
 </div></footer>
 <script type="module" src="assets/quickstart-sandbox.js"></script>
 <script src="assets/showcase.js" defer></script>
+<script src="assets/recording-mode.js" defer></script>
 </body></html>
