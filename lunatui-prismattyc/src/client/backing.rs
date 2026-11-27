@@ -348,8 +348,9 @@ mod tests {
     fn prepared_image_has_required_immutability_seals() {
         use std::os::fd::AsRawFd;
         let image = PreparedImage::prepare(&[9; 16]).expect("image should prepare");
-        // SAFETY: F_GET_SEALS only reads flags from the live memfd owned by `image`.
-        let seals = unsafe { libc::fcntl(image.descriptor.as_raw_fd(), libc::F_GET_SEALS) };
+        let seals =
+            // SAFETY: F_GET_SEALS only reads flags from the live memfd owned by `image`.
+            unsafe { libc::fcntl(image.descriptor.as_raw_fd(), libc::F_GET_SEALS) };
         assert!(seals >= 0);
         let required =
             libc::F_SEAL_GROW | libc::F_SEAL_SHRINK | libc::F_SEAL_WRITE | libc::F_SEAL_SEAL;

@@ -338,9 +338,6 @@ struct Received {
     reason = "Ancillary descriptor validation must happen in one ordered pass before any received descriptor is returned."
 )]
 fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
-    // Sixteen descriptors are the wire limit. Leave room for a modestly malformed
-    // packet so the receiver can reject >16 explicitly, while larger ancillary
-    // payloads are rejected by MSG_CTRUNC.
     let mut ancillary = [0usize; 32];
     let mut vector = libc::iovec {
         iov_base: output.as_mut_ptr().cast(),
@@ -667,10 +664,10 @@ mod tests {
     fn control_accepts_only_expected_opcode_size_and_identity() {
         assert!(run_reply(response(4, 40, 7, 9, 11)).is_ok());
         for reply in [
-            response(6, 40, 7, 9, 11),  // wrong opcode
-            response(4, 32, 7, 9, 11),  // wrong size
-            response(4, 40, 8, 9, 11),  // wrong session
-            response(4, 40, 7, 10, 11), // wrong epoch
+            response(6, 40, 7, 9, 11),
+            response(4, 32, 7, 9, 11),
+            response(4, 40, 8, 9, 11),
+            response(4, 40, 7, 10, 11),
         ] {
             assert_eq!(
                 run_reply(reply)
@@ -683,12 +680,6 @@ mod tests {
     }
 
     #[cfg(unix)]
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_ptr_alignment,
-        clippy::undocumented_unsafe_blocks,
-        reason = "the test helper builds bounded SCM_RIGHTS messages using libc's ABI macros"
-    )]
     fn send_many_descriptors(
         socket: &UnixStream,
         bytes: &[u8],
@@ -698,27 +689,39 @@ mod tests {
             iov_base: bytes.as_ptr().cast_mut().cast(),
             iov_len: bytes.len(),
         };
+        let payload_bytes = descriptors.len() * std::mem::size_of::<i32>();
+        let payload_len = libc::c_uint::try_from(payload_bytes).expect("bounded fd payload");
+        let control_bytes =
+            // SAFETY: CMSG_SPACE is a pure layout calculation for this bounded descriptor payload.
+            unsafe { libc::CMSG_SPACE(payload_len) };
         let mut storage = vec![
             0usize;
-            (unsafe { libc::CMSG_SPACE((descriptors.len() * 4) as _) } as usize)
+            usize::try_from(control_bytes)
+                .expect("ancillary space fits usize")
                 .div_ceil(std::mem::size_of::<usize>())
         ];
-        let mut message: libc::msghdr = unsafe { std::mem::zeroed() };
+        let mut message: libc::msghdr =
+            // SAFETY: all-zero is a valid initial state for this C ABI structure.
+            unsafe { std::mem::zeroed() };
         message.msg_iov = &raw mut vector;
         message.msg_iovlen = 1;
         message.msg_control = storage.as_mut_ptr().cast();
-        message.msg_controllen = unsafe { libc::CMSG_SPACE((descriptors.len() * 4) as _) } as _;
+        message.msg_controllen = control_bytes;
+        // SAFETY: `storage` provides the exact CMSG_SPACE capacity calculated above.
         unsafe {
             let header = libc::CMSG_FIRSTHDR(&raw const message);
             (*header).cmsg_level = libc::SOL_SOCKET;
             (*header).cmsg_type = libc::SCM_RIGHTS;
-            (*header).cmsg_len = libc::CMSG_LEN((descriptors.len() * 4) as _) as _;
-            let data = libc::CMSG_DATA(header).cast::<i32>();
-            for (index, fd) in descriptors.iter().enumerate() {
-                data.add(index).write_unaligned(fd.as_raw_fd());
-            }
+            (*header).cmsg_len = libc::CMSG_LEN(payload_len);
+            std::ptr::copy_nonoverlapping(
+                descriptors.as_ptr().cast::<u8>(),
+                libc::CMSG_DATA(header),
+                payload_bytes,
+            );
         }
-        let count = unsafe { libc::sendmsg(socket.as_raw_fd(), &raw const message, 0) };
+        let count =
+            // SAFETY: the iovec and ancillary buffer remain live for this call.
+            unsafe { libc::sendmsg(socket.as_raw_fd(), &raw const message, 0) };
         if count < 0 {
             Err(io::Error::last_os_error())
         } else {
