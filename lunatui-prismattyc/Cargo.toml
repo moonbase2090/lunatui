@@ -11,11 +11,11 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-core = { version = "0.1.44", path = "../lunatui-core" }
+lunatui-core = { version = "0.1.45", path = "../lunatui-core" }
 
 [target.'cfg(unix)'.dependencies]
 anyhow = "1"
 getrandom = "0.3"
 libc = "0.2"
-lunatui-image = { version = "0.1.44", path = "../lunatui-image" }
+lunatui-image = { version = "0.1.45", path = "../lunatui-image" }
 sha2 = "0.10"
