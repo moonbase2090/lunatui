@@ -155,32 +155,43 @@ mod tests {
     )]
 
     use super::{Producer, RING_BYTES, SLOT_BYTES_U32};
-    use std::{fs::File, os::fd::OwnedFd};
+    use std::os::fd::OwnedFd;
 
-    fn descriptor() -> OwnedFd {
-        File::open("/dev/null")
-            .expect("open test descriptor")
-            .into()
-    }
-
-    fn valid_setup() -> [u8; 128] {
+    fn valid_setup() -> (OwnedFd, [u8; 128]) {
+        let mut ring = vec![0; RING_BYTES];
+        ring[..8].copy_from_slice(b"LUNARING");
+        ring[8..10].copy_from_slice(&1u16.to_le_bytes());
+        ring[10..12].copy_from_slice(&2u16.to_le_bytes());
+        ring[12..16].copy_from_slice(&4096u32.to_le_bytes());
+        ring[16..24].copy_from_slice(&u64::try_from(RING_BYTES).expect("ring size").to_le_bytes());
+        ring[24..28].copy_from_slice(&4u32.to_le_bytes());
+        ring[28..32].copy_from_slice(&SLOT_BYTES_U32.to_le_bytes());
+        ring[32..40].copy_from_slice(&1u64.to_le_bytes());
+        let prepared = crate::backing::PreparedImage::prepare(&ring).expect("prepare ring fixture");
         let mut setup = [0; 128];
         setup[4..6].copy_from_slice(&9u16.to_le_bytes());
         setup[8..16].copy_from_slice(&1u64.to_le_bytes());
         setup[32..40].copy_from_slice(&(RING_BYTES as u64).to_le_bytes());
-        setup[40..48].copy_from_slice(&(RING_BYTES as u64).to_le_bytes());
+        setup[40..48].copy_from_slice(&prepared.physical.to_le_bytes());
         setup[48..52].copy_from_slice(&4u32.to_le_bytes());
         setup[52..56].copy_from_slice(&SLOT_BYTES_U32.to_le_bytes());
         setup[56..58].copy_from_slice(&super::super::backing::KIND.to_le_bytes());
         setup[58..60].copy_from_slice(&1u16.to_le_bytes());
-        setup
+        (prepared.descriptor, setup)
+    }
+
+    #[test]
+    fn from_setup_accepts_a_valid_sealed_ring() {
+        let (descriptor, setup) = valid_setup();
+        assert!(Producer::from_setup(descriptor, &setup).is_ok());
     }
 
     #[test]
     fn from_setup_rejects_wrong_record_length() {
-        let mut setup = valid_setup().to_vec();
+        let (descriptor, setup) = valid_setup();
+        let mut setup = setup.to_vec();
         setup.pop();
-        let error = Producer::from_setup(descriptor(), &setup)
+        let error = Producer::from_setup(descriptor, &setup)
             .err()
             .expect("short setup rejected");
         assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
@@ -188,9 +199,9 @@ mod tests {
 
     #[test]
     fn from_setup_rejects_wrong_ring_extent() {
-        let mut setup = valid_setup();
+        let (descriptor, mut setup) = valid_setup();
         setup[32..40].copy_from_slice(&1u64.to_le_bytes());
-        let error = Producer::from_setup(descriptor(), &setup)
+        let error = Producer::from_setup(descriptor, &setup)
             .err()
             .expect("wrong ring extent rejected");
         assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
@@ -198,9 +209,9 @@ mod tests {
 
     #[test]
     fn from_setup_rejects_wrong_slot_count() {
-        let mut setup = valid_setup();
+        let (descriptor, mut setup) = valid_setup();
         setup[48..52].copy_from_slice(&3u32.to_le_bytes());
-        let error = Producer::from_setup(descriptor(), &setup)
+        let error = Producer::from_setup(descriptor, &setup)
             .err()
             .expect("wrong slot count rejected");
         assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
@@ -208,9 +219,9 @@ mod tests {
 
     #[test]
     fn from_setup_rejects_nonzero_reserved_tail() {
-        let mut setup = valid_setup();
+        let (descriptor, mut setup) = valid_setup();
         setup[127] = 1;
-        let error = Producer::from_setup(descriptor(), &setup)
+        let error = Producer::from_setup(descriptor, &setup)
             .err()
             .expect("nonzero reserved tail rejected");
         assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
