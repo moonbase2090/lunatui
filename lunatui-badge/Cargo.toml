@@ -16,17 +16,17 @@ default = ["graphite-text"]
 graphite-text = ["lunatui-widgets/graphite-text"]
 
 [dependencies]
-lunatui-core = { version = "0.1.44", path = "../lunatui-core" }
-lunatui-ui-tokens = { version = "0.1.44", path = "../lunatui-ui-tokens" }
-lunatui-widgets = { version = "0.1.44", path = "../lunatui-widgets", default-features = false }
+lunatui-core = { version = "0.1.45", path = "../lunatui-core" }
+lunatui-ui-tokens = { version = "0.1.45", path = "../lunatui-ui-tokens" }
+lunatui-widgets = { version = "0.1.45", path = "../lunatui-widgets", default-features = false }
 
 [dev-dependencies]
 image = { version = "=0.25.10", default-features = false, features = ["png"] }
-lunatui-card = { version = "0.1.44", path = "../lunatui-card" }
-lunatui-image = { version = "0.1.44", path = "../lunatui-image" }
-lunatui-runtime = { version = "0.1.44", path = "../lunatui-runtime" }
-lunatui-term = { version = "0.1.44", path = "../lunatui-term" }
-lunatui-theme = { version = "0.1.44", path = "../lunatui-theme", features = ["graphite-extensions"] }
+lunatui-card = { version = "0.1.45", path = "../lunatui-card" }
+lunatui-image = { version = "0.1.45", path = "../lunatui-image" }
+lunatui-runtime = { version = "0.1.45", path = "../lunatui-runtime" }
+lunatui-term = { version = "0.1.45", path = "../lunatui-term" }
+lunatui-theme = { version = "0.1.45", path = "../lunatui-theme", features = ["graphite-extensions"] }
 serde_json = "1.0.149"
 
 [[example]]
