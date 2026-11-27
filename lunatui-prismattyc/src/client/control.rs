@@ -349,9 +349,16 @@ fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
     message.msg_iov = &raw mut vector;
     message.msg_iovlen = 1;
     message.msg_control = ancillary.as_mut_ptr().cast();
-    message.msg_controllen = std::mem::size_of_val(&ancillary)
-        .try_into()
-        .map_err(|_| crate::invalid("ancillary buffer size"))?;
+    #[cfg(target_os = "linux")]
+    {
+        message.msg_controllen = std::mem::size_of_val(&ancillary);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        message.msg_controllen = std::mem::size_of_val(&ancillary)
+            .try_into()
+            .map_err(|_| crate::invalid("ancillary buffer size"))?;
+    }
     #[cfg(target_os = "linux")]
     let flags = libc::MSG_DONTWAIT | libc::MSG_CMSG_CLOEXEC;
     #[cfg(target_os = "macos")]
@@ -367,10 +374,17 @@ fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
     let control_len = message.msg_controllen as usize;
     let capacity = std::mem::size_of_val(&ancillary);
     invalid |= control_len > capacity;
-    message.msg_controllen = control_len
-        .min(capacity)
-        .try_into()
-        .map_err(|_| crate::invalid("ancillary length"))?;
+    #[cfg(target_os = "linux")]
+    {
+        message.msg_controllen = control_len.min(capacity);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        message.msg_controllen = control_len
+            .min(capacity)
+            .try_into()
+            .map_err(|_| crate::invalid("ancillary length"))?;
+    }
     let control_start = message.msg_control as usize;
     let control_end = control_start.saturating_add(control_len.min(capacity));
     let mut header =
@@ -555,7 +569,8 @@ fn verify_peer(socket: &UnixStream) -> io::Result<()> {
         let mut credentials: libc::ucred =
             // SAFETY: getsockopt fully initializes this C output struct.
             unsafe { std::mem::zeroed() };
-        let mut length = std::mem::size_of_val(&credentials) as libc::socklen_t;
+        let mut length = libc::socklen_t::try_from(std::mem::size_of_val(&credentials))
+            .map_err(|_| crate::invalid("credential size"))?;
         if
         // SAFETY: socket is a live UnixStream and output pointers reference valid storage.
         unsafe {
@@ -563,8 +578,8 @@ fn verify_peer(socket: &UnixStream) -> io::Result<()> {
                 socket.as_raw_fd(),
                 libc::SOL_SOCKET,
                 libc::SO_PEERCRED,
-                (&mut credentials as *mut libc::ucred).cast(),
-                &mut length,
+                (&raw mut credentials).cast(),
+                &raw mut length,
             )
         } != 0
         {

@@ -38,6 +38,7 @@ Changes to this file need MB2090 sign-off (`.github/CODEOWNERS`).
 | `lunatui-prismattyc/src/client/control.rs`, `Control::step_inner` | `clippy::too_many_lines` | One control step validates sequence, opcode, size, and descriptor ownership before returning a record | Native image presentation |
 | `lunatui-prismattyc/src/client/control.rs`, `receive` | `clippy::too_many_lines` | Ancillary descriptors are validated in one ordered pass before they are returned | Native image presentation |
 | `lunatui-prismattyc/src/native.rs`, `drain` | `clippy::too_many_lines` | Discovery preserves incomplete and unrelated terminal input while draining the ordered stream | Native image presentation |
+| `lunatui-runtime/src/run.rs`, `run` | `clippy::too_many_lines` | The terminal event loop keeps frame rendering, input, and native image lifecycle ordered in one loop | Native image presentation |
 
 ## Checks
 

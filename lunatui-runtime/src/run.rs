@@ -67,6 +67,10 @@ impl FrameState {
 ///
 /// Returns I/O, session, or encoder errors from the host loop.
 #[cfg(any(unix, windows))]
+#[expect(
+    clippy::too_many_lines,
+    reason = "The terminal event loop keeps frame rendering, input, and native image lifecycle ordered in one loop."
+)]
 pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
     if !io::stdout().is_terminal() {
         return Err(io::Error::new(
@@ -75,11 +79,13 @@ pub fn run<A: App>(mut app: A, options: RunOptions) -> io::Result<()> {
         ));
     }
     #[cfg(feature = "image-presenter")]
-    let (images, mut pending_input, pointer) = if options.pixel_images {
+    let (images, pending_input, pointer) = if options.pixel_images {
         probe_pixel_layer()
     } else {
         (PixelLayer::new(PixelMode::Cells), Vec::new(), None)
     };
+    #[cfg(all(feature = "image-presenter", unix))]
+    let mut pending_input = pending_input;
     #[cfg(not(feature = "image-presenter"))]
     let pointer = None::<CellPixels>;
     let tracking = if pointer.is_some() {
