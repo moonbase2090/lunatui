@@ -155,35 +155,151 @@ mod tests {
     )]
 
     use super::{Producer, RING_BYTES, SLOT_BYTES_U32};
-    use std::os::fd::OwnedFd;
+    use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+    #[cfg(target_os = "macos")]
+    use std::{
+        ffi::CString,
+        sync::atomic::{AtomicU64, Ordering},
+    };
+
+    fn ring_descriptor() -> (OwnedFd, u64) {
+        #[cfg(target_os = "linux")]
+        let raw =
+            // SAFETY: the static name is NUL-terminated and flags request a new sealable memfd.
+            unsafe {
+                libc::memfd_create(
+                    c"lunatui-test-ring".as_ptr(),
+                    libc::MFD_CLOEXEC | libc::MFD_ALLOW_SEALING,
+                )
+            };
+        #[cfg(target_os = "macos")]
+        let (name, raw) = {
+            static NEXT_NAME: AtomicU64 = AtomicU64::new(0);
+            let name = CString::new(format!(
+                "/lunatui-test-ring-{}-{}",
+                std::process::id(),
+                NEXT_NAME.fetch_add(1, Ordering::Relaxed)
+            ))
+            .expect("valid shm name");
+            let raw =
+                // SAFETY: `name` is NUL-terminated and shm_open copies it during this call.
+                unsafe {
+                    libc::shm_open(
+                        name.as_ptr(),
+                        libc::O_CREAT | libc::O_EXCL | libc::O_RDWR,
+                        0o600,
+                    )
+                };
+            (name, raw)
+        };
+        assert!(raw >= 0, "create ring backing");
+        let descriptor =
+            // SAFETY: successful memfd_create/shm_open returned a fresh owned descriptor.
+            unsafe { OwnedFd::from_raw_fd(raw) };
+        #[cfg(target_os = "macos")]
+        {
+            let result =
+                // SAFETY: `name` remains a live NUL-terminated string.
+                unsafe { libc::shm_unlink(name.as_ptr()) };
+            assert_eq!(result, 0);
+            let flags =
+                // SAFETY: `descriptor` is a live file descriptor.
+                unsafe { libc::fcntl(descriptor.as_raw_fd(), libc::F_GETFD) };
+            assert!(flags >= 0);
+            let result =
+                // SAFETY: `descriptor` is live and flags came from F_GETFD above.
+                unsafe {
+                    libc::fcntl(
+                        descriptor.as_raw_fd(),
+                        libc::F_SETFD,
+                        flags | libc::FD_CLOEXEC,
+                    )
+                };
+            assert_eq!(result, 0);
+        }
+        let extent = libc::off_t::try_from(RING_BYTES).expect("ring extent fits off_t");
+        let result =
+            // SAFETY: `descriptor` is live and `extent` is the fixed ring size.
+            unsafe { libc::ftruncate(descriptor.as_raw_fd(), extent) };
+        assert_eq!(result, 0);
+        let address =
+            // SAFETY: the descriptor is sized above and the mapping covers the full ring.
+            unsafe {
+                libc::mmap(
+                    std::ptr::null_mut(),
+                    RING_BYTES,
+                    libc::PROT_READ | libc::PROT_WRITE,
+                    libc::MAP_SHARED,
+                    descriptor.as_raw_fd(),
+                    0,
+                )
+            };
+        assert_ne!(address, libc::MAP_FAILED, "map ring fixture");
+        let mut header = [0; 4096];
+        header[..8].copy_from_slice(b"LUNARING");
+        header[8..10].copy_from_slice(&1u16.to_le_bytes());
+        header[10..12].copy_from_slice(&2u16.to_le_bytes());
+        header[12..16].copy_from_slice(&4096u32.to_le_bytes());
+        header[16..24]
+            .copy_from_slice(&u64::try_from(RING_BYTES).expect("ring size").to_le_bytes());
+        header[24..28].copy_from_slice(&4u32.to_le_bytes());
+        header[28..32].copy_from_slice(&SLOT_BYTES_U32.to_le_bytes());
+        header[32..40].copy_from_slice(&1u64.to_le_bytes());
+        // SAFETY: the successful mapping covers the 4096-byte header buffer.
+        unsafe { std::ptr::copy_nonoverlapping(header.as_ptr(), address.cast(), header.len()) };
+        let result =
+            // SAFETY: `address` is the complete successful RING_BYTES mapping.
+            unsafe { libc::munmap(address, RING_BYTES) };
+        assert_eq!(result, 0);
+        #[cfg(target_os = "linux")]
+        {
+            let result =
+                // SAFETY: the memfd allows seals and all writable mappings are closed.
+                unsafe {
+                    libc::fcntl(
+                        descriptor.as_raw_fd(),
+                        libc::F_ADD_SEALS,
+                        libc::F_SEAL_GROW | libc::F_SEAL_SHRINK,
+                    )
+                };
+            assert_eq!(result, 0);
+        }
+        let mut status: libc::stat =
+            // SAFETY: `status` is a valid writable output structure.
+            unsafe { std::mem::zeroed() };
+        let result =
+            // SAFETY: the live descriptor and output pointer are valid for fstat.
+            unsafe { libc::fstat(descriptor.as_raw_fd(), &raw mut status) };
+        assert_eq!(result, 0);
+        let physical = u64::try_from(status.st_size).expect("nonnegative ring extent");
+        (descriptor, physical)
+    }
 
     fn valid_setup() -> (OwnedFd, [u8; 128]) {
-        let mut ring = vec![0; RING_BYTES];
-        ring[..8].copy_from_slice(b"LUNARING");
-        ring[8..10].copy_from_slice(&1u16.to_le_bytes());
-        ring[10..12].copy_from_slice(&2u16.to_le_bytes());
-        ring[12..16].copy_from_slice(&4096u32.to_le_bytes());
-        ring[16..24].copy_from_slice(&u64::try_from(RING_BYTES).expect("ring size").to_le_bytes());
-        ring[24..28].copy_from_slice(&4u32.to_le_bytes());
-        ring[28..32].copy_from_slice(&SLOT_BYTES_U32.to_le_bytes());
-        ring[32..40].copy_from_slice(&1u64.to_le_bytes());
-        let prepared = crate::backing::PreparedImage::prepare(&ring).expect("prepare ring fixture");
+        let (descriptor, physical) = ring_descriptor();
         let mut setup = [0; 128];
         setup[4..6].copy_from_slice(&9u16.to_le_bytes());
         setup[8..16].copy_from_slice(&1u64.to_le_bytes());
         setup[32..40].copy_from_slice(&(RING_BYTES as u64).to_le_bytes());
-        setup[40..48].copy_from_slice(&prepared.physical.to_le_bytes());
+        setup[40..48].copy_from_slice(&physical.to_le_bytes());
         setup[48..52].copy_from_slice(&4u32.to_le_bytes());
         setup[52..56].copy_from_slice(&SLOT_BYTES_U32.to_le_bytes());
         setup[56..58].copy_from_slice(&super::super::backing::KIND.to_le_bytes());
         setup[58..60].copy_from_slice(&1u16.to_le_bytes());
-        (prepared.descriptor, setup)
+        (descriptor, setup)
     }
 
     #[test]
     fn from_setup_accepts_a_valid_sealed_ring() {
         let (descriptor, setup) = valid_setup();
-        assert!(Producer::from_setup(descriptor, &setup).is_ok());
+        let result = Producer::from_setup(descriptor, &setup);
+        assert!(
+            result.is_ok(),
+            "valid setup rejected: {}",
+            result
+                .err()
+                .map_or_else(String::new, |error| error.to_string())
+        );
     }
 
     #[test]
