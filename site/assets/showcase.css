@@ -131,3 +131,24 @@
 @media (prefers-reduced-motion:reduce){.code pre{scroll-behavior:auto}}
 
 .stage-bar,.tpl-run{background:#131830}
+
+.graphite-intro{max-width:62ch;margin:1rem 0 1.5rem}
+.graphite-intro p,.try-modes p{margin:.5rem 0 .8rem;color:var(--ink2)}
+.mode-switch{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;border:0;margin:1rem 0;padding:0}
+.mode-switch[hidden]{display:none}
+.mode-switch legend{font-weight:600;padding:0;margin-bottom:.35rem}
+.mode-switch label{display:inline-flex;align-items:center;gap:.45rem;min-height:44px;padding:0 .9rem;border:1px solid var(--line-s);border-radius:.5rem;cursor:pointer}
+.mode-switch label:has(:checked){border-color:var(--lav);color:var(--ink);background:#282d57}
+.mode-switch label:focus-within{outline:2px solid var(--lav);outline-offset:2px}
+.mode-switch input{accent-color:#b9a7ff}
+.mode-stage,.mode-recording{margin:0;min-width:0}
+.mode-recording{width:100%;background:#151521;border-radius:.5rem;overflow:hidden}
+.mode-recording img{display:block;width:100%;height:auto;object-fit:contain}
+.mode-recording figcaption{padding:.6rem .8rem;color:#d3cfe3;font:500 .85rem/1.4 var(--sans)}
+.mode-stage,.try-modes .mode-recording{max-width:960px}
+.preview:has(.mode-recording){padding:0;overflow:hidden}
+.try-modes{padding:1rem clamp(14px,3vw,22px);min-width:0}
+.try-modes pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.browser-title{padding:.8rem 22px 0}
+.console-example{margin-top:1rem}
+.console-example summary{cursor:pointer;padding:.7rem 0;color:var(--ink2)}

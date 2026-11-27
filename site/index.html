@@ -221,8 +221,21 @@ footer nav a:hover{color:var(--lav)}
 
 
 <section class="band" id="widgets"><div class="container">
- <div class="band-h"><div><h2>Widgets</h2><p>Every preview on this page is terminal text in Lunatui's default dark theme, set in HTML at the size your terminal draws it. Open the code under any widget to see what draws it.</p></div>
+ <div class="band-h"><div><h2>Widgets</h2><p>Explore the activity monitor and individual widgets recorded with Lunatui 0.1.44.</p></div>
  <a class="band-link" href="https://github.com/moonbase2090/lunatui/tree/main/lunatui-widgets">Browse all widgets on GitHub</a></div>
+ <section class="graphite-intro" id="graphite"><h3>Graphite mode</h3>
+ <p>Graphite lets widgets draw text and shapes in pixels. The activity monitor uses it when a terminal such as Kitty reports a supported image protocol and its cell size. On a cell-only terminal it draws with glyphs instead.</p>
+ <a href="quickstart.html#try-modes">Run the activity monitor</a></section>
+ <fieldset class="mode-switch" data-mode-controls hidden><legend>Rendering mode</legend>
+  <label><input type="radio" name="mode" value="cell" checked> Cell</label>
+  <label><input type="radio" name="mode" value="graphite"> Graphite</label>
+  <label class="motion"><input type="checkbox" data-play> Play recordings</label>
+ </fieldset>
+ <div class="mode-stage"><figure class="mode-recording" data-cell="monitor-cell" data-graphite="monitor-graphite" data-cell-alt="Activity monitor with rows of status badges and trend lines drawn in terminal cells" data-graphite-alt="Activity monitor with typeset status badges and continuous activity traces" data-graphite-caption="Graphite recording">
+  <img src="assets/media/modes/monitor-cell.png" alt="Activity monitor with rows of status badges and trend lines drawn in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div>
+ <details class="console-example"><summary>Explore the release console in Cell mode</summary>
  <figure class="stage" style="margin:0">
   <figcaption class="stage-bar"><span>cargo run --example release_console_app</span><span class="wide">112 × 30 cells</span><span class="narrow">46 × 27 cells</span></figcaption>
   <div class="stage-body"><pre class="term wide" style="--cols:112;--rows:30" role="img" aria-label="A release console built from Lunatui widgets: tabs, a services table, capacity gauges, release progress, a requests sparkline and a log."><span class="o sel"> ● </span><span class="sel b">lunar-deploy</span><span class="d sel">   production</span><span class="sel">                                                          </span><span class="d sel">release v0.4.2   14:02:06 </span>
@@ -283,18 +296,12 @@ footer nav a:hover{color:var(--lav)}
 <span class="sel"> </span><span class="a sel">tab</span><span class="sel"> views  </span><span class="a sel">q</span><span class="sel"> quit                </span><span class="o sel">● connected </span></pre></div>
  </figure>
  <div class="built"><span>Built from</span><a href="https://github.com/moonbase2090/lunatui/blob/main/lunatui-widgets/src/tabs.rs">Tabs</a><a href="https://github.com/moonbase2090/lunatui/blob/main/lunatui-widgets/src/table.rs">Table</a><a href="https://github.com/moonbase2090/lunatui/blob/main/lunatui-widgets/src/status_dot.rs">StatusDot</a><a href="https://github.com/moonbase2090/lunatui/blob/main/lunatui-widgets/src/line_gauge.rs">LineGauge</a><a href="#w-progress">ProgressBar</a><a href="#w-sparkline">Sparkline</a><a href="#w-logview">LogView</a><a href="https://github.com/moonbase2090/lunatui/blob/main/lunatui-widgets/src/status_bar.rs">StatusBar</a></div>
+ </details>
  <div class="units">
-<article class="unit w3" id="w-form"><h3>Form</h3><p>Labels, required markers, dim hints and fail-colored errors around your own inputs.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:11" role="img" aria-label="Form: Name and Email marked required, a hint under Name, an error under Email, a radio group and a toggle."><span class="a x b">Name</span><span class="f x"> *</span>                                        
-         <span class="x">As it appears on invoices</span>            
-                                              
-<span class="x">Email</span><span class="f x"> *</span>                                       
-         <span class="f x">✖ Enter a full email address</span>         
-                                              
-<span class="x">Plan</span>     <span class="x">○</span> <span class="x">Free</span>   <span class="x">○</span> <span class="x">Pro</span>   <span class="x">○</span> <span class="x">Team</span>              
-                                              
-                                              
-<span class="x">Updates</span>  <span class="a x">━━━</span><span class="o x">●</span> <span class="x">Product news</span>                    
-                                              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">use lunatui_field::{Field, Form};
+<article class="unit w3" id="w-form"><h3>Form</h3><p>Labels, required markers, dim hints and fail-colored errors around your own inputs.</p><div class="frame"><div class="preview"><figure class="mode-recording" data-cell="form" data-graphite="form" data-cell-alt="Form fields in terminal cells" data-graphite-alt="Form fields in terminal cells" data-graphite-caption="Cell fallback · No Graphite renderer in this release">
+  <img src="assets/media/modes/form.png" alt="Form fields in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">use lunatui_field::{Field, Form};
 
 let form = Form::new([
     Field::new(&quot;Name&quot;).required().help(&quot;As it appears on invoices&quot;),
@@ -306,28 +313,18 @@ let form = Form::new([
 form.render(area, &amp;mut cx);
 RadioGroup::new([&quot;Free&quot;, &quot;Pro&quot;, &quot;Team&quot;]).flow(RadioFlow::Horizontal).gap(3).render(plan, &amp;mut cx);
 Toggle::new(true).label(&quot;Product news&quot;).render(updates, &amp;mut cx);</code></pre></div></div></article>
-<article class="unit w3" id="w-progress"><h3>ProgressBar</h3><p>Segmented bars with eighth-block ends, so ok, warn and fail share one track.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:8" role="img" aria-label="ProgressBar: four pipeline stages, done, running, failed and queued.">checkout                                  <span class="d">done</span>
-<span class="o bg">                                              </span>
-compile                                    72%
-<span class="a bg">                                 </span><span class="a el e1 sel"> </span><span class="sel">████████████</span>
-test                                  <span class="f">1 failed</span>
-<span class="o bg">                                       </span><span class="o el e4"> </span><span class="o bg">  </span><span class="o el e6"> </span><span class="o bg"> </span><span class="o el e1 sel"> </span><span class="sel">█</span>
-upload                                  <span class="d">queued</span>
-<span class="sel">██████████████████████████████████████████████</span></pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">ProgressBar::new()
+<article class="unit w3" id="w-progress"><h3>ProgressBar</h3><p>Segmented bars with eighth-block ends, so ok, warn and fail share one track.</p><div class="frame"><div class="preview"><figure class="mode-recording" data-cell="progress-bar" data-graphite="progress-bar-pixels" data-cell-alt="Release pipeline progress bars in terminal cells" data-graphite-alt="Release pipeline progress bars with pixel fills" data-graphite-caption="Native pixel recording · Enabled by the widget’s pixel option">
+  <img src="assets/media/modes/progress-bar.png" alt="Release pipeline progress bars in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">ProgressBar::new()
     .segment(0.86, ProgressTone::Ok)
     .segment(0.07, ProgressTone::Warn)
     .segment(0.03, ProgressTone::Fail)
     .render(area, &amp;mut cx);</code></pre></div></div></article>
-<article class="unit w4" id="w-logview"><h3>LogView</h3><p>A ring buffer of entries, drawn newest first with level colors. It follows new output until you scroll.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:48;--rows:10" role="img" aria-label="LogView: timestamped entries with level colors, newest at the bottom.">14:02:04 <span class="w b"> WARN</span> /healthz answered in 412 ms (budg
-14:02:05 <span class="o"> INFO</span> 4 of 6 pods ready                
-14:02:05 <span class="f b">ERROR</span> connection refused on :9200      
-14:02:06 <span class="o"> INFO</span> restarting, attempt 2 of 5       
-14:02:06 <span class="o"> INFO</span> 6 of 6 pods ready                
-14:02:06 <span class="o"> INFO</span> 1,086 passed, 1 failed           
-14:02:06 <span class="w b"> WARN</span> render::wide_cluster failed on wi
-14:02:06 <span class="o"> INFO</span> waiting for test stage           
-14:02:06 <span class="a">DEBUG</span> rotated 3 tls sessions           
-14:02:06 <span class="o"> INFO</span> traffic shifted 25%              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">let mut log = LogBuffer::new(500);
+<article class="unit w4" id="w-logview"><h3>LogView</h3><p>A ring buffer of entries, drawn newest first with level colors. It follows new output until you scroll.</p><div class="frame"><div class="preview"><figure class="mode-recording" data-cell="logs" data-graphite="logs" data-cell-alt="Service log entries in terminal cells" data-graphite-alt="Service log entries in terminal cells" data-graphite-caption="Cell fallback · No Graphite renderer in this release">
+  <img src="assets/media/modes/logs.png" alt="Service log entries in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">let mut log = LogBuffer::new(500);
 log.push(LogEntry::new(LogLevel::Warn, &quot;probe&quot;, &quot;/healthz slow, 412 ms&quot;).stamp(&quot;14:02:04&quot;));
 log.push(LogEntry::new(LogLevel::Error, &quot;search&quot;, &quot;search refused :9200&quot;).stamp(&quot;14:02:05&quot;));
 
@@ -335,36 +332,23 @@ LogView::new(&amp;log)
     .target_width(0)
     .follow(true)
     .render(area, &amp;mut cx);</code></pre></div></div></article>
-<article class="unit w2" id="w-calendar"><h3>Monthly</h3><p>One month in a 21-column Sunday grid, with event days marked from theme tokens.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:25;--rows:8" role="img" aria-label="Monthly calendar for November 2026, Sunday first, with three event days marked."><span class="fc b">      November 2026      </span>
- Su Mo Tu We Th Fr Sa    
- <span class="fc b"> 1</span>  2 <span class="w"> 3</span>  4  5  6  7    
-  8  9 10 11 <span class="o">12</span> 13 14    
- 15 16 17 18 19 20 21    
- 22 23 <span class="a">24</span> 25 26 27 28    
- 29 30  1  2  3  4  5    
-                         </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Monthly::new(date(2026, 11, 1), events.as_slice())
+<article class="unit w2" id="w-calendar"><h3>Monthly</h3><p>One month in a 21-column Sunday grid, with event days marked from theme tokens.</p><div class="frame"><div class="preview"><figure class="mode-recording" data-cell="calendar" data-graphite="calendar" data-cell-alt="Monthly agenda in terminal cells" data-graphite-alt="Monthly agenda in terminal cells" data-graphite-caption="Cell fallback · No Graphite renderer in this release">
+  <img src="assets/media/modes/calendar.png" alt="Monthly agenda in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Monthly::new(date(2026, 11, 1), events.as_slice())
     .state(WidgetState::Focused)
     .render(area, &amp;mut cx);</code></pre></div></div></article>
-<article class="unit w3" id="w-sparkline"><h3>Sparkline</h3><p>One column per sample in eight block steps, one row or several.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:7" role="img" aria-label="Two sparklines: a three-row requests line and a one-row errors line."><span class="a">               </span><span class="a eb e1"> </span><span class="a eb e3"> </span><span class="a eb e2"> </span><span class="a">               </span><span class="a eb e2"> </span><span class="a eb e4"> </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a eb e3"> </span><span class="a eb e1"> </span><span class="a">     </span>  
-<span class="a">   </span><span class="a eb e2"> </span><span class="a eb e1"> </span><span class="a eb e4"> </span><span class="a eb e3"> </span><span class="a eb e5">  </span><span class="a eb e2"> </span><span class="a eb e1">  </span><span class="a eb e2"> </span><span class="a eb e4"> </span><span class="a eb e7"> </span><span class="a bg">    </span><span class="a eb e6"> </span><span class="a eb e5"> </span><span class="a eb e4"> </span><span class="a eb e5"> </span><span class="a eb e7"> </span><span class="a eb e6"> </span><span class="a eb e4"> </span><span class="a eb e3"> </span><span class="a eb e2">  </span><span class="a eb e4"> </span><span class="a eb e5"> </span><span class="a eb e7"> </span><span class="a bg">        </span><span class="a eb e7"> </span><span class="a eb e5"> </span><span class="a eb e4">  </span>  
-<span class="a eb e7"> </span><span class="a bg"> </span><span class="a eb e7"> </span><span class="a bg">                                         </span>  
-                                              
-                                              
-<span class="f eb e6"> </span><span class="f"> </span><span class="f bg"> </span><span class="f eb e4"> </span><span class="f eb e2"> </span><span class="f bg"> </span><span class="f eb e6"> </span><span class="f eb e2"> </span><span class="f eb e1"> </span><span class="f eb e5"> </span><span class="f eb e2"> </span><span class="f eb e1"> </span><span class="f eb e5"> </span><span class="f"> </span><span class="f eb e5"> </span><span class="f eb e1"> </span><span class="f eb e6"> </span><span class="f eb e4"> </span><span class="f"> </span><span class="f eb e4"> </span><span class="f eb e1"> </span><span class="f bg"> </span><span class="f eb e2"> </span><span class="f eb e6"> </span><span class="f eb e4"> </span><span class="f"> </span><span class="f eb e6"> </span><span class="f eb e4"> </span><span class="f eb e5"> </span><span class="f bg"> </span><span class="f eb e1"> </span><span class="f eb e5"> </span><span class="f bg"> </span><span class="f eb e2"> </span><span class="f bg"> </span><span class="f eb e2"> </span><span class="f"> </span><span class="f eb e5"> </span><span class="f eb e1"> </span><span class="f bg"> </span><span class="f eb e5"> </span><span class="f eb e1"> </span><span class="f bg"> </span><span class="f"> </span>  
-                                              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Sparkline::new(&amp;requests)
+<article class="unit w3" id="w-sparkline"><h3>Sparkline</h3><p>One column per sample in eight block steps, one row or several.</p><div class="frame"><div class="preview"><figure class="mode-recording" data-cell="sparkline" data-graphite="sparkline-graphite" data-cell-alt="Service activity sparklines in terminal cells" data-graphite-alt="Activity monitor detail trace rendered by the Graphite Sparkline" data-graphite-caption="Graphite recording · Activity monitor detail">
+  <img src="assets/media/modes/sparkline.png" alt="Service activity sparklines in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Sparkline::new(&amp;requests)
     .max(24)
     .render(Rect::new(x, y, 44, 3), &amp;mut cx);
 Sparkline::new(&amp;errors).render(Rect::new(x, y + 5, 44, 1), &amp;mut cx);</code></pre></div></div></article>
-<article class="unit w3" id="w-barchart"><h3>BarChart</h3><p>Vertical or horizontal bars with eighth-block tops, value labels and group gaps.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:10" role="img" aria-label="BarChart: seven vertical bars of builds per day with labels."><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
-<span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a eb e5">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
-<span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
-<span class="a">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a eb e4">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
-<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
-<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
-<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a eb e5">    </span><span class="x">  </span><span class="a">    </span><span class="x">      </span>
-<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a eb e6">    </span><span class="x">      </span>
-<span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">  </span><span class="a bg">    </span><span class="x">      </span>
-<span class="x">Mon   Tue   Wed   Thu   Fri   Sat   Sun       </span></pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">let bars = [
+<article class="unit w3" id="w-barchart"><h3>BarChart</h3><p>Vertical or horizontal bars with eighth-block tops, value labels and group gaps.</p><div class="frame"><div class="preview"><figure class="mode-recording" data-cell="barchart" data-graphite="barchart-pixels" data-cell-alt="Grouped bar charts in terminal cells" data-graphite-alt="Grouped bar charts with pixel fills" data-graphite-caption="Native pixel recording · Enabled by the widget’s pixel option">
+  <img src="assets/media/modes/barchart.png" alt="Grouped bar charts in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">let bars = [
     Bar::new(34).label(&quot;Mon&quot;), Bar::new(41).label(&quot;Tue&quot;), Bar::new(38).label(&quot;Wed&quot;),
     Bar::new(52).label(&quot;Thu&quot;), Bar::new(61).label(&quot;Fri&quot;), Bar::new(18).label(&quot;Sat&quot;),
     Bar::new(12).label(&quot;Sun&quot;),
@@ -373,13 +357,10 @@ BarChart::from_bars(&amp;bars)
     .bar_width(4)
     .bar_gap(2)
     .render(area, &amp;mut cx);</code></pre></div></div></article>
-<article class="unit w3" id="w-accordion"><h3>Accordion</h3><p>Collapsible sections with a caret, a title and a dim badge. Your content goes in each open body.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:7" role="img" aria-label="Accordion: Build and Publish open with their steps, Package and Notify closed."><span class="a x b">▾</span> <span class="a x b">Build</span>                                <span class="x">2 steps</span>
-                                              
-                                              
-<span class="x">▸</span> <span class="x">Package</span>                              <span class="x">2 steps</span>
-<span class="x">▾</span> <span class="x">Publish</span>                               <span class="x">1 step</span>
-                                              
-<span class="x">▸</span> <span class="x">Notify</span>                                   <span class="x">off</span></pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Accordion::new(vec![
+<article class="unit w3" id="w-accordion"><h3>Accordion</h3><p>Collapsible sections with a caret, a title and a dim badge. Your content goes in each open body.</p><div class="frame"><div class="preview"><figure class="mode-recording" data-cell="accordion" data-graphite="accordion" data-cell-alt="Pipeline settings sections in terminal cells" data-graphite-alt="Pipeline settings sections in terminal cells" data-graphite-caption="Cell fallback · No Graphite renderer in this release">
+  <img src="assets/media/modes/accordion.png" alt="Pipeline settings sections in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">Accordion::new(vec![
     AccordionSection::new(&quot;Build&quot;, 2).open(true).badge(&quot;2 steps&quot;),
     AccordionSection::new(&quot;Package&quot;, 2).badge(&quot;2 steps&quot;),
     AccordionSection::new(&quot;Publish&quot;, 1).open(true).badge(&quot;1 step&quot;),
@@ -387,14 +368,10 @@ BarChart::from_bars(&amp;bars)
 ])
 .focus(Some(2))
 .render(area, &amp;mut cx);</code></pre></div></div></article>
-<article class="unit w3" id="w-bigtext"><h3>BigText</h3><p>Large letters from an 8 by 8 pixel face, in full, half-height, quadrant or finer blocks.</p><div class="frame"><div class="preview"><pre class="term " style="--cols:46;--rows:8" role="img" aria-label="BigText: the time 14:02 drawn in large pixels."><span class="a">   </span><span class="a bg">  </span><span class="a">    </span><span class="a bg">  </span><span class="a">  </span><span class="a bg">  </span><span class="a">    </span><span class="a eb e4">  </span><span class="a">    </span><span class="a eb e4"> </span><span class="a bg">    </span><span class="a eb e4"> </span><span class="a">  </span><span class="a eb e4"> </span><span class="a bg">    </span><span class="a eb e4"> </span><span class="a"> </span>      
-<span class="a"> </span><span class="a bg">    </span><span class="a">    </span><span class="a bg">  </span><span class="a eb e4">  </span><span class="a bg">  </span><span class="a">    </span><span class="a ht">  </span><span class="a">    </span><span class="a bg">  </span><span class="a">  </span><span class="a bg">  </span><span class="a">    </span><span class="a eb e4">  </span><span class="a bg">  </span><span class="a"> </span>      
-<span class="a">   </span><span class="a bg">  </span><span class="a">    </span><span class="a ht">    </span><span class="a bg">  </span><span class="a">    </span><span class="a eb e4">  </span><span class="a">    </span><span class="a bg">  </span><span class="a">  </span><span class="a bg">  </span><span class="a">  </span><span class="a eb e4"> </span><span class="a bg"> </span><span class="a ht">   </span><span class="a">  </span>      
-<span class="a"> </span><span class="a bg">      </span><span class="a">      </span><span class="a bg">  </span><span class="a">    </span><span class="a ht">  </span><span class="a">    </span><span class="a ht"> </span><span class="a bg">    </span><span class="a ht"> </span><span class="a">  </span><span class="a bg">      </span><span class="a"> </span>      
-                                              
-                                              
-                                              
-                                              </pre></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">BigText::new(&quot;14:02&quot;)
+<article class="unit w3" id="w-bigtext"><h3>BigText</h3><p>Large letters from an 8 by 8 pixel face, in full, half-height, quadrant or finer blocks.</p><div class="frame"><div class="preview"><figure class="mode-recording" data-cell="bigtext" data-graphite="bigtext" data-cell-alt="Cutover countdown in terminal cells" data-graphite-alt="Cutover countdown in terminal cells" data-graphite-caption="Cell fallback · No Graphite renderer in this release">
+  <img src="assets/media/modes/bigtext.png" alt="Cutover countdown in terminal cells" loading="lazy">
+  <figcaption>Cell recording</figcaption>
+ </figure></div><div class="code" style="--peek:4"><pre><code data-lang="rust" data-start="1">BigText::new(&quot;14:02&quot;)
     .pixel_size(PixelSize::HalfHeight)
     .alignment(Alignment::Center)
     .render(area, &amp;mut cx);</code></pre></div></div></article>
@@ -446,4 +423,5 @@ BarChart::from_bars(&amp;bars)
 </div></footer>
 <script src="assets/site.js" defer></script>
 <script src="assets/showcase.js" defer></script>
+<script src="assets/recording-mode.js" defer></script>
 </body></html>
