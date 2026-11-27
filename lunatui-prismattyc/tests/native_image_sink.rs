@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #![doc = include_str!("../README.md")]
+#![cfg(unix)]
 
 use lunatui_core::Rect;
 use lunatui_image::{Fit, ImageId, ImageRequest, ImageSink, ImageSource};
