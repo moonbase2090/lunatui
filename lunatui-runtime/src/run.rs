@@ -359,16 +359,28 @@ fn activate_native_images(
 }
 
 #[cfg(all(feature = "image-presenter", unix))]
-fn fail_native_session(
-    native: &mut Option<NativeImageSession>,
+trait FallbackTerminal {
+    fn present_fallback(&mut self, bytes: &[u8]) -> io::Result<()>;
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+impl<W: std::io::Write> FallbackTerminal for Session<W> {
+    fn present_fallback(&mut self, bytes: &[u8]) -> io::Result<()> {
+        self.present_frame(bytes).map_err(io::Error::other)
+    }
+}
+
+#[cfg(all(feature = "image-presenter", unix))]
+fn fail_native_session<T>(
+    native: &mut Option<T>,
     frames: &mut FrameState,
-    terminal: &mut Session<impl std::io::Write>,
+    terminal: &mut impl FallbackTerminal,
     scheduler: &mut Scheduler,
 ) -> io::Result<()> {
     native.take();
     frames.native_images = None;
     frames.repaint = true;
-    terminal.present_frame(lunatui_prismattyc::ansi_fallback_repaint_prefix())?;
+    terminal.present_fallback(lunatui_prismattyc::ansi_fallback_repaint_prefix())?;
     scheduler.on_input();
     Ok(())
 }
@@ -750,6 +762,89 @@ mod tests {
         let options = RunOptions::new(80, 24);
         assert_eq!(options.width, 80);
         assert_eq!(options.height, 24);
+    }
+
+    #[cfg(all(feature = "image-presenter", unix))]
+    #[test]
+    fn native_failure_repaints_cells_on_the_virtual_scheduler_clock() {
+        use std::{cell::RefCell, rc::Rc, time::Duration};
+
+        struct SharedOutput(Rc<RefCell<Vec<u8>>>);
+        struct Fallback;
+        impl App for Fallback {
+            fn update(&mut self, _: &Event) -> ControlFlow {
+                ControlFlow::Continue
+            }
+            fn render(&mut self, grid: &mut Grid, _: Rect, clusters: &mut ClusterTable) {
+                grid.put_str(0, 0, Style::new(), "fallback", clusters);
+            }
+        }
+
+        impl super::FallbackTerminal for SharedOutput {
+            fn present_fallback(&mut self, bytes: &[u8]) -> std::io::Result<()> {
+                self.0.borrow_mut().extend_from_slice(bytes);
+                Ok(())
+            }
+        }
+        let output = Rc::new(RefCell::new(Vec::new()));
+        let mut terminal = SharedOutput(Rc::clone(&output));
+        let mut frames = FrameState {
+            prev: Grid::new(12, 1),
+            next: Grid::new(12, 1),
+            clusters: ClusterTable::new(),
+            encoder: Encoder::new(),
+            last_palette: None,
+            repaint: false,
+            pointer: None,
+            native_images: None,
+            images: super::PixelLayer::new(super::PixelMode::Cells),
+            mode: super::RenderMode::Cell,
+        };
+        let mut native = Some(());
+        let mut scheduler = crate::sched::Scheduler::animating(Duration::from_millis(16));
+
+        assert!(
+            super::fail_native_session(&mut native, &mut frames, &mut terminal, &mut scheduler)
+                .is_ok()
+        );
+        assert!(
+            native.is_none(),
+            "the failed native session must be discarded"
+        );
+        assert!(
+            frames.native_images.is_none(),
+            "the native image sink must be discarded"
+        );
+        assert!(
+            frames.repaint,
+            "the next cell render must repaint the full grid"
+        );
+        assert_eq!(
+            scheduler.poll(Duration::ZERO, false),
+            crate::sched::SchedulePoll::Render
+        );
+        let mut app = Fallback;
+        assert!(
+            super::render_present(&mut app, Rect::new(0, 0, 12, 1), &mut frames, |parts| {
+                let mut output = output.borrow_mut();
+                for part in parts {
+                    output.extend_from_slice(part);
+                }
+                Ok(())
+            })
+            .is_ok()
+        );
+        let bytes = output.borrow();
+        assert!(
+            bytes
+                .windows(b"fallback".len())
+                .any(|window| window == b"fallback")
+        );
+        assert!(
+            bytes
+                .windows(b"\x1bc\x1b[2J\x1b[H".len())
+                .any(|window| window == b"\x1bc\x1b[2J\x1b[H")
+        );
     }
 
     struct PaletteApp {

@@ -293,3 +293,66 @@ const _: () = {
     assert!(std::mem::size_of::<PshmFdInfo>() == 1192);
     assert!(std::mem::offset_of!(PshmFdInfo, pshm) == 24);
 };
+
+#[cfg(test)]
+mod tests {
+    #![allow(
+        clippy::err_expect,
+        clippy::expect_used,
+        reason = "test fixtures use explicit panic messages for setup and rejection assertions"
+    )]
+
+    use super::PreparedImage;
+    use sha2::{Digest, Sha256};
+    use std::sync::atomic::AtomicBool;
+
+    #[test]
+    fn prepare_copies_payload_and_returns_its_sha256() {
+        let pixels = [0, 1, 2, 3, 255, 128, 64, 32];
+        let image = PreparedImage::prepare(&pixels).expect("small image should prepare");
+        assert_eq!(image.digest, <[u8; 32]>::from(Sha256::digest(pixels)));
+        assert!(image.physical >= pixels.len() as u64);
+    }
+
+    #[test]
+    fn prepare_rejects_empty_and_over_limit_payloads() {
+        assert_eq!(
+            PreparedImage::prepare(&[])
+                .err()
+                .expect("empty rejected")
+                .kind(),
+            std::io::ErrorKind::InvalidData
+        );
+        let too_large = vec![0; 64 * 1024 * 1024 + 1];
+        assert_eq!(
+            PreparedImage::prepare(&too_large)
+                .err()
+                .expect("oversize rejected")
+                .kind(),
+            std::io::ErrorKind::InvalidData
+        );
+    }
+
+    #[test]
+    fn prepare_honors_preexisting_cancellation() {
+        let cancelled = AtomicBool::new(true);
+        let result = PreparedImage::prepare_cancellable(&[7; 1024], &cancelled);
+        assert_eq!(
+            result.err().expect("cancelled preparation rejected").kind(),
+            std::io::ErrorKind::Interrupted
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn prepared_image_has_required_immutability_seals() {
+        use std::os::fd::AsRawFd;
+        let image = PreparedImage::prepare(&[9; 16]).expect("image should prepare");
+        // SAFETY: F_GET_SEALS only reads flags from the live memfd owned by `image`.
+        let seals = unsafe { libc::fcntl(image.descriptor.as_raw_fd(), libc::F_GET_SEALS) };
+        assert!(seals >= 0);
+        let required =
+            libc::F_SEAL_GROW | libc::F_SEAL_SHRINK | libc::F_SEAL_WRITE | libc::F_SEAL_SEAL;
+        assert_eq!(seals & required, required);
+    }
+}

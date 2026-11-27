@@ -338,7 +338,10 @@ struct Received {
     reason = "Ancillary descriptor validation must happen in one ordered pass before any received descriptor is returned."
 )]
 fn receive(socket: &UnixStream, output: &mut [u8]) -> io::Result<Received> {
-    let mut ancillary = [0usize; 512];
+    // Sixteen descriptors are the wire limit. Leave room for a modestly malformed
+    // packet so the receiver can reject >16 explicitly, while larger ancillary
+    // payloads are rejected by MSG_CTRUNC.
+    let mut ancillary = [0usize; 32];
     let mut vector = libc::iovec {
         iov_base: output.as_mut_ptr().cast(),
         iov_len: output.len(),
@@ -597,4 +600,193 @@ fn verify_peer(socket: &UnixStream) -> io::Result<()> {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, "peer UID"));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(
+        clippy::err_expect,
+        clippy::expect_used,
+        reason = "socket-pair test fixtures use explicit panic messages for setup failures"
+    )]
+
+    #[cfg(unix)]
+    use super::receive;
+    use super::{Control, send};
+    #[cfg(unix)]
+    use std::os::fd::AsRawFd;
+    use std::{
+        fs::File,
+        io::{self, Read, Write},
+        os::fd::OwnedFd,
+        os::unix::net::UnixStream,
+        thread,
+        time::{Duration, Instant},
+    };
+
+    fn request(opcode: u16, size: usize, session: u64, epoch: u64, sequence: u64) -> Vec<u8> {
+        let mut bytes = vec![0; size];
+        bytes[..4].copy_from_slice(
+            &u32::try_from(size)
+                .expect("record size fits u32")
+                .to_le_bytes(),
+        );
+        bytes[4..6].copy_from_slice(&opcode.to_le_bytes());
+        bytes[8..16].copy_from_slice(&session.to_le_bytes());
+        bytes[16..24].copy_from_slice(&sequence.to_le_bytes());
+        bytes[24..32].copy_from_slice(&epoch.to_le_bytes());
+        bytes
+    }
+
+    fn response(opcode: u16, size: usize, session: u64, epoch: u64, sequence: u64) -> Vec<u8> {
+        let mut bytes = request(opcode, size, session, epoch, sequence);
+        if opcode == 4 {
+            bytes[6..8].copy_from_slice(&2u16.to_le_bytes());
+        }
+        bytes
+    }
+
+    fn run_reply(reply: Vec<u8>) -> io::Result<()> {
+        let (client, mut host) = UnixStream::pair()?;
+        let server = thread::spawn(move || {
+            let mut request = [0; 40];
+            host.read_exact(&mut request).expect("request from control");
+            host.write_all(&reply).expect("reply to control");
+        });
+        let mut control = Control::new(client)?;
+        let result = control.exchange(
+            request(3, 40, 7, 9, 11),
+            None,
+            Instant::now() + Duration::from_secs(1),
+        );
+        server.join().expect("host thread");
+        result.map(|_| ())
+    }
+
+    #[test]
+    fn control_accepts_only_expected_opcode_size_and_identity() {
+        assert!(run_reply(response(4, 40, 7, 9, 11)).is_ok());
+        for reply in [
+            response(6, 40, 7, 9, 11),  // wrong opcode
+            response(4, 32, 7, 9, 11),  // wrong size
+            response(4, 40, 8, 9, 11),  // wrong session
+            response(4, 40, 7, 10, 11), // wrong epoch
+        ] {
+            assert_eq!(
+                run_reply(reply)
+                    .err()
+                    .expect("malformed reply rejected")
+                    .kind(),
+                io::ErrorKind::InvalidData
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_ptr_alignment,
+        clippy::undocumented_unsafe_blocks,
+        reason = "the test helper builds bounded SCM_RIGHTS messages using libc's ABI macros"
+    )]
+    fn send_many_descriptors(
+        socket: &UnixStream,
+        bytes: &[u8],
+        descriptors: &[OwnedFd],
+    ) -> io::Result<()> {
+        let mut vector = libc::iovec {
+            iov_base: bytes.as_ptr().cast_mut().cast(),
+            iov_len: bytes.len(),
+        };
+        let mut storage = vec![
+            0usize;
+            (unsafe { libc::CMSG_SPACE((descriptors.len() * 4) as _) } as usize)
+                .div_ceil(std::mem::size_of::<usize>())
+        ];
+        let mut message: libc::msghdr = unsafe { std::mem::zeroed() };
+        message.msg_iov = &raw mut vector;
+        message.msg_iovlen = 1;
+        message.msg_control = storage.as_mut_ptr().cast();
+        message.msg_controllen = unsafe { libc::CMSG_SPACE((descriptors.len() * 4) as _) } as _;
+        unsafe {
+            let header = libc::CMSG_FIRSTHDR(&raw const message);
+            (*header).cmsg_level = libc::SOL_SOCKET;
+            (*header).cmsg_type = libc::SCM_RIGHTS;
+            (*header).cmsg_len = libc::CMSG_LEN((descriptors.len() * 4) as _) as _;
+            let data = libc::CMSG_DATA(header).cast::<i32>();
+            for (index, fd) in descriptors.iter().enumerate() {
+                data.add(index).write_unaligned(fd.as_raw_fd());
+            }
+        }
+        let count = unsafe { libc::sendmsg(socket.as_raw_fd(), &raw const message, 0) };
+        if count < 0 {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn control_rejects_more_than_sixteen_descriptors_and_truncated_ancillary() {
+        let descriptors: Vec<_> = (0..80)
+            .map(|_| File::open("/dev/null").expect("open fd").into())
+            .collect();
+        let (reader, writer) = UnixStream::pair().expect("socket pair");
+        send_many_descriptors(&writer, &[0; 4], &descriptors).expect("send descriptor burst");
+        assert_eq!(
+            receive(&reader, &mut [0; 4])
+                .err()
+                .expect("truncated SCM_RIGHTS rejected")
+                .kind(),
+            io::ErrorKind::InvalidData
+        );
+
+        let too_many: Vec<_> = (0..17)
+            .map(|_| File::open("/dev/null").expect("open fd").into())
+            .collect();
+        let (client, mut host) = UnixStream::pair().expect("socket pair");
+        let server = thread::spawn(move || {
+            let mut request = [0; 40];
+            host.read_exact(&mut request).expect("read request");
+            send_many_descriptors(&host, &response(4, 40, 7, 9, 11), &too_many)
+                .expect("send too many fds");
+        });
+        let mut control = Control::new(client).expect("valid peer");
+        let result = control.exchange(
+            request(3, 40, 7, 9, 11),
+            None,
+            Instant::now() + Duration::from_secs(1),
+        );
+        server.join().expect("host thread");
+        assert_eq!(
+            result.err().expect("descriptor limit enforced").kind(),
+            io::ErrorKind::InvalidData
+        );
+    }
+
+    #[test]
+    fn stale_setup_replies_are_bounded() {
+        let (client, mut host) = UnixStream::pair().expect("socket pair");
+        let server = thread::spawn(move || {
+            let mut request = [0; 56];
+            host.read_exact(&mut request).expect("read request");
+            let descriptor: OwnedFd = File::open("/dev/null").expect("open descriptor").into();
+            for _ in 0..5 {
+                let stale = response(2, 48, 7, 8, 1);
+                send(&host, &stale, Some(&descriptor)).expect("send stale setup");
+            }
+        });
+        let mut control = Control::new(client).expect("valid peer");
+        let result = control.exchange(
+            request(1, 56, 0, 9, 1),
+            None,
+            Instant::now() + Duration::from_secs(1),
+        );
+        server.join().expect("host thread");
+        assert_eq!(
+            result.err().expect("stale record bound enforced").kind(),
+            io::ErrorKind::InvalidData
+        );
+    }
 }

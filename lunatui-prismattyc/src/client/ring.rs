@@ -145,3 +145,74 @@ impl Drop for Producer {
         unsafe { libc::munmap(self.address.as_ptr().cast(), RING_BYTES) };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(
+        clippy::err_expect,
+        clippy::expect_used,
+        reason = "test fixtures use explicit panic messages for setup and rejection assertions"
+    )]
+
+    use super::{Producer, RING_BYTES, SLOT_BYTES_U32};
+    use std::{fs::File, os::fd::OwnedFd};
+
+    fn descriptor() -> OwnedFd {
+        File::open("/dev/null")
+            .expect("open test descriptor")
+            .into()
+    }
+
+    fn valid_setup() -> [u8; 128] {
+        let mut setup = [0; 128];
+        setup[4..6].copy_from_slice(&9u16.to_le_bytes());
+        setup[8..16].copy_from_slice(&1u64.to_le_bytes());
+        setup[32..40].copy_from_slice(&(RING_BYTES as u64).to_le_bytes());
+        setup[40..48].copy_from_slice(&(RING_BYTES as u64).to_le_bytes());
+        setup[48..52].copy_from_slice(&4u32.to_le_bytes());
+        setup[52..56].copy_from_slice(&SLOT_BYTES_U32.to_le_bytes());
+        setup[56..58].copy_from_slice(&super::super::backing::KIND.to_le_bytes());
+        setup[58..60].copy_from_slice(&1u16.to_le_bytes());
+        setup
+    }
+
+    #[test]
+    fn from_setup_rejects_wrong_record_length() {
+        let mut setup = valid_setup().to_vec();
+        setup.pop();
+        let error = Producer::from_setup(descriptor(), &setup)
+            .err()
+            .expect("short setup rejected");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn from_setup_rejects_wrong_ring_extent() {
+        let mut setup = valid_setup();
+        setup[32..40].copy_from_slice(&1u64.to_le_bytes());
+        let error = Producer::from_setup(descriptor(), &setup)
+            .err()
+            .expect("wrong ring extent rejected");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn from_setup_rejects_wrong_slot_count() {
+        let mut setup = valid_setup();
+        setup[48..52].copy_from_slice(&3u32.to_le_bytes());
+        let error = Producer::from_setup(descriptor(), &setup)
+            .err()
+            .expect("wrong slot count rejected");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn from_setup_rejects_nonzero_reserved_tail() {
+        let mut setup = valid_setup();
+        setup[127] = 1;
+        let error = Producer::from_setup(descriptor(), &setup)
+            .err()
+            .expect("nonzero reserved tail rejected");
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+    }
+}
