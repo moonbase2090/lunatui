@@ -694,25 +694,37 @@ mod tests {
         let control_bytes =
             // SAFETY: CMSG_SPACE is a pure layout calculation for this bounded descriptor payload.
             unsafe { libc::CMSG_SPACE(payload_len) };
-        let mut storage = vec![
-            0usize;
-            usize::try_from(control_bytes)
-                .expect("ancillary space fits usize")
-                .div_ceil(std::mem::size_of::<usize>())
-        ];
+        let control_space = usize::try_from(control_bytes).expect("ancillary space fits usize");
+        let mut storage = vec![0usize; control_space.div_ceil(std::mem::size_of::<usize>())];
         let mut message: libc::msghdr =
             // SAFETY: all-zero is a valid initial state for this C ABI structure.
             unsafe { std::mem::zeroed() };
         message.msg_iov = &raw mut vector;
         message.msg_iovlen = 1;
         message.msg_control = storage.as_mut_ptr().cast();
-        message.msg_controllen = control_bytes;
+        #[cfg(target_os = "linux")]
+        {
+            message.msg_controllen =
+                usize::try_from(control_bytes).expect("ancillary size fits msg_controllen");
+        }
+        #[cfg(target_os = "macos")]
+        {
+            message.msg_controllen = control_bytes;
+        }
         // SAFETY: `storage` provides the exact CMSG_SPACE capacity calculated above.
         unsafe {
             let header = libc::CMSG_FIRSTHDR(&raw const message);
             (*header).cmsg_level = libc::SOL_SOCKET;
             (*header).cmsg_type = libc::SCM_RIGHTS;
-            (*header).cmsg_len = libc::CMSG_LEN(payload_len);
+            #[cfg(target_os = "linux")]
+            {
+                (*header).cmsg_len = usize::try_from(libc::CMSG_LEN(payload_len))
+                    .expect("cmsg length fits cmsg_len");
+            }
+            #[cfg(target_os = "macos")]
+            {
+                (*header).cmsg_len = libc::CMSG_LEN(payload_len);
+            }
             std::ptr::copy_nonoverlapping(
                 descriptors.as_ptr().cast::<u8>(),
                 libc::CMSG_DATA(header),
