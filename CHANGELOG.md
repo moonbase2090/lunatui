@@ -8,6 +8,8 @@ Every PR adds its entry under **Unreleased**.
 
 ## [Unreleased]
 
+## [0.1.46] - 2026-11-28
+
 ### Added
 
 - The `Image` widget can display decoded images through the Prismattyc native presenter. If the native session is unavailable or fails, the runtime uses the terminal’s existing image fallback.
