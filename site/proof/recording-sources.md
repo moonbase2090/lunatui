@@ -10,3 +10,5 @@ The gallery uses recordings from the [v0.1.44 release](https://github.com/moonba
 | Activity monitor | `examples/activity_monitor.rs` and `docs/media/graphite-activity-monitor.gif` | Run the release example with an output directory. Render its ten-frame `cells.cast` with `agg --font-size 20 --last-frame-duration 1`. The Graphite animation comes from the release recording of the same scene. |
 
 The mode switch swaps the recording and its caption. The Play recordings control switches between the animation and a still. Visitors who request reduced motion start with still frames.
+
+Each recording's alt text describes its opening frame in words: the visible text, counts and values, so a screen reader or a search can read what the frame shows. The activity monitor frame is 960 pixels wide. On a narrow screen it keeps that width inside a sideways scroller so its text stays readable.
