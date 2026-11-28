@@ -11,9 +11,9 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-lunatui-core = { version = "0.1.45", path = "../lunatui-core" }
-lunatui-term = { version = "0.1.45", path = "../lunatui-term" }
-lunatui-widgets = { version = "0.1.45", path = "../lunatui-widgets", default-features = false }
+lunatui-core = { version = "0.1.46", path = "../lunatui-core" }
+lunatui-term = { version = "0.1.46", path = "../lunatui-term" }
+lunatui-widgets = { version = "0.1.46", path = "../lunatui-widgets", default-features = false }
 ratatui = "=0.30.2"
 
 [dev-dependencies]
